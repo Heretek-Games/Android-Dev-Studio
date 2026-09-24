@@ -1,71 +1,14 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Heretek 3D Android Game</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; touch-action: none; }
-    body, html { width: 100%; height: 100%; overflow: hidden; background: #09090b; }
-    canvas { width: 100%; height: 100%; display: block; }
-    #joystick-container {
-      position: absolute;
-      bottom: 24px;
-      left: 24px;
-      width: 120px;
-      height: 120px;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.1);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    #joystick-thumb {
-      width: 50px;
-      height: 50px;
-      border-radius: 50%;
-      background: rgba(59, 130, 246, 0.85);
-      border: 2px solid #ffffff;
-      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.5);
-    }
-    #jump-btn {
-      position: absolute;
-      bottom: 32px;
-      right: 32px;
-      width: 64px;
-      height: 64px;
-      border-radius: 50%;
-      background: rgba(245, 158, 11, 0.9);
-      border: 2px solid #fde68a;
-      color: white;
-      font-weight: bold;
-      font-size: 14px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 4px 14px rgba(245, 158, 11, 0.4);
-    }
-  </style>
-</head>
-<body>
-  <canvas id="game-canvas"></canvas>
-  <div id="joystick-container">
-    <div id="joystick-thumb"></div>
-  </div>
-  <div id="jump-btn">JUMP</div>
-
-  <script>
-    // Native Android Bridge Interface check
-    if (window.AndroidBridge) {
-      window.AndroidBridge.log('Init', 'Game container initialized in Android System WebView.');
-    }
-
-    const jumpBtn = document.getElementById('jump-btn');
-    jumpBtn.addEventListener('touchstart', (e) => {
-      e.preventDefault();
-      if (window.AndroidBridge) window.AndroidBridge.vibrate(25);
-    });
-  </script>
-</body>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%233b82f6'><path d='M21 16.5c0 .38-.21.71-.53.88l-7.9 4.44c-.16.12-.36.18-.57.18s-.41-.06-.57-.18l-7.9-4.44A.991.991 0 0 1 3 16.5v-9c0-.38.21-.71.53-.88l7.9-4.44c.16-.12.36-.18.57-.18s.41.06.57.18l7.9 4.44c.32.17.53.5.53.88v9z'/></svg>" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Heretek 3D Android Studio</title>
+    <script type="module" crossorigin src="/assets/index-BDxnJYbf.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-DJqSjIYB.css">
+  </head>
+  <body class="bg-studio-bg text-gray-100 overflow-hidden select-none">
+    <div id="root"></div>
+  </body>
 </html>

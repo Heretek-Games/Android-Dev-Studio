@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
+import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
 import { useStudio } from '../state/StudioState';
-import { MobileInput } from '@heretek/engine';
+import { MobileInput, RigidBody3D } from '@heretek/engine';
 import { GDevelopAssetService } from '../services/GDevelopAssetService';
 import {
   Maximize2,
@@ -36,6 +37,37 @@ export const Viewport3D: React.FC = () => {
   const joystickContainerRef = useRef<HTMLDivElement>(null);
   const joystickOriginRef = useRef<{ x: number; y: number } | null>(null);
   const isDraggingJoystickRef = useRef(false);
+
+  // Transform Gizmo refs
+  const transformControlsRef = useRef<TransformControls | null>(null);
+  const selectedGameObjectRef = useRef(selectedGameObject);
+  selectedGameObjectRef.current = selectedGameObject;
+
+  // Sync TransformControls mode dynamically
+  useEffect(() => {
+    if (transformControlsRef.current) {
+      transformControlsRef.current.setMode(gizmoMode);
+    }
+  }, [gizmoMode]);
+
+  // Global keyboard shortcuts (W: translate, E: rotate, R: scale)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const tag = (document.activeElement?.tagName || '').toLowerCase();
+      if (tag === 'input' || tag === 'textarea') return;
+      if (isPlaying) return;
+
+      if (e.key === 'w' || e.key === 'W') {
+        setGizmoMode('translate');
+      } else if (e.key === 'e' || e.key === 'E') {
+        setGizmoMode('rotate');
+      } else if (e.key === 'r' || e.key === 'R') {
+        setGizmoMode('scale');
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isPlaying]);
 
   // Global pointer release listener
   useEffect(() => {
@@ -96,6 +128,53 @@ export const Viewport3D: React.FC = () => {
     boxHelper.visible = false;
     scene.threeScene.add(boxHelper);
 
+    // TransformControls & 3D Manipulator Gizmo
+    const transformControls = new TransformControls(camera, renderer.domElement);
+    transformControlsRef.current = transformControls;
+    transformControls.setMode(gizmoMode);
+    const transformHelper = transformControls.getHelper();
+    scene.threeScene.add(transformHelper);
+    transformHelper.visible = false;
+
+    // Transform proxy synced to selected entity
+    const transformProxy = new THREE.Object3D();
+    transformProxy.name = '__studio_transform_proxy__';
+    scene.threeScene.add(transformProxy);
+
+    let isGizmoDragging = false;
+    transformControls.addEventListener('dragging-changed', (event: any) => {
+      isGizmoDragging = !!event.value;
+    });
+
+    transformControls.addEventListener('objectChange', () => {
+      if (selectedGameObjectRef.current) {
+        const go = selectedGameObjectRef.current;
+        go.transform.position.copy(transformProxy.position);
+        go.transform.rotation.copy(transformProxy.rotation);
+        go.transform.scale.copy(transformProxy.scale);
+        const rb = go.getComponent(RigidBody3D);
+        if (rb && (rb as any).body) {
+          (rb as any).body.setTranslation(
+            { x: transformProxy.position.x, y: transformProxy.position.y, z: transformProxy.position.z },
+            true
+          );
+          const q = transformProxy.quaternion;
+          (rb as any).body.setRotation({ x: q.x, y: q.y, z: q.z, w: q.w }, true);
+        }
+      }
+    });
+
+    if (selectedGameObject && !isPlaying) {
+      transformProxy.position.copy(selectedGameObject.transform.position);
+      transformProxy.rotation.copy(selectedGameObject.transform.rotation);
+      transformProxy.scale.copy(selectedGameObject.transform.scale);
+      transformControls.attach(transformProxy);
+      transformHelper.visible = true;
+    } else {
+      transformControls.detach();
+      transformHelper.visible = false;
+    }
+
     // Orbit Controls (Simple custom implementation without external dependency)
     let isDragging = false;
     let isPanning = false;
@@ -124,8 +203,11 @@ export const Viewport3D: React.FC = () => {
 
     updateCamera();
 
+    let pointerDownPos = { x: 0, y: 0 };
     const onMouseDown = (e: MouseEvent) => {
       if (e.target !== canvas) return;
+      pointerDownPos = { x: e.clientX, y: e.clientY };
+      if (isGizmoDragging) return;
       if (e.button === 0) isDragging = true;
       if (e.button === 2) isPanning = true;
       prevMouseX = e.clientX;
@@ -133,6 +215,7 @@ export const Viewport3D: React.FC = () => {
     };
 
     const onMouseMove = (e: MouseEvent) => {
+      if (isGizmoDragging) return;
       const dx = e.clientX - prevMouseX;
       const dy = e.clientY - prevMouseY;
       prevMouseX = e.clientX;
@@ -152,9 +235,41 @@ export const Viewport3D: React.FC = () => {
       }
     };
 
-    const onMouseUp = () => {
+    const onMouseUp = (e: MouseEvent) => {
       isDragging = false;
       isPanning = false;
+
+      // Click-to-select raycasting: if mouse didn't drag more than 4 pixels
+      const dist = Math.hypot(e.clientX - pointerDownPos.x, e.clientY - pointerDownPos.y);
+      if (dist < 5 && !isGizmoDragging && !isPlaying && e.button === 0) {
+        const rect = canvas.getBoundingClientRect();
+        const mouseX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        const mouseY = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+        const raycaster = new THREE.Raycaster();
+        raycaster.setFromCamera(new THREE.Vector2(mouseX, mouseY), camera);
+
+        const validObjects = scene.threeScene.children.filter(
+          c => c !== grid && c !== boxHelper && c !== transformHelper && c !== transformProxy
+        );
+        const intersects = raycaster.intersectObjects(validObjects, true);
+
+        let hitGameObjectId: string | null = null;
+        for (const hit of intersects) {
+          let curr: THREE.Object3D | null = hit.object;
+          while (curr) {
+            if (curr.userData?.gameObject?.id) {
+              hitGameObjectId = curr.userData.gameObject.id;
+              break;
+            }
+            curr = curr.parent;
+          }
+          if (hitGameObjectId) break;
+        }
+
+        if (hitGameObjectId) {
+          setSelectedId(hitGameObjectId);
+        }
+      }
     };
 
     const onWheel = (e: WheelEvent) => {
@@ -216,14 +331,21 @@ export const Viewport3D: React.FC = () => {
         }
       }
 
-      // Update Selection Box Helper
-      if (selectedGameObject) {
-        const mr = selectedGameObject.components.find((c: any) => c.threeMesh) as any;
-        if (mr && mr.threeMesh) {
-          boxHelper.setFromObject(mr.threeMesh);
-          boxHelper.visible = !isPlaying;
+      // Update Selection Box Helper & Transform Proxy
+      if (selectedGameObject && !isPlaying) {
+        if (!isGizmoDragging) {
+          transformProxy.position.copy(selectedGameObject.transform.position);
+          transformProxy.rotation.copy(selectedGameObject.transform.rotation);
+          transformProxy.scale.copy(selectedGameObject.transform.scale);
+        }
+        const mr = selectedGameObject.components.find((c: any) => c.threeMesh || c.loadedRoot) as any;
+        const targetMesh = mr?.threeMesh || mr?.loadedRoot;
+        if (targetMesh) {
+          boxHelper.setFromObject(targetMesh);
+          boxHelper.visible = true;
         } else {
-          boxHelper.visible = false;
+          boxHelper.setFromObject(transformProxy);
+          boxHelper.visible = true;
         }
       } else {
         boxHelper.visible = false;
@@ -243,8 +365,12 @@ export const Viewport3D: React.FC = () => {
       canvas.removeEventListener('wheel', onWheel);
       canvas.removeEventListener('contextmenu', onContextMenu);
       renderer.dispose();
+      transformControls.dispose();
+      transformControlsRef.current = null;
       scene.threeScene.remove(grid);
       scene.threeScene.remove(boxHelper);
+      scene.threeScene.remove(transformHelper);
+      scene.threeScene.remove(transformProxy);
     };
   }, [isPlaying, selectedGameObject]);
 

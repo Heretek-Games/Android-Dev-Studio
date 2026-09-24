@@ -28,5 +28,8 @@ export * from './shaders/AnimeCelShader.js';
 export * from './ai/BehaviorTree.js';
 export * from './weapons/WeaponController.js';
 export * from './rendering/InstancedMeshBatcher.js';
+export * from './rendering/FoliageInstancer.js';
 export * from './terrain/TerrainChunk.js';
 export * from './terrain/WorldStreamer.js';
+export * from './combat/ElementalSystem.js';
+export * from './combat/ElementalReactionComponent.js';

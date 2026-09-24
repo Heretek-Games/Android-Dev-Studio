@@ -158,6 +158,80 @@ export class TerrainChunk extends Component {
     }
   }
 
+  /**
+   * Applies sculpting brush deformation (raise, lower, smooth, flatten) at world coordinates
+   */
+  public deform(
+    worldX: number,
+    worldZ: number,
+    brushRadius: number,
+    brushStrength: number,
+    mode: 'raise' | 'lower' | 'smooth' | 'flatten',
+    targetHeight: number = 0
+  ): void {
+    if (!this.geometry || !this.mesh) return;
+
+    const positions = this.geometry.attributes.position;
+    const originX = this.mesh.position.x;
+    const originZ = this.mesh.position.z;
+
+    let modified = false;
+
+    // First pass for smooth average
+    let avgHeight = 0;
+    let inRadiusCount = 0;
+    if (mode === 'smooth') {
+      for (let i = 0; i < positions.count; i++) {
+        const vx = originX + positions.getX(i);
+        const vz = originZ + positions.getZ(i);
+        const dist = Math.hypot(vx - worldX, vz - worldZ);
+        if (dist <= brushRadius) {
+          avgHeight += positions.getY(i);
+          inRadiusCount++;
+        }
+      }
+      if (inRadiusCount > 0) {
+        avgHeight /= inRadiusCount;
+      }
+    }
+
+    for (let i = 0; i < positions.count; i++) {
+      const vx = originX + positions.getX(i);
+      const vz = originZ + positions.getZ(i);
+      const dist = Math.hypot(vx - worldX, vz - worldZ);
+
+      if (dist <= brushRadius) {
+        // Cosine falloff factor (1.0 at center, 0.0 at edge)
+        const factor = 0.5 * (1 + Math.cos((Math.PI * dist) / brushRadius));
+        const currentY = positions.getY(i);
+        let newY = currentY;
+
+        switch (mode) {
+          case 'raise':
+            newY += brushStrength * factor;
+            break;
+          case 'lower':
+            newY = Math.max(0, currentY - brushStrength * factor);
+            break;
+          case 'smooth':
+            newY = currentY + (avgHeight - currentY) * factor * Math.min(1.0, brushStrength);
+            break;
+          case 'flatten':
+            newY = currentY + (targetHeight - currentY) * factor * Math.min(1.0, brushStrength);
+            break;
+        }
+
+        positions.setY(i, newY);
+        modified = true;
+      }
+    }
+
+    if (modified) {
+      positions.needsUpdate = true;
+      this.geometry.computeVertexNormals();
+    }
+  }
+
   public override onDestroy(): void {
     if (this.mesh) {
       if (this.mesh.parent) {

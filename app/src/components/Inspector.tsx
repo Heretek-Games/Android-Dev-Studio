@@ -7,7 +7,10 @@ import {
   RigidBody3D,
   Collider3D,
   MobileController,
-  EventSheet
+  EventSheet,
+  ElementalReactionComponent,
+  AnimeCelShader,
+  type ElementType
 } from '@heretek/engine';
 import {
   Sliders,
@@ -18,7 +21,13 @@ import {
   Activity,
   Plus,
   Trash2,
-  ChevronDown
+  ChevronDown,
+  Flame,
+  Droplet,
+  Snowflake,
+  Wind,
+  ShieldAlert,
+  Sparkles
 } from 'lucide-react';
 
 export const Inspector: React.FC = () => {
@@ -63,6 +72,8 @@ export const Inspector: React.FC = () => {
   const collider = go.getComponent(Collider3D);
   const mobileController = go.getComponent(MobileController);
   const eventSheet = go.getComponent(EventSheet);
+  const elementalComp = go.getComponent(ElementalReactionComponent);
+  const celShader = go.getComponent(AnimeCelShader);
 
   return (
     <div className="flex flex-col h-full bg-studio-surface select-none border-l border-studio-border overflow-y-auto">
@@ -362,6 +373,129 @@ export const Inspector: React.FC = () => {
           </div>
         )}
 
+        {/* Elemental Reaction Combat Component */}
+        {elementalComp && (
+          <div className="bg-zinc-900/60 border border-studio-border/70 rounded-lg p-3 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-rose-400 uppercase tracking-wider flex items-center space-x-1.5">
+                <Flame className="w-3.5 h-3.5 text-rose-400" />
+                <span>Elemental Combat Reaction</span>
+              </span>
+              <button
+                onClick={() => { go.removeComponent(elementalComp); refreshScene(); }}
+                className="text-gray-500 hover:text-red-400 p-0.5 rounded transition-colors"
+                title="Remove Component"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            <div className="space-y-2 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-gray-400">Current Aura</span>
+                {elementalComp.currentAura ? (
+                  <span
+                    className={`px-2 py-0.5 rounded text-[11px] font-bold font-mono ${
+                      elementalComp.currentAura.element === 'Pyro'
+                        ? 'bg-rose-950 text-rose-400 border border-rose-500/40'
+                        : elementalComp.currentAura.element === 'Hydro'
+                        ? 'bg-blue-950 text-blue-400 border border-blue-500/40'
+                        : elementalComp.currentAura.element === 'Cryo'
+                        ? 'bg-cyan-950 text-cyan-400 border border-cyan-500/40'
+                        : elementalComp.currentAura.element === 'Electro'
+                        ? 'bg-purple-950 text-purple-400 border border-purple-500/40'
+                        : 'bg-emerald-950 text-emerald-400 border border-emerald-500/40'
+                    }`}
+                  >
+                    {elementalComp.currentAura.element} ({elementalComp.currentAura.gaugeUnits.toFixed(1)}U)
+                  </span>
+                ) : (
+                  <span className="text-zinc-500 text-[11px] font-mono">None (Clean)</span>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="text-gray-400">Status</span>
+                <span className={`text-[11px] font-mono font-medium ${elementalComp.isFrozen ? 'text-cyan-300 animate-pulse font-bold' : 'text-emerald-400'}`}>
+                  {elementalComp.isFrozen ? `FROZEN (${elementalComp.freezeTimer.toFixed(1)}s)` : 'ACTIVE'}
+                </span>
+              </div>
+
+              {elementalComp.lastReaction && (
+                <div className="p-1.5 rounded bg-zinc-950 border border-zinc-800 flex items-center justify-between font-mono text-[10px]">
+                  <span className="text-zinc-400">Last Reaction:</span>
+                  <span className="text-amber-300 font-bold">
+                    {elementalComp.lastReaction.reaction} (×{elementalComp.lastReaction.damageMultiplier.toFixed(1)})
+                  </span>
+                </div>
+              )}
+
+              {/* Elemental Attack Trigger Buttons */}
+              <div className="pt-1">
+                <span className="text-[10px] text-zinc-400 block mb-1.5">Apply Elemental Attack (Genshin Engine):</span>
+                <div className="grid grid-cols-5 gap-1">
+                  {(['Pyro', 'Hydro', 'Cryo', 'Electro', 'Anemo'] as ElementType[]).map((elem) => (
+                    <button
+                      key={elem}
+                      onClick={() => {
+                        elementalComp.receiveElementalAttack(elem, 50, 1.0);
+                        refreshScene();
+                      }}
+                      className={`py-1 rounded text-[10px] font-bold border transition-all active:scale-95 ${
+                        elem === 'Pyro'
+                          ? 'bg-rose-900/50 hover:bg-rose-800/60 border-rose-500/50 text-rose-300'
+                          : elem === 'Hydro'
+                          ? 'bg-blue-900/50 hover:bg-blue-800/60 border-blue-500/50 text-blue-300'
+                          : elem === 'Cryo'
+                          ? 'bg-cyan-900/50 hover:bg-cyan-800/60 border-cyan-500/50 text-cyan-300'
+                          : elem === 'Electro'
+                          ? 'bg-purple-900/50 hover:bg-purple-800/60 border-purple-500/50 text-purple-300'
+                          : 'bg-emerald-900/50 hover:bg-emerald-800/60 border-emerald-500/50 text-emerald-300'
+                      }`}
+                    >
+                      {elem}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Anime Cel Shader Component */}
+        {celShader && (
+          <div className="bg-zinc-900/60 border border-studio-border/70 rounded-lg p-3 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-sky-400 uppercase tracking-wider flex items-center space-x-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-sky-400" />
+                <span>Genshin Cel-Shader</span>
+              </span>
+              <button
+                onClick={() => { go.removeComponent(celShader); refreshScene(); }}
+                className="text-gray-500 hover:text-red-400 p-0.5 rounded transition-colors"
+                title="Remove Component"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
+            <div className="space-y-1 text-xs">
+              <div className="flex items-center justify-between text-zinc-400">
+                <span>Rim Power</span>
+                <span className="font-mono text-zinc-200">{celShader.rimPower.toFixed(1)}</span>
+              </div>
+              <input
+                type="range"
+                min={1}
+                max={8}
+                step={0.5}
+                value={celShader.rimPower}
+                onChange={(e) => { celShader.rimPower = Number(e.target.value); refreshScene(); }}
+                className="w-full accent-sky-500 h-1 bg-zinc-700 rounded cursor-pointer"
+              />
+            </div>
+          </div>
+        )}
+
         {/* Add Component Button */}
         <div className="relative pt-2">
           <button
@@ -407,6 +541,22 @@ export const Inspector: React.FC = () => {
                   className="w-full px-3 py-1.5 text-left rounded hover:bg-studio-hover text-gray-200"
                 >
                   + Visual Event Sheet
+                </button>
+              )}
+              {!elementalComp && (
+                <button
+                  onClick={() => { go.addComponent(new ElementalReactionComponent()); setShowAddComponent(false); refreshScene(); }}
+                  className="w-full px-3 py-1.5 text-left rounded hover:bg-studio-hover text-gray-200"
+                >
+                  + Genshin Elemental Combat
+                </button>
+              )}
+              {!celShader && (
+                <button
+                  onClick={() => { go.addComponent(new AnimeCelShader()); setShowAddComponent(false); refreshScene(); }}
+                  className="w-full px-3 py-1.5 text-left rounded hover:bg-studio-hover text-gray-200"
+                >
+                  + Anime Cel-Shader
                 </button>
               )}
             </div>

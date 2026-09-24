@@ -12,9 +12,16 @@ import {
   CheckCircle,
   Activity,
   Trees,
-  CloudSun
+  CloudSun,
+  Wind,
+  Paintbrush,
+  Sprout,
+  ArrowUp,
+  ArrowDown,
+  Minimize2,
+  Square
 } from 'lucide-react';
-import { TerrainChunk, GameObject } from '@heretek/engine';
+import { TerrainChunk, GameObject, FoliageInstancer } from '@heretek/engine';
 
 export const TerrainSculptorDock: React.FC = () => {
   const { scene, refreshScene, addLog } = useStudio();
@@ -28,6 +35,17 @@ export const TerrainSculptorDock: React.FC = () => {
   const [chunkSize, setChunkSize] = useState(32);
   const [chunkResolution, setChunkResolution] = useState(32);
   const [isGenerated, setIsGenerated] = useState(false);
+
+  // Foliage scattering parameters
+  const [foliageCount, setFoliageCount] = useState(2000);
+  const [windSpeed, setWindSpeed] = useState(3.5);
+  const [windStrength, setWindStrength] = useState(0.18);
+  const [isFoliageActive, setIsFoliageActive] = useState(false);
+
+  // Sculpting Brush parameters
+  const [brushMode, setBrushMode] = useState<'none' | 'raise' | 'lower' | 'smooth' | 'flatten'>('none');
+  const [brushRadius, setBrushRadius] = useState(6);
+  const [brushStrength, setBrushStrength] = useState(0.6);
 
   // Active chunks telemetry
   const [activeChunksCount, setActiveChunksCount] = useState(0);
@@ -74,10 +92,67 @@ export const TerrainSculptorDock: React.FC = () => {
     if (existing) {
       scene.removeGameObject(existing);
     }
+    const foliage = scene.findByName('ProceduralFoliageField');
+    if (foliage) {
+      scene.removeGameObject(foliage);
+      setIsFoliageActive(false);
+    }
     setIsGenerated(false);
     setActiveChunksCount(0);
     refreshScene();
-    addLog('info', 'TerrainSculptor', 'Cleared procedural terrain chunks from scene.');
+    addLog('info', 'TerrainSculptor', 'Cleared procedural terrain and foliage from scene.');
+  };
+
+  const handleScatterFoliage = () => {
+    try {
+      const existing = scene.findByName('ProceduralFoliageField');
+      if (existing) {
+        scene.removeGameObject(existing);
+      }
+      const go = new GameObject('ProceduralFoliageField');
+      const foliage = new FoliageInstancer({
+        count: foliageCount,
+        radius: (chunkSize * 0.7),
+        windSpeed,
+        windStrength,
+        grassColor: '#22c55e',
+        flowerColor: '#ec4899'
+      });
+      go.addComponent(foliage);
+      scene.addGameObject(go);
+      foliage.awake();
+      foliage.start();
+      setIsFoliageActive(true);
+      refreshScene();
+      addLog('info', 'FoliageInstancer', `Scattered ${foliageCount} wind-animated grass & flower instances across terrain.`);
+    } catch (err: any) {
+      addLog('error', 'FoliageInstancer', `Failed to scatter foliage: ${err.message}`);
+    }
+  };
+
+  const handleClearFoliage = () => {
+    const existing = scene.findByName('ProceduralFoliageField');
+    if (existing) {
+      scene.removeGameObject(existing);
+    }
+    setIsFoliageActive(false);
+    refreshScene();
+    addLog('info', 'FoliageInstancer', 'Cleared procedural foliage instances.');
+  };
+
+  const handleApplyBrushDeform = () => {
+    if (brushMode === 'none') return;
+    const terrainGo = scene.findByName('ProceduralTerrainChunk_0_0');
+    if (!terrainGo) {
+      addLog('warn', 'TerrainSculptor', 'Generate terrain before applying brush deformation.');
+      return;
+    }
+    const chunk = terrainGo.getComponent(TerrainChunk);
+    if (!chunk) return;
+
+    chunk.deform(chunk.size / 2, chunk.size / 2, brushRadius, brushStrength, brushMode);
+    refreshScene();
+    addLog('info', 'TerrainSculptor', `Applied ${brushMode} brush (Radius: ${brushRadius}m, Strength: ${brushStrength}) at terrain center.`);
   };
 
   return (
@@ -221,6 +296,198 @@ export const TerrainSculptorDock: React.FC = () => {
               />
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Interactive Terrain Sculpting Brushes */}
+      <div className="p-3 bg-zinc-900 border border-zinc-800 rounded-lg space-y-3">
+        <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
+          <div className="flex items-center space-x-2 text-xs font-semibold text-zinc-300">
+            <Paintbrush className="w-3.5 h-3.5 text-amber-400" />
+            <span>Interactive Sculpting Brushes</span>
+          </div>
+          <span className="text-[10px] text-zinc-400 font-mono">
+            Active Mode: <strong className="text-amber-300 uppercase">{brushMode}</strong>
+          </span>
+        </div>
+
+        {/* Brush Mode Selectors */}
+        <div className="grid grid-cols-5 gap-1.5 text-xs">
+          <button
+            onClick={() => setBrushMode('none')}
+            className={`py-1.5 px-2 rounded flex flex-col items-center justify-center space-y-1 transition-colors ${
+              brushMode === 'none' ? 'bg-zinc-700 text-white border border-zinc-500' : 'bg-zinc-950 text-zinc-400 hover:bg-zinc-800'
+            }`}
+          >
+            <Eye className="w-3.5 h-3.5" />
+            <span className="text-[10px]">Inspect</span>
+          </button>
+          <button
+            onClick={() => setBrushMode('raise')}
+            className={`py-1.5 px-2 rounded flex flex-col items-center justify-center space-y-1 transition-colors ${
+              brushMode === 'raise' ? 'bg-amber-600 text-white' : 'bg-zinc-950 text-zinc-400 hover:bg-zinc-800'
+            }`}
+          >
+            <ArrowUp className="w-3.5 h-3.5" />
+            <span className="text-[10px]">Raise</span>
+          </button>
+          <button
+            onClick={() => setBrushMode('lower')}
+            className={`py-1.5 px-2 rounded flex flex-col items-center justify-center space-y-1 transition-colors ${
+              brushMode === 'lower' ? 'bg-blue-600 text-white' : 'bg-zinc-950 text-zinc-400 hover:bg-zinc-800'
+            }`}
+          >
+            <ArrowDown className="w-3.5 h-3.5" />
+            <span className="text-[10px]">Lower</span>
+          </button>
+          <button
+            onClick={() => setBrushMode('smooth')}
+            className={`py-1.5 px-2 rounded flex flex-col items-center justify-center space-y-1 transition-colors ${
+              brushMode === 'smooth' ? 'bg-purple-600 text-white' : 'bg-zinc-950 text-zinc-400 hover:bg-zinc-800'
+            }`}
+          >
+            <Minimize2 className="w-3.5 h-3.5" />
+            <span className="text-[10px]">Smooth</span>
+          </button>
+          <button
+            onClick={() => setBrushMode('flatten')}
+            className={`py-1.5 px-2 rounded flex flex-col items-center justify-center space-y-1 transition-colors ${
+              brushMode === 'flatten' ? 'bg-emerald-600 text-white' : 'bg-zinc-950 text-zinc-400 hover:bg-zinc-800'
+            }`}
+          >
+            <Square className="w-3.5 h-3.5" />
+            <span className="text-[10px]">Flatten</span>
+          </button>
+        </div>
+
+        {/* Brush Radius & Strength */}
+        {brushMode !== 'none' && (
+          <div className="grid grid-cols-2 gap-3 pt-1 text-xs">
+            <div>
+              <div className="flex justify-between text-zinc-400 mb-1">
+                <span>Brush Radius</span>
+                <span className="font-mono text-zinc-200">{brushRadius}m</span>
+              </div>
+              <input
+                type="range"
+                min={2}
+                max={16}
+                step={1}
+                value={brushRadius}
+                onChange={e => setBrushRadius(Number(e.target.value))}
+                className="w-full accent-amber-500 h-1 bg-zinc-700 rounded cursor-pointer"
+              />
+            </div>
+            <div>
+              <div className="flex justify-between text-zinc-400 mb-1">
+                <span>Brush Strength</span>
+                <span className="font-mono text-zinc-200">{brushStrength.toFixed(2)}</span>
+              </div>
+              <input
+                type="range"
+                min={0.1}
+                max={1.5}
+                step={0.05}
+                value={brushStrength}
+                onChange={e => setBrushStrength(Number(e.target.value))}
+                className="w-full accent-amber-500 h-1 bg-zinc-700 rounded cursor-pointer"
+              />
+            </div>
+          </div>
+        )}
+
+        {brushMode !== 'none' && (
+          <button
+            onClick={handleApplyBrushDeform}
+            disabled={!isGenerated}
+            className="w-full py-1.5 bg-amber-600/80 hover:bg-amber-500 text-white rounded text-xs font-semibold shadow disabled:opacity-40 transition-colors"
+          >
+            Apply {brushMode.toUpperCase()} at Center
+          </button>
+        )}
+      </div>
+
+      {/* Vegetation & Procedural Wind Foliage */}
+      <div className="p-3 bg-zinc-900 border border-zinc-800 rounded-lg space-y-3">
+        <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
+          <div className="flex items-center space-x-2 text-xs font-semibold text-zinc-300">
+            <Sprout className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Procedural Wind Foliage & Vegetation</span>
+          </div>
+          {isFoliageActive && (
+            <span className="px-2 py-0.5 bg-emerald-950/80 border border-emerald-500/40 rounded text-[10px] text-emerald-300 font-mono">
+              {foliageCount} Instances (1 Draw Call)
+            </span>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+          <div>
+            <div className="flex justify-between text-zinc-400 mb-1">
+              <span>Foliage Density</span>
+              <span className="font-mono text-zinc-200">{foliageCount}</span>
+            </div>
+            <input
+              type="range"
+              min={500}
+              max={5000}
+              step={250}
+              value={foliageCount}
+              onChange={e => setFoliageCount(Number(e.target.value))}
+              className="w-full accent-emerald-500 h-1 bg-zinc-700 rounded cursor-pointer"
+            />
+          </div>
+
+          <div>
+            <div className="flex justify-between text-zinc-400 mb-1">
+              <span>Wind Sway Speed</span>
+              <span className="font-mono text-zinc-200">{windSpeed.toFixed(1)}</span>
+            </div>
+            <input
+              type="range"
+              min={1.0}
+              max={6.0}
+              step={0.5}
+              value={windSpeed}
+              onChange={e => setWindSpeed(Number(e.target.value))}
+              className="w-full accent-teal-500 h-1 bg-zinc-700 rounded cursor-pointer"
+            />
+          </div>
+
+          <div>
+            <div className="flex justify-between text-zinc-400 mb-1">
+              <span>Wind Strength</span>
+              <span className="font-mono text-zinc-200">{windStrength.toFixed(2)}</span>
+            </div>
+            <input
+              type="range"
+              min={0.05}
+              max={0.4}
+              step={0.02}
+              value={windStrength}
+              onChange={e => setWindStrength(Number(e.target.value))}
+              className="w-full accent-teal-500 h-1 bg-zinc-700 rounded cursor-pointer"
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center space-x-2 pt-1">
+          <button
+            onClick={handleScatterFoliage}
+            disabled={!isGenerated}
+            className="flex-1 py-1.5 bg-emerald-700 hover:bg-emerald-600 disabled:opacity-40 text-white rounded text-xs font-semibold shadow transition-colors flex items-center justify-center space-x-1"
+          >
+            <Trees className="w-3.5 h-3.5" />
+            <span>Scatter Wind-Swayed Foliage</span>
+          </button>
+          {isFoliageActive && (
+            <button
+              onClick={handleClearFoliage}
+              className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded text-xs transition-colors"
+            >
+              Clear Foliage
+            </button>
+          )}
         </div>
       </div>
 

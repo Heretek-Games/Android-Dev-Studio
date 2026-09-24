@@ -7,6 +7,7 @@ node_modules/
 dist/
 out/
 build/
+!harness/build/
 .output/
 
 # Logs
