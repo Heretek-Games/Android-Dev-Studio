@@ -9,6 +9,8 @@ import { AIHarnessDock } from './components/AIHarnessDock';
 import { ArtemisQADock } from './components/ArtemisQADock';
 import { AssetBrowser } from './components/AssetBrowser';
 import { ConsoleDock } from './components/ConsoleDock';
+import { AgentSwarmDock } from './components/AgentSwarmDock';
+import { ProfilerDock } from './components/ProfilerDock';
 import {
   Box,
   Zap,
@@ -16,13 +18,13 @@ import {
   Bot,
   Folder,
   Terminal,
-  Layers,
-  ChevronDown
+  Users,
+  Activity
 } from 'lucide-react';
 
 const StudioContent: React.FC = () => {
   const [centerTab, setCenterTab] = useState<'viewport' | 'events'>('viewport');
-  const [bottomTab, setBottomTab] = useState<'ai' | 'artemis' | 'assets' | 'console'>('ai');
+  const [bottomTab, setBottomTab] = useState<'ai' | 'swarm' | 'artemis' | 'profiler' | 'assets' | 'console'>('ai');
 
   return (
     <div className="flex flex-col h-screen w-screen bg-studio-bg text-gray-200 select-none overflow-hidden font-sans">
@@ -72,7 +74,7 @@ const StudioContent: React.FC = () => {
             </div>
           </div>
 
-          {/* Lower Center: Bottom Dock Tabs (AI Copilot, Artemis QA, Assets, Console) */}
+          {/* Lower Center: Bottom Dock Tabs */}
           <div className="h-72 min-h-[180px] max-h-[420px] flex flex-col border-t border-studio-border bg-studio-surface">
             {/* Bottom Tab Bar */}
             <div className="h-8 bg-zinc-900 border-b border-studio-border flex items-center justify-between px-2">
@@ -89,6 +91,17 @@ const StudioContent: React.FC = () => {
                   <span>Studio AI Copilot</span>
                 </button>
                 <button
+                  onClick={() => setBottomTab('swarm')}
+                  className={`flex items-center space-x-1.5 px-3 py-1 text-xs rounded-t font-medium transition-colors ${
+                    bottomTab === 'swarm'
+                      ? 'bg-studio-surface text-indigo-400 border-t-2 border-indigo-500 font-semibold'
+                      : 'text-gray-400 hover:text-gray-200'
+                  }`}
+                >
+                  <Users className="w-3.5 h-3.5" />
+                  <span>Agent Swarm & Memory</span>
+                </button>
+                <button
                   onClick={() => setBottomTab('artemis')}
                   className={`flex items-center space-x-1.5 px-3 py-1 text-xs rounded-t font-medium transition-colors ${
                     bottomTab === 'artemis'
@@ -100,6 +113,17 @@ const StudioContent: React.FC = () => {
                   <span>Google Artemis Mobile QA</span>
                 </button>
                 <button
+                  onClick={() => setBottomTab('profiler')}
+                  className={`flex items-center space-x-1.5 px-3 py-1 text-xs rounded-t font-medium transition-colors ${
+                    bottomTab === 'profiler'
+                      ? 'bg-studio-surface text-blue-400 border-t-2 border-blue-500 font-semibold'
+                      : 'text-gray-400 hover:text-gray-200'
+                  }`}
+                >
+                  <Activity className="w-3.5 h-3.5" />
+                  <span>Mobile Profiler</span>
+                </button>
+                <button
                   onClick={() => setBottomTab('assets')}
                   className={`flex items-center space-x-1.5 px-3 py-1 text-xs rounded-t font-medium transition-colors ${
                     bottomTab === 'assets'
@@ -108,13 +132,13 @@ const StudioContent: React.FC = () => {
                   }`}
                 >
                   <Folder className="w-3.5 h-3.5" />
-                  <span>Project Assets</span>
+                  <span>Project Assets & CC0 Store</span>
                 </button>
                 <button
                   onClick={() => setBottomTab('console')}
                   className={`flex items-center space-x-1.5 px-3 py-1 text-xs rounded-t font-medium transition-colors ${
                     bottomTab === 'console'
-                      ? 'bg-studio-surface text-blue-400 border-t-2 border-blue-500 font-semibold'
+                      ? 'bg-studio-surface text-cyan-400 border-t-2 border-cyan-500 font-semibold'
                       : 'text-gray-400 hover:text-gray-200'
                   }`}
                 >
@@ -127,7 +151,9 @@ const StudioContent: React.FC = () => {
             {/* Active Bottom Tab Body */}
             <div className="flex-1 overflow-hidden">
               {bottomTab === 'ai' && <AIHarnessDock />}
+              {bottomTab === 'swarm' && <AgentSwarmDock />}
               {bottomTab === 'artemis' && <ArtemisQADock />}
+              {bottomTab === 'profiler' && <ProfilerDock />}
               {bottomTab === 'assets' && <AssetBrowser />}
               {bottomTab === 'console' && <ConsoleDock />}
             </div>

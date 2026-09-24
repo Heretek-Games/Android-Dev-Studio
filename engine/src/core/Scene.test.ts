@@ -7,6 +7,17 @@ import { CameraComponent } from '../components/CameraComponent.js';
 import { LightComponent } from '../components/LightComponent.js';
 import { EventSheet } from '../events/EventSheet.js';
 import { EngineContext } from './EngineContext.js';
+import { BlendTree1D, AnimationController } from '../animation/BlendTree.js';
+import {
+  BehaviorTreeComponent,
+  DistanceCheckNode,
+  MoveTowardsNode,
+  SequenceNode,
+  SelectorNode,
+  BTStatus
+} from '../ai/BehaviorTree.js';
+import { WeaponController } from '../weapons/WeaponController.js';
+import { CelShadingComponent } from '../shaders/CelShader.js';
 
 describe('Engine Core ECS & Scene Graph', () => {
   test('creates game objects and adds components', () => {
@@ -104,5 +115,71 @@ describe('Engine Core ECS & Scene Graph', () => {
     assert.strictEqual(mover.transform.position.z, 2);
     assert.strictEqual(mover.transform.scale.x, 2);
     assert.strictEqual(mover.transform.scale.y, 3);
+  });
+
+  test('animation blend tree interpolates locomotion clips', () => {
+    const bt = new BlendTree1D('speed', [
+      { name: 'Idle', duration: 2.0, threshold: 0.0 },
+      { name: 'Walk', duration: 1.0, threshold: 4.0 },
+      { name: 'Run', duration: 0.6, threshold: 8.0 }
+    ]);
+
+    // Test exact lower bound
+    const idleRes = bt.evaluate(0.0, 0.1);
+    assert.strictEqual(idleRes.primaryClip, 'Idle');
+    assert.strictEqual(idleRes.blendWeight, 0);
+
+    // Test intermediate interpolation (speed = 6.0 is 50% between Walk and Run)
+    const midRes = bt.evaluate(6.0, 0.1);
+    assert.strictEqual(midRes.primaryClip, 'Walk');
+    assert.strictEqual(midRes.secondaryClip, 'Run');
+    assert.strictEqual(midRes.blendWeight, 0.5);
+  });
+
+  test('behavior tree evaluates selector and distance conditions', () => {
+    const scene = new Scene('AIScene');
+    const player = new GameObject('Player Hero');
+    player.transform.setPosition(0, 0, 0);
+    scene.addGameObject(player);
+
+    const demon = new GameObject('Demon');
+    demon.transform.setPosition(0, 0, 5); // 5m away
+    const bt = demon.addComponent(new BehaviorTreeComponent(
+      new SequenceNode([
+        new DistanceCheckNode('Player Hero', 10.0, 'less'),
+        new MoveTowardsNode('Player Hero', 2.0, 1.0)
+      ])
+    ));
+    scene.addGameObject(demon);
+
+    demon.update(1.0); // Demon moves 2m towards player along -Z
+    assert.strictEqual(bt.lastStatus, BTStatus.RUNNING);
+    assert.ok(demon.transform.position.z < 5.0);
+  });
+
+  test('weapon controller fires, tracks ammo, and reloads', () => {
+    const weapon = new WeaponController({ maxAmmo: 10, fireRate: 10, reloadTime: 0.5 });
+    assert.strictEqual(weapon.currentAmmo, 10);
+
+    const hit = weapon.fire();
+    assert.strictEqual(weapon.currentAmmo, 9);
+    assert.strictEqual(weapon.canFire(), false); // In cooldown
+
+    // Empty magazine
+    weapon.currentAmmo = 0;
+    weapon.fire(); // Triggers reload
+    assert.strictEqual(weapon.isReloading, true);
+
+    weapon.update(0.6); // Completes reload
+    assert.strictEqual(weapon.isReloading, false);
+    assert.strictEqual(weapon.currentAmmo, 10);
+  });
+
+  test('cel shading component serializes parameters', () => {
+    const cel = new CelShadingComponent({ steps: 4, rimColor: '#38bdf8', outlineWidth: 0.05 });
+    const json = cel.toJSON();
+    assert.strictEqual(json.steps, 4);
+    assert.strictEqual(json.rimColor, '#38bdf8');
+    assert.strictEqual(json.outlineWidth, 0.05);
   });
 });

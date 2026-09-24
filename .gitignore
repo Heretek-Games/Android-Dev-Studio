@@ -45,3 +45,6 @@ local.properties
 # Python
 __pycache__/
 *.py[cod]
+*.sqlite
+*.sqlite3
+*.sqlite-journal

@@ -19,3 +19,9 @@ export * from './events/EventSheet.js';
 // Input & Physics
 export * from './input/MobileInput.js';
 export * from './physics/PhysicsWorld.js';
+
+// AAA Engine Systems (Genshin, COD Mobile, Doom scope)
+export * from './animation/BlendTree.js';
+export * from './shaders/CelShader.js';
+export * from './ai/BehaviorTree.js';
+export * from './weapons/WeaponController.js';
