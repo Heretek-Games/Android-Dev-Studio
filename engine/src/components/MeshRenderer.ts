@@ -53,11 +53,26 @@ export class MeshRenderer extends Component {
   }
 
   public override update(_deltaTime: number): void {
+    this.syncMeshTransform();
+  }
+
+  public override lateUpdate(_deltaTime: number): void {
+    this.syncMeshTransform();
+  }
+
+  private syncMeshTransform(): void {
     if (!this.threeMesh) return;
     const t = this.gameObject.transform;
-    this.threeMesh.position.copy(t.position);
-    this.threeMesh.rotation.copy(t.rotation);
-    this.threeMesh.scale.copy(t.scale);
+    if (t.parent) {
+      t.updateMatrices();
+      this.threeMesh.position.setFromMatrixPosition(t.worldMatrix);
+      this.threeMesh.quaternion.setFromRotationMatrix(t.worldMatrix);
+      this.threeMesh.scale.setFromMatrixScale(t.worldMatrix);
+    } else {
+      this.threeMesh.position.copy(t.position);
+      this.threeMesh.rotation.copy(t.rotation);
+      this.threeMesh.scale.copy(t.scale);
+    }
   }
 
   public override onDestroy(): void {

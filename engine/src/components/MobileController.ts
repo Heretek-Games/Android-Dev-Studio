@@ -14,6 +14,8 @@ export class MobileController extends Component {
   public rotationSpeed: number = 10.0;
   public jumpForce: number = 5.0;
 
+  public isMoving: boolean = false;
+
   private rigidBody: RigidBody3D | null = null;
   private moveDirection: THREE.Vector3 = new THREE.Vector3();
 
@@ -31,11 +33,16 @@ export class MobileController extends Component {
   }
 
   public override update(deltaTime: number): void {
+    if (!this.rigidBody) {
+      this.rigidBody = this.gameObject.getComponent(RigidBody3D);
+    }
+
     const input = MobileInput.instance;
     const jx = input.leftJoystick.x;
     const jy = input.leftJoystick.y;
 
     if (Math.abs(jx) > 0.05 || Math.abs(jy) > 0.05) {
+      this.isMoving = true;
       // Forward is along -Z in Three.js convention
       this.moveDirection.set(jx, 0, -jy).normalize();
 
@@ -47,7 +54,7 @@ export class MobileController extends Component {
           this.moveDirection.z * this.moveSpeed
         );
       } else {
-        // Direct kinematic transform translation
+        // Direct kinematic transform translation fallback
         this.gameObject.transform.translate(
           this.moveDirection.x * this.moveSpeed * deltaTime,
           0,
@@ -60,7 +67,17 @@ export class MobileController extends Component {
       const currentAngle = this.gameObject.transform.rotation.y;
       const angleDiff = Math.atan2(Math.sin(targetAngle - currentAngle), Math.cos(targetAngle - currentAngle));
       this.gameObject.transform.rotateY(angleDiff * Math.min(1.0, this.rotationSpeed * deltaTime));
+
+      if (this.rigidBody && this.rigidBody.rapierBody) {
+        this.rigidBody.rapierBody.setRotation({
+          x: this.gameObject.transform.quaternion.x,
+          y: this.gameObject.transform.quaternion.y,
+          z: this.gameObject.transform.quaternion.z,
+          w: this.gameObject.transform.quaternion.w
+        }, true);
+      }
     } else {
+      this.isMoving = false;
       if (this.rigidBody && this.rigidBody.rapierBody && this.rigidBody.bodyType === 'dynamic') {
         const vel = this.rigidBody.rapierBody.linvel();
         this.rigidBody.setLinearVelocity(0, vel.y, 0);
@@ -71,7 +88,7 @@ export class MobileController extends Component {
     if (input.getButton('jump')) {
       if (this.rigidBody && this.rigidBody.rapierBody && this.rigidBody.bodyType === 'dynamic') {
         const vel = this.rigidBody.rapierBody.linvel();
-        if (Math.abs(vel.y) < 0.1) {
+        if (Math.abs(vel.y) < 0.35) {
           this.rigidBody.applyImpulse(0, this.jumpForce, 0);
         }
       }

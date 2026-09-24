@@ -28,8 +28,31 @@ export const Viewport3D: React.FC = () => {
   const [showDeviceFrame, setShowDeviceFrame] = useState(false);
   const [joystickActive, setJoystickActive] = useState(false);
   const [joystickPos, setJoystickPos] = useState({ x: 0, y: 0 });
+  const [actionPulse, setActionPulse] = useState(false);
+  const [playerCoords, setPlayerCoords] = useState({ x: '0.0', y: '1.5', z: '0.0' });
 
+  const joystickContainerRef = useRef<HTMLDivElement>(null);
   const joystickOriginRef = useRef<{ x: number; y: number } | null>(null);
+  const isDraggingJoystickRef = useRef(false);
+
+  // Global pointer release listener
+  useEffect(() => {
+    const handleGlobalRelease = () => {
+      if (isDraggingJoystickRef.current) {
+        isDraggingJoystickRef.current = false;
+        setJoystickActive(false);
+        joystickOriginRef.current = null;
+        setJoystickPos({ x: 0, y: 0 });
+        MobileInput.instance.setJoystick('left', 0, 0);
+      }
+    };
+    window.addEventListener('pointerup', handleGlobalRelease);
+    window.addEventListener('pointercancel', handleGlobalRelease);
+    return () => {
+      window.removeEventListener('pointerup', handleGlobalRelease);
+      window.removeEventListener('pointercancel', handleGlobalRelease);
+    };
+  }, []);
 
   useEffect(() => {
     if (!canvasRef.current || !containerRef.current) return;
@@ -161,11 +184,33 @@ export const Viewport3D: React.FC = () => {
 
     // Animation Loop
     let animId: number;
-    const animate = () => {
+    let lastCoordUpdate = 0;
+    const animate = (timestamp: number) => {
       animId = requestAnimationFrame(animate);
 
       if (isPlaying) {
         updateCamera();
+
+        // Update player coordinates periodically
+        if (timestamp - lastCoordUpdate > 100) {
+          lastCoordUpdate = timestamp;
+          const player = scene.findByName('Player Hero');
+          if (player) {
+            const pp = player.transform.position;
+            setPlayerCoords({
+              x: pp.x.toFixed(1),
+              y: pp.y.toFixed(1),
+              z: pp.z.toFixed(1)
+            });
+          }
+        }
+
+        // Visually mirror WASD keys on joystick knob when not dragging
+        if (!isDraggingJoystickRef.current) {
+          const jx = MobileInput.instance.leftJoystick.x;
+          const jy = MobileInput.instance.leftJoystick.y;
+          setJoystickPos({ x: jx * 32, y: -jy * 32 });
+        }
       }
 
       // Update Selection Box Helper
@@ -184,7 +229,7 @@ export const Viewport3D: React.FC = () => {
       renderer.render(scene.threeScene, camera);
     };
 
-    animate();
+    animId = requestAnimationFrame(animate);
 
     return () => {
       cancelAnimationFrame(animId);
@@ -200,40 +245,73 @@ export const Viewport3D: React.FC = () => {
     };
   }, [isPlaying, selectedGameObject]);
 
-  // Virtual Joystick Touch / Mouse Handlers
-  const handleJoystickStart = (e: React.MouseEvent | React.TouchEvent) => {
-    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-    joystickOriginRef.current = { x: clientX, y: clientY };
+  // Pointer-Captured Virtual Joystick Handlers
+  const handleJoystickPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!joystickContainerRef.current) return;
+
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {}
+
+    isDraggingJoystickRef.current = true;
     setJoystickActive(true);
-    setJoystickPos({ x: 0, y: 0 });
-  };
 
-  const handleJoystickMove = (e: React.MouseEvent | React.TouchEvent) => {
-    if (!joystickActive || !joystickOriginRef.current) return;
-    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    const rect = joystickContainerRef.current.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    joystickOriginRef.current = { x: centerX, y: centerY };
 
-    const dx = clientX - joystickOriginRef.current.x;
-    const dy = clientY - joystickOriginRef.current.y;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-    const maxDist = 45;
+    const dx = e.clientX - centerX;
+    const dy = e.clientY - centerY;
+    const dist = Math.hypot(dx, dy);
+    const maxRadius = 36;
 
     let nx = dx;
     let ny = dy;
-    if (dist > maxDist) {
-      nx = (dx / dist) * maxDist;
-      ny = (dy / dist) * maxDist;
+    if (dist > maxRadius) {
+      nx = (dx / dist) * maxRadius;
+      ny = (dy / dist) * maxRadius;
     }
 
     setJoystickPos({ x: nx, y: ny });
-    MobileInput.instance.setJoystick('left', nx / maxDist, -ny / maxDist);
+    MobileInput.instance.setJoystick('left', nx / maxRadius, -ny / maxRadius);
   };
 
-  const handleJoystickEnd = () => {
+  const handleJoystickPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDraggingJoystickRef.current || !joystickOriginRef.current) return;
+    e.preventDefault();
+
+    const dx = e.clientX - joystickOriginRef.current.x;
+    const dy = e.clientY - joystickOriginRef.current.y;
+    const dist = Math.hypot(dx, dy);
+    const maxRadius = 36;
+
+    let nx = dx;
+    let ny = dy;
+    if (dist > maxRadius) {
+      nx = (dx / dist) * maxRadius;
+      ny = (dy / dist) * maxRadius;
+    }
+
+    setJoystickPos({ x: nx, y: ny });
+    MobileInput.instance.setJoystick('left', nx / maxRadius, -ny / maxRadius);
+  };
+
+  const handleJoystickPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDraggingJoystickRef.current) return;
+    e.preventDefault();
+    try {
+      if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      }
+    } catch {}
+
+    isDraggingJoystickRef.current = false;
     setJoystickActive(false);
-    setJoystickPos({ x: 0, y: 0 });
     joystickOriginRef.current = null;
+    setJoystickPos({ x: 0, y: 0 });
     MobileInput.instance.setJoystick('left', 0, 0);
   };
 
@@ -300,49 +378,118 @@ export const Viewport3D: React.FC = () => {
         {/* Play Mode Mobile HUD & On-Screen Touch Controls */}
         {isPlaying && (
           <div className="absolute inset-0 pointer-events-none select-none">
-            {/* Top Status */}
-            <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full text-[11px] font-mono text-emerald-400 border border-emerald-500/30 flex items-center space-x-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-              <span>LIVE PLAYMODE (WASD / Touch)</span>
+            {/* Top Bar HUD */}
+            <div className="absolute top-3 inset-x-3 flex items-center justify-between">
+              {/* Left Status & Telemetry */}
+              <div className="flex items-center space-x-2">
+                <div className="bg-black/70 backdrop-blur-md px-3 py-1.5 rounded-full text-[11px] font-mono text-emerald-400 border border-emerald-500/30 flex items-center space-x-2 shadow-lg">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                  <span className="font-semibold">HERO ARENA LIVE</span>
+                  <span className="text-zinc-500">|</span>
+                  <span className="text-zinc-300">Pos: ({playerCoords.x}, {playerCoords.y}, {playerCoords.z})</span>
+                </div>
+              </div>
+
+              {/* Center Health Bar */}
+              <div className="hidden sm:flex flex-col items-center bg-black/60 backdrop-blur-md px-4 py-1.5 rounded-xl border border-white/10 shadow-lg">
+                <div className="flex items-center justify-between w-36 text-[10px] font-mono text-zinc-300 mb-1">
+                  <span>HP</span>
+                  <span className="text-emerald-400 font-bold">100 / 100</span>
+                </div>
+                <div className="w-36 h-2 bg-zinc-800 rounded-full overflow-hidden border border-white/10">
+                  <div className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full w-full" />
+                </div>
+              </div>
+
+              {/* Right Controls Help Pill */}
+              <div className="bg-black/70 backdrop-blur-md px-3 py-1.5 rounded-full text-[11px] font-mono text-zinc-300 border border-white/10 flex items-center space-x-3 shadow-lg">
+                <span className="text-blue-400">WASD / Stick: Move</span>
+                <span className="text-amber-400">Space: Jump</span>
+                <span className="text-red-400">E/F: Action</span>
+              </div>
             </div>
+
+            {/* Action Visual Pulse Indicator */}
+            {actionPulse && (
+              <div className="absolute inset-0 border-4 border-red-500/40 pointer-events-none animate-pulse" />
+            )}
 
             {/* Virtual Left Analog Joystick */}
             <div
-              className="absolute bottom-8 left-8 w-28 h-28 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center pointer-events-auto cursor-pointer shadow-lg"
-              onMouseDown={handleJoystickStart}
-              onMouseMove={handleJoystickMove}
-              onMouseUp={handleJoystickEnd}
-              onTouchStart={handleJoystickStart}
-              onTouchMove={handleJoystickMove}
-              onTouchEnd={handleJoystickEnd}
+              ref={joystickContainerRef}
+              className={`absolute bottom-8 left-8 w-32 h-32 rounded-full bg-zinc-900/60 backdrop-blur-md border-2 ${
+                joystickActive ? 'border-blue-400 shadow-blue-500/30 ring-4 ring-blue-500/20' : 'border-white/20'
+              } flex items-center justify-center pointer-events-auto cursor-pointer shadow-2xl transition-colors touch-none select-none`}
+              onPointerDown={handleJoystickPointerDown}
+              onPointerMove={handleJoystickPointerMove}
+              onPointerUp={handleJoystickPointerUp}
+              onPointerCancel={handleJoystickPointerUp}
             >
+              {/* Inner crosshairs / directional ticks */}
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-30">
+                <div className="w-full h-px bg-white" />
+                <div className="h-full w-px bg-white absolute" />
+              </div>
+              <div className="absolute inset-2 rounded-full border border-dashed border-white/15 pointer-events-none" />
+
+              {/* Joystick Movable Knob */}
               <div
-                className="w-12 h-12 rounded-full bg-blue-500/80 border-2 border-white shadow-md shadow-blue-500/50 transition-transform"
+                className={`w-14 h-14 rounded-full ${
+                  joystickActive
+                    ? 'bg-blue-500 shadow-blue-500/60 scale-105'
+                    : 'bg-blue-600/90 shadow-blue-500/40'
+                } border-2 border-white shadow-xl flex items-center justify-center pointer-events-none transition-transform duration-75`}
                 style={{
                   transform: `translate(${joystickPos.x}px, ${joystickPos.y}px)`
                 }}
-              />
+              >
+                <div className="w-5 h-5 rounded-full bg-white/40 shadow-inner" />
+              </div>
             </div>
 
             {/* Virtual Action Buttons (Right) */}
-            <div className="absolute bottom-8 right-8 flex flex-col items-center space-y-3 pointer-events-auto">
+            <div className="absolute bottom-8 right-8 flex flex-col items-center space-y-3 pointer-events-auto select-none">
               <button
-                onMouseDown={() => MobileInput.instance.setButton('jump', true)}
-                onMouseUp={() => MobileInput.instance.setButton('jump', false)}
-                onTouchStart={() => MobileInput.instance.setButton('jump', true)}
-                onTouchEnd={() => MobileInput.instance.setButton('jump', false)}
-                className="w-14 h-14 rounded-full bg-amber-500/90 active:bg-amber-400 text-white font-bold text-xs shadow-lg shadow-amber-500/40 border border-amber-300 flex items-center justify-center active:scale-95 transition-all"
+                onPointerDown={(e) => {
+                  e.preventDefault();
+                  MobileInput.instance.setButton('jump', true);
+                }}
+                onPointerUp={(e) => {
+                  e.preventDefault();
+                  MobileInput.instance.setButton('jump', false);
+                }}
+                onPointerLeave={(e) => {
+                  e.preventDefault();
+                  MobileInput.instance.setButton('jump', false);
+                }}
+                className="w-16 h-16 rounded-full bg-gradient-to-tr from-amber-600 to-amber-400 active:from-amber-500 active:to-amber-300 text-white font-black text-xs shadow-xl shadow-amber-500/40 border-2 border-amber-200 flex flex-col items-center justify-center active:scale-95 transition-all touch-none"
               >
-                JUMP
+                <span>JUMP</span>
+                <span className="text-[9px] text-amber-200 font-mono font-normal">SPACE</span>
               </button>
+
               <button
-                onMouseDown={() => MobileInput.instance.setButton('fire', true)}
-                onMouseUp={() => MobileInput.instance.setButton('fire', false)}
-                onTouchStart={() => MobileInput.instance.setButton('fire', true)}
-                onTouchEnd={() => MobileInput.instance.setButton('fire', false)}
-                className="w-12 h-12 rounded-full bg-red-500/90 active:bg-red-400 text-white font-bold text-xs shadow-lg shadow-red-500/40 border border-red-300 flex items-center justify-center active:scale-95 transition-all"
+                onPointerDown={(e) => {
+                  e.preventDefault();
+                  MobileInput.instance.setButton('fire', true);
+                  MobileInput.instance.setButton('action', true);
+                  setActionPulse(true);
+                  setTimeout(() => setActionPulse(false), 250);
+                }}
+                onPointerUp={(e) => {
+                  e.preventDefault();
+                  MobileInput.instance.setButton('fire', false);
+                  MobileInput.instance.setButton('action', false);
+                }}
+                onPointerLeave={(e) => {
+                  e.preventDefault();
+                  MobileInput.instance.setButton('fire', false);
+                  MobileInput.instance.setButton('action', false);
+                }}
+                className="w-14 h-14 rounded-full bg-gradient-to-tr from-red-600 to-rose-400 active:from-red-500 active:to-rose-300 text-white font-black text-xs shadow-xl shadow-red-500/40 border-2 border-red-200 flex flex-col items-center justify-center active:scale-95 transition-all touch-none"
               >
-                ACTION
+                <span>ATTACK</span>
+                <span className="text-[9px] text-red-200 font-mono font-normal">E / F</span>
               </button>
             </div>
           </div>

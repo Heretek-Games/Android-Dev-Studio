@@ -91,34 +91,79 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const clearLogs = () => setLogs([]);
 
+  const isInitializedRef = useRef(false);
+
   // Initialize Default Starter Scene
   useEffect(() => {
+    if (isInitializedRef.current || scene.gameObjects.length > 0) return;
+    isInitializedRef.current = true;
+
     engineContext.setScene(scene);
     physicsWorld.initialize().catch(console.error);
 
     // Directional Sun Light
     const sun = new GameObject('Directional Sun');
-    sun.transform.setPosition(5, 12, 6);
-    sun.addComponent(new LightComponent({ type: 'directional', intensity: 2.0, castShadow: true }));
+    sun.transform.setPosition(8, 15, 10);
+    sun.addComponent(new LightComponent({ type: 'directional', intensity: 2.2, castShadow: true }));
     scene.addGameObject(sun);
 
     // Ambient Fill Light
     const ambient = new GameObject('Ambient Light');
-    ambient.addComponent(new LightComponent({ type: 'ambient', intensity: 0.6 }));
+    ambient.addComponent(new LightComponent({ type: 'ambient', intensity: 0.65 }));
     scene.addGameObject(ambient);
 
-    // Ground Plane
+    // Cyan Point Light Accent
+    const cyanLight = new GameObject('Cyan Accent Light');
+    cyanLight.transform.setPosition(-6, 3.5, -4);
+    cyanLight.addComponent(new LightComponent({ type: 'point', intensity: 3.5, color: '#06b6d4' }));
+    scene.addGameObject(cyanLight);
+
+    // Ground Arena (30 x 1 x 30)
     const ground = new GameObject('Ground Arena');
     ground.transform.setPosition(0, -0.5, 0);
     ground.addComponent(new MeshRenderer({
       shape: 'box',
-      size: [24, 1, 24],
-      color: '#27272a',
-      roughness: 0.8
+      size: [30, 1, 30],
+      color: '#18181b',
+      roughness: 0.7,
+      metalness: 0.3
     }));
     ground.addComponent(new RigidBody3D({ bodyType: 'fixed' }));
-    ground.addComponent(new Collider3D({ shape: 'box', size: [24, 1, 24] }));
+    ground.addComponent(new Collider3D({ shape: 'box', size: [30, 1, 30] }));
     scene.addGameObject(ground);
+
+    // Perimeter Barrier Walls
+    const wallThickness = 1;
+    const wallHeight = 2.5;
+    const arenaSize = 30;
+
+    const northWall = new GameObject('North Barrier');
+    northWall.transform.setPosition(0, wallHeight / 2, -arenaSize / 2);
+    northWall.addComponent(new MeshRenderer({ shape: 'box', size: [arenaSize, wallHeight, wallThickness], color: '#3f3f46' }));
+    northWall.addComponent(new RigidBody3D({ bodyType: 'fixed' }));
+    northWall.addComponent(new Collider3D({ shape: 'box', size: [arenaSize, wallHeight, wallThickness] }));
+    scene.addGameObject(northWall);
+
+    const southWall = new GameObject('South Barrier');
+    southWall.transform.setPosition(0, wallHeight / 2, arenaSize / 2);
+    southWall.addComponent(new MeshRenderer({ shape: 'box', size: [arenaSize, wallHeight, wallThickness], color: '#3f3f46' }));
+    southWall.addComponent(new RigidBody3D({ bodyType: 'fixed' }));
+    southWall.addComponent(new Collider3D({ shape: 'box', size: [arenaSize, wallHeight, wallThickness] }));
+    scene.addGameObject(southWall);
+
+    const eastWall = new GameObject('East Barrier');
+    eastWall.transform.setPosition(arenaSize / 2, wallHeight / 2, 0);
+    eastWall.addComponent(new MeshRenderer({ shape: 'box', size: [wallThickness, wallHeight, arenaSize], color: '#3f3f46' }));
+    eastWall.addComponent(new RigidBody3D({ bodyType: 'fixed' }));
+    eastWall.addComponent(new Collider3D({ shape: 'box', size: [wallThickness, wallHeight, arenaSize] }));
+    scene.addGameObject(eastWall);
+
+    const westWall = new GameObject('West Barrier');
+    westWall.transform.setPosition(-arenaSize / 2, wallHeight / 2, 0);
+    westWall.addComponent(new MeshRenderer({ shape: 'box', size: [wallThickness, wallHeight, arenaSize], color: '#3f3f46' }));
+    westWall.addComponent(new RigidBody3D({ bodyType: 'fixed' }));
+    westWall.addComponent(new Collider3D({ shape: 'box', size: [wallThickness, wallHeight, arenaSize] }));
+    scene.addGameObject(westWall);
 
     // Player Hero
     const player = new GameObject('Player Hero');
@@ -127,39 +172,97 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       shape: 'capsule',
       size: [1, 2, 1],
       color: '#3b82f6',
-      roughness: 0.3,
-      metalness: 0.2
+      roughness: 0.25,
+      metalness: 0.3
     }));
-    player.addComponent(new RigidBody3D({ bodyType: 'dynamic', mass: 2.0 }));
+    player.addComponent(new RigidBody3D({ bodyType: 'dynamic', mass: 2.0, lockRotations: true }));
     player.addComponent(new Collider3D({ shape: 'capsule', size: [1, 2, 1] }));
-    player.addComponent(new MobileController({ moveSpeed: 7.0, jumpForce: 7.0 }));
+    player.addComponent(new MobileController({ moveSpeed: 8.0, jumpForce: 8.5 }));
     scene.addGameObject(player);
 
-    // Interactive Obstacle Box
-    const crate = new GameObject('Bonus Crate');
-    crate.transform.setPosition(3, 2, -4);
-    crate.addComponent(new MeshRenderer({
+    // Visor on Player
+    const visor = new GameObject('Player Visor');
+    visor.transform.setPosition(0, 0.4, -0.45);
+    visor.addComponent(new MeshRenderer({
       shape: 'box',
-      size: [1.5, 1.5, 1.5],
-      color: '#f59e0b',
-      roughness: 0.4
+      size: [0.65, 0.2, 0.3],
+      color: '#38bdf8',
+      roughness: 0.1,
+      metalness: 0.8
     }));
-    crate.addComponent(new RigidBody3D({ bodyType: 'dynamic', mass: 1.0 }));
-    crate.addComponent(new Collider3D({ shape: 'box', size: [1.5, 1.5, 1.5] }));
-    crate.addComponent(new EventSheet([
+    player.transform.addChild(visor.transform);
+    scene.addGameObject(visor);
+
+    // Bonus Crates (Stacked physics obstacles)
+    const crateA = new GameObject('Bonus Crate A');
+    crateA.transform.setPosition(3, 1, -4);
+    crateA.addComponent(new MeshRenderer({
+      shape: 'box',
+      size: [1.6, 1.6, 1.6],
+      color: '#f59e0b',
+      roughness: 0.35
+    }));
+    crateA.addComponent(new RigidBody3D({ bodyType: 'dynamic', mass: 1.5 }));
+    crateA.addComponent(new Collider3D({ shape: 'box', size: [1.6, 1.6, 1.6] }));
+    scene.addGameObject(crateA);
+
+    const crateB = new GameObject('Bonus Crate B');
+    crateB.transform.setPosition(3, 2.7, -4);
+    crateB.addComponent(new MeshRenderer({
+      shape: 'box',
+      size: [1.4, 1.4, 1.4],
+      color: '#d97706',
+      roughness: 0.35
+    }));
+    crateB.addComponent(new RigidBody3D({ bodyType: 'dynamic', mass: 1.0 }));
+    crateB.addComponent(new Collider3D({ shape: 'box', size: [1.4, 1.4, 1.4] }));
+    scene.addGameObject(crateB);
+
+    // Collectible Gold Coin
+    const coin = new GameObject('Gold Coin');
+    coin.transform.setPosition(-4, 1.2, -3);
+    coin.addComponent(new MeshRenderer({
+      shape: 'cylinder',
+      size: [1.0, 0.2, 1.0],
+      color: '#eab308',
+      roughness: 0.2,
+      metalness: 0.8
+    }));
+    coin.addComponent(new EventSheet([
       {
-        id: 'spin_crate',
+        id: 'spin_coin',
         name: 'Idle Spin',
         enabled: true,
         conditions: [{ type: 'EveryFrame' }],
-        actions: [{ type: 'RotateY', params: { speed: 1.0 } }]
+        actions: [{ type: 'RotateY', params: { speed: 2.5 } }]
       }
     ]));
-    scene.addGameObject(crate);
+    scene.addGameObject(coin);
+
+    // Monster Minion
+    const minion = new GameObject('Monster Minion');
+    minion.transform.setPosition(-5, 1.6, 4);
+    minion.addComponent(new MeshRenderer({
+      shape: 'sphere',
+      size: [1.4, 1.4, 1.4],
+      color: '#ef4444',
+      roughness: 0.3,
+      metalness: 0.4
+    }));
+    minion.addComponent(new EventSheet([
+      {
+        id: 'spin_minion',
+        name: 'Minion Pulse',
+        enabled: true,
+        conditions: [{ type: 'EveryFrame' }],
+        actions: [{ type: 'RotateY', params: { speed: 1.2 } }]
+      }
+    ]));
+    scene.addGameObject(minion);
 
     setSelectedId(player.id);
     refreshScene();
-    addLog('info', 'Studio', 'Default 3D Android Scene loaded.');
+    addLog('info', 'Studio', '🎮 Hero Arena 3D Scene loaded (Single instance, PBR lighting, Physics Barriers).');
     refreshDevices();
   }, []);
 
@@ -230,6 +333,9 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setIsPlaying(true);
     setIsPaused(false);
 
+    // Attach physics world to scene so scene.update steps Rapier simulation every frame
+    scene.physicsWorld = physicsWorld;
+
     // Initialize physics for all dynamic & static bodies
     for (const go of scene.gameObjects) {
       const rb = go.getComponent(RigidBody3D);
@@ -239,7 +345,7 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
 
     engineContext.start();
-    addLog('info', 'PlayMode', '▶ Play mode started. Physics and Mobile Input active.');
+    addLog('info', 'PlayMode', '▶ Play mode started. Physics simulation and Mobile Input active.');
   };
 
   const pausePlayMode = () => {
@@ -257,8 +363,19 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     engineContext.stop();
     setIsPlaying(false);
     setIsPaused(false);
+    scene.physicsWorld = null;
 
-    // Restore pre-play snapshot or clean up
+    // Reset player position cleanly
+    const player = scene.findByName('Player Hero');
+    if (player) {
+      const rb = player.getComponent(RigidBody3D);
+      if (rb) {
+        rb.setPosition(0, 1.5, 0);
+      } else {
+        player.transform.setPosition(0, 1.5, 0);
+      }
+    }
+
     addLog('info', 'PlayMode', '⏹ Play mode stopped.');
     refreshScene();
   };

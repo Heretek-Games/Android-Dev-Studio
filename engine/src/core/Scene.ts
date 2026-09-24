@@ -1,11 +1,13 @@
 import * as THREE from 'three';
 import { GameObject } from './GameObject.js';
+import type { PhysicsWorld } from '../physics/PhysicsWorld.js';
 
 export class Scene {
   public id: string;
   public name: string;
   public threeScene: THREE.Scene;
   public gameObjects: GameObject[] = [];
+  public physicsWorld: PhysicsWorld | null = null;
 
   constructor(name = 'MainScene', id?: string) {
     this.name = name;
@@ -55,6 +57,9 @@ export class Scene {
   public update(deltaTime: number): void {
     for (let i = 0; i < this.gameObjects.length; i++) {
       this.gameObjects[i].update(deltaTime);
+    }
+    if (this.physicsWorld && this.physicsWorld.isReady) {
+      this.physicsWorld.step(deltaTime);
     }
     for (let i = 0; i < this.gameObjects.length; i++) {
       this.gameObjects[i].lateUpdate(deltaTime);

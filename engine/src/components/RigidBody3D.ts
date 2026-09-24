@@ -11,6 +11,7 @@ export interface RigidBodyOptions {
   linearDamping?: number;
   angularDamping?: number;
   gravityScale?: number;
+  lockRotations?: boolean;
 }
 
 export class RigidBody3D extends Component {
@@ -19,6 +20,7 @@ export class RigidBody3D extends Component {
   public linearDamping: number = 0.0;
   public angularDamping: number = 0.0;
   public gravityScale: number = 1.0;
+  public lockRotations: boolean = false;
 
   public rapierBody: RAPIER.RigidBody | null = null;
   private physicsWorld: PhysicsWorld | null = null;
@@ -32,6 +34,7 @@ export class RigidBody3D extends Component {
       if (options.linearDamping !== undefined) this.linearDamping = options.linearDamping;
       if (options.angularDamping !== undefined) this.angularDamping = options.angularDamping;
       if (options.gravityScale !== undefined) this.gravityScale = options.gravityScale;
+      if (options.lockRotations !== undefined) this.lockRotations = options.lockRotations;
     }
   }
 
@@ -66,11 +69,23 @@ export class RigidBody3D extends Component {
     bodyDesc.setAngularDamping(this.angularDamping);
     bodyDesc.setGravityScale(this.gravityScale);
 
+    if (this.lockRotations) {
+      bodyDesc.enabledRotations(false, true, false);
+    }
+
     this.rapierBody = physics.world.createRigidBody(bodyDesc);
     this.rapierBody.userData = this.gameObject;
   }
 
   public override update(_deltaTime: number): void {
+    this.syncTransform();
+  }
+
+  public override lateUpdate(_deltaTime: number): void {
+    this.syncTransform();
+  }
+
+  private syncTransform(): void {
     if (!this.rapierBody || this.bodyType === 'fixed') return;
 
     const pos = this.rapierBody.translation();
@@ -81,6 +96,15 @@ export class RigidBody3D extends Component {
     t.quaternion.set(rot.x, rot.y, rot.z, rot.w);
     t.rotation.setFromQuaternion(t.quaternion, 'YXZ');
     t.updateMatrices();
+  }
+
+  public setPosition(x: number, y: number, z: number): void {
+    this.gameObject.transform.setPosition(x, y, z);
+    if (this.rapierBody) {
+      this.rapierBody.setTranslation({ x, y, z }, true);
+      this.rapierBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
+      this.rapierBody.setAngvel({ x: 0, y: 0, z: 0 }, true);
+    }
   }
 
   public applyImpulse(x: number, y: number, z: number): void {
@@ -116,7 +140,8 @@ export class RigidBody3D extends Component {
       mass: this.mass,
       linearDamping: this.linearDamping,
       angularDamping: this.angularDamping,
-      gravityScale: this.gravityScale
+      gravityScale: this.gravityScale,
+      lockRotations: this.lockRotations
     };
   }
 
@@ -126,5 +151,6 @@ export class RigidBody3D extends Component {
     if (data.linearDamping !== undefined) this.linearDamping = data.linearDamping;
     if (data.angularDamping !== undefined) this.angularDamping = data.angularDamping;
     if (data.gravityScale !== undefined) this.gravityScale = data.gravityScale;
+    if (data.lockRotations !== undefined) this.lockRotations = data.lockRotations;
   }
 }
