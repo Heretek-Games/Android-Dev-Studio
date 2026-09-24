@@ -1,6 +1,11 @@
 """
 Heretek 3D Android Studio — Autonomous Multi-Agent Swarm Orchestrator
-Coordinates specialized subagents (Systems Architect, Gameplay Coder, Code Reviewer, Artemis QA)
+Coordinates 5 specialized subagents:
+1. Systems Architect (Engine core, ECS, monorepo integrity)
+2. Gameplay Coder (Player controller, weapon ballistics, behavior trees)
+3. World & Level Designer (Open-world streaming, terrain sculptor, prop scatter)
+4. Shader & Tech Artist (Anime cel-shader, toon outlines, lighting)
+5. Artemis QA Lead (Autonomous mobile playtesting, 60 FPS profiling)
 using task dependency DAGs and persistent project memory.
 """
 
@@ -13,6 +18,8 @@ from ..memory.project_memory import ProjectMemory
 class SubagentRole:
     ARCHITECT = "SystemsArchitect"
     CODER = "GameplayCoder"
+    WORLD_DESIGNER = "WorldDesigner"
+    SHADER_DEV = "ShaderDev"
     REVIEWER = "CodeReviewer"
     QA = "ArtemisQA"
 
@@ -36,57 +43,48 @@ class AgentSwarmOrchestrator:
         )
         tasks.append({"id": t1_id, "role": SubagentRole.ARCHITECT, "title": "Architectural Specification"})
 
-        # 2. Gameplay Coding Tasks based on genre detection
-        if "genshin" in lower or "rpg" in lower or "open world" in lower:
+        # 2. Open World & Level Design Task
+        if "genshin" in lower or "open world" in lower or "skyrim" in lower or "terrain" in lower or "world" in lower:
+            t_world_id = self.memory.create_task(
+                title="Generate Procedural Fractal Terrain & Chunk Streaming",
+                description="Configure multi-octave fractal noise, slope-based splatting, and world streamer chunks around player",
+                assigned_agent=SubagentRole.WORLD_DESIGNER,
+                dependencies=[t1_id]
+            )
+            tasks.append({"id": t_world_id, "role": SubagentRole.WORLD_DESIGNER, "title": "Procedural Terrain & Chunk Streaming"})
+
+            t_shader_id = self.memory.create_task(
+                title="Configure Genshin Anime Cel-Shader & Outlines",
+                description="Setup multi-band diffuse quantization, Fresnel rim lighting, and inverted-hull toon outlines",
+                assigned_agent=SubagentRole.SHADER_DEV,
+                dependencies=[t_world_id]
+            )
+            tasks.append({"id": t_shader_id, "role": SubagentRole.SHADER_DEV, "title": "Anime Cel-Shader & Outlines"})
+
             t2_id = self.memory.create_task(
-                title="Implement Skeletal Animation Blend Tree & Cel-Shading",
-                description="Configure 1D movement blend space, combat state machine, and anime toon lighting",
+                title="Implement Skeletal Locomotion Blend Tree & Controls",
+                description="Configure 1D/2D locomotion blend spaces, cross-fades, and touch joystick mapping",
                 assigned_agent=SubagentRole.CODER,
-                dependencies=[t1_id]
+                dependencies=[t_shader_id]
             )
-            tasks.append({"id": t2_id, "role": SubagentRole.CODER, "title": "Animation Blend Tree & Cel-Shading"})
+            tasks.append({"id": t2_id, "role": SubagentRole.CODER, "title": "Locomotion Blend Tree"})
 
-            t3_id = self.memory.create_task(
-                title="Generate Quadtree Terrain & Elemental Reactives",
-                description="Stream terrain chunks and setup interactive elemental collision zones",
-                assigned_agent=SubagentRole.CODER,
-                dependencies=[t1_id]
-            )
-            tasks.append({"id": t3_id, "role": SubagentRole.CODER, "title": "Terrain & Elemental Systems"})
-
-        elif "cod" in lower or "fps" in lower or "shooter" in lower:
+        elif "cod" in lower or "fps" in lower or "shooter" in lower or "doom" in lower:
             t2_id = self.memory.create_task(
                 title="Implement FPS Viewmodel & Ballistic Raycast Controller",
-                description="Configure weapon sway, ADS blend transitions, recoil bloom, and raycast hitscan",
+                description="Configure weapon sway, ADS blend transitions, recoil bloom, and zero-GC raycast hitscan",
                 assigned_agent=SubagentRole.CODER,
                 dependencies=[t1_id]
             )
             tasks.append({"id": t2_id, "role": SubagentRole.CODER, "title": "FPS Viewmodel & Weapon Ballistics"})
 
             t3_id = self.memory.create_task(
-                title="Setup Sub-Tick Spatial Partitioning & Touch Aim HUD",
-                description="Configure BVH hitboxes and mobile gyroscope/touch aiming sensitivity",
-                assigned_agent=SubagentRole.CODER,
-                dependencies=[t1_id]
-            )
-            tasks.append({"id": t3_id, "role": SubagentRole.CODER, "title": "Touch Aim & Hitbox BVH"})
-
-        elif "doom" in lower or "arena" in lower or "horde" in lower:
-            t2_id = self.memory.create_task(
-                title="Implement Demon Horde Behavior Tree & Spawner",
+                title="Setup Demon Horde Behavior Tree & Spawner",
                 description="Construct selector-sequence behavior trees, NavMesh pathfinding, and wave triggers",
                 assigned_agent=SubagentRole.CODER,
-                dependencies=[t1_id]
+                dependencies=[t2_id]
             )
-            tasks.append({"id": t2_id, "role": SubagentRole.CODER, "title": "Demon Horde Behavior Tree"})
-
-            t3_id = self.memory.create_task(
-                title="Configure Clustered Lighting & Gore Decal Particle Emitter",
-                description="Setup dynamic point lights, impact burst emitters, and screen-space shake",
-                assigned_agent=SubagentRole.CODER,
-                dependencies=[t1_id]
-            )
-            tasks.append({"id": t3_id, "role": SubagentRole.CODER, "title": "Clustered Lighting & VFX"})
+            tasks.append({"id": t3_id, "role": SubagentRole.CODER, "title": "Demon Horde Behavior Tree"})
 
         else:
             t2_id = self.memory.create_task(
@@ -138,6 +136,10 @@ class AgentSwarmOrchestrator:
                     tags=["architecture", "gdd"]
                 )
                 result = {"status": "success", "adr_id": adr_id, "details": "Scene schema and component budget compiled."}
+            elif role == SubagentRole.WORLD_DESIGNER:
+                result = {"status": "success", "chunks_generated": 4, "details": "Procedural heightmap terrain streaming active with slope splatting."}
+            elif role == SubagentRole.SHADER_DEV:
+                result = {"status": "success", "shader_type": "AnimeCelShader", "details": "3 bands, inverted-hull outline, Fresnel rim glow compiled."}
             elif role == SubagentRole.CODER:
                 result = {"status": "success", "components_generated": 2, "details": "TypeScript classes created without per-frame allocations."}
             elif role == SubagentRole.REVIEWER:

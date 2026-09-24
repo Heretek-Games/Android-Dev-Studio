@@ -12,6 +12,7 @@ export * from './components/CameraComponent.js';
 export * from './components/RigidBody3D.js';
 export * from './components/Collider3D.js';
 export * from './components/MobileController.js';
+export * from './components/ModelRenderer.js';
 
 // Events & Scripting
 export * from './events/EventSheet.js';
@@ -23,5 +24,9 @@ export * from './physics/PhysicsWorld.js';
 // AAA Engine Systems (Genshin, COD Mobile, Doom scope)
 export * from './animation/BlendTree.js';
 export * from './shaders/CelShader.js';
+export * from './shaders/AnimeCelShader.js';
 export * from './ai/BehaviorTree.js';
 export * from './weapons/WeaponController.js';
+export * from './rendering/InstancedMeshBatcher.js';
+export * from './terrain/TerrainChunk.js';
+export * from './terrain/WorldStreamer.js';

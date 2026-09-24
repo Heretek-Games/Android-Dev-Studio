@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { useStudio } from '../state/StudioState';
 import { MobileInput } from '@heretek/engine';
+import { GDevelopAssetService } from '../services/GDevelopAssetService';
 import {
   Maximize2,
   Eye,
@@ -16,6 +17,7 @@ import {
 export const Viewport3D: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const {
     scene,
     selectedGameObject,
@@ -82,6 +84,7 @@ export const Viewport3D: React.FC = () => {
     );
     camera.position.set(0, 10, 15);
     camera.lookAt(0, 0, 0);
+    cameraRef.current = camera;
 
     // Helpers (Grid & Axes)
     const grid = new THREE.GridHelper(30, 30, 0x3b82f6, 0x3f3f46);
@@ -315,9 +318,42 @@ export const Viewport3D: React.FC = () => {
     MobileInput.instance.setJoystick('left', 0, 0);
   };
 
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    const rawData = e.dataTransfer.getData('application/json');
+    if (!rawData) return;
+    try {
+      const data = JSON.parse(rawData);
+      if (data.type === 'gdevelop-asset' && data.asset) {
+        let spawnPos: [number, number, number] = [0, 1.5, 0];
+        if (cameraRef.current && containerRef.current) {
+          const rect = containerRef.current.getBoundingClientRect();
+          const mouseX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+          const mouseY = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+          const raycaster = new THREE.Raycaster();
+          raycaster.setFromCamera(new THREE.Vector2(mouseX, mouseY), cameraRef.current);
+          const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+          const hitPoint = new THREE.Vector3();
+          if (raycaster.ray.intersectPlane(groundPlane, hitPoint)) {
+            spawnPos = [hitPoint.x, 1.5, hitPoint.z];
+          }
+        }
+        await GDevelopAssetService.getInstance().installAssetToScene(data.asset, scene, spawnPos);
+        refreshScene();
+      }
+    } catch (err) {
+      console.error('Failed to handle asset drop:', err);
+    }
+  };
+
   return (
     <div
       ref={containerRef}
+      onDragOver={(e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy';
+      }}
+      onDrop={handleDrop}
       className={`relative w-full h-full bg-zinc-950 overflow-hidden flex items-center justify-center ${
         showDeviceFrame ? 'p-6 bg-zinc-900' : ''
       }`}
