@@ -1,0 +1,42 @@
+@import 'dockview/dist/styles/dockview.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --dockview-theme: 'dockview-theme-dark';
+  --dv-drag-over-background-color: rgba(59, 130, 246, 0.2);
+  --dv-drag-over-border-color: #3b82f6;
+  --dv-activegroup-visiblepanel-tab-background-color: #27272a;
+  --dv-activegroup-hiddenpanel-tab-background-color: #18181b;
+  --dv-tab-color: #9ca3af;
+  --dv-tab-active-color: #ffffff;
+  --dv-separator-border: #3f3f46;
+  --dv-paneview-header-border-color: #3f3f46;
+}
+
+body, html, #root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* Custom minimal dark scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #18181b;
+}
+::-webkit-scrollbar-thumb {
+  background: #3f3f46;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #52525b;
+}

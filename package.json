@@ -1,0 +1,18 @@
+{
+  "name": "android-dev-studio",
+  "version": "0.1.0",
+  "private": true,
+  "description": "In-house AI Harness Desktop Studio for developing 3D Android Games",
+  "workspaces": [
+    "engine",
+    "app"
+  ],
+  "scripts": {
+    "dev": "npm --workspace=app run dev",
+    "dev:desktop": "npm --workspace=app run dev:desktop",
+    "build": "npm --workspace=engine run build && npm --workspace=app run build",
+    "test": "npm --workspace=engine test"
+  },
+  "author": "Heretek Games",
+  "license": "MIT"
+}
