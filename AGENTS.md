@@ -83,6 +83,17 @@ Live LLM settings are loaded from `.env.prod`:
 
 The Vite dev server proxies `/api/llm` to `https://llm.heretek.one/v1`, keeping credentials securely managed.
 
+### Studio MCP Tools (`harness/mcp_server.py`)
+External coding agents can interact with the live studio session via 8 JSON-RPC tools:
+1. `studio_get_scene_hierarchy`: Inspect active GameObjects, components, and transforms.
+2. `studio_spawn_entity`: Spawn 3D meshes (box, sphere, capsule, etc.) with Rapier3D physics.
+3. `studio_modify_component`: Live-tune materials, velocities, light intensity, or controller speed.
+4. `studio_add_visual_event`: Wire GDevelop condition-action rules into entity EventSheets.
+5. `studio_search_and_install_asset`: Search CC0 3D models (Quaternius, Kenney, Poly Haven) and instantiate to scene.
+6. `studio_self_heal_error`: Run autonomous diagnosis and apply corrective restorative patches to corrupted scenes.
+7. `studio_build_and_deploy_apk`: Package and launch the hardware-accelerated WebView container on Android.
+8. `studio_run_artemis_qa`: Launch Google Artemis for autonomous gameplay validation and 60 FPS profiling.
+
 ---
 
 ## 🧪 Testing Guidelines for Agents

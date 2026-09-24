@@ -76,4 +76,33 @@ describe('Engine Core ECS & Scene Graph', () => {
     assert.strictEqual(json.gameObjects.length, 1);
     assert.strictEqual(json.gameObjects[0].name, 'Sun');
   });
+
+  test('event sheet translates and scales object', () => {
+    const scene = new Scene('ActionScene');
+    const mover = new GameObject('Mover');
+    mover.transform.setPosition(0, 0, 0);
+
+    mover.addComponent(new EventSheet([
+      {
+        id: 'move_event',
+        name: 'Translate and Scale',
+        enabled: true,
+        conditions: [{ type: 'EveryFrame' }],
+        actions: [
+          { type: 'Translate', params: { x: 2, y: 0, z: 4, relativeToDelta: true } },
+          { type: 'SetScale', params: { x: 2, y: 3, z: 2 } }
+        ]
+      }
+    ]));
+
+    scene.addGameObject(mover);
+    const ctx = new EngineContext();
+    ctx.setScene(scene);
+
+    ctx.step(0.5); // x: 2 * 0.5 = 1, z: 4 * 0.5 = 2
+    assert.strictEqual(mover.transform.position.x, 1);
+    assert.strictEqual(mover.transform.position.z, 2);
+    assert.strictEqual(mover.transform.scale.x, 2);
+    assert.strictEqual(mover.transform.scale.y, 3);
+  });
 });

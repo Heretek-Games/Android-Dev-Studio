@@ -1,14 +1,6 @@
 import React, { useState } from 'react';
 import { useStudio } from '../state/StudioState';
 import {
-  GameObject,
-  MeshRenderer,
-  RigidBody3D,
-  Collider3D,
-  EventSheet,
-  LightComponent
-} from '@heretek/engine';
-import {
   Sparkles,
   Send,
   Bot,
@@ -17,24 +9,34 @@ import {
   Cpu,
   Layers,
   Wand2,
-  Brain
+  Brain,
+  ShieldAlert,
+  Activity,
+  ShoppingBag
 } from 'lucide-react';
 import { AiHarnessService } from '../services/AiHarnessService';
 
 export const AIHarnessDock: React.FC = () => {
-  const { scene, refreshScene, addLog, setSelectedId } = useStudio();
+  const { scene, refreshScene, addLog } = useStudio();
   const [prompt, setPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [streamingReasoning, setStreamingReasoning] = useState<string>('');
   const [chatHistory, setChatHistory] = useState<Array<{
     sender: 'user' | 'ai';
     text: string;
     reasoning?: string;
     details?: string[];
+    isSelfHealed?: boolean;
   }>>([
     {
       sender: 'ai',
-      text: 'Hello! I am your 3D Android Studio AI Copilot. Ask me to construct 3D environments, wire game logic, create mobile touch controls, or generate shaders.',
-      details: ['Engine: Three.js PBR + Rapier3D WASM', 'Target: Android 14 / WebGL2', 'MCP Server: Active']
+      text: 'Hello! I am your 3D Android Studio AI Copilot. Ask me to construct 3D environments, wire visual game logic, optimize mobile touch controls, or self-heal runtime errors.',
+      details: [
+        'Engine: Three.js PBR + Rapier3D WASM physics',
+        'Target: Android 14 / WebGL2 / Hardware WebView',
+        'CC0 Asset Store: GDevelop, Quaternius & Kenney integrated',
+        'Model: mimotp/mimo-v2.6-flash & Studio MCP'
+      ]
     }
   ]);
 
@@ -43,12 +45,21 @@ export const AIHarnessDock: React.FC = () => {
     if (!q.trim() || isGenerating) return;
 
     setPrompt('');
+    setStreamingReasoning('');
     setChatHistory(prev => [...prev, { sender: 'user', text: q }]);
     setIsGenerating(true);
     addLog('ai', 'AI Harness', `Calling LLM for prompt: "${q}"`);
 
     try {
-      const result = await AiHarnessService.getInstance().generateWorld(q, scene);
+      const result = await AiHarnessService.getInstance().generateWorld(
+        q,
+        scene,
+        (progress) => {
+          if (progress.accumulatedReasoning) {
+            setStreamingReasoning(progress.accumulatedReasoning);
+          }
+        }
+      );
       refreshScene();
 
       setChatHistory(prev => [
@@ -56,7 +67,7 @@ export const AIHarnessDock: React.FC = () => {
         {
           sender: 'ai',
           text: result.summary,
-          reasoning: result.reasoning,
+          reasoning: result.reasoning || streamingReasoning,
           details: result.actionsApplied
         }
       ]);
@@ -71,6 +82,35 @@ export const AIHarnessDock: React.FC = () => {
           details: ['Fallback mode engaged']
         }
       ]);
+    } finally {
+      setIsGenerating(false);
+      setStreamingReasoning('');
+    }
+  };
+
+  const handleSelfHealScene = async () => {
+    setIsGenerating(true);
+    addLog('ai', 'AI Harness', 'Running autonomous scene stability & physics collision audit...');
+
+    try {
+      const result = await AiHarnessService.getInstance().selfHeal(
+        { error: 'Proactive Audit: Check physics bounds, ground clipping, and lighting intensity', source: 'Inspector' },
+        scene
+      );
+      refreshScene();
+
+      setChatHistory(prev => [
+        ...prev,
+        {
+          sender: 'ai',
+          text: result.summary,
+          reasoning: result.reasoning,
+          details: result.actionsApplied,
+          isSelfHealed: true
+        }
+      ]);
+    } catch (err: any) {
+      addLog('error', 'AI Harness', `Self-heal failed: ${err.message}`);
     } finally {
       setIsGenerating(false);
     }
@@ -88,23 +128,23 @@ export const AIHarnessDock: React.FC = () => {
             Studio AI Copilot (Natural Language Scene & Logic Harness)
           </span>
         </div>
-        <div className="flex items-center space-x-1.5 text-[11px] text-gray-400 font-mono">
+        <div className="flex items-center space-x-2 text-[11px] text-gray-400 font-mono">
           <Cpu className="w-3 h-3 text-purple-400" />
-          <span>Gemini 3.8 Flash & Studio MCP</span>
+          <span>mimo-v2.6-flash & Studio MCP</span>
         </div>
       </div>
 
       {/* Quick Action Suggestion Chips */}
       <div className="flex items-center space-x-2 p-2 bg-zinc-900/60 border-b border-studio-border overflow-x-auto text-[11px]">
         <button
-          onClick={() => handleGenerate('Generate an obstacle course with pillars')}
+          onClick={() => handleGenerate('Generate an obstacle course with pillars and jumping pads')}
           className="flex items-center space-x-1 px-2.5 py-1 rounded-full bg-zinc-800 hover:bg-zinc-700 text-gray-300 border border-studio-border whitespace-nowrap transition-colors"
         >
           <Wand2 className="w-3 h-3 text-red-400" />
           <span>Add Obstacle Arena</span>
         </button>
         <button
-          onClick={() => handleGenerate('Spawn 3 spinning gold coins')}
+          onClick={() => handleGenerate('Spawn 3 spinning gold coins with Idle Spin events')}
           className="flex items-center space-x-1 px-2.5 py-1 rounded-full bg-zinc-800 hover:bg-zinc-700 text-gray-300 border border-studio-border whitespace-nowrap transition-colors"
         >
           <Sparkles className="w-3 h-3 text-amber-400" />
@@ -118,11 +158,18 @@ export const AIHarnessDock: React.FC = () => {
           <span>Add Floating Platform</span>
         </button>
         <button
-          onClick={() => handleGenerate('Change to warm sunset lighting')}
+          onClick={() => handleGenerate('Change to warm sunset lighting with high-contrast shadows')}
           className="flex items-center space-x-1 px-2.5 py-1 rounded-full bg-zinc-800 hover:bg-zinc-700 text-gray-300 border border-studio-border whitespace-nowrap transition-colors"
         >
           <Zap className="w-3 h-3 text-orange-400" />
           <span>Sunset Lighting</span>
+        </button>
+        <button
+          onClick={handleSelfHealScene}
+          className="flex items-center space-x-1 px-2.5 py-1 rounded-full bg-purple-900/40 hover:bg-purple-900/60 text-purple-300 border border-purple-500/40 whitespace-nowrap transition-colors"
+        >
+          <ShieldAlert className="w-3 h-3 text-purple-400" />
+          <span>Audit & Self-Heal</span>
         </button>
       </div>
 
@@ -140,9 +187,16 @@ export const AIHarnessDock: React.FC = () => {
                   : 'bg-zinc-900 border border-studio-border text-gray-200 shadow-sm'
               }`}
             >
-              <div className="flex items-center space-x-1.5 mb-1 font-semibold text-[11px] text-gray-400">
-                {item.sender === 'user' ? <span>You</span> : <Bot className="w-3 h-3 text-purple-400" />}
-                {item.sender === 'ai' && <span>AI Copilot</span>}
+              <div className="flex items-center justify-between space-x-1.5 mb-1 font-semibold text-[11px] text-gray-400">
+                <div className="flex items-center space-x-1.5">
+                  {item.sender === 'user' ? <span>You</span> : <Bot className="w-3 h-3 text-purple-400" />}
+                  {item.sender === 'ai' && <span>AI Copilot</span>}
+                </div>
+                {item.isSelfHealed && (
+                  <span className="text-[10px] bg-purple-500/20 text-purple-300 px-1.5 py-0.2 rounded border border-purple-500/30">
+                    Self-Healed
+                  </span>
+                )}
               </div>
 
               {item.reasoning && (
@@ -174,9 +228,22 @@ export const AIHarnessDock: React.FC = () => {
         ))}
 
         {isGenerating && (
-          <div className="flex items-center space-x-2 text-xs text-purple-400 p-2 bg-purple-500/10 rounded border border-purple-500/20 max-w-sm">
-            <Sparkles className="w-4 h-4 animate-spin text-purple-400" />
-            <span>Analyzing scene graph, generating components & wiring physics...</span>
+          <div className="space-y-2 max-w-md">
+            <div className="flex items-center space-x-2 text-xs text-purple-400 p-2 bg-purple-500/10 rounded border border-purple-500/20">
+              <Sparkles className="w-4 h-4 animate-spin text-purple-400" />
+              <span>Analyzing scene graph, generating components & wiring physics...</span>
+            </div>
+            {streamingReasoning && (
+              <div className="p-2.5 rounded bg-zinc-950/90 border border-purple-500/30 text-[11px] font-mono text-purple-300 space-y-1">
+                <div className="flex items-center space-x-1.5 text-purple-400 font-semibold">
+                  <Brain className="w-3 h-3 animate-pulse" />
+                  <span>Streaming Reasoning Trace:</span>
+                </div>
+                <div className="max-h-28 overflow-y-auto text-gray-300 text-[10px] leading-relaxed">
+                  {streamingReasoning}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
