@@ -16,6 +16,7 @@ if(ANDROID)
   add_library(heretek_native SHARED
     scene_loader.cpp
     culling.cpp
+    terrain_mesh.cpp
     vulkan_swapchain.cpp
     vulkan_renderer.cpp
     jni_bridge.cpp
@@ -34,6 +35,7 @@ if(HERETEK_BUILD_HOST_TESTS)
   add_executable(native_scene_test
     scene_loader.cpp
     culling.cpp
+    terrain_mesh.cpp
     tests/native_scene_test.cpp
   )
   target_include_directories(native_scene_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})

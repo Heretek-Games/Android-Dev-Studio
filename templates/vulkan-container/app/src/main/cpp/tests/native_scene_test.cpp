@@ -11,6 +11,7 @@
 
 #include "../culling.h"
 #include "../scene_loader.h"
+#include "../terrain_mesh.h"
 
 using namespace heretek;
 
@@ -43,6 +44,7 @@ int main(int argc, char** argv) {
   CHECK(scene.meshes.size() == 3, "3 mesh records");
   CHECK(scene.lights.size() == 1, "1 light record");
   CHECK(scene.terrainLod.size() == 64, "64 quadtree terrain LOD leaves (depth 3)");
+  CHECK(scene.terrainMaxDepth == 3, "terrain_meta carries the export depth");
   CHECK(scene.drawCallEstimate() == 67, "draw estimate includes mesh + LOD leaves (3 + 64)");
 
   // LOD leaves tile the world bounds exactly once
@@ -55,6 +57,53 @@ int main(int argc, char** argv) {
 
   CHECK(scene.terrainLod[0].depth == 3, "leaves are at the configured depth");
   CHECK(scene.terrainLod[0].blend == 1.0f, "max-depth leaves are fully blended to finest");
+
+  // ---- Terrain mesh generation from LOD leaves ----
+  const float h1 = terrainHeight(12.5f, -30.25f, 1337, 12.0f);
+  const float h2 = terrainHeight(12.5f, -30.25f, 1337, 12.0f);
+  CHECK(h1 == h2, "terrainHeight is deterministic for a seed");
+  CHECK(h1 >= 0.0f && h1 <= 12.0f, "terrainHeight stays within [0, maxHeight]");
+  CHECK(terrainHeight(12.5f, -30.25f, 99, 12.0f) != h1, "different seeds decorrelate terrain");
+
+  CHECK(terrainResolutionForLod(3, 3) == 33, "finest LOD uses the base resolution");
+  CHECK(terrainResolutionForLod(0, 3) == 5, "coarsest LOD floors at 5 vertices");
+  CHECK(terrainResolutionForLod(3, 3) >= terrainResolutionForLod(2, 3) &&
+            terrainResolutionForLod(2, 3) >= terrainResolutionForLod(1, 3),
+        "resolution decreases with coarser LODs");
+
+  TerrainLodRecord sampleLeaf;
+  sampleLeaf.id = "test";
+  sampleLeaf.depth = 3;
+  sampleLeaf.minX = -16;
+  sampleLeaf.minZ = -16;
+  sampleLeaf.maxX = 16;
+  sampleLeaf.maxZ = 16;
+  sampleLeaf.lod = 3;
+  const TerrainMeshData sampleMesh = generateTerrainMesh(sampleLeaf, 9, 42, 10.0f);
+  CHECK(sampleMesh.vertexCount() == 81, "9x9 grid -> 81 vertices");
+  CHECK(sampleMesh.indexCount() == 8 * 8 * 6, "8x8 cells -> 384 indices");
+  CHECK(sampleMesh.vertices[0] == -16.0f && sampleMesh.vertices[2] == -16.0f,
+        "grid starts at the leaf origin");
+  CHECK(sampleMesh.vertices[80 * 6] == 16.0f, "grid ends at the leaf max X");
+  bool heightsInRange = true;
+  bool normalsUnit = true;
+  for (uint32_t i = 0; i < sampleMesh.vertexCount(); i++) {
+    const float y = sampleMesh.vertices[i * 6 + 1];
+    if (y < 0.0f || y > 10.0f) heightsInRange = false;
+    const float nx = sampleMesh.vertices[i * 6 + 3];
+    const float ny = sampleMesh.vertices[i * 6 + 4];
+    const float nz = sampleMesh.vertices[i * 6 + 5];
+    const float len = std::sqrt(nx * nx + ny * ny + nz * nz);
+    if (std::fabs(len - 1.0f) > 1e-3f) normalsUnit = false;
+  }
+  CHECK(heightsInRange, "all vertex heights stay within [0, maxHeight]");
+  CHECK(normalsUnit, "all normals are unit length");
+
+  const TerrainMeshPlan plan = planTerrainMeshes(scene.terrainLod, 3, 1337, 12.0f);
+  CHECK(plan.leaves == 64, "mesh plan covers every LOD leaf");
+  CHECK(plan.maxVerticesPerLeaf == 33 * 33, "finest leaf uses 33x33 vertices");
+  CHECK(plan.totalVertices == 64u * 33u * 33u, "total vertex budget is deterministic (69,696)");
+  CHECK(plan.totalIndices == 64u * 32u * 32u * 6u, "total index budget is deterministic (393,216)");
   CHECK(scene.meshes[0].physics == PhysicsType::Fixed, "ground is fixed physics");
   CHECK(scene.meshes[1].physics == PhysicsType::Dynamic, "player is dynamic physics");
   CHECK(std::fabs(scene.meshes[0].sx - 24.0f) < 1e-3f, "ground size preserved");

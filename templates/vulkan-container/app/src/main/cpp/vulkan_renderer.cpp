@@ -10,6 +10,7 @@
 #include <fstream>
 
 #include "culling.h"
+#include "terrain_mesh.h"
 
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, "HeretekTier2", __VA_ARGS__)
 
@@ -548,6 +549,8 @@ bool VulkanRenderer::createSurface(ANativeWindow* window, int width, int height)
 
 void VulkanRenderer::uploadScene(const NativeScene& scene) {
   drawCallEstimate_ = scene.drawCallEstimate();
+  const uint32_t maxDepth = scene.terrainMaxDepth > 0 ? scene.terrainMaxDepth : 4;
+  terrainPlan_ = planTerrainMeshes(scene.terrainLod, maxDepth, 1337, 12.0f);
   instanceCount_ = 0;
   if (instanceMapped_ == nullptr) return;
 

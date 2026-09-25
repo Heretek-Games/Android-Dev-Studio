@@ -190,6 +190,10 @@ def export_scene(
             int(quadtree.get("maxDepth", 4)),
             float(quadtree.get("splitFactor", 1.6)),
         )
+        lines.append(
+            f"terrain_meta {int(quadtree.get('maxDepth', 4))} "
+            f"{_f(quadtree.get('focusX', 0.0))} {_f(quadtree.get('focusZ', 0.0))}"
+        )
         for leaf in terrain_leaves:
             lines.append(
                 f"terrain_lod {leaf['id']} {leaf['depth']} "

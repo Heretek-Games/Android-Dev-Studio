@@ -18,6 +18,7 @@
 #include <android/native_window.h>
 #include <vulkan/vulkan.h>
 
+#include "terrain_mesh.h"
 #include "vulkan_swapchain.h"
 
 namespace heretek {
@@ -33,6 +34,9 @@ class VulkanRenderer {
 
   int drawCallEstimate() const { return drawCallEstimate_; }
   int instanceCount() const { return instanceCount_; }
+  /** Terrain mesh planning telemetry (LOD leaves + generated vertices). */
+  int terrainLeaves() const { return static_cast<int>(terrainPlan_.leaves); }
+  int terrainVertices() const { return static_cast<int>(terrainPlan_.totalVertices); }
   bool isReady() const { return device_ != VK_NULL_HANDLE; }
   const std::string& lastError() const { return lastError_; }
 
@@ -88,6 +92,7 @@ class VulkanRenderer {
   uint32_t instanceCount_ = 0;
   uint32_t indirectCommandCount_ = 0;
   int drawCallEstimate_ = 0;
+  TerrainMeshPlan terrainPlan_{};
   uint32_t currentFrame_ = 0;
   std::string shaderDir_;
   std::string lastError_;
@@ -117,6 +122,8 @@ class VulkanRenderer {
 
   int drawCallEstimate() const { return drawCallEstimate_; }
   int instanceCount() const { return instanceCount_; }
+  int terrainLeaves() const { return 0; }
+  int terrainVertices() const { return 0; }
   bool isReady() const { return false; }
   const std::string& lastError() const { return lastError_; }
 

@@ -73,8 +73,8 @@ cmake --build /tmp/tier2-build
 | Vulkan swapchain + render pass + framebuffers | ✅ compiles (NDK) |
 | Compute culling dispatch + instanced indirect draws | ✅ implemented, compiles; on-device runtime validation pending |
 | JNI bridge + SurfaceView frame loop + surface lifecycle | ✅ implemented, compiles |
-| Quadtree terrain LOD export + native parsing | ✅ focus-driven leaves exported (`--quadtree`), parsed into `TerrainLodRecord`, host-tested |
-| Native terrain mesh streaming | 🚧 next (LOD leaves are data-complete; mesh generation lands with the terrain pass) |
+| Quadtree terrain LOD export + native parsing | ✅ focus-driven leaves exported (`--quadtree`), parsed into `TerrainLodRecord` (with `terrain_meta` depth), host-tested |
+| Native terrain mesh generation | ✅ heightmap-displaced grid meshes per leaf (LOD-scaled resolution, normals, deterministic budgets), host-tested; per-leaf GPU buffer upload remains |
 
 Shaders are compiled with the NDK's bundled glslc:
 

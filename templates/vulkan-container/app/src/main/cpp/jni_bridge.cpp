@@ -63,6 +63,18 @@ Java_com_heretek_gamestudio_native_MainActivity_nativeInstanceCount(JNIEnv* /*en
   return gSceneReady ? gRenderer.instanceCount() : -1;
 }
 
+extern "C" JNIEXPORT jint JNICALL
+Java_com_heretek_gamestudio_native_MainActivity_nativeTerrainLeaves(JNIEnv* /*env*/,
+                                                                    jobject /*this*/) {
+  return gSceneReady ? gRenderer.terrainLeaves() : -1;
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_heretek_gamestudio_native_MainActivity_nativeTerrainVertices(JNIEnv* /*env*/,
+                                                                      jobject /*this*/) {
+  return gSceneReady ? gRenderer.terrainVertices() : -1;
+}
+
 extern "C" JNIEXPORT void JNICALL
 Java_com_heretek_gamestudio_native_MainActivity_nativeFrame(JNIEnv* /*env*/, jobject /*this*/) {
   gRenderer.renderFrame();

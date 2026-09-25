@@ -23,6 +23,8 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
     private external fun nativeSurfaceDestroyed()
     private external fun nativeDrawCalls(): Int
     private external fun nativeInstanceCount(): Int
+    private external fun nativeTerrainLeaves(): Int
+    private external fun nativeTerrainVertices(): Int
     private external fun nativeFrame()
     private external fun nativeShutdown()
 
@@ -47,6 +49,13 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         copyAsset("shaders/scene.frag.spv", File(shaderDir, "scene.frag.spv"))
 
         initialized = nativeInit(sceneFile.absolutePath, shaderDir.absolutePath)
+        if (initialized) {
+            android.util.Log.i(
+                "HeretekTier2",
+                "Scene ready — draws=${nativeDrawCalls()} instances=${nativeInstanceCount()} " +
+                    "terrainLeaves=${nativeTerrainLeaves()} terrainVertices=${nativeTerrainVertices()}"
+            )
+        }
 
         surfaceView = SurfaceView(this)
         surfaceView.holder.addCallback(this)

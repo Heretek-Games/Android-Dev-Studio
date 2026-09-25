@@ -84,6 +84,11 @@ bool parseSceneText(const std::string& text, NativeScene& out, std::string& erro
         return false;
       }
       out.terrainLod.push_back(std::move(leaf));
+    } else if (kind == "terrain_meta") {
+      if (!(tokens >> out.terrainMaxDepth >> out.terrainFocusX >> out.terrainFocusZ)) {
+        error = "line " + std::to_string(lineNumber) + ": malformed terrain_meta record";
+        return false;
+      }
     } else {
       error = "line " + std::to_string(lineNumber) + ": unknown record type '" + kind + "'";
       return false;

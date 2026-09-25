@@ -52,6 +52,9 @@ struct NativeScene {
   std::vector<InstanceRecord> instances;
   std::vector<LightRecord> lights;
   std::vector<TerrainLodRecord> terrainLod;
+  /** Quadtree depth used for the terrain_lod export (0 when absent). */
+  uint32_t terrainMaxDepth = 0;
+  float terrainFocusX = 0, terrainFocusZ = 0;
 
   /** One draw per mesh + one draw per unique instanced batch + one per LOD leaf. */
   int drawCallEstimate() const;
