@@ -99,6 +99,13 @@ function buildScene(spec, engine) {
       if (objSpec.controller) {
         go.addComponent(new engine.MobileController(objSpec.controllerOptions || {}));
       }
+      if (objSpec.vehicle) {
+        const vehicle = new engine.VehicleController(objSpec.vehicle);
+        if (objSpec.vehicle.throttle !== undefined) vehicle.throttle = objSpec.vehicle.throttle;
+        if (objSpec.vehicle.steering !== undefined) vehicle.steering = objSpec.vehicle.steering;
+        if (objSpec.vehicle.brake !== undefined) vehicle.brake = objSpec.vehicle.brake;
+        go.addComponent(vehicle);
+      }
       if (objSpec.events && objSpec.events.length) {
         go.addComponent(new engine.EventSheet(objSpec.events.map((ev, i) => ({
           id: ev.id || `qa_ev_${i}`,
@@ -131,7 +138,7 @@ function transformField(go, field) {
 }
 
 function evaluateRules(spec, ctxData) {
-  const { scene, samples, firstSamples, metrics } = ctxData;
+  const { scene, samples, firstSamples, metrics, dt } = ctxData;
   const results = [];
 
   for (const rule of spec.rules || []) {
@@ -180,6 +187,39 @@ function evaluateRules(spec, ctxData) {
         const delta = Math.abs((b ?? 0) - (a ?? 0));
         pass = delta >= (rule.minDelta ?? 1e-3);
         detail = `${rule.target}.${rule.field} delta=${delta.toFixed(5)} (minDelta=${rule.minDelta ?? 1e-3})`;
+        break;
+      }
+      case 'distance_traveled': {
+        const go = scene.findByName(rule.target);
+        if (!go) { pass = false; detail = `missing "${rule.target}"`; break; }
+        const first = firstSamples[rule.target];
+        const dx = go.transform.position.x - (first?.positionX ?? 0);
+        const dz = go.transform.position.z - (first?.positionZ ?? 0);
+        const distance = Math.hypot(dx, dz);
+        pass = distance >= (rule.min ?? 1);
+        detail = `${rule.target} traveled ${distance.toFixed(2)}m (min=${rule.min ?? 1})`;
+        break;
+      }
+      case 'speed_min': {
+        // Average speed along the sampled path: Σ segment distances / elapsed sampled time
+        let pathLength = 0;
+        let prev = null;
+        let firstFrame = null;
+        let lastFrame = null;
+        for (const s of samples) {
+          const f = s.fields[rule.target];
+          if (!f) continue;
+          if (firstFrame === null) firstFrame = s.frame;
+          lastFrame = s.frame;
+          if (prev) {
+            pathLength += Math.hypot(f.positionX - prev.positionX, f.positionZ - prev.positionZ);
+          }
+          prev = f;
+        }
+        const elapsed = ((lastFrame ?? 0) - (firstFrame ?? 0)) * (rule.dt ?? dt ?? 1 / 60);
+        const avgSpeed = elapsed > 0 ? pathLength / elapsed : 0;
+        pass = avgSpeed >= (rule.min ?? 1);
+        detail = `${rule.target} avg speed ${avgSpeed.toFixed(2)} m/s (min=${rule.min ?? 1})`;
         break;
       }
       case 'transform_bounds': {
@@ -303,7 +343,7 @@ async function main() {
     eventCount
   };
 
-  const ruleResults = evaluateRules(spec, { scene, samples, firstSamples, metrics });
+  const ruleResults = evaluateRules(spec, { scene, samples, firstSamples, metrics, dt: args.dt });
   const passed = ruleResults.filter(r => r.pass).length;
   const total = ruleResults.length;
   const allPass = total > 0 && passed === total;

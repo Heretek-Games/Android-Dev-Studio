@@ -23,6 +23,7 @@ Android-Dev-Studio/
 │   ├── src/spatial/                  # SpatialGrid 3D hash (proximity/radius/AABB queries)
 │   ├── src/navigation/               # GridPathfinder + NavGrid (hierarchical A*)
 │   ├── src/simulation/               # EconomyTick (fixed-step, frame-rate independent)
+│   ├── src/terrain/                  # TerrainChunk, WorldStreamer, HierarchicalStreamingCells (urban clustering + budget-aware draw distance)
 │   ├── src/rendering/                # InstancedMeshBatcher, FoliageInstancer, LODManager, DecalDispatcher
 │   ├── src/dialogue/                 # DialogueManager (visual nodes, gated choices, script DSL)
 │   └── src/combat/, src/weapons/     # Elemental matrix + ballistic WeaponController (hit events)
@@ -166,9 +167,10 @@ real engine runtime. The Studio UI writes through the same gate via `POST /api/s
   success.
 
 ### Headless QA Pipeline (`harness/agents/`)
-- `qa_scenario_runner.mjs`: Node runner that builds a scenario spec into a real `Scene`, initializes Rapier3D WASM physics, steps the `EngineContext` for N fixed-dt frames, and emits a JSON report (metrics + per-rule pass/fail).
+- `qa_scenario_runner.mjs`: Node runner that builds a scenario spec into a real `Scene`, initializes Rapier3D WASM physics, steps the `EngineContext` for N fixed-dt frames, and emits a JSON report (metrics + per-rule pass/fail). GameObjects support `vehicle` configs (Rapier raycast vehicle + throttle/steering/brake inputs) and `events`/`controller` components.
+- Rule vocabulary: `entity_exists`, `entity_component`, `event_attached`, `object_count`, `transform_changes`, `transform_bounds`, `distance_traveled`, `speed_min`, `no_nan_transforms`, `draw_call_budget`, `fps_min`.
 - `artemis_qa_runner.py`: Orchestrator — invokes the Node runner, compares metrics against the persisted baseline (FPS drop >20%, frame time rise >20%, draw calls rise >25%, heap rise >30% ⇒ `REGRESSED`), records benchmarks into `project_memory.sqlite`, and writes `harness/artemis_report.json`.
-- Scenario specs live in `harness/config/scenarios/`; the live MCP-controlled scene is `harness/scenes/active_scene.json`.
+- Scenario specs live in `harness/config/scenarios/` (e.g. `mini_arena.json`, `driving_course.json`); the live MCP-controlled scene is `harness/scenes/active_scene.json`.
 
 ---
 
