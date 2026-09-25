@@ -143,4 +143,27 @@ export class AnimeCelShader extends Component {
       this.outlineMesh = null;
     }
   }
+
+  public override toJSON(): Record<string, any> {
+    return {
+      type: 'AnimeCelShader',
+      enabled: this.enabled,
+      baseColor: '#' + this.baseColor.getHexString(),
+      shadowColor: '#' + this.shadowColor.getHexString(),
+      rimColor: '#' + this.rimColor.getHexString(),
+      outlineColor: '#' + this.outlineColor.getHexString(),
+      outlineThickness: this.outlineThickness,
+      rimPower: this.rimPower
+    };
+  }
+
+  public override fromJSON(data: Record<string, any>): void {
+    if (data.enabled !== undefined) this.enabled = data.enabled;
+    if (typeof data.baseColor === 'string') this.baseColor.set(data.baseColor);
+    if (typeof data.shadowColor === 'string') this.shadowColor.set(data.shadowColor);
+    if (typeof data.rimColor === 'string') this.rimColor.set(data.rimColor);
+    if (typeof data.outlineColor === 'string') this.outlineColor.set(data.outlineColor);
+    if (data.outlineThickness !== undefined) this.outlineThickness = data.outlineThickness;
+    if (data.rimPower !== undefined) this.rimPower = data.rimPower;
+  }
 }

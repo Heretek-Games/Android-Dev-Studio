@@ -1,6 +1,8 @@
 // Core ECS & Scene
 export * from './core/Transform.js';
 export * from './core/Component.js';
+export * from './core/ComponentRegistry.js';
+export * from './core/BuiltinComponents.js';
 export * from './core/GameObject.js';
 export * from './core/Scene.js';
 export * from './core/EngineContext.js';

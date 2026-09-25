@@ -110,4 +110,14 @@ export class HealthComponent extends Component {
       destroyOnDeath: this.destroyOnDeath
     };
   }
+
+  public override fromJSON(data: Record<string, any>): void {
+    if (data.enabled !== undefined) this.enabled = data.enabled;
+    if (data.maxHealth !== undefined) this.maxHealth = data.maxHealth;
+    if (data.health !== undefined) this.health = data.health;
+    if (data.invulnerabilitySeconds !== undefined) {
+      this.invulnerabilitySeconds = data.invulnerabilitySeconds;
+    }
+    if (data.destroyOnDeath !== undefined) this.destroyOnDeath = data.destroyOnDeath;
+  }
 }

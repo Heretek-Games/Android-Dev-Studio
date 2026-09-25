@@ -1,5 +1,6 @@
 import { Transform } from './Transform.js';
 import { Component } from './Component.js';
+import { createComponent } from './ComponentRegistry.js';
 import type { Scene } from './Scene.js';
 
 export class GameObject {
@@ -87,5 +88,31 @@ export class GameObject {
       transform: this.transform.toJSON(),
       components: this.components.map(c => c.toJSON())
     };
+  }
+
+  public fromJSON(data: Record<string, any>): void {
+    if (typeof data.name === 'string') this.name = data.name;
+    if (typeof data.tag === 'string') this.tag = data.tag;
+    if (typeof data.layer === 'string') this.layer = data.layer;
+    if (typeof data.active === 'boolean') this.active = data.active;
+    if (data.transform && typeof data.transform === 'object') {
+      this.transform.fromJSON(data.transform as { position?: number[]; rotation?: number[]; scale?: number[] });
+    }
+    for (const c of [...this.components]) {
+      this.removeComponent(c);
+    }
+    const components = Array.isArray(data.components) ? data.components : [];
+    for (const compData of components) {
+      const type = (compData as Record<string, any>)?.type;
+      if (typeof type !== 'string') {
+        throw new Error(`GameObject '${this.name}': component entry missing type`);
+      }
+      const comp = createComponent(type);
+      if (!comp) {
+        throw new Error(`GameObject '${this.name}': unknown component type '${type}'`);
+      }
+      this.addComponent(comp);
+      comp.fromJSON(compData as Record<string, any>);
+    }
   }
 }

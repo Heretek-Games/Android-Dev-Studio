@@ -112,6 +112,42 @@ export class ElementalReactionComponent extends Component {
     return reactionResult;
   }
 
+  public override toJSON(): Record<string, any> {
+    return {
+      type: 'ElementalReactionComponent',
+      enabled: this.enabled,
+      health: this.health,
+      maxHealth: this.maxHealth,
+      aura: this.currentAura
+        ? {
+            element: this.currentAura.element,
+            gaugeUnits: this.currentAura.gaugeUnits,
+            duration: this.currentAura.duration,
+            maxDuration: this.currentAura.maxDuration
+          }
+        : null
+    };
+  }
+
+  public override fromJSON(data: Record<string, any>): void {
+    if (data.enabled !== undefined) this.enabled = data.enabled;
+    if (data.maxHealth !== undefined) this.maxHealth = data.maxHealth;
+    if (data.health !== undefined) this.health = data.health;
+    // Restore the aura directly: re-seeding through receiveElementalAttack
+    // would re-trigger reactions and damage, corrupting the snapshot.
+    const aura = data.aura;
+    if (aura && typeof aura.element === 'string') {
+      this.currentAura = {
+        element: aura.element,
+        gaugeUnits: aura.gaugeUnits ?? 1,
+        duration: aura.duration ?? 9.5,
+        maxDuration: aura.maxDuration ?? 9.5
+      };
+    } else {
+      this.currentAura = null;
+    }
+  }
+
   private freeze(duration: number): void {
     this.isFrozen = true;
     this.freezeTimer = duration;

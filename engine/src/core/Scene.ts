@@ -74,6 +74,29 @@ export class Scene {
     };
   }
 
+  /**
+   * Restores the scene from a toJSON snapshot (undo/redo, play-mode restore).
+   * Clears current objects first; unknown component types throw rather than
+   * silently dropping behavior.
+   */
+  public fromJSON(data: Record<string, any>): void {
+    this.clear();
+    if (typeof data.name === 'string') this.name = data.name;
+    const objects = Array.isArray(data.gameObjects) ? data.gameObjects : [];
+    for (const goData of objects) {
+      const go = new GameObject(
+        typeof (goData as Record<string, any>).name === 'string'
+          ? (goData as Record<string, any>).name as string
+          : 'Restored Object',
+        typeof (goData as Record<string, any>).id === 'string'
+          ? (goData as Record<string, any>).id as string
+          : undefined
+      );
+      go.fromJSON(goData as Record<string, any>);
+      this.addGameObject(go);
+    }
+  }
+
   public clear(): void {
     for (const go of [...this.gameObjects]) {
       go.destroy();

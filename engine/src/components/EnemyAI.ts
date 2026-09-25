@@ -91,4 +91,20 @@ export class EnemyAI extends Component {
       attackIntervalSeconds: this.attackIntervalSeconds
     };
   }
+
+  public override fromJSON(data: Record<string, any>): void {
+    if (data.enabled !== undefined) this.enabled = data.enabled;
+    if (data.targetName !== undefined) this.targetName = data.targetName;
+    if (data.moveSpeed !== undefined) this.moveSpeed = data.moveSpeed;
+    if (data.stopDistance !== undefined) this.stopDistance = data.stopDistance;
+    if (data.aggroRange !== undefined) this.aggroRange = data.aggroRange;
+    if (data.attackRange !== undefined) this.attackRange = data.attackRange;
+    if (data.attackDamage !== undefined) this.attackDamage = data.attackDamage;
+    if (data.attackIntervalSeconds !== undefined) {
+      this.attackIntervalSeconds = data.attackIntervalSeconds;
+    }
+    // Behavior-tree nodes capture tunables at construction; rebuild so the
+    // restored values actually drive.
+    this.tree = new BehaviorTreeComponent(this.buildTree());
+  }
 }

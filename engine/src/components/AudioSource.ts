@@ -99,4 +99,15 @@ export class AudioSource extends Component {
       maxDistance: this.maxDistance
     };
   }
+
+  public override fromJSON(data: Record<string, any>): void {
+    if (data.enabled !== undefined) this.enabled = data.enabled;
+    if (data.clipId !== undefined) this.clipId = data.clipId;
+    if (data.volume !== undefined) this.volume = data.volume;
+    if (data.loop !== undefined) this.loop = data.loop;
+    if (data.playOnStart !== undefined) this.playOnStart = data.playOnStart;
+    if (data.spatial !== undefined) this.spatial = data.spatial;
+    if (data.refDistance !== undefined) this.refDistance = data.refDistance;
+    if (data.maxDistance !== undefined) this.maxDistance = data.maxDistance;
+  }
 }
