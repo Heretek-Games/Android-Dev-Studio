@@ -1,408 +1,216 @@
 {
   "id": "loop_work_scene",
   "name": "Loop Work Scene",
-  "goal": "Two-Biome Valley",
+  "goal": "Open County",
   "gameObjects": [
     {
-      "name": "Valley Ground",
-      "shape": "plane",
+      "name": "County Ground",
+      "shape": "box",
       "size": [
-        80.0,
+        140.0,
         1.0,
         80.0
       ],
       "position": [
         0.0,
-        0.0,
+        -0.5,
         0.0
       ],
-      "color": "#8b8157",
+      "color": "#6b8e4e",
       "physics": "fixed",
       "streamer": {
         "chunkSize": 16.0,
-        "renderDistance": 2.0,
+        "renderDistance": 1.0,
         "resolution": 8.0
       }
-    },
-    {
-      "name": "Sand Basin",
-      "shape": "box",
-      "size": [
-        30.0,
-        0.4,
-        30.0
-      ],
-      "position": [
-        -15.0,
-        0.2,
-        0.0
-      ],
-      "color": "#d8b878",
-      "physics": "fixed",
-      "biome": "sand"
-    },
-    {
-      "name": "Grass Basin",
-      "shape": "box",
-      "size": [
-        30.0,
-        0.4,
-        30.0
-      ],
-      "position": [
-        15.0,
-        0.2,
-        0.0
-      ],
-      "color": "#6f9a4a",
-      "physics": "fixed",
-      "biome": "grass"
-    },
-    {
-      "name": "Sand Dune One",
-      "shape": "sphere",
-      "size": [
-        7.0,
-        3.5,
-        7.0
-      ],
-      "position": [
-        -22.0,
-        1.4,
-        -9.0
-      ],
-      "color": "#e0c287",
-      "physics": "fixed",
-      "biome": "sand"
-    },
-    {
-      "name": "Sand Dune Two",
-      "shape": "sphere",
-      "size": [
-        6.0,
-        3.0,
-        6.0
-      ],
-      "position": [
-        -8.0,
-        1.2,
-        10.0
-      ],
-      "color": "#dcbc7c",
-      "physics": "fixed",
-      "biome": "sand"
-    },
-    {
-      "name": "Sand Rock",
-      "shape": "box",
-      "size": [
-        3.0,
-        2.5,
-        3.0
-      ],
-      "position": [
-        -26.0,
-        1.4,
-        7.0
-      ],
-      "color": "#a98c5f",
-      "physics": "fixed",
-      "biome": "sand"
-    },
-    {
-      "name": "Grass Tree One",
-      "shape": "cylinder",
-      "size": [
-        1.2,
-        6.0,
-        1.2
-      ],
-      "position": [
-        21.0,
-        3.2,
-        -9.0
-      ],
-      "color": "#4f7a35",
-      "physics": "fixed",
-      "biome": "grass"
-    },
-    {
-      "name": "Grass Tree Two",
-      "shape": "cylinder",
-      "size": [
-        1.4,
-        7.0,
-        1.4
-      ],
-      "position": [
-        9.0,
-        3.7,
-        11.0
-      ],
-      "color": "#557f3a",
-      "physics": "fixed",
-      "biome": "grass"
-    },
-    {
-      "name": "Grass Bush One",
-      "shape": "sphere",
-      "size": [
-        3.0,
-        2.4,
-        3.0
-      ],
-      "position": [
-        26.0,
-        1.4,
-        8.0
-      ],
-      "color": "#67934a",
-      "physics": "fixed",
-      "biome": "grass"
-    },
-    {
-      "name": "Grass Bush Two",
-      "shape": "sphere",
-      "size": [
-        2.6,
-        2.0,
-        2.6
-      ],
-      "position": [
-        6.0,
-        1.2,
-        -11.0
-      ],
-      "color": "#5f8c44",
-      "physics": "fixed",
-      "biome": "grass"
     },
     {
       "name": "Player Car",
       "shape": "box",
       "size": [
         1.8,
-        0.8,
-        3.6
+        1.0,
+        4.0
       ],
       "position": [
         0.0,
-        1.4,
-        0.0
+        1.2,
+        6.0
       ],
-      "color": "#c8392f",
+      "color": "#c0392b",
       "physics": "dynamic",
-      "mass": 900.0,
+      "mass": 1200.0,
       "vehicle": {
         "wheels": [
           {
             "offset": [
-              -0.9,
+              -0.8,
               0.0,
-              1.3
+              1.2
             ]
           },
           {
             "offset": [
-              0.9,
+              0.8,
               0.0,
-              1.3
+              1.2
             ]
           },
           {
             "offset": [
-              -0.9,
+              -0.8,
               0.0,
-              -1.3
+              -1.2
             ]
           },
           {
             "offset": [
-              0.9,
+              0.8,
               0.0,
-              -1.3
+              -1.2
             ]
           }
         ],
         "throttle": 1.0
-      },
-      "events": [
-        {
-          "name": "Car Hop",
-          "conditions": [
-            {
-              "type": "OnTouchTap",
-              "params": {
-                "name": "Player Car"
-              }
-            }
-          ],
-          "actions": [
-            {
-              "type": "ApplyImpulse",
-              "params": {
-                "x": 0,
-                "y": 8,
-                "z": 0
-              }
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "name": "Terrain Streamer",
-      "shape": "box",
-      "size": [
-        1.0,
-        1.0,
-        1.0
-      ],
-      "position": [
-        0.0,
-        0.6,
-        0.0
-      ],
-      "color": "#444444",
-      "physics": "none",
-      "streamer": {
-        "chunkSize": 16.0,
-        "renderDistance": 2.0,
-        "resolution": 8.0
       }
     },
     {
-      "name": "Goal Marker",
-      "shape": "torus",
+      "name": "Town Hall",
+      "shape": "box",
+      "size": [
+        8.0,
+        10.0,
+        8.0
+      ],
+      "position": [
+        -35.0,
+        5.0,
+        0.0
+      ],
+      "color": "#8e6b4e",
+      "physics": "fixed",
+      "biome": "town"
+    },
+    {
+      "name": "Town Houses",
+      "shape": "box",
+      "size": [
+        12.0,
+        6.0,
+        6.0
+      ],
+      "position": [
+        -25.0,
+        3.0,
+        -8.0
+      ],
+      "color": "#a08060",
+      "physics": "fixed",
+      "biome": "town"
+    },
+    {
+      "name": "Town Market",
+      "shape": "box",
+      "size": [
+        6.0,
+        4.0,
+        6.0
+      ],
+      "position": [
+        -18.0,
+        2.0,
+        8.0
+      ],
+      "color": "#b09070",
+      "physics": "fixed",
+      "biome": "town"
+    },
+    {
+      "name": "Farm Barn",
+      "shape": "box",
+      "size": [
+        10.0,
+        6.0,
+        8.0
+      ],
+      "position": [
+        0.0,
+        3.0,
+        -5.0
+      ],
+      "color": "#a33b20",
+      "physics": "fixed",
+      "biome": "farm"
+    },
+    {
+      "name": "Farm Silo",
+      "shape": "cylinder",
       "size": [
         4.0,
-        4.0,
+        10.0,
         4.0
       ],
       "position": [
-        26.0,
-        4.0,
-        -12.0
+        12.0,
+        5.0,
+        5.0
       ],
-      "color": "#ffd447",
+      "color": "#c9c9c9",
       "physics": "fixed",
-      "biome": "grass",
-      "events": [
-        {
-          "name": "Spin Goal Ring",
-          "conditions": [
-            {
-              "type": "EveryFrame",
-              "params": {
-                "interval": 0.05
-              }
-            }
-          ],
-          "actions": [
-            {
-              "type": "RotateY",
-              "params": {
-                "degrees": 10
-              }
-            }
-          ]
-        }
-      ]
+      "biome": "farm"
     },
     {
-      "name": "Valley Wall North",
-      "shape": "box",
+      "name": "Wilds Rocks",
+      "shape": "sphere",
       "size": [
-        80.0,
-        4.0,
-        1.0
+        6.0,
+        6.0,
+        6.0
       ],
       "position": [
-        0.0,
-        2.0,
-        -40.0
+        30.0,
+        3.0,
+        -6.0
       ],
-      "color": "#7d7459",
-      "physics": "fixed"
+      "color": "#7a7a6a",
+      "physics": "fixed",
+      "biome": "wilds"
     },
     {
-      "name": "Valley Wall South",
+      "name": "Wilds Grove",
       "shape": "box",
       "size": [
-        80.0,
-        4.0,
-        1.0
+        8.0,
+        8.0,
+        8.0
       ],
       "position": [
-        0.0,
-        2.0,
-        40.0
-      ],
-      "color": "#7d7459",
-      "physics": "fixed"
-    },
-    {
-      "name": "Valley Wall West",
-      "shape": "box",
-      "size": [
-        1.0,
+        48.0,
         4.0,
-        80.0
+        6.0
       ],
-      "position": [
-        -40.0,
-        2.0,
-        0.0
-      ],
-      "color": "#7d7459",
-      "physics": "fixed"
-    },
-    {
-      "name": "Valley Wall East",
-      "shape": "box",
-      "size": [
-        1.0,
-        4.0,
-        80.0
-      ],
-      "position": [
-        40.0,
-        2.0,
-        0.0
-      ],
-      "color": "#7d7459",
-      "physics": "fixed"
+      "color": "#3f6b3f",
+      "physics": "fixed",
+      "biome": "wilds"
     },
     {
       "kind": "light",
-      "name": "Valley Sun",
+      "name": "Sun",
       "lightType": "directional",
-      "color": "#fff3d6",
+      "color": "#fff4e0",
       "intensity": 2.0,
       "position": [
-        20.0,
-        40.0,
-        20.0
-      ]
-    },
-    {
-      "kind": "light",
-      "name": "Valley Fill",
-      "lightType": "ambient",
-      "color": "#bcd4ff",
-      "intensity": 0.6,
-      "position": [
-        0.0,
-        10.0,
-        0.0
+        30.0,
+        60.0,
+        30.0
       ]
     }
   ],
   "rules": [
     {
       "type": "entity_exists",
-      "target": "Valley Ground",
-      "id": "valley-ground"
+      "target": "County Ground",
+      "id": "county-ground"
     },
     {
       "type": "entity_component",
@@ -412,32 +220,44 @@
     },
     {
       "type": "biome_coverage_min",
-      "biome": "sand",
-      "min": 2,
+      "biome": "town",
+      "min": 3,
       "region": {
-        "minX": -30,
-        "maxX": 0,
-        "minZ": -15,
-        "maxZ": 15
+        "minX": -60,
+        "maxX": -10,
+        "minZ": -20,
+        "maxZ": 20
       },
-      "id": "sand-held"
+      "id": "town-held"
     },
     {
       "type": "biome_coverage_min",
-      "biome": "grass",
+      "biome": "farm",
       "min": 2,
       "region": {
-        "minX": 0,
-        "maxX": 30,
-        "minZ": -15,
-        "maxZ": 15
+        "minX": -10,
+        "maxX": 20,
+        "minZ": -20,
+        "maxZ": 20
       },
-      "id": "grass-held"
+      "id": "farms-held"
+    },
+    {
+      "type": "biome_coverage_min",
+      "biome": "wilds",
+      "min": 2,
+      "region": {
+        "minX": 20,
+        "maxX": 60,
+        "minZ": -20,
+        "maxZ": 20
+      },
+      "id": "wilds-held"
     },
     {
       "type": "traversal_coverage_min",
       "min": 0.8,
-      "id": "valley-traversable"
+      "id": "county-traversable"
     },
     {
       "type": "streaming_coherence_min",

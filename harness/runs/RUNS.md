@@ -518,6 +518,24 @@ Evidence: `harness/runs/loop_runs/20260925-133811-*.json` + `harness/scenes/loop
 
 ---
 
+## Run Block 12 — 2026-09-25, Phase 2 Rung 1: Streaming Valley ✅
+
+**Valley brief** (`harness/briefs/examples/valley_streaming.json`: 8 criteria, 6 automatable
+incl. `valley-traversable` + `streaming-seamless`) through the full production loop — **GREEN**.
+
+### Verification
+
+| Check | Evidence |
+|-------|----------|
+| Milestone run | **GREEN** — 6/6 automatable (`valley-ground`, `player-car`, `valley-traversable`, `streaming-seamless`, `draw-budget`, `sim-fps`); 2 critic-owned (`valley-read`, `brief-faithful`) listed, not passed |
+| Loop trace | generate (13 actions incl. streamer config) → gate clean → QA **SUCCEEDED 6/6** in 1 iteration, 2,293 tokens |
+| Gates | traversal sweep coverage=1.0 (0 holes); streaming transect coverage=1, 0 gaps, 0 thrash reloads |
+| DAG + memory | 16 tasks in the ledger, all completed; brief persisted and retrievable |
+
+Evidence: `harness/runs/loop_runs/20260925-140409-*.json`.
+
+---
+
 ## Run Block 13 — 2026-09-25, Phase 2 Rung 2: Two-Biome Valley ✅
 
 **Valley-biomes brief** (`harness/briefs/examples/valley_biomes.json`: 10 criteria, 8 automatable
@@ -537,18 +555,21 @@ Evidence: `harness/runs/loop_runs/20260925-141538-*.json`.
 
 ---
 
-## Run Block 12 — 2026-09-25, Phase 2 Rung 1: Streaming Valley ✅
+## Run Block 14 — 2026-09-25, Phase 2 Rung 3: Open County (Three Districts) ✅
 
-**Valley brief** (`harness/briefs/examples/valley_streaming.json`: 8 criteria, 6 automatable
-incl. `valley-traversable` + `streaming-seamless`) through the full production loop — **GREEN**.
+**County brief** (`harness/briefs/examples/county_districts.json`: 11 criteria, 9 automatable
+incl. three regional `biome_coverage_min` rules: town/farm/wilds) through the full
+production loop — **GREEN**. This run exercised the whole failure-recovery path, not just
+the happy path.
 
 ### Verification
 
 | Check | Evidence |
 |-------|----------|
-| Milestone run | **GREEN** — 6/6 automatable (`valley-ground`, `player-car`, `valley-traversable`, `streaming-seamless`, `draw-budget`, `sim-fps`); 2 critic-owned (`valley-read`, `brief-faithful`) listed, not passed |
-| Loop trace | generate (13 actions incl. streamer config) → gate clean → QA **SUCCEEDED 6/6** in 1 iteration, 2,293 tokens |
+| Milestone run | **GREEN** — 9/9 automatable (`county-ground`, `player-car`, `town-held`, `farms-held`, `wilds-held`, `county-traversable`, `streaming-seamless`, `draw-budget`, `sim-fps`); 2 critic-owned (`county-read`, `brief-faithful`) listed, not passed |
+| Loop trace | generate returned malformed JSON (0 actions, parse `failed`) → QA FAILED 2/9 → repair (10 actions) → gate rejected `Player Car`/`Farm Barn` spawn penetration → repair (1 action: move car +Z) → QA **SUCCEEDED 9/9** in 3 iterations, 13,598 tokens |
+| Composition | 3 live `town` + 2 live `farm` + 2 live `wilds` objects, each inside its district region |
 | Gates | traversal sweep coverage=1.0 (0 holes); streaming transect coverage=1, 0 gaps, 0 thrash reloads |
-| DAG + memory | 16 tasks in the ledger, all completed; brief persisted and retrievable |
+| DAG + memory | brief persisted and retrievable; tasks reflect the outcome |
 
-Evidence: `harness/runs/loop_runs/20260925-140409-*.json`.
+Evidence: `harness/runs/loop_runs/20260925-142226-*.json`.
