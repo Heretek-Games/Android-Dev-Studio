@@ -341,17 +341,18 @@ export const AgentSwarmDock: React.FC = () => {
           </div>
 
           {/* Subagent Roster Bar */}
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-5 gap-2">
             {[
               { role: 'Systems Architect', spec: 'GDD & DAG Planning', icon: Compass, color: 'text-blue-400' },
               { role: 'Gameplay Coder', spec: 'Zero-GC Components', icon: Code2, color: 'text-emerald-400' },
-              { role: 'Code Reviewer', spec: 'Static Quality Gate', icon: ShieldCheck, color: 'text-purple-400' },
-              { role: 'Artemis QA', spec: '60 FPS Device Profiler', icon: Bot, color: 'text-amber-400' }
+              { role: 'Invariant Auditor', spec: 'Zero-Mistake Gate', icon: ShieldCheck, color: 'text-rose-400' },
+              { role: 'Artemis QA', spec: 'Headless Sim & Baselines', icon: Bot, color: 'text-amber-400' },
+              { role: 'Code Reviewer', spec: 'Final Sign-off', icon: CheckCircle2, color: 'text-purple-400' }
             ].map((ag, i) => (
-              <div key={i} className="p-2 rounded-lg bg-zinc-900/80 border border-studio-border flex flex-col space-y-1">
+              <div key={i} className="p-2 rounded-lg bg-zinc-900/80 border border-zinc-800 flex flex-col space-y-1">
                 <div className="flex items-center space-x-1.5">
                   <ag.icon className={`w-3.5 h-3.5 ${ag.color}`} />
-                  <span className="font-semibold text-gray-200 truncate">{ag.role}</span>
+                  <span className="font-semibold text-gray-200 truncate text-[11px]">{ag.role}</span>
                 </div>
                 <span className="text-[10px] text-gray-400 truncate">{ag.spec}</span>
                 <span className="text-[9px] text-emerald-400 font-mono flex items-center space-x-1">

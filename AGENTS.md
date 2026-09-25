@@ -84,8 +84,8 @@ Live LLM settings are loaded from `.env.prod`:
 The Vite dev server proxies `/api/llm` to `https://llm.heretek.one/v1`, keeping credentials securely managed.
 
 ### Studio MCP Tools (`harness/mcp_server.py`)
-External coding agents can interact with the live studio session via 9 JSON-RPC tools.
-Scene-mutating tools persist to `harness/scenes/active_scene.json` (scenario format)
+External coding agents can interact with the live studio session via 23 JSON-RPC tools with **zero-mistake transactional invariant verification**.
+Scene-mutating tools run the 7-point Scene Invariant Gate (`harness/validation/scene_invariants.py`), persist to `harness/scenes/active_scene.json` (scenario format),
 and synchronize a snapshot into `project_memory.py` on every change; the QA tool
 boots that exact file headless on the real engine runtime.
 1. `studio_get_scene_hierarchy`: Inspect active GameObjects, components, and transforms.
@@ -97,6 +97,31 @@ boots that exact file headless on the real engine runtime.
 7. `studio_self_heal_error`: Run autonomous diagnosis and apply corrective restorative patches to corrupted scenes.
 8. `studio_build_and_deploy_apk`: Package and launch the hardware-accelerated WebView container on Android.
 9. `studio_run_artemis_qa`: Boot the active scene headless (real Rapier3D + EventSheet runtime), evaluate game-rule assertions, record real telemetry (sim FPS, frame time, GPU draw-call estimate, memory heap), and detect regressions against the `project_memory` baseline.
+10. `studio_configure_lod`: Configure camera-distance LOD thresholds and enforce mobile draw budget.
+11. `studio_configure_spatial_grid`: Query or configure uniform 3D spatial hash partitions (Veloren / SS14 pattern).
+12. `studio_configure_pathfinding`: Build navigation grids, obstacle rects, and compute hierarchical A* paths.
+13. `studio_configure_economy`: Add deterministic fixed-step economic and logistics resource simulation rules.
+14. `studio_configure_alife`: Configure S.T.A.L.K.E.R. OpenXRay inspired dual-tier A-Life populations.
+15. `studio_configure_dialogue`: Register and manage branching narrative dialogue trees and scripts.
+16. `studio_configure_cel_shader`: Apply Genshin-style anime cel-shading parameters and inverted-hull toon outlines.
+17. `studio_trigger_elemental_reaction`: Evaluate Genshin elemental reactions (Vaporize, Melt, Freeze, Overload, Swirl).
+18. `studio_scatter_foliage`: Scatter wind-animated foliage in a single GPU draw call.
+19. `studio_import_gdevelop_asset`: Import assets directly from GDevelop asset database.
+20. `studio_create_terrain_chunk`: Generate fractal heightmap terrain chunks with elevation sampling.
+21. `studio_query_memory`: Query ADRs, task DAGs, and QA benchmarks from cross-session memory.
+22. `studio_record_adr`: Record an Architectural Decision Record into persistent memory.
+23. `studio_dispatch_subagent_task`: Decompose game design prompt and dispatch multi-agent swarm pipeline.
+
+### Deterministic Zero-Mistake Guardrails (`harness/validation/`)
+- `scene_invariants.py`: Enforces 7 hard invariants before any mutation is saved:
+  1. Finite Transforms (no NaN, null, or Infinity)
+  2. Mobile Draw Budget (unbatched meshes <= 100)
+  3. Collision Non-Penetration at Spawn (dynamic bodies cannot intersect fixed geometry)
+  4. Entity Identity Uniqueness
+  5. Component Contract Integrity
+  6. Event Target Integrity
+  7. Physics Velocity Caps (<= 200 m/s)
+- `save_active_scene_transactional`: Automatically rolls back scene modifications if any invariant fails, returning structured feedback to the calling agent.
 
 ### Headless QA Pipeline (`harness/agents/`)
 - `qa_scenario_runner.mjs`: Node runner that builds a scenario spec into a real `Scene`, initializes Rapier3D WASM physics, steps the `EngineContext` for N fixed-dt frames, and emits a JSON report (metrics + per-rule pass/fail).

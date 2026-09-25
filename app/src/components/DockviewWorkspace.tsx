@@ -21,6 +21,8 @@ import { ProfilerDock } from './ProfilerDock';
 import { ConsoleDock } from './ConsoleDock';
 import { TerrainSculptorDock } from './TerrainSculptorDock';
 import { AnimationBlendTreeDock } from './AnimationBlendTreeDock';
+import { LargeScaleWorldDock } from './LargeScaleWorldDock';
+import { DialogueEditorDock } from './DialogueEditorDock';
 
 export type WorkspacePreset = 'default' | 'level_design' | 'visual_scripting' | 'ai_swarm' | 'mobile_qa';
 
@@ -37,7 +39,9 @@ const components: Record<string, React.FunctionComponent<IDockviewPanelProps>> =
   profiler: () => <ProfilerDock />,
   console: () => <ConsoleDock />,
   terrain_sculptor: () => <TerrainSculptorDock />,
-  animation_studio: () => <AnimationBlendTreeDock />
+  animation_studio: () => <AnimationBlendTreeDock />,
+  large_world: () => <LargeScaleWorldDock />,
+  dialogue_editor: () => <DialogueEditorDock />
 };
 
 export const DockviewWorkspace: React.FC = () => {
@@ -136,6 +140,20 @@ export const DockviewWorkspace: React.FC = () => {
         id: 'profiler',
         component: 'profiler',
         title: 'Mobile Profiler',
+        position: { referencePanel: 'asset_browser', direction: 'within' }
+      });
+
+      api.addPanel({
+        id: 'large_world',
+        component: 'large_world',
+        title: 'Large-Scale World & Sim',
+        position: { referencePanel: 'asset_browser', direction: 'within' }
+      });
+
+      api.addPanel({
+        id: 'dialogue_editor',
+        component: 'dialogue_editor',
+        title: 'Dialogue & Narrative',
         position: { referencePanel: 'asset_browser', direction: 'within' }
       });
 

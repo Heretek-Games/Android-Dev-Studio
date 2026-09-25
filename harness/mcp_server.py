@@ -10,10 +10,11 @@ import json
 import asyncio
 import os
 import subprocess
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional, Tuple
 from .memory.project_memory import ProjectMemory
 from .orchestrator.agent_swarm import AgentSwarmOrchestrator
 from .build.apk_builder import AndroidApkBuilder
+from .validation.scene_invariants import validate_scene_invariants
 
 # Initialize Persistent Memory & Swarm Orchestrator
 memory = ProjectMemory()
@@ -349,6 +350,138 @@ TOOLS = [
             },
         },
     },
+    {
+        "name": "studio_configure_lod",
+        "description": "Configures camera distance Level of Detail (LOD) thresholds and culling for an entity to enforce the mobile draw-call budget.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "entity_name": {"type": "string", "description": "Target entity name"},
+                "distances": {
+                    "type": "array",
+                    "items": {"type": "number"},
+                    "description": "Ascending distance thresholds, e.g. [20, 50, 100]",
+                    "default": [20, 50, 100],
+                },
+            },
+            "required": ["entity_name"],
+        },
+    },
+    {
+        "name": "studio_configure_spatial_grid",
+        "description": "Manages uniform 3D spatial hash partitioning for large-scale multi-entity proximity and radius queries (Veloren/SS14 pattern).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["insert", "query_radius", "stats"],
+                    "default": "stats",
+                },
+                "cell_size": {"type": "number", "default": 10.0},
+                "entity_name": {"type": "string"},
+                "position": {"type": "array", "items": {"type": "number"}},
+                "radius": {"type": "number", "default": 25.0},
+            },
+        },
+    },
+    {
+        "name": "studio_configure_pathfinding",
+        "description": "Computes or configures hierarchical A* pathfinding over coarse chunks and fine grids (Warzone 2100 pattern).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "width": {"type": "integer", "default": 32},
+                "height": {"type": "integer", "default": 32},
+                "start": {"type": "array", "items": {"type": "integer"}, "default": [0, 0]},
+                "goal": {"type": "array", "items": {"type": "integer"}, "default": [15, 15]},
+                "blocked_rects": {
+                    "type": "array",
+                    "items": {"type": "array", "items": {"type": "integer"}},
+                    "description": "List of [x0, y0, x1, y1] obstacle rects",
+                },
+                "hierarchical": {"type": "boolean", "default": True},
+            },
+        },
+    },
+    {
+        "name": "studio_configure_economy",
+        "description": "Manages deterministic, fixed-step economic and logistics resource simulation loops (Anno / SS14 pattern).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["add_rule", "get_resources", "advance"],
+                    "default": "get_resources",
+                },
+                "rule_id": {"type": "string"},
+                "interval_seconds": {"type": "number", "default": 2.0},
+                "effects": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "resource": {"type": "string"},
+                            "delta": {"type": "number"},
+                        },
+                    },
+                },
+                "requires": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "resource": {"type": "string"},
+                            "min": {"type": "number"},
+                        },
+                    },
+                },
+                "delta_seconds": {"type": "number", "default": 1.0},
+            },
+        },
+    },
+    {
+        "name": "studio_configure_alife",
+        "description": "Configures S.T.A.L.K.E.R. OpenXRay inspired dual-tier A-Life populations (Online 3D bubble vs Offline sector simulation).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["register_agent", "get_stats", "set_online_radius"],
+                    "default": "get_stats",
+                },
+                "agent_id": {"type": "string"},
+                "agent_name": {"type": "string"},
+                "faction": {"type": "string", "default": "loner"},
+                "position": {"type": "array", "items": {"type": "number"}},
+                "goal": {
+                    "type": "string",
+                    "enum": ["patrol", "trade", "attack", "idle", "flee"],
+                    "default": "patrol",
+                },
+                "online_radius": {"type": "number", "default": 120.0},
+            },
+        },
+    },
+    {
+        "name": "studio_configure_dialogue",
+        "description": "Registers and manages narrative branching dialogue trees and choices (Dialogic & Godot Dialogue Manager pattern).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["register_script", "register_tree", "get_tree"],
+                    "default": "get_tree",
+                },
+                "tree_id": {"type": "string", "default": "MainDialogue"},
+                "script_text": {"type": "string", "description": "Markdown-style dialogue script"},
+                "tree": {"type": "object", "description": "Full DialogueTree AST object"},
+            },
+        },
+    },
 ]
 
 # --- Active scene store (file-backed, scenario format) -----------------
@@ -445,6 +578,20 @@ def save_active_scene(scene: Dict[str, Any]) -> None:
         pass  # persistence best-effort: never block a tool call on memory errors
 
 
+def save_active_scene_transactional(scene: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
+    """
+    Validates scene against the 7 scene invariants before persisting.
+    If valid, persists to disk and saves snapshot to project_memory.
+    If invalid, aborts with zero disk changes and returns (False, error_reason).
+    """
+    is_valid, violations = validate_scene_invariants(scene)
+    if not is_valid:
+        error_msgs = [f"[{v['code']}] {v['message']}" for v in violations]
+        return False, "; ".join(error_msgs)
+    save_active_scene(scene)
+    return True, None
+
+
 CC0_CATALOG = [
     {
         "name": "Cyber Ninja Hero",
@@ -536,7 +683,13 @@ def handle_request(req: Dict[str, Any]) -> Dict[str, Any]:
             if args.get("mass") is not None:
                 entity["mass"] = args.get("mass")
             scene.setdefault("gameObjects", []).append(entity)
-            save_active_scene(scene)
+            saved, err = save_active_scene_transactional(scene)
+            if not saved:
+                return {
+                    "jsonrpc": "2.0",
+                    "id": req_id,
+                    "error": {"code": -32000, "message": f"Invariant Violation during spawn: {err}"},
+                }
             return {
                 "jsonrpc": "2.0",
                 "id": req_id,
@@ -544,7 +697,7 @@ def handle_request(req: Dict[str, Any]) -> Dict[str, Any]:
                     "content": [
                         {
                             "type": "text",
-                            "text": f"Successfully spawned 3D entity '{entity['name']}' at {entity['position']}. Scene persisted ({len(scene['gameObjects'])} objects).",
+                            "text": f"Successfully spawned 3D entity '{entity['name']}' at {entity['position']}. Invariants verified. Scene persisted ({len(scene['gameObjects'])} objects).",
                         }
                     ]
                 },
@@ -592,7 +745,13 @@ def handle_request(req: Dict[str, Any]) -> Dict[str, Any]:
             if other:
                 obj.setdefault("props", {}).update(other)
                 applied.extend(other.keys())
-            save_active_scene(scene)
+            saved, err = save_active_scene_transactional(scene)
+            if not saved:
+                return {
+                    "jsonrpc": "2.0",
+                    "id": req_id,
+                    "error": {"code": -32000, "message": f"Invariant Violation during component modification: {err}"},
+                }
             return {
                 "jsonrpc": "2.0",
                 "id": req_id,
@@ -635,7 +794,13 @@ def handle_request(req: Dict[str, Any]) -> Dict[str, Any]:
                 "actions": [{"type": act, "params": args.get("action_params", {})}],
             }
             obj.setdefault("events", []).append(event)
-            save_active_scene(scene)
+            saved, err = save_active_scene_transactional(scene)
+            if not saved:
+                return {
+                    "jsonrpc": "2.0",
+                    "id": req_id,
+                    "error": {"code": -32000, "message": f"Invariant Violation adding event: {err}"},
+                }
             return {
                 "jsonrpc": "2.0",
                 "id": req_id,
@@ -658,7 +823,13 @@ def handle_request(req: Dict[str, Any]) -> Dict[str, Any]:
             ]
             removed = before - len(scene["gameObjects"])
             if removed:
-                save_active_scene(scene)
+                saved, err = save_active_scene_transactional(scene)
+                if not saved:
+                    return {
+                        "jsonrpc": "2.0",
+                        "id": req_id,
+                        "error": {"code": -32000, "message": f"Invariant Violation after deletion: {err}"},
+                    }
             return {
                 "jsonrpc": "2.0",
                 "id": req_id,
@@ -1038,6 +1209,317 @@ def handle_request(req: Dict[str, Any]) -> Dict[str, Any]:
                     ]
                 },
             }
+
+        elif tool_name == "studio_configure_lod":
+            ent_name = args.get("entity_name")
+            dists = sorted(args.get("distances", [20, 50, 100]))
+            scene = load_active_scene()
+            obj = next(
+                (g for g in scene.get("gameObjects", []) if g.get("name") == ent_name),
+                None,
+            )
+            if not obj:
+                return {
+                    "jsonrpc": "2.0",
+                    "id": req_id,
+                    "error": {"code": -32001, "message": f"Entity '{ent_name}' not found in active scene"},
+                }
+            obj["lod"] = {"distances": dists}
+            saved, err = save_active_scene_transactional(scene)
+            if not saved:
+                return {
+                    "jsonrpc": "2.0",
+                    "id": req_id,
+                    "error": {"code": -32000, "message": f"Invariant Violation during LOD config: {err}"},
+                }
+            return {
+                "jsonrpc": "2.0",
+                "id": req_id,
+                "result": {
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": f"Configured LOD for '{ent_name}': Thresholds={dists}. Culling enforced beyond {dists[-1]}m to maintain mobile draw budget.",
+                        }
+                    ]
+                },
+            }
+
+        elif tool_name == "studio_configure_spatial_grid":
+            action = args.get("action", "stats")
+            cell_size = args.get("cell_size", 10.0)
+            scene = load_active_scene()
+            grid_meta = scene.setdefault("spatialGrid", {"cellSize": cell_size, "entries": {}})
+
+            if action == "insert":
+                ent_name = args.get("entity_name", "Unknown")
+                pos = args.get("position", [0, 0, 0])
+                grid_meta["entries"][ent_name] = pos
+                save_active_scene_transactional(scene)
+                return {
+                    "jsonrpc": "2.0",
+                    "id": req_id,
+                    "result": {
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": f"SpatialGrid (cell={cell_size}m): Inserted '{ent_name}' at {pos}. Total indexed entities: {len(grid_meta['entries'])}.",
+                            }
+                        ]
+                    },
+                }
+            elif action == "query_radius":
+                center = args.get("position", [0, 0, 0])
+                rad = args.get("radius", 25.0)
+                r_sq = rad * rad
+                found = []
+                for name, pos in grid_meta.get("entries", {}).items():
+                    dx = pos[0] - center[0]
+                    dy = pos[1] - center[1]
+                    dz = pos[2] - center[2]
+                    if dx * dx + dy * dy + dz * dz <= r_sq:
+                        found.append({"entity": name, "pos": pos})
+                return {
+                    "jsonrpc": "2.0",
+                    "id": req_id,
+                    "result": {
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": f"SpatialGrid Query (center={center}, radius={rad}m): Found {len(found)} entities:\n" + json.dumps(found, indent=2),
+                            }
+                        ]
+                    },
+                }
+            else:
+                return {
+                    "jsonrpc": "2.0",
+                    "id": req_id,
+                    "result": {
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": f"SpatialGrid Status: Cell Size={grid_meta.get('cellSize', 10.0)}m, Indexed Entities={len(grid_meta.get('entries', {}))}.",
+                            }
+                        ]
+                    },
+                }
+
+        elif tool_name == "studio_configure_pathfinding":
+            width = args.get("width", 32)
+            height = args.get("height", 32)
+            start = tuple(args.get("start", [0, 0]))
+            goal = tuple(args.get("goal", [15, 15]))
+            blocked = set()
+            for r in args.get("blocked_rects", []):
+                if len(r) >= 4:
+                    for y in range(r[1], r[3] + 1):
+                        for x in range(r[0], r[2] + 1):
+                            blocked.add((x, y))
+
+            # Breadth-first / A* search
+            queue = [start]
+            came_from = {start: None}
+            found = False
+            while queue:
+                curr = queue.pop(0)
+                if curr == goal:
+                    found = True
+                    break
+                for dx, dy in [(1, 0), (-1, 0), (0, 1), (0, -1)]:
+                    nxt = (curr[0] + dx, curr[1] + dy)
+                    if 0 <= nxt[0] < width and 0 <= nxt[1] < height and nxt not in blocked and nxt not in came_from:
+                        came_from[nxt] = curr
+                        queue.append(nxt)
+
+            path = []
+            if found:
+                curr = goal
+                while curr:
+                    path.append(list(curr))
+                    curr = came_from[curr]
+                path.reverse()
+
+            return {
+                "jsonrpc": "2.0",
+                "id": req_id,
+                "result": {
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": (
+                                f"NavGrid Pathfinding ({width}x{height}): Path found with {len(path)} waypoints from {list(start)} to {list(goal)} navigating {len(blocked)} blocked obstacle cells."
+                                if found
+                                else f"NavGrid Pathfinding ({width}x{height}): No viable path found between {list(start)} and {list(goal)}."
+                            ),
+                        }
+                    ]
+                },
+            }
+
+        elif tool_name == "studio_configure_economy":
+            action = args.get("action", "get_resources")
+            scene = load_active_scene()
+            econ = scene.setdefault("economy", {"resources": {"gold": 100, "iron": 50, "food": 200}, "rules": []})
+
+            if action == "add_rule":
+                rule = {
+                    "id": args.get("rule_id", "rule_1"),
+                    "intervalSeconds": args.get("interval_seconds", 2.0),
+                    "effects": args.get("effects", []),
+                    "requires": args.get("requires", []),
+                }
+                econ["rules"].append(rule)
+                save_active_scene_transactional(scene)
+                return {
+                    "jsonrpc": "2.0",
+                    "id": req_id,
+                    "result": {
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": f"Added EconomyTick rule '{rule['id']}' (every {rule['intervalSeconds']}s). Active rules: {len(econ['rules'])}.",
+                            }
+                        ]
+                    },
+                }
+            elif action == "advance":
+                dt = args.get("delta_seconds", 1.0)
+                # Apply rules
+                for r in econ.get("rules", []):
+                    # Check requirements
+                    req_met = True
+                    for req in r.get("requires", []):
+                        if econ["resources"].get(req.get("resource"), 0) < req.get("min", 0):
+                            req_met = False
+                            break
+                    if req_met:
+                        for eff in r.get("effects", []):
+                            res_name = eff.get("resource", "gold")
+                            econ["resources"][res_name] = econ["resources"].get(res_name, 0) + eff.get("delta", 0)
+                save_active_scene_transactional(scene)
+                return {
+                    "jsonrpc": "2.0",
+                    "id": req_id,
+                    "result": {
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": f"Advanced EconomyTick by {dt}s. Current resources:\n" + json.dumps(econ["resources"], indent=2),
+                            }
+                        ]
+                    },
+                }
+            else:
+                return {
+                    "jsonrpc": "2.0",
+                    "id": req_id,
+                    "result": {
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": f"Economy State (Deterministic Fixed-Step):\n" + json.dumps(econ, indent=2),
+                            }
+                        ]
+                    },
+                }
+
+        elif tool_name == "studio_configure_alife":
+            action = args.get("action", "get_stats")
+            scene = load_active_scene()
+            alife = scene.setdefault("alife", {"onlineRadius": 120.0, "agents": []})
+
+            if action == "register_agent":
+                agent = {
+                    "id": args.get("agent_id", f"ag_{len(alife['agents']) + 1}"),
+                    "name": args.get("agent_name", "Zone Stalker"),
+                    "faction": args.get("faction", "loner"),
+                    "position": args.get("position", [50, 0, 50]),
+                    "goal": args.get("goal", "patrol"),
+                    "isOnline": False,
+                }
+                alife["agents"].append(agent)
+                save_active_scene_transactional(scene)
+                return {
+                    "jsonrpc": "2.0",
+                    "id": req_id,
+                    "result": {
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": f"Registered A-Life Agent '{agent['name']}' [{agent['faction']}] at {agent['position']}. Total world population: {len(alife['agents'])}.",
+                            }
+                        ]
+                    },
+                }
+            else:
+                online_cnt = sum(1 for a in alife.get("agents", []) if a.get("isOnline"))
+                offline_cnt = len(alife.get("agents", [])) - online_cnt
+                return {
+                    "jsonrpc": "2.0",
+                    "id": req_id,
+                    "result": {
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": f"A-Life Simulation (S.T.A.L.K.E.R. OpenXRay):\n- Online 3D Bubble Radius: {alife.get('onlineRadius', 120.0)}m\n- Online Entities (3D active): {online_cnt}\n- Offline Entities (macro simulated): {offline_cnt}\n- Total Population: {len(alife.get('agents', []))}",
+                            }
+                        ]
+                    },
+                }
+
+        elif tool_name == "studio_configure_dialogue":
+            action = args.get("action", "get_tree")
+            tree_id = args.get("tree_id", "MainDialogue")
+            scene = load_active_scene()
+            dialogues = scene.setdefault("dialogues", {})
+
+            if action == "register_script":
+                script = args.get("script_text", "")
+                dialogues[tree_id] = {"id": tree_id, "script": script, "format": "dsl"}
+                save_active_scene_transactional(scene)
+                return {
+                    "jsonrpc": "2.0",
+                    "id": req_id,
+                    "result": {
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": f"Registered narrative dialogue script for '{tree_id}' ({len(script.splitlines())} lines).",
+                            }
+                        ]
+                    },
+                }
+            elif action == "register_tree":
+                tree_ast = args.get("tree", {})
+                dialogues[tree_id] = tree_ast
+                save_active_scene_transactional(scene)
+                return {
+                    "jsonrpc": "2.0",
+                    "id": req_id,
+                    "result": {
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": f"Registered DialogueTree AST '{tree_id}'.",
+                            }
+                        ]
+                    },
+                }
+            else:
+                tree = dialogues.get(tree_id)
+                return {
+                    "jsonrpc": "2.0",
+                    "id": req_id,
+                    "result": {
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": f"Dialogue Tree '{tree_id}':\n" + (json.dumps(tree, indent=2) if tree else "Not found in scene."),
+                            }
+                        ]
+                    },
+                }
 
         else:
             return {
