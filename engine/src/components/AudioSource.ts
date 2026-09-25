@@ -17,6 +17,8 @@ export interface AudioSourceOptions {
   spatial?: boolean;
   refDistance?: number;
   maxDistance?: number;
+  /** Mixer bus routing (requires the manager to carry a mixer). */
+  bus?: string;
   /** Custom manager (tests / multiple buses). Defaults to the shared manager. */
   manager?: AudioManager;
 }
@@ -29,6 +31,7 @@ export class AudioSource extends Component {
   public spatial: boolean;
   public refDistance: number;
   public maxDistance: number;
+  public bus?: string;
 
   private readonly manager: AudioManager;
   private voiceId: number | null = null;
@@ -42,6 +45,7 @@ export class AudioSource extends Component {
     this.spatial = options.spatial ?? false;
     this.refDistance = options.refDistance ?? 5;
     this.maxDistance = options.maxDistance ?? 40;
+    this.bus = options.bus;
     this.manager = options.manager ?? getAudioManager();
   }
 
@@ -67,7 +71,8 @@ export class AudioSource extends Component {
       loop: this.loop,
       spatial: this.spatial,
       refDistance: this.refDistance,
-      maxDistance: this.maxDistance
+      maxDistance: this.maxDistance,
+      bus: this.bus
     });
     return this.voiceId !== null;
   }
@@ -96,7 +101,8 @@ export class AudioSource extends Component {
       playOnStart: this.playOnStart,
       spatial: this.spatial,
       refDistance: this.refDistance,
-      maxDistance: this.maxDistance
+      maxDistance: this.maxDistance,
+      bus: this.bus
     };
   }
 
@@ -109,5 +115,6 @@ export class AudioSource extends Component {
     if (data.spatial !== undefined) this.spatial = data.spatial;
     if (data.refDistance !== undefined) this.refDistance = data.refDistance;
     if (data.maxDistance !== undefined) this.maxDistance = data.maxDistance;
+    if (data.bus !== undefined) this.bus = data.bus;
   }
 }

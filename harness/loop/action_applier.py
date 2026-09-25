@@ -1952,6 +1952,19 @@ def _apply_spawn(
                 f"spawn particle rejected — {particle_reasons[0] if particle_reasons else 'malformed'}",
             )
         obj["particle"] = particle
+    if action.get("audio") is not None:
+        # Maps to an AudioSource in the QA runner (objSpec.audio).
+        audio_reasons: List[str] = []
+        audio = _validate_audio(action.get("audio"), audio_reasons)
+        if audio is None:
+            return _outcome(
+                result,
+                index,
+                "spawn",
+                "invalid",
+                f"spawn audio rejected — {audio_reasons[0] if audio_reasons else 'malformed'}",
+            )
+        obj["audio"] = audio
     if action.get("anim") is not None:
         # Maps to an AnimFSM in the QA runner (objSpec.anim).
         anim_reasons: List[str] = []
@@ -2464,6 +2477,226 @@ def _validate_input_binding(
     return normalized
 
 
+def _validate_audio(
+    value: Any, errors: Optional[List[str]] = None
+) -> Optional[Dict[str, Any]]:
+    """AudioSource voice specs pass straight to the QA runner (objSpec.audio).
+
+    Returns the normalized spec, or None when malformed. clipId is required
+    (clips auto-register headless); volume is 0..1; unknown keys rejected.
+    """
+
+    def fail(reason: str) -> None:
+        if errors is not None:
+            errors.append(reason)
+        return None
+
+    if not isinstance(value, dict):
+        fail("spawn 'audio' must be an object with at least a clipId")
+        return None
+    clip_id = value.get("clipId")
+    if not isinstance(clip_id, str) or not clip_id.strip():
+        fail("spawn audio 'clipId' must be a non-empty string")
+        return None
+    normalized: Dict[str, Any] = {"clipId": clip_id.strip()}
+    if "bus" in value:
+        if not isinstance(value["bus"], str) or not value["bus"].strip():
+            fail("spawn audio 'bus' must be a non-empty string")
+            return None
+        normalized["bus"] = value["bus"].strip()
+    if "volume" in value:
+        if not _is_finite_number(value["volume"]) or not 0 <= value["volume"] <= 1:
+            fail("spawn audio 'volume' must be 0..1")
+            return None
+        normalized["volume"] = float(value["volume"])
+    for flag in ("loop", "playOnStart", "spatial"):
+        if flag in value:
+            if not isinstance(value[flag], bool):
+                fail(f"spawn audio '{flag}' must be true/false")
+                return None
+            normalized[flag] = value[flag]
+    for dist in ("refDistance", "maxDistance"):
+        if dist in value:
+            if not _is_finite_number(value[dist]) or value[dist] <= 0:
+                fail(f"spawn audio '{dist}' must be positive")
+                return None
+            normalized[dist] = float(value[dist])
+    for key in value:
+        if key not in (
+            "clipId",
+            "bus",
+            "volume",
+            "loop",
+            "playOnStart",
+            "spatial",
+            "refDistance",
+            "maxDistance",
+        ):
+            fail(f"unknown spawn audio key '{key}'")
+            return None
+    return normalized
+
+
+def _validate_mixer(
+    value: Any, errors: Optional[List[str]] = None
+) -> Optional[Dict[str, Any]]:
+    """Mixer specs pass straight to the QA runner (spec.mixer)."""
+
+    def fail(reason: str) -> None:
+        if errors is not None:
+            errors.append(reason)
+        return None
+
+    if not isinstance(value, dict):
+        fail("mixer 'config' must be an object with buses/duckRules/snapshots")
+        return None
+    normalized: Dict[str, Any] = {}
+    raw_buses = value.get("buses", {})
+    if not isinstance(raw_buses, dict):
+        fail("mixer config 'buses' must be a name->spec map")
+        return None
+    buses: Dict[str, Any] = {}
+    for name, spec in raw_buses.items():
+        if not isinstance(name, str) or not name.strip() or not isinstance(spec, dict):
+            fail(f"mixer bus {name!r} must be an object")
+            return None
+        entry: Dict[str, Any] = {}
+        if "gainDb" in spec:
+            if not _is_finite_number(spec["gainDb"]):
+                fail(f"mixer bus '{name}'.gainDb must be finite")
+                return None
+            entry["gainDb"] = float(spec["gainDb"])
+        for flag in ("mute", "solo"):
+            if flag in spec:
+                if not isinstance(spec[flag], bool):
+                    fail(f"mixer bus '{name}'.{flag} must be true/false")
+                    return None
+                entry[flag] = spec[flag]
+        if "send" in spec:
+            if not isinstance(spec["send"], str) or not spec["send"].strip():
+                fail(f"mixer bus '{name}'.send must be a non-empty bus name")
+                return None
+            entry["send"] = spec["send"].strip()
+        for key in spec:
+            if key not in ("gainDb", "mute", "solo", "send"):
+                fail(f"mixer bus '{name}' unknown key '{key}'")
+                return None
+        buses[name.strip()] = entry
+    # Send targets must exist; cycles rejected (engine throws otherwise).
+    for name, entry in buses.items():
+        send = entry.get("send")
+        if send is not None and send != "master" and send not in buses:
+            fail(f"mixer bus '{name}'.send names unknown bus '{send}'")
+            return None
+    seen_cycle: set = set()
+
+    def visits(start: str, trail: set) -> bool:
+        current: Optional[str] = start
+        while current is not None and current != "master":
+            if current in trail:
+                return True
+            trail.add(current)
+            target = buses.get(current, {}).get("send")
+            current = target
+        return False
+
+    for name in buses:
+        if visits(name, set()):
+            fail(f"mixer bus send cycle involving '{name}'")
+            return None
+        seen_cycle.add(name)
+    if buses:
+        normalized["buses"] = buses
+    raw_ducks = value.get("duckRules", [])
+    if not isinstance(raw_ducks, list):
+        fail("mixer config 'duckRules' must be an array")
+        return None
+    ducks: List[Dict[str, Any]] = []
+    known = set(buses) | {"master"}
+    for i, rule in enumerate(raw_ducks):
+        if not isinstance(rule, dict):
+            fail(f"mixer duckRules[{i}] must be an object")
+            return None
+        for endpoint in ("trigger", "target"):
+            ref = rule.get(endpoint)
+            if not isinstance(ref, str) or ref not in known:
+                fail(f"mixer duckRules[{i}].{endpoint} must name a defined bus")
+                return None
+        entry_r: Dict[str, Any] = {"trigger": rule["trigger"], "target": rule["target"]}
+        if "depthDb" in rule:
+            if not _is_finite_number(rule["depthDb"]):
+                fail(f"mixer duckRules[{i}].depthDb must be finite")
+                return None
+            entry_r["depthDb"] = float(rule["depthDb"])
+        for timing in ("attack", "release"):
+            if timing in rule:
+                if not _is_finite_number(rule[timing]) or rule[timing] <= 0:
+                    fail(f"mixer duckRules[{i}].{timing} must be positive")
+                    return None
+                entry_r[timing] = float(rule[timing])
+        for key in rule:
+            if key not in ("trigger", "target", "depthDb", "attack", "release"):
+                fail(f"mixer duckRules[{i}] unknown key '{key}'")
+                return None
+        ducks.append(entry_r)
+    if ducks:
+        normalized["duckRules"] = ducks
+    raw_snaps = value.get("snapshots", {})
+    if not isinstance(raw_snaps, dict):
+        fail("mixer config 'snapshots' must be a name->gains map")
+        return None
+    snaps: Dict[str, Any] = {}
+    for snap_name, gains in raw_snaps.items():
+        if (
+            not isinstance(snap_name, str)
+            or not snap_name.strip()
+            or not isinstance(gains, dict)
+            or not gains
+        ):
+            fail(f"mixer snapshot {snap_name!r} must be a non-empty bus->dB map")
+            return None
+        clean: Dict[str, float] = {}
+        for bus_name, db in gains.items():
+            if bus_name not in known or not _is_finite_number(db):
+                fail(f"mixer snapshot '{snap_name}' needs defined buses with finite dB")
+                return None
+            clean[bus_name] = float(db)
+        snaps[snap_name.strip()] = clean
+    if snaps:
+        normalized["snapshots"] = snaps
+    if not normalized:
+        fail("mixer config must define at least one of buses/duckRules/snapshots")
+        return None
+    for key in value:
+        if key not in ("buses", "duckRules", "snapshots"):
+            fail(f"unknown mixer config key '{key}'")
+            return None
+    return normalized
+
+
+def _apply_mixer(
+    scene: Dict[str, Any], action: Dict[str, Any], result: ApplyResult, index: int
+) -> None:
+    reasons: List[str] = []
+    config = _validate_mixer(action.get("config"), reasons)
+    if config is None:
+        detail = reasons[0] if reasons else "malformed config"
+        return _outcome(
+            result, index, "mixer", "invalid", f"mixer config rejected — {detail}"
+        )
+    scene["mixer"] = config
+    parts = []
+    if "buses" in config:
+        parts.append(f"{len(config['buses'])} bus(es)")
+    if "duckRules" in config:
+        parts.append(f"{len(config['duckRules'])} duck rule(s)")
+    if "snapshots" in config:
+        parts.append(f"{len(config['snapshots'])} snapshot(s)")
+    _outcome(
+        result, index, "mixer", "applied", f"Registered mixer ({', '.join(parts)})"
+    )
+
+
 def _validate_inputmap(
     value: Any, errors: Optional[List[str]] = None
 ) -> Optional[Dict[str, Any]]:
@@ -2814,6 +3047,7 @@ _HANDLERS = {
     "prefab": _apply_prefab,
     "locale": _apply_locale,
     "input": _apply_input,
+    "mixer": _apply_mixer,
 }
 
 

@@ -425,6 +425,48 @@ function setupInput(spec, engine) {
   };
 }
 /**
+ * Audio (Track 1.10): routes objSpec.audio through AudioSources on a fresh
+ * shared manager (clips auto-registered; NullBackend headless), attaches
+ * spec.mixer when present, and steps mixer fades/ducks per frame. Voice
+ * presence per bus drives ducking automatically.
+ */
+function setupAudio(spec, scene, engine) {
+  const wantsAudio = (spec.gameObjects || []).some(o => o && o.audio) || spec.mixer;
+  if (!wantsAudio) return null;
+  const manager = new engine.AudioManager(new engine.NullAudioBackend());
+  engine.setAudioManager(manager);
+  let mixer = null;
+  if (spec.mixer && typeof spec.mixer === 'object') {
+    mixer = new engine.AudioMixer(spec.mixer);
+    manager.setMixer(mixer);
+  }
+  for (const objSpec of spec.gameObjects || []) {
+    if (!objSpec || !objSpec.audio) continue;
+    const go = scene.findByName(objSpec.name);
+    if (!go) continue;
+    const cfg = objSpec.audio;
+    if (typeof cfg.clipId === 'string' && cfg.clipId && !manager.hasClip(cfg.clipId)) {
+      manager.registerClip(cfg.clipId);
+    }
+    const source = new engine.AudioSource({
+      clipId: cfg.clipId,
+      volume: cfg.volume,
+      loop: cfg.loop,
+      playOnStart: cfg.playOnStart !== false,
+      spatial: cfg.spatial,
+      refDistance: cfg.refDistance,
+      maxDistance: cfg.maxDistance,
+      bus: cfg.bus,
+      manager
+    });
+    go.addComponent(source);
+    // Attached post-build, so the start() lifecycle already ran: honor
+    // playOnStart explicitly (addComponent only fires awake()).
+    if (cfg.playOnStart !== false) source.play();
+  }
+  return { manager, mixer };
+}
+/**
  * Dialogue auto-play: register every spec.dialogues tree and walk each one
  * deterministically (first available choice, bounded steps), recording stable
  * node visits plus emitted events. Action/condition nodes self-resolve inside
@@ -673,7 +715,7 @@ function placementNote(game) {
 }
 
 function evaluateRules(spec, ctxData) {
-  const { scene, samples, firstSamples, metrics, dt, game, dialogue, input } = ctxData;
+  const { scene, samples, firstSamples, metrics, dt, game, dialogue, input, audio } = ctxData;
   const results = [];
 
   for (const rule of spec.rules || []) {
@@ -772,6 +814,20 @@ function evaluateRules(spec, ctxData) {
           pass = rec.axis2 >= (rule.min ?? 0.5);
           detail = `"${rule.action}" peak|axis2|=${rec.axis2.toFixed(3)} (min=${rule.min ?? 0.5})`;
         }
+        break;
+      }
+      case 'audio_bus_gain': {
+        if (!audio || !audio.mixer) { pass = false; detail = 'no spec.mixer present'; break; }
+        const gain = audio.mixer.voiceGain(rule.bus, 1);
+        pass = gain >= (rule.min ?? 0.5);
+        detail = `bus '${rule.bus}' gain=${gain.toFixed(3)} (min=${rule.min ?? 0.5})`;
+        break;
+      }
+      case 'audio_bus_ceiling': {
+        if (!audio || !audio.mixer) { pass = false; detail = 'no spec.mixer present'; break; }
+        const gain = audio.mixer.voiceGain(rule.bus, 1);
+        pass = gain <= (rule.max ?? 0.5);
+        detail = `bus '${rule.bus}' gain=${gain.toFixed(3)} (max=${rule.max ?? 0.5})`;
         break;
       }
       case 'object_count': {
@@ -1067,6 +1123,7 @@ async function main() {
   );
   const dialogue = setupDialogue(spec, engine);
   const input = setupInput(spec, engine);
+  const audio = setupAudio(spec, scene, engine);
 
   const eventCount = scene.gameObjects.reduce(
     (n, go) => n + go.components.filter(c => c.constructor.name === 'EventSheet').reduce((m, es) => m + es.events.length, 0), 0
@@ -1109,6 +1166,7 @@ async function main() {
       samples.push({ frame, fields: fieldsNow });
     }
     if (input) input.map.endFrame();
+    if (audio) audio.manager.update(args.dt);
   }
 
   const sorted = [...times].sort((a, b) => a - b);
@@ -1165,7 +1223,7 @@ async function main() {
     }
   }
 
-  const ruleResults = evaluateRules(spec, { scene, samples, firstSamples, metrics, dt: args.dt, game, dialogue, input });
+  const ruleResults = evaluateRules(spec, { scene, samples, firstSamples, metrics, dt: args.dt, game, dialogue, input, audio });
   const passed = ruleResults.filter(r => r.pass).length;
   const total = ruleResults.length;
   const allPass = total > 0 && passed === total;

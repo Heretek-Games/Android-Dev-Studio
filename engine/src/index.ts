@@ -20,6 +20,7 @@ export * from './components/RigidBody3D.js';
 export * from './components/Collider3D.js';
 export * from './components/MobileController.js';
 export * from './audio/AudioManager.js';
+export * from './audio/AudioMixer.js';
 export * from './game/GameFlow.js';
 export * from './game/WaveSpawner.js';
 export * from './ui/GameShell.js';

@@ -8,6 +8,7 @@
 import type { AudioBackend, PlayRequest } from './AudioBackend.js';
 import { NullAudioBackend } from './AudioBackend.js';
 import { WebAudioBackend } from './WebAudioBackend.js';
+import type { AudioMixer } from './AudioMixer.js';
 
 export interface PlayOptions {
   /** Per-play base volume (0..1). */
@@ -19,6 +20,8 @@ export interface PlayOptions {
   refDistance?: number;
   /** Distance (world units) where the voice becomes silent. */
   maxDistance?: number;
+  /** Mixer bus routing (requires setMixer; unmixed voices ignore it). */
+  bus?: string;
 }
 
 interface VoiceState {
@@ -29,6 +32,7 @@ interface VoiceState {
   refDistance: number;
   maxDistance: number;
   position: [number, number, number];
+  bus?: string;
 }
 
 const DEFAULT_REF_DISTANCE = 5;
@@ -41,6 +45,7 @@ export class AudioManager {
   private readonly warnedMissing = new Set<string>();
   private masterVolume = 1;
   private listener: [number, number, number] = [0, 0, 0];
+  private mixer: AudioMixer | null = null;
 
   public constructor(backend?: AudioBackend) {
     this.backend = backend ?? (WebAudioBackend.isSupported() ? new WebAudioBackend() : new NullAudioBackend());
@@ -80,6 +85,7 @@ export class AudioManager {
       refDistance: options.refDistance ?? DEFAULT_REF_DISTANCE,
       maxDistance: options.maxDistance ?? DEFAULT_MAX_DISTANCE,
       position: [0, 0, 0],
+      bus: options.bus,
     };
     const request: PlayRequest = { volume: this.voiceVolume(state), loop: state.loop };
     const voiceId = this.backend.play(clipId, request);
@@ -107,6 +113,42 @@ export class AudioManager {
 
   public getMasterVolume(): number {
     return this.masterVolume;
+  }
+
+  /** Attaches a mixer (null detaches; unmixed voices compute as before). */
+  public setMixer(mixer: AudioMixer | null): void {
+    this.mixer = mixer;
+    this.refreshVoiceVolumes();
+  }
+
+  public getMixer(): AudioMixer | null {
+    return this.mixer;
+  }
+
+  /**
+   * Advances mixer fades/ducks and re-pushes backend volumes. `activity`
+   * maps bus name -> voice-active; omitted entries read as inactive.
+   * Call once per frame when a mixer is attached (no-op otherwise).
+   */
+  public update(deltaTime: number, activity: Record<string, boolean> = {}): void {
+    if (!this.mixer) return;
+    this.mixer.update(deltaTime, this.voiceActivity(activity));
+    this.refreshVoiceVolumes();
+  }
+
+  /** Live voice presence per bus, merged over explicit activity hints. */
+  private voiceActivity(hints: Record<string, boolean>): Record<string, boolean> {
+    const activity: Record<string, boolean> = { ...hints };
+    for (const state of this.voices.values()) {
+      if (state.bus) activity[state.bus] = true;
+    }
+    return activity;
+  }
+
+  private refreshVoiceVolumes(): void {
+    for (const [voiceId, state] of this.voices) {
+      this.backend.setVolume(voiceId, this.voiceVolume(state));
+    }
   }
 
   public setListenerPosition(x: number, y: number, z: number): void {
@@ -146,6 +188,9 @@ export class AudioManager {
       const [x, y, z] = state.position;
       const distance = Math.hypot(x - lx, y - ly, z - lz);
       volume *= AudioManager.attenuation(distance, state.refDistance, state.maxDistance);
+    }
+    if (this.mixer && state.bus) {
+      volume = this.mixer.voiceGain(state.bus, volume);
     }
     return clamp01(volume);
   }

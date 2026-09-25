@@ -18,6 +18,9 @@ import {
   AnimFSM,
   TimelineLite,
   InputActionMap,
+  AudioManager,
+  NullAudioBackend,
+  AudioMixer,
   type PrefabStore
 } from '@heretek/engine';
 
@@ -199,6 +202,27 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         window.dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyD' }));
         const moveAfter = map.getAxis2('move');
         return { move, jumpBefore, jumpDuring, jumpAfter, moveAfter };
+      },
+      probeAudioMixer: () => {
+        // Mixer math through the real bundled engine: two looping voices,
+        // dialogue ducks music, 2s of stepped fades.
+        const manager = new AudioManager(new NullAudioBackend());
+        manager.registerClip('probe-song');
+        manager.registerClip('probe-voice');
+        const mixer = new AudioMixer({
+          buses: { music: { gainDb: -6 }, dialogue: {} },
+          duckRules: [{ trigger: 'dialogue', target: 'music', depthDb: -12, attack: 0.05, release: 0.3 }]
+        });
+        manager.setMixer(mixer);
+        manager.play('probe-song', { bus: 'music', loop: true });
+        manager.play('probe-voice', { bus: 'dialogue', loop: true });
+        for (let i = 0; i < 120; i++) manager.update(1 / 60);
+        return {
+          music: Number(mixer.voiceGain('music', 1).toFixed(4)),
+          dialogue: Number(mixer.voiceGain('dialogue', 1).toFixed(4)),
+          audibility: mixer.getAudibility('music'),
+          voices: manager.getVoiceCount()
+        };
       },
       getComponents: (name: string) => {
         const go: any = scene.findByName(name);

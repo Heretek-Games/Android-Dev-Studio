@@ -35,6 +35,12 @@ RULE_DESCRIPTIONS = {
     "input_action_min": lambda r: (
         f"input action '{r.get('action')}' must register during the run"
     ),
+    "audio_bus_gain": lambda r: (
+        f"mixer bus '{r.get('bus')}' must hold gain >= {r.get('min', 0.5)}"
+    ),
+    "audio_bus_ceiling": lambda r: (
+        f"mixer bus '{r.get('bus')}' must stay at gain <= {r.get('max', 0.5)}"
+    ),
     "object_count": lambda r: (
         f"the scene must contain exactly {r.get('count')} objects"
     ),
@@ -84,7 +90,8 @@ ACTION_SCHEMA = """Action vocabulary (a JSON array named "actions"):
      "behaviors": [{"type": "TopDownMovement", "options": {"moveSpeed": 5}}] (optional: attaches behavior components; Tween takes play-spec options, TopDownMovement takes moveSpeed/allowDiagonals/rotateToHeading/simulate),
      "particle": {"rate": 60, "maxParticles": 200, "shape": "sphere", "direction": [0,1,0], "speedMin": 2, "speedMax": 5, "lifetimeMin": 0.5, "lifetimeMax": 1.5, "startColor": "#ffaa00", "endColor": "#ff0000", "seed": 7} (optional: adds a CPU-sim ParticleSystem, one draw; shape point|box|sphere, blending additive|normal),
      "anim": {"states": {"Idle": {"clip": "idle", "clipLength": 2}, "Run": {"clip": "run", "clipLength": 1}}, "initial": "Idle", "transitions": [{"from": "Idle", "to": "Run", "conditions": [{"param": "speed", "op": ">", "value": 0.5}]}]} (optional: adds an AnimFSM state machine; ops ==,!=,>,<,>=,<=,trigger; from "*" matches any state),
-     "timeline": {"duration": 4, "tracks": [{"target": "Mover", "clips": [{"id": "m1", "start": 1, "dur": 2, "type": "move", "data": {"to": [6,0,0]}}]}]} (optional: adds a TimelineLite cutscene; clip types move|rotate|event|anim|camera)}
+     "timeline": {"duration": 4, "tracks": [{"target": "Mover", "clips": [{"id": "m1", "start": 1, "dur": 2, "type": "move", "data": {"to": [6,0,0]}}]}]} (optional: adds a TimelineLite cutscene; clip types move|rotate|event|anim|camera),
+     "audio": {"clipId": "coin", "bus": "sfx", "volume": 0.8} (optional: adds an AudioSource voice; bus routes through the scene mixer when present)}
   - {"type": "light", "name": "...", "lightType": "directional"|"point"|"ambient",
      "color": "#rrggbb", "intensity": 2.0, "position": [x,y,z]}
   - {"type": "modify", "target": "...", "position": [x,y,z], "color": "#rrggbb",
@@ -137,6 +144,9 @@ ACTION_SCHEMA = """Action vocabulary (a JSON array named "actions"):
     (registers the scene input-action map plus a scripted injection schedule for the
     input_action_min audit; binding sources key|button|stick|gamepad-button|gamepad-axis;
     digital axis2 bindings REQUIRE output2; script actions must name mapped actions)
+  - {"type": "mixer", "config": {"buses": {"music": {"gainDb": -6}, "dialogue": {}}, "duckRules": [{"trigger": "dialogue", "target": "music", "depthDb": -12}], "snapshots": {"quiet": {"music": -24}}}}
+    (registers the scene audio mixer for the audio_bus_gain/ceiling audits; send targets
+    and duck endpoints must name defined buses; send cycles rejected)
 
 How acceptance rules map onto the schema (the QA runner checks these exact components):
   - "RigidBody3D"/"Collider3D" component -> the spawn has "physics": "dynamic" (or "fixed")

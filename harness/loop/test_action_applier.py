@@ -1474,6 +1474,81 @@ class InputActionTests(unittest.TestCase):
             self.assertIn(hint, result.outcomes[0]["detail"])
 
 
+class MixerActionTests(unittest.TestCase):
+    def test_mixer_action_registers_buses_ducks_snapshots(self):
+        scene, result = apply_actions(
+            base_scene(),
+            [
+                {
+                    "type": "mixer",
+                    "config": {
+                        "buses": {"music": {"gainDb": -6}, "dialogue": {}},
+                        "duckRules": [
+                            {"trigger": "dialogue", "target": "music", "depthDb": -12}
+                        ],
+                        "snapshots": {"quiet": {"music": -24}},
+                    },
+                },
+                {
+                    "type": "spawn",
+                    "name": "Jukebox",
+                    "physics": "none",
+                    "audio": {
+                        "clipId": "song",
+                        "bus": "music",
+                        "volume": 0.8,
+                        "loop": True,
+                    },
+                },
+            ],
+        )
+        self.assertEqual(result.applied, 2)
+        self.assertEqual(scene["mixer"]["buses"]["music"]["gainDb"], -6)
+        self.assertEqual(scene["gameObjects"][1]["audio"]["clipId"], "song")
+
+    def test_mixer_and_audio_reject_malformed(self):
+        for action, hint in (
+            ({"type": "mixer", "config": {}}, "at least one"),
+            (
+                {"type": "mixer", "config": {"buses": {"a": {"send": "b"}}}},
+                "unknown bus",
+            ),
+            (
+                {
+                    "type": "mixer",
+                    "config": {"buses": {"a": {"send": "b"}, "b": {"send": "a"}}},
+                },
+                "cycle",
+            ),
+            (
+                {
+                    "type": "mixer",
+                    "config": {
+                        "buses": {"m": {}},
+                        "duckRules": [{"trigger": "x", "target": "m"}],
+                    },
+                },
+                "defined bus",
+            ),
+            (
+                {"type": "mixer", "config": {"snapshots": {"q": {"m": -3}}}},
+                "defined buses",
+            ),
+            ({"type": "spawn", "name": "W", "audio": {}}, "clipId"),
+            (
+                {"type": "spawn", "name": "W", "audio": {"clipId": "c", "volume": 2}},
+                "volume",
+            ),
+            (
+                {"type": "spawn", "name": "W", "audio": {"clipId": "c", "nope": 1}},
+                "nope",
+            ),
+        ):
+            _, result = apply_actions(base_scene(), [action])
+            self.assertEqual(result.invalid, 1, f"should reject {action!r}")
+            self.assertIn(hint, result.outcomes[0]["detail"])
+
+
 class PrefabActionTests(unittest.TestCase):
     def test_prefab_define_registers_template(self):
         scene, result = apply_actions(
