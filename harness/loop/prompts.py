@@ -20,6 +20,9 @@ RULE_DESCRIPTIONS = {
         f"event '{r.get('event')}' on '{r.get('target')}' must fire "
         f"at least {r.get('min', 1)}x during the run"
     ),
+    "particle_count_min": lambda r: (
+        f"'{r.get('target')}' must hold at least {r.get('min', 1)} live particles"
+    ),
     "object_count": lambda r: (
         f"the scene must contain exactly {r.get('count')} objects"
     ),

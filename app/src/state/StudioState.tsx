@@ -14,6 +14,7 @@ import {
   EngineContext,
   PhysicsWorld,
   instantiatePrefab,
+  ParticleSystem,
   type PrefabStore
 } from '@heretek/engine';
 
@@ -151,6 +152,21 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           ? JSON.parse(JSON.stringify(es.getTrace()))
           : [];
       },
+      getParticleState: (name: string) => {
+        const go: any = scene.findByName(name);
+        if (!go) return null;
+        const ps = go.components.find((c: any) => c.constructor.name === 'ParticleSystem');
+        if (!ps) return null;
+        return {
+          alive: ps.aliveCount,
+          emitting: ps.emitting,
+          enabled: ps.enabled,
+          active: go.active,
+          rate: ps.rate,
+          maxParticles: ps.maxParticles,
+          frame: engineContext.frameCount
+        };
+      },
       getComponents: (name: string) => {
         const go: any = scene.findByName(name);
         return go
@@ -207,6 +223,34 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         setSelectedId(go.id);
         refreshScene();
         addLog('info', 'Scene', 'Spawned event-trace probe.');
+        return go.name;
+      },
+      spawnParticleProbe: () => {
+        undoService.checkpoint(scene);
+        const go = new GameObject('Probe Fountain');
+        go.transform.setPosition(0, 1, 0);
+        go.addComponent(new ParticleSystem({
+          rate: 60,
+          maxParticles: 300,
+          shape: 'sphere',
+          shapeSize: [0.5, 0.5, 0.5],
+          direction: [0, 1, 0],
+          spread: 0.4,
+          speedMin: 2,
+          speedMax: 5,
+          gravity: 5,
+          lifetimeMin: 0.8,
+          lifetimeMax: 1.6,
+          sizeMin: 0.25,
+          sizeMax: 0.5,
+          startColor: '#ffaa00',
+          endColor: '#ef4444',
+          seed: 7
+        }));
+        scene.addGameObject(go);
+        setSelectedId(go.id);
+        refreshScene();
+        addLog('info', 'Scene', 'Spawned particle probe.');
         return go.name;
       },
       getLogs: () => logs.map((l: any) => `${l.level}|${l.source}|${l.message}`)

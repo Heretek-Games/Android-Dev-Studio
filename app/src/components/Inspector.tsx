@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useStudio } from '../state/StudioState';
 import {
   MeshRenderer,
@@ -10,6 +10,7 @@ import {
   EventSheet,
   ElementalReactionComponent,
   AnimeCelShader,
+  ParticleSystem,
   type ElementType
 } from '@heretek/engine';
 import {
@@ -94,11 +95,12 @@ const AccordionCard: React.FC<AccordionCardProps> = ({
 };
 
 export const Inspector: React.FC = () => {
-  const { selectedGameObject, refreshScene, detachPrefab, undo, canUndo } = useStudio();
+  const { selectedGameObject, refreshScene, detachPrefab, undo, canUndo, isPlaying } = useStudio();
   const [showAddComponent, setShowAddComponent] = useState(false);
   const [openCards, setOpenCards] = useState<Record<string, boolean>>({
     transform: true,
     prefab: true,
+    particle: true,
     mesh: true,
     rigidBody: false,
     controller: false,
@@ -110,6 +112,14 @@ export const Inspector: React.FC = () => {
   const toggleCard = (key: string) => {
     setOpenCards(prev => ({ ...prev, [key]: !prev[key] }));
   };
+  // Live particle readout: re-render twice a second during play so the
+  // alive badge tracks the running simulation (static otherwise).
+  const [, setLiveTick] = useState(0);
+  useEffect(() => {
+    if (!isPlaying) return;
+    const id = setInterval(() => setLiveTick(t => t + 1), 500);
+    return () => clearInterval(id);
+  }, [isPlaying]);
 
   if (!selectedGameObject) {
     return (
@@ -153,6 +163,7 @@ export const Inspector: React.FC = () => {
   const eventSheet = go.getComponent(EventSheet);
   const elementalComp = go.getComponent(ElementalReactionComponent);
   const celShader = go.getComponent(AnimeCelShader);
+  const particleSys = go.getComponent(ParticleSystem);
 
   return (
     <div className="flex flex-col h-full bg-zinc-950 select-none border-l border-zinc-800 overflow-y-auto">
@@ -604,8 +615,65 @@ export const Inspector: React.FC = () => {
           </AccordionCard>
         )}
 
-        {/* Add Component Button */}
-        <div className="relative pt-2">
+        {/* 8. Particle Emitter */}
+        {particleSys && (
+          <AccordionCard
+            title="Particle Emitter"
+            icon={Sparkles}
+            colorClass="text-orange-400"
+            isOpen={openCards.particle}
+            onToggle={() => toggleCard('particle')}
+            onRemove={() => { go.removeComponent(particleSys); refreshScene(); }}
+            badge={
+              <span className="font-mono text-[10px] text-orange-300">
+                {particleSys.aliveCount}/{particleSys.maxParticles}
+              </span>
+            }
+          >
+            <div className="space-y-2 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-zinc-400">Rate /s</span>
+                <input
+                  type="number"
+                  step="5"
+                  value={particleSys.rate}
+                  onChange={(e) => { particleSys.rate = Math.max(0, parseFloat(e.target.value) || 0); refreshScene(); }}
+                  className="w-20 bg-zinc-950 border border-zinc-700 rounded px-2 py-0.5 text-right text-white outline-none font-mono"
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-zinc-400">Max particles</span>
+                <span className="font-mono text-zinc-200">{particleSys.maxParticles}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-zinc-400">Lifetime</span>
+                <span className="font-mono text-zinc-200">{particleSys.lifetimeMin}s – {particleSys.lifetimeMax}s</span>
+              </div>
+              <div className="grid grid-cols-3 gap-1.5 pt-1">
+                <button
+                  onClick={() => { particleSys.emit(20); refreshScene(); }}
+                  className="py-1.5 rounded bg-orange-900/40 hover:bg-orange-800/50 border border-orange-700/50 text-orange-200 text-[11px] font-medium transition-colors"
+                >
+                  Burst +20
+                </button>
+                <button
+                  onClick={() => { particleSys.emitting ? particleSys.pause() : particleSys.play(); refreshScene(); }}
+                  className="py-1.5 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-200 text-[11px] font-medium transition-colors"
+                >
+                  {particleSys.emitting ? 'Pause' : 'Play'}
+                </button>
+                <button
+                  onClick={() => { particleSys.restart(); refreshScene(); }}
+                  className="py-1.5 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-200 text-[11px] font-medium transition-colors"
+                >
+                  Restart
+                </button>
+              </div>
+            </div>
+          </AccordionCard>
+        )}
+
+        {/* Add Component Button */}        <div className="relative pt-2">
           <button
             onClick={() => setShowAddComponent(!showAddComponent)}
             className="w-full flex items-center justify-center space-x-1.5 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-200 text-xs font-medium border border-zinc-800 hover:border-zinc-700 transition-colors shadow-sm"

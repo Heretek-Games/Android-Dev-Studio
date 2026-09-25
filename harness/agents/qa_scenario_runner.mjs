@@ -320,6 +320,9 @@ function buildScene(spec, engine) {
           }
         }
       }
+      if (objSpec.particle) {
+        go.addComponent(new engine.ParticleSystem(objSpec.particle));
+      }
       if (objSpec.health) {
         go.addComponent(new engine.HealthComponent(objSpec.health));
       }
@@ -662,6 +665,14 @@ function evaluateRules(spec, ctxData) {
         }
         pass = rec.fireCount >= (rule.min ?? 1);
         detail = `"${rule.event}" fired ${rec.fireCount}x (min=${rule.min ?? 1}, lastTick=${rec.lastFireTick}, blockedBy=[${rec.conditions.filter(c => c.lastResult === false).map(c => c.type).join(', ') || 'none'}])`;
+        break;
+      }
+      case 'particle_count_min': {
+        const go = scene.findByName(rule.target);
+        const ps = go ? go.components.find(c => c.constructor.name === 'ParticleSystem') : null;
+        if (!ps) { pass = false; detail = `no ParticleSystem on "${rule.target}"`; break; }
+        pass = ps.aliveCount >= (rule.min ?? 1);
+        detail = `"${rule.target}" particles alive=${ps.aliveCount} (min=${rule.min ?? 1}, cap=${ps.maxParticles})`;
         break;
       }
       case 'object_count': {

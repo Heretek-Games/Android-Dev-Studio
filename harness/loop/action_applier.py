@@ -838,6 +838,122 @@ def _validate_saveslot_options(
     return normalized
 
 
+PARTICLE_INTS = {"maxParticles": 1, "burst": 0}
+PARTICLE_NUMERICS = {"rate", "duration", "spread", "gravity", "drag", "opacity"}
+PARTICLE_RANGES = (
+    ("speedMin", "speedMax"),
+    ("lifetimeMin", "lifetimeMax"),
+    ("sizeMin", "sizeMax"),
+)
+
+
+def _validate_particle(
+    value: Any, errors: Optional[List[str]] = None
+) -> Optional[Dict[str, Any]]:
+    """ParticleSystem emitter options pass straight to the QA runner (objSpec.particle).
+
+    Returns the normalized options, or None when malformed. Range pairs
+    (speed/lifetime/size min-max) must order correctly; colors must be
+    #rgb/#rrggbb; unknown keys are rejected so typos surface as repair input.
+    """
+
+    def fail(reason: str) -> None:
+        if errors is not None:
+            errors.append(reason)
+        return None
+
+    if not isinstance(value, dict):
+        fail("spawn 'particle' must be an object of emitter options")
+        return None
+    normalized: Dict[str, Any] = {}
+    for key, item in value.items():
+        if key in PARTICLE_INTS:
+            floor = PARTICLE_INTS[key]
+            if (
+                isinstance(item, bool)
+                or not isinstance(item, (int, float))
+                or int(item) != item
+                or item < floor
+            ):
+                fail(
+                    f"spawn particle '{key}' must be an integer >= {floor} "
+                    f"(got {item!r})"
+                )
+                return None
+            normalized[key] = int(item)
+        elif key in PARTICLE_NUMERICS:
+            if not _is_finite_number(item):
+                fail(f"spawn particle '{key}' must be a finite number (got {item!r})")
+                return None
+            if key in ("rate", "duration", "drag") and item < 0:
+                fail(f"spawn particle '{key}' must be >= 0 (got {item!r})")
+                return None
+            if key == "spread" and not 0 <= item <= 3.141592653589793:
+                fail(f"spawn particle 'spread' must be 0..pi radians (got {item!r})")
+                return None
+            if key == "opacity" and not 0 <= item <= 1:
+                fail(f"spawn particle 'opacity' must be 0..1 (got {item!r})")
+                return None
+            normalized[key] = float(item)
+        elif key == "seed":
+            if (
+                isinstance(item, bool)
+                or not isinstance(item, (int, float))
+                or int(item) != item
+                or item < 0
+            ):
+                fail(f"spawn particle 'seed' must be an integer >= 0 (got {item!r})")
+                return None
+            normalized[key] = int(item)
+        elif key == "shape":
+            if item not in ("point", "box", "sphere"):
+                fail(f"spawn particle 'shape' must be point|box|sphere (got {item!r})")
+                return None
+            normalized[key] = item
+        elif key in ("shapeSize", "direction"):
+            vec = _vec3(item)
+            if vec is None:
+                fail(f"spawn particle '{key}' must be 3 finite numbers (got {item!r})")
+                return None
+            normalized[key] = vec
+        elif key in ("startColor", "endColor"):
+            if not _is_color(item):
+                fail(f"spawn particle '{key}' must be #rgb or #rrggbb (got {item!r})")
+                return None
+            normalized[key] = item
+        elif key == "blending":
+            if item not in ("additive", "normal"):
+                fail(
+                    f"spawn particle 'blending' must be additive|normal (got {item!r})"
+                )
+                return None
+            normalized[key] = item
+        elif key in ("loop", "autostart"):
+            if not isinstance(item, bool):
+                fail(f"spawn particle '{key}' must be true/false (got {item!r})")
+                return None
+            normalized[key] = item
+        elif key in {lo for pair in PARTICLE_RANGES for lo in pair} | {
+            hi for pair in PARTICLE_RANGES for hi in pair
+        }:
+            if not _is_finite_number(item) or item < 0:
+                fail(
+                    f"spawn particle '{key}' must be a non-negative finite number (got {item!r})"
+                )
+                return None
+            normalized[key] = float(item)
+        else:
+            fail(f"unknown spawn particle key '{key}'")
+            return None
+    for lo, hi in PARTICLE_RANGES:
+        if lo in normalized and hi in normalized and normalized[lo] > normalized[hi]:
+            fail(
+                f"spawn particle '{lo}' must be <= '{hi}' (got {normalized[lo]} > {normalized[hi]})"
+            )
+            return None
+    return normalized
+
+
 DIALOGUE_NODE_TYPES = {"text", "choice", "condition", "action", "end"}
 DIALOGUE_CONDITION_OPERATORS = {"==", "!=", ">", "<", ">=", "<="}
 
@@ -1603,6 +1719,19 @@ def _apply_spawn(
                 f"spawn behaviors rejected — {behavior_reasons[0] if behavior_reasons else 'malformed'}",
             )
         obj["behaviors"] = behaviors
+    if action.get("particle") is not None:
+        # Maps to a ParticleSystem in the QA runner (objSpec.particle).
+        particle_reasons: List[str] = []
+        particle = _validate_particle(action.get("particle"), particle_reasons)
+        if particle is None:
+            return _outcome(
+                result,
+                index,
+                "spawn",
+                "invalid",
+                f"spawn particle rejected — {particle_reasons[0] if particle_reasons else 'malformed'}",
+            )
+        obj["particle"] = particle
 
     scene.setdefault("gameObjects", []).append(obj)
     _outcome(

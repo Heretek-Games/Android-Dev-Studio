@@ -1005,6 +1005,56 @@ class BehaviorArrayTests(unittest.TestCase):
             self.assertEqual(result.invalid, 1, f"should reject {bad!r}")
             self.assertIn(hint, result.outcomes[0]["detail"])
 
+    def test_particle_options_validate(self):
+        scene, result = apply_actions(
+            base_scene(),
+            [
+                {
+                    "type": "spawn",
+                    "name": "Sparks",
+                    "physics": "none",
+                    "particle": {
+                        "rate": 60,
+                        "maxParticles": 200,
+                        "shape": "sphere",
+                        "direction": [0, 1, 0],
+                        "speedMin": 2,
+                        "speedMax": 5,
+                        "lifetimeMin": 0.5,
+                        "lifetimeMax": 1.5,
+                        "startColor": "#ffaa00",
+                        "endColor": "#ff0000",
+                        "blending": "additive",
+                        "seed": 7,
+                    },
+                }
+            ],
+        )
+        self.assertEqual(result.applied, 1)
+        particle = scene["gameObjects"][1]["particle"]
+        self.assertEqual(particle["maxParticles"], 200)
+        self.assertEqual(particle["shape"], "sphere")
+
+        for bad, hint in (
+            ({"rate": -1}, "rate"),
+            ({"maxParticles": 0}, "maxParticles"),
+            ({"maxParticles": 2.5}, "maxParticles"),
+            ({"shape": "cone"}, "shape"),
+            ({"direction": [0, 1]}, "direction"),
+            ({"speedMin": 5, "speedMax": 2}, "speedMin"),
+            ({"lifetimeMin": 2, "lifetimeMax": 1}, "lifetimeMin"),
+            ({"startColor": "red"}, "startColor"),
+            ({"blending": "multiply"}, "blending"),
+            ({"spread": 4}, "spread"),
+            ({"opacity": 2}, "opacity"),
+            ({"friction": 1}, "friction"),
+        ):
+            _, result = apply_actions(
+                base_scene(), [{"type": "spawn", "name": "W", "particle": bad}]
+            )
+            self.assertEqual(result.invalid, 1, f"should reject {bad!r}")
+            self.assertIn(hint, result.outcomes[0]["detail"])
+
 
 def keeper_tree():
     return {

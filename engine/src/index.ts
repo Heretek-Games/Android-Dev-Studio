@@ -68,6 +68,7 @@ export * from './behaviors/Pathfollow.js';
 export * from './behaviors/Timer.js';
 export * from './behaviors/Spawner.js';
 export * from './behaviors/SaveSlot.js';
+export * from './particles/ParticleSystem.js';
 export * from './combat/ElementalReactionComponent.js';
 export * from './vehicles/VehicleController.js';
 export * from './ai/TrafficSystem.js';
