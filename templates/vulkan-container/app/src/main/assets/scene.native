@@ -1,0 +1,6 @@
+# heretek-native-scene v1
+scene MainArena
+mesh Ground_Arena 0.0000 -0.5000 0.0000 24.0000 1.0000 24.0000 0.1529 0.1529 0.1647 fixed
+mesh Player_Hero 0.0000 1.5000 0.0000 1.0000 1.5000 1.0000 0.2314 0.5098 0.9647 dynamic
+mesh Bonus_Crate 3.0000 2.0000 -4.0000 1.5000 1.5000 1.5000 0.9608 0.6196 0.0431 dynamic
+light Directional_Sun 5.0000 12.0000 6.0000 1.0000 1.0000 1.0000 2.5000 directional

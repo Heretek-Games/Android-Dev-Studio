@@ -35,12 +35,16 @@ Android-Dev-Studio/
 │   └── vite.config.ts                # Dev server config & /api/llm secure proxy
 │
 ├── templates/
-│   └── android-container/            # High-performance Android Gradle Template (Tier 1)
-│       ├── app/src/main/
-│       │   ├── AndroidManifest.xml   # Fullscreen landscape, OpenGL ES 3.0, vibration
-│       │   ├── java/                 # MainActivity.kt (Hardware-accelerated WebView, WebViewAssetLoader, AndroidBridge)
-│       │   └── assets/game/          # Bundled webgame container with touch HUD
-│       └── build.gradle
+│   ├── android-container/            # High-performance Android Gradle Template (Tier 1)
+│   │   ├── app/src/main/
+│   │   │   ├── AndroidManifest.xml   # Fullscreen landscape, OpenGL ES 3.0, vibration
+│   │   │   ├── java/                 # MainActivity.kt (Hardware-accelerated WebView, WebViewAssetLoader, AndroidBridge)
+│   │   │   └── assets/game/          # Bundled webgame container with touch HUD
+│   │   └── build.gradle
+│   └── vulkan-container/             # Tier 2 native Vulkan container (NDK)
+│       ├── app/src/main/cpp/         # scene_loader, culling (host-tested), vulkan_renderer bootstrap, JNI bridge
+│       ├── app/src/main/assets/      # scene.native exported by harness/build/scene_exporter.py
+│       └── app/build.gradle.kts      # externalNativeBuild (arm64-v8a, libheretek_native.so)
 │
 └── harness/                          # AI Harness, Artemis QA & Studio MCP Server
     ├── agents/artemis_qa_runner.py   # Google Artemis autonomous mobile playtesting runner

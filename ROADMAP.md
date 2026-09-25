@@ -60,10 +60,10 @@ A phased roadmap tracking progress from foundational 3D engine systems to AAA-ti
 - [x] Add Unity `.unitypackage` decompression and manifest extraction pipeline in `GDevelopAssetService.ts` and `AssetBrowser.tsx`.
 
 ### Milestone 6: Dual-Tier Native Vulkan Mobile Container (Tier 2) 🚀
-- [ ] Scaffold native C++/NDK Android project using Google Filament or Godot 4 Vulkan Mobile core.
-- [ ] Build scene exporter: translate `project.scene.json` into native Vulkan scene graphs.
-- [ ] Implement GPU compute culling and instanced draw calls for 50k+ simulated entities (Anno 1800 scale).
-- [ ] Implement quadtree terrain and mesh LOD streaming (Genshin Impact scale).
+- [x] Scaffold native C++/NDK Android project (`templates/vulkan-container`): CMake project building `libheretek_native.so` (verified: ARM64 Android ELF via NDK r30, links libvulkan/libandroid/liblog), Vulkan instance/device bootstrap, JNI bridge, MainActivity SurfaceView loop, Gradle scaffolding. No Filament/Godot dependency — the container owns its renderer core.
+- [x] Build scene exporter: `harness/build/scene_exporter.py` translates studio scenes into the dependency-free `scene.native` line format + `scene.summary.json` draw-budget report (6 unit tests; deterministic output; sample exported into the container assets). Native `scene_loader.cpp` parses it with line-numbered error reporting (host-tested).
+- [ ] Implement GPU compute culling and instanced draw calls for 50k+ simulated entities (Anno 1800 scale). **Progress:** CPU reference implementation (`culling.cpp`: Gribb–Hartmann frustum planes, AABB tests, instanced batch packing) host-tested (caught a real row/column-major bug); GPU dispatch pending.
+- [ ] Implement quadtree terrain and mesh LOD streaming (Genshin Impact scale). **Progress:** TS engine ships `TerrainChunk`, `WorldStreamer` (frame-budgeted rings), and `HierarchicalStreamingCells` (district/block/chunk tiers + adaptive draw budget); native integration pending.
 
 ### Milestone 7: Autonomous QA & OpenCode Delegation ✅
 - [x] Configure `opencode-mcp` in `~/.gemini/config/mcp_config.json` with auto-serve on port 4096.
