@@ -103,5 +103,85 @@ class V2RoundTripTests(unittest.TestCase):
         self.assertEqual(scene["gameObjects"][0]["name"], "B")
 
 
+class V2PrefabTests(unittest.TestCase):
+    def _write_prefab_scene(self, root):
+        from harness.prefabs.prefabs import PrefabStore
+
+        scene_dir = Path(root) / "main"
+        PrefabStore(scene_dir / "prefabs").save(
+            {
+                "id": "goblin",
+                "template": {
+                    "shape": "capsule",
+                    "physics": "none",
+                    "color": "#4d7c0f",
+                    "health": {"maxHealth": 50},
+                },
+            }
+        )
+        PrefabStore(scene_dir / "prefabs").save(
+            {
+                "id": "goblin-brute",
+                "base": "goblin",
+                "overrides": {"health": {"maxHealth": 120}},
+            }
+        )
+        (scene_dir / "scene.json").write_text(
+            json.dumps({"id": "t", "name": "T", "gameObjects": []}),
+            encoding="utf-8",
+        )
+        objects_dir = scene_dir / "objects"
+        objects_dir.mkdir(parents=True, exist_ok=True)
+        (objects_dir / "a.json").write_text(
+            json.dumps(
+                {
+                    "uid": "a",
+                    "name": "Goblin A",
+                    "prefabUid": "goblin",
+                    "position": [5, 1.5, 0],
+                }
+            ),
+            encoding="utf-8",
+        )
+        (objects_dir / "b.json").write_text(
+            json.dumps(
+                {
+                    "uid": "b",
+                    "name": "Goblin King",
+                    "prefabUid": "goblin-brute",
+                    "color": "#ffd700",
+                }
+            ),
+            encoding="utf-8",
+        )
+        return scene_dir
+
+    def test_prefab_instances_resolve_with_overrides(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            scene = assemble_from_v2(self._write_prefab_scene(tmp))
+        by_name = {o["name"]: o for o in scene["gameObjects"]}
+        self.assertEqual(by_name["Goblin A"]["shape"], "capsule")
+        self.assertEqual(by_name["Goblin A"]["position"], [5, 1.5, 0])
+        self.assertEqual(by_name["Goblin A"]["health"], {"maxHealth": 50})
+        self.assertEqual(by_name["Goblin King"]["health"], {"maxHealth": 120})
+        self.assertEqual(by_name["Goblin King"]["color"], "#ffd700")
+        self.assertNotIn("prefabUid", by_name["Goblin A"])
+
+    def test_unknown_prefab_fails_loudly(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            scene_dir = self._write_prefab_scene(tmp)
+            (scene_dir / "objects" / "c.json").write_text(
+                json.dumps({"uid": "c", "name": "Orc", "prefabUid": "orc"}),
+                encoding="utf-8",
+            )
+            with self.assertRaises(ValueError) as ctx:
+                assemble_from_v2(scene_dir)
+        self.assertIn("orc", str(ctx.exception))
+
+
 if __name__ == "__main__":
     unittest.main()

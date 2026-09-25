@@ -99,15 +99,35 @@ def convert_to_v2(scene: Dict[str, Any], out_dir: Path) -> Dict[str, str]:
 
 
 def assemble_from_v2(scene_dir: Path) -> Dict[str, Any]:
-    """Rebuild the v1 flat dict from a v2 directory (what every consumer reads)."""
+    """Rebuild the v1 flat dict from a v2 directory (what every consumer reads).
+
+    Object records may carry `prefabUid` (+ optional per-field overrides):
+    they resolve against the scene dir's `prefabs/` store (PrefabStore files),
+    then merge like loop spawn-from-prefab (explicit fields win, identity from
+    the record). Unknown prefab ids fail loudly with the file path.
+    """
+    from harness.prefabs.prefabs import PrefabStore, resolve_prefab
+
     scene_dir = Path(scene_dir)
     header = json.loads((scene_dir / "scene.json").read_text(encoding="utf-8"))
+    store = PrefabStore(scene_dir / "prefabs").load_all()
     objects: List[Dict[str, Any]] = []
     objects_dir = scene_dir / "objects"
     if objects_dir.is_dir():
         for path in sorted(objects_dir.glob("*.json")):
             record = json.loads(path.read_text(encoding="utf-8"))
             record.pop("uid", None)
+            prefab_uid = record.pop("prefabUid", None)
+            if prefab_uid is not None:
+                errors: List[str] = []
+                base = resolve_prefab(store, prefab_uid, None, errors)
+                if base is None:
+                    raise ValueError(
+                        f"{path.name}: {errors[0] if errors else 'unresolvable prefab'}"
+                    )
+                merged = {k: v for k, v in base.items() if k not in ("name", "uid")}
+                merged.update(record)
+                record = merged
             objects.append(record)
     scene: Dict[str, Any] = {
         "id": header.get("id"),
