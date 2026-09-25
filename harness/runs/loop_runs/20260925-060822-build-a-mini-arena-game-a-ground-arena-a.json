@@ -1,0 +1,588 @@
+{
+  "goal": "Build a mini arena game: a ground arena, a player capsule with mobile controls, 6 tall pillar obstacles in an obstacle course, at least 15 spinning gold coins, and a warm sunset directional light",
+  "rules": [
+    {
+      "id": "player_exists",
+      "type": "entity_exists",
+      "target": "Player Capsule"
+    },
+    {
+      "id": "player_has_physics",
+      "type": "entity_component",
+      "target": "Player Capsule",
+      "component": "RigidBody3D"
+    },
+    {
+      "id": "player_has_mobile_controls",
+      "type": "entity_component",
+      "target": "Player Capsule",
+      "component": "MobileController"
+    },
+    {
+      "id": "coin_count",
+      "type": "object_count",
+      "min": 15,
+      "max": 40
+    },
+    {
+      "id": "coins_have_spin_events",
+      "type": "event_attached",
+      "target": "Gold Coin 1",
+      "action": "RotateY"
+    },
+    {
+      "id": "coins_actually_spin",
+      "type": "transform_changes",
+      "target": "Gold Coin 1",
+      "field": "rotationY",
+      "minDelta": 0.05
+    },
+    {
+      "id": "player_stays_above_floor",
+      "type": "transform_bounds",
+      "target": "Player Capsule",
+      "axis": "y",
+      "min": -5
+    },
+    {
+      "id": "finite_transforms",
+      "type": "no_nan_transforms"
+    },
+    {
+      "id": "mobile_draw_budget",
+      "type": "draw_call_budget",
+      "max": 100
+    },
+    {
+      "id": "sim_performance",
+      "type": "fps_min",
+      "min": 30
+    }
+  ],
+  "verdict": "green",
+  "iterations": [
+    {
+      "iteration": 1,
+      "phase": "generate",
+      "visionNotes": [],
+      "llm": {
+        "model": "mimo-v2.6-flash",
+        "promptTokens": 906,
+        "completionTokens": 2123,
+        "totalTokens": 3029,
+        "latencySeconds": 25.369,
+        "finishReason": "stop",
+        "attempts": 1
+      },
+      "parse": {
+        "strategy": "raw",
+        "actionCount": 41,
+        "summary": "A compact sunset arena with a controllable player capsule, 6-pillar obstacle course, and 15 spinning gold coins.",
+        "error": null
+      },
+      "apply": {
+        "applied": 41,
+        "targetMissing": 0,
+        "invalid": 0,
+        "failed": 0,
+        "outcomes": [
+          {
+            "index": 0,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Ground Plane (plane) at [0.0, 0.0, 0.0]",
+            "target": "Ground Plane"
+          },
+          {
+            "index": 1,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Player Capsule (capsule) at [0.0, 1.2, -16.0]",
+            "target": "Player Capsule"
+          },
+          {
+            "index": 2,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Pillar 1 (cylinder) at [-6.0, 3.0, -8.0]",
+            "target": "Pillar 1"
+          },
+          {
+            "index": 3,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Pillar 2 (cylinder) at [0.0, 3.0, -4.0]",
+            "target": "Pillar 2"
+          },
+          {
+            "index": 4,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Pillar 3 (cylinder) at [6.0, 3.0, -8.0]",
+            "target": "Pillar 3"
+          },
+          {
+            "index": 5,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Pillar 4 (cylinder) at [-6.0, 3.0, 4.0]",
+            "target": "Pillar 4"
+          },
+          {
+            "index": 6,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Pillar 5 (cylinder) at [0.0, 3.0, 8.0]",
+            "target": "Pillar 5"
+          },
+          {
+            "index": 7,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Pillar 6 (cylinder) at [6.0, 3.0, 4.0]",
+            "target": "Pillar 6"
+          },
+          {
+            "index": 8,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Gold Coin 1 (cylinder) at [-8.0, 1.5, -14.0]",
+            "target": "Gold Coin 1"
+          },
+          {
+            "index": 9,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Gold Coin 2 (cylinder) at [-4.0, 1.5, -14.0]",
+            "target": "Gold Coin 2"
+          },
+          {
+            "index": 10,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Gold Coin 3 (cylinder) at [4.0, 1.5, -14.0]",
+            "target": "Gold Coin 3"
+          },
+          {
+            "index": 11,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Gold Coin 4 (cylinder) at [8.0, 1.5, -14.0]",
+            "target": "Gold Coin 4"
+          },
+          {
+            "index": 12,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Gold Coin 5 (cylinder) at [-8.0, 1.5, -6.0]",
+            "target": "Gold Coin 5"
+          },
+          {
+            "index": 13,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Gold Coin 6 (cylinder) at [-3.0, 1.5, -6.0]",
+            "target": "Gold Coin 6"
+          },
+          {
+            "index": 14,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Gold Coin 7 (cylinder) at [3.0, 1.5, -6.0]",
+            "target": "Gold Coin 7"
+          },
+          {
+            "index": 15,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Gold Coin 8 (cylinder) at [8.0, 1.5, -6.0]",
+            "target": "Gold Coin 8"
+          },
+          {
+            "index": 16,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Gold Coin 9 (cylinder) at [-8.0, 1.5, 0.0]",
+            "target": "Gold Coin 9"
+          },
+          {
+            "index": 17,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Gold Coin 10 (cylinder) at [-3.0, 1.5, 0.0]",
+            "target": "Gold Coin 10"
+          },
+          {
+            "index": 18,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Gold Coin 11 (cylinder) at [3.0, 1.5, 0.0]",
+            "target": "Gold Coin 11"
+          },
+          {
+            "index": 19,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Gold Coin 12 (cylinder) at [8.0, 1.5, 0.0]",
+            "target": "Gold Coin 12"
+          },
+          {
+            "index": 20,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Gold Coin 13 (cylinder) at [-5.0, 1.5, 10.0]",
+            "target": "Gold Coin 13"
+          },
+          {
+            "index": 21,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Gold Coin 14 (cylinder) at [0.0, 1.5, 14.0]",
+            "target": "Gold Coin 14"
+          },
+          {
+            "index": 22,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Gold Coin 15 (cylinder) at [5.0, 1.5, 10.0]",
+            "target": "Gold Coin 15"
+          },
+          {
+            "index": 23,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added directional light 'Sunset Sun' (intensity 2.5)",
+            "target": "Sunset Sun"
+          },
+          {
+            "index": 24,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added ambient light 'Warm Fill' (intensity 0.6)",
+            "target": "Warm Fill"
+          },
+          {
+            "index": 25,
+            "type": "event",
+            "status": "applied",
+            "detail": "Wired EveryFrame -> Translate on Player Capsule",
+            "target": "Player Capsule"
+          },
+          {
+            "index": 26,
+            "type": "event",
+            "status": "applied",
+            "detail": "Wired EveryFrame -> RotateY on Gold Coin 1",
+            "target": "Gold Coin 1"
+          },
+          {
+            "index": 27,
+            "type": "event",
+            "status": "applied",
+            "detail": "Wired EveryFrame -> RotateY on Gold Coin 2",
+            "target": "Gold Coin 2"
+          },
+          {
+            "index": 28,
+            "type": "event",
+            "status": "applied",
+            "detail": "Wired EveryFrame -> RotateY on Gold Coin 3",
+            "target": "Gold Coin 3"
+          },
+          {
+            "index": 29,
+            "type": "event",
+            "status": "applied",
+            "detail": "Wired EveryFrame -> RotateY on Gold Coin 4",
+            "target": "Gold Coin 4"
+          },
+          {
+            "index": 30,
+            "type": "event",
+            "status": "applied",
+            "detail": "Wired EveryFrame -> RotateY on Gold Coin 5",
+            "target": "Gold Coin 5"
+          },
+          {
+            "index": 31,
+            "type": "event",
+            "status": "applied",
+            "detail": "Wired EveryFrame -> RotateY on Gold Coin 6",
+            "target": "Gold Coin 6"
+          },
+          {
+            "index": 32,
+            "type": "event",
+            "status": "applied",
+            "detail": "Wired EveryFrame -> RotateY on Gold Coin 7",
+            "target": "Gold Coin 7"
+          },
+          {
+            "index": 33,
+            "type": "event",
+            "status": "applied",
+            "detail": "Wired EveryFrame -> RotateY on Gold Coin 8",
+            "target": "Gold Coin 8"
+          },
+          {
+            "index": 34,
+            "type": "event",
+            "status": "applied",
+            "detail": "Wired EveryFrame -> RotateY on Gold Coin 9",
+            "target": "Gold Coin 9"
+          },
+          {
+            "index": 35,
+            "type": "event",
+            "status": "applied",
+            "detail": "Wired EveryFrame -> RotateY on Gold Coin 10",
+            "target": "Gold Coin 10"
+          },
+          {
+            "index": 36,
+            "type": "event",
+            "status": "applied",
+            "detail": "Wired EveryFrame -> RotateY on Gold Coin 11",
+            "target": "Gold Coin 11"
+          },
+          {
+            "index": 37,
+            "type": "event",
+            "status": "applied",
+            "detail": "Wired EveryFrame -> RotateY on Gold Coin 12",
+            "target": "Gold Coin 12"
+          },
+          {
+            "index": 38,
+            "type": "event",
+            "status": "applied",
+            "detail": "Wired EveryFrame -> RotateY on Gold Coin 13",
+            "target": "Gold Coin 13"
+          },
+          {
+            "index": 39,
+            "type": "event",
+            "status": "applied",
+            "detail": "Wired EveryFrame -> RotateY on Gold Coin 14",
+            "target": "Gold Coin 14"
+          },
+          {
+            "index": 40,
+            "type": "event",
+            "status": "applied",
+            "detail": "Wired EveryFrame -> RotateY on Gold Coin 15",
+            "target": "Gold Coin 15"
+          }
+        ],
+        "appliedDescriptions": [
+          "Spawned Ground Plane (plane) at [0.0, 0.0, 0.0]",
+          "Spawned Player Capsule (capsule) at [0.0, 1.2, -16.0]",
+          "Spawned Pillar 1 (cylinder) at [-6.0, 3.0, -8.0]",
+          "Spawned Pillar 2 (cylinder) at [0.0, 3.0, -4.0]",
+          "Spawned Pillar 3 (cylinder) at [6.0, 3.0, -8.0]",
+          "Spawned Pillar 4 (cylinder) at [-6.0, 3.0, 4.0]",
+          "Spawned Pillar 5 (cylinder) at [0.0, 3.0, 8.0]",
+          "Spawned Pillar 6 (cylinder) at [6.0, 3.0, 4.0]",
+          "Spawned Gold Coin 1 (cylinder) at [-8.0, 1.5, -14.0]",
+          "Spawned Gold Coin 2 (cylinder) at [-4.0, 1.5, -14.0]",
+          "Spawned Gold Coin 3 (cylinder) at [4.0, 1.5, -14.0]",
+          "Spawned Gold Coin 4 (cylinder) at [8.0, 1.5, -14.0]",
+          "Spawned Gold Coin 5 (cylinder) at [-8.0, 1.5, -6.0]",
+          "Spawned Gold Coin 6 (cylinder) at [-3.0, 1.5, -6.0]",
+          "Spawned Gold Coin 7 (cylinder) at [3.0, 1.5, -6.0]",
+          "Spawned Gold Coin 8 (cylinder) at [8.0, 1.5, -6.0]",
+          "Spawned Gold Coin 9 (cylinder) at [-8.0, 1.5, 0.0]",
+          "Spawned Gold Coin 10 (cylinder) at [-3.0, 1.5, 0.0]",
+          "Spawned Gold Coin 11 (cylinder) at [3.0, 1.5, 0.0]",
+          "Spawned Gold Coin 12 (cylinder) at [8.0, 1.5, 0.0]",
+          "Spawned Gold Coin 13 (cylinder) at [-5.0, 1.5, 10.0]",
+          "Spawned Gold Coin 14 (cylinder) at [0.0, 1.5, 14.0]",
+          "Spawned Gold Coin 15 (cylinder) at [5.0, 1.5, 10.0]",
+          "Added directional light 'Sunset Sun' (intensity 2.5)",
+          "Added ambient light 'Warm Fill' (intensity 0.6)",
+          "Wired EveryFrame -> Translate on Player Capsule",
+          "Wired EveryFrame -> RotateY on Gold Coin 1",
+          "Wired EveryFrame -> RotateY on Gold Coin 2",
+          "Wired EveryFrame -> RotateY on Gold Coin 3",
+          "Wired EveryFrame -> RotateY on Gold Coin 4",
+          "Wired EveryFrame -> RotateY on Gold Coin 5",
+          "Wired EveryFrame -> RotateY on Gold Coin 6",
+          "Wired EveryFrame -> RotateY on Gold Coin 7",
+          "Wired EveryFrame -> RotateY on Gold Coin 8",
+          "Wired EveryFrame -> RotateY on Gold Coin 9",
+          "Wired EveryFrame -> RotateY on Gold Coin 10",
+          "Wired EveryFrame -> RotateY on Gold Coin 11",
+          "Wired EveryFrame -> RotateY on Gold Coin 12",
+          "Wired EveryFrame -> RotateY on Gold Coin 13",
+          "Wired EveryFrame -> RotateY on Gold Coin 14",
+          "Wired EveryFrame -> RotateY on Gold Coin 15"
+        ]
+      },
+      "gate": {
+        "valid": false,
+        "violations": [
+          {
+            "code": "COLLIDER_PENETRATION_AT_SPAWN",
+            "message": "Dynamic collider 'Player Capsule' penetrates fixed collider 'Ground Plane' at spawn",
+            "entity": "Player Capsule"
+          }
+        ]
+      },
+      "qa": {
+        "verdict": "skipped",
+        "reason": "invariant gate violation"
+      }
+    },
+    {
+      "iteration": 2,
+      "phase": "repair",
+      "visionNotes": [],
+      "llm": {
+        "model": "mimo-v2.6-flash",
+        "promptTokens": 3281,
+        "completionTokens": 151,
+        "totalTokens": 3432,
+        "latencySeconds": 49.713,
+        "finishReason": "stop",
+        "attempts": 1
+      },
+      "parse": {
+        "strategy": "raw",
+        "actionCount": 1,
+        "summary": "Raise the Player Capsule so its collider clears the fixed ground plane at spawn, leaving all other objects and events untouched.",
+        "error": null
+      },
+      "apply": {
+        "applied": 1,
+        "targetMissing": 0,
+        "invalid": 0,
+        "failed": 0,
+        "outcomes": [
+          {
+            "index": 0,
+            "type": "modify",
+            "status": "applied",
+            "detail": "Modified Player Capsule: position",
+            "target": "Player Capsule"
+          }
+        ],
+        "appliedDescriptions": [
+          "Modified Player Capsule: position"
+        ]
+      },
+      "gate": {
+        "valid": true,
+        "violations": []
+      },
+      "qa": {
+        "verdict": "SUCCEEDED",
+        "passed": 10,
+        "total": 10,
+        "failedRules": [],
+        "metrics": {
+          "avgFrameTimeMs": 0.2057,
+          "p95FrameTimeMs": 0.2643,
+          "maxFrameTimeMs": 27.6934,
+          "simFpsEstimate": 4861.24,
+          "drawCallEstimate": 23,
+          "instancedBatches": 0,
+          "memoryHeapMb": 16.06,
+          "objectCount": 25,
+          "physicsBodyCount": 23,
+          "eventCount": 16
+        }
+      }
+    }
+  ],
+  "totalTokens": 6461,
+  "totalLatencySeconds": 75.082,
+  "finalReport": {
+    "schemaVersion": 1,
+    "runner": "qa_scenario_runner.mjs",
+    "scenario": "loop_work_scene.json",
+    "goal": "Build a mini arena game: a ground arena, a player capsule with mobile controls, 6 tall pillar obstacles in an obstacle course, at least 15 spinning gold coins, and a warm sunset directional light",
+    "timestamp": 1790330902.117,
+    "frames": 600,
+    "fixedDeltaSeconds": 0.016666666666666666,
+    "metrics": {
+      "avgFrameTimeMs": 0.2057,
+      "p95FrameTimeMs": 0.2643,
+      "maxFrameTimeMs": 27.6934,
+      "simFpsEstimate": 4861.24,
+      "drawCallEstimate": 23,
+      "instancedBatches": 0,
+      "memoryHeapMb": 16.06,
+      "objectCount": 25,
+      "physicsBodyCount": 23,
+      "eventCount": 16
+    },
+    "rules": [
+      {
+        "id": "player_exists",
+        "type": "entity_exists",
+        "pass": true,
+        "detail": "found \"Player Capsule\""
+      },
+      {
+        "id": "player_has_physics",
+        "type": "entity_component",
+        "pass": true,
+        "detail": "Player Capsule components: [MeshRenderer, RigidBody3D, Collider3D, MobileController, EventSheet]"
+      },
+      {
+        "id": "player_has_mobile_controls",
+        "type": "entity_component",
+        "pass": true,
+        "detail": "Player Capsule components: [MeshRenderer, RigidBody3D, Collider3D, MobileController, EventSheet]"
+      },
+      {
+        "id": "coin_count",
+        "type": "object_count",
+        "pass": true,
+        "detail": "objectCount=25 (min=15 max=40)"
+      },
+      {
+        "id": "coins_have_spin_events",
+        "type": "event_attached",
+        "pass": true,
+        "detail": "actions: [RotateY]"
+      },
+      {
+        "id": "coins_actually_spin",
+        "type": "transform_changes",
+        "pass": true,
+        "detail": "Gold Coin 1.rotationY delta=628.31853 (minDelta=0.05)"
+      },
+      {
+        "id": "player_stays_above_floor",
+        "type": "transform_bounds",
+        "pass": true,
+        "detail": "\"Player Capsule\" stayed within bounds over 13 samples"
+      },
+      {
+        "id": "finite_transforms",
+        "type": "no_nan_transforms",
+        "pass": true,
+        "detail": "all 25 transforms finite"
+      },
+      {
+        "id": "mobile_draw_budget",
+        "type": "draw_call_budget",
+        "pass": true,
+        "detail": "drawCallEstimate=23 (budget 100)"
+      },
+      {
+        "id": "sim_performance",
+        "type": "fps_min",
+        "pass": true,
+        "detail": "simFpsEstimate=4861.2 (min 30)"
+      }
+    ],
+    "passed": 10,
+    "total": 10,
+    "verdict": "SUCCEEDED",
+    "confidence": 1
+  },
+  "error": null,
+  "workScene": "/home/john/Projects/Android-Dev-Studio/harness/scenes/loop_work_scene.json"
+}
