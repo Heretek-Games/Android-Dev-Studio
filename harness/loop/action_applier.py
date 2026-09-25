@@ -252,7 +252,14 @@ CEL_NUMERICS = {"outlineThickness", "rimPower"}
 #: Behaviors the loop may attach via the `behaviors` array (mirrors the engine
 #: BuiltinComponents registry; Tween options pass through unvalidated since
 #: every key is a valid tween spec field trio).
-BEHAVIOR_TYPES = {"Tween", "TopDownMovement", "Draggable", "DestroyOutsideScreen"}
+BEHAVIOR_TYPES = {
+    "Tween",
+    "TopDownMovement",
+    "Draggable",
+    "DestroyOutsideScreen",
+    "PlatformerCharacter",
+    "Platform",
+}
 
 
 def _validate_cel(
@@ -346,6 +353,16 @@ def _validate_behaviors(
             normalized.append({"type": btype, "options": checked})
         elif btype == "DestroyOutsideScreen":
             checked = _validate_destroy_outside_options(options, i, errors)
+            if checked is None:
+                return None
+            normalized.append({"type": btype, "options": checked})
+        elif btype == "PlatformerCharacter":
+            checked = _validate_platformer_options(options, i, errors)
+            if checked is None:
+                return None
+            normalized.append({"type": btype, "options": checked})
+        elif btype == "Platform":
+            checked = _validate_platform_options(options, i, errors)
             if checked is None:
                 return None
             normalized.append({"type": btype, "options": checked})
@@ -470,6 +487,88 @@ def _validate_destroy_outside_options(
             fail(
                 f"behaviors[{index}] unknown DestroyOutsideScreen option '{key}' "
                 "(allowed: margin)"
+            )
+            return None
+    return normalized
+
+
+PLATFORMER_NUMERICS = {"moveSpeed", "jumpForce", "gravity", "coyoteTime"}
+
+
+def _validate_platformer_options(
+    options: Dict[str, Any], index: int, errors: Optional[List[str]]
+) -> Optional[Dict[str, Any]]:
+    def fail(reason: str) -> None:
+        if errors is not None:
+            errors.append(reason)
+        return None
+
+    normalized: Dict[str, Any] = {}
+    for key, item in options.items():
+        if key in PLATFORMER_NUMERICS:
+            if not _is_finite_number(item) or item < 0:
+                fail(
+                    f"behaviors[{index}] PlatformerCharacter '{key}' must be a "
+                    f"non-negative finite number (got {item!r})"
+                )
+                return None
+            normalized[key] = float(item)
+        elif key == "maxJumps":
+            if (
+                isinstance(item, bool)
+                or not isinstance(item, (int, float))
+                or int(item) != item
+                or item < 1
+            ):
+                fail(
+                    f"behaviors[{index}] PlatformerCharacter 'maxJumps' must be "
+                    f"an integer >= 1 (got {item!r})"
+                )
+                return None
+            normalized[key] = int(item)
+        elif key == "simulate":
+            if (
+                not isinstance(item, dict)
+                or not _is_finite_number(item.get("x"))
+                or not isinstance(item.get("jump"), bool)
+            ):
+                fail(
+                    f"behaviors[{index}] PlatformerCharacter 'simulate' must be "
+                    f"{{x, jump:bool}} (got {item!r})"
+                )
+                return None
+            normalized[key] = {"x": float(item["x"]), "jump": item["jump"]}
+        else:
+            fail(
+                f"behaviors[{index}] unknown PlatformerCharacter option '{key}' "
+                "(allowed: moveSpeed, jumpForce, gravity, coyoteTime, maxJumps, simulate)"
+            )
+            return None
+    return normalized
+
+
+def _validate_platform_options(
+    options: Dict[str, Any], index: int, errors: Optional[List[str]]
+) -> Optional[Dict[str, Any]]:
+    def fail(reason: str) -> None:
+        if errors is not None:
+            errors.append(reason)
+        return None
+
+    normalized: Dict[str, Any] = {}
+    for key, item in options.items():
+        if key == "platformType":
+            if item not in ("solid", "jumpthru", "ladder"):
+                fail(
+                    f"behaviors[{index}] Platform 'platformType' must be "
+                    f"solid|jumpthru|ladder (got {item!r})"
+                )
+                return None
+            normalized[key] = item
+        else:
+            fail(
+                f"behaviors[{index}] unknown Platform option '{key}' "
+                "(allowed: platformType)"
             )
             return None
     return normalized

@@ -21,6 +21,8 @@ import { Tween } from '../behaviors/Tween.js';
 import { TopDownMovement } from '../behaviors/TopDownMovement.js';
 import { Draggable } from '../behaviors/Draggable.js';
 import { DestroyOutsideScreen } from '../behaviors/DestroyOutsideScreen.js';
+import { PlatformerCharacter } from '../behaviors/PlatformerCharacter.js';
+import { Platform } from '../behaviors/Platform.js';
 
 /**
  * Registers every restorable built-in component by its toJSON type name.
@@ -49,6 +51,8 @@ export function registerBuiltinComponents(): void {  registerComponent('MeshRend
   registerComponent('TopDownMovement', TopDownMovement);
   registerComponent('Draggable', Draggable);
   registerComponent('DestroyOutsideScreen', DestroyOutsideScreen);
+  registerComponent('PlatformerCharacter', PlatformerCharacter);
+  registerComponent('Platform', Platform);
 }
 
 // Self-register on import so restores work without a manual init call.

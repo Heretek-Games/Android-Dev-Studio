@@ -850,6 +850,58 @@ class BehaviorArrayTests(unittest.TestCase):
             self.assertEqual(result.invalid, 1, f"should reject {bad!r}")
             self.assertIn(hint, result.outcomes[0]["detail"])
 
+    def test_platformer_and_platform_validate(self):
+        scene, result = apply_actions(
+            base_scene(),
+            [
+                {
+                    "type": "spawn",
+                    "name": "Hero",
+                    "physics": "none",
+                    "behaviors": [
+                        {
+                            "type": "PlatformerCharacter",
+                            "options": {
+                                "moveSpeed": 6,
+                                "maxJumps": 2,
+                                "simulate": {"x": 1, "jump": False},
+                            },
+                        },
+                        {"type": "Platform", "options": {"platformType": "jumpthru"}},
+                    ],
+                }
+            ],
+        )
+        self.assertEqual(result.applied, 1)
+        behaviors = scene["gameObjects"][1]["behaviors"]
+        self.assertEqual(behaviors[0]["options"]["maxJumps"], 2)
+        self.assertEqual(behaviors[1]["options"], {"platformType": "jumpthru"})
+
+        for bad, hint in (
+            (
+                [{"type": "PlatformerCharacter", "options": {"jumpForce": -1}}],
+                "jumpForce",
+            ),
+            ([{"type": "PlatformerCharacter", "options": {"maxJumps": 0}}], "maxJumps"),
+            (
+                [{"type": "PlatformerCharacter", "options": {"maxJumps": 1.5}}],
+                "maxJumps",
+            ),
+            (
+                [{"type": "PlatformerCharacter", "options": {"simulate": {"x": 1}}}],
+                "simulate",
+            ),
+            (
+                [{"type": "Platform", "options": {"platformType": "cloud"}}],
+                "platformType",
+            ),
+        ):
+            _, result = apply_actions(
+                base_scene(), [{"type": "spawn", "name": "W", "behaviors": bad}]
+            )
+            self.assertEqual(result.invalid, 1, f"should reject {bad!r}")
+            self.assertIn(hint, result.outcomes[0]["detail"])
+
 
 def keeper_tree():
     return {

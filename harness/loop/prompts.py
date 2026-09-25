@@ -153,7 +153,9 @@ How acceptance rules map onto the schema (the QA runner checks these exact compo
     "behaviors", e.g. "behaviors": [{"type": "TopDownMovement", "options": {"moveSpeed": 5,
     "simulate": {"x": 1, "y": 0}}}] for scripted headless movement, or [{"type": "Tween"}]
     for animation specs driven by play() calls. Draggable takes
-    axisLock/dragTarget/snapBack; DestroyOutsideScreen takes margin.
+    axisLock/dragTarget/snapBack; DestroyOutsideScreen takes margin;
+    PlatformerCharacter takes moveSpeed/jumpForce/gravity/coyoteTime/maxJumps/simulate;
+    Platform takes platformType solid|jumpthru|ladder.
   - "EventSheet" / event_attached rules -> emit an "event" action targeting that object
   - "LightComponent" -> emit a "light" action
   - object_count rules count every entry in gameObjects (lights included)

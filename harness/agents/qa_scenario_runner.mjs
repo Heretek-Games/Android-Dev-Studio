@@ -305,6 +305,10 @@ function buildScene(spec, engine) {
             go.addComponent(new engine.Draggable(spec.options || {}));
           } else if (name === 'DestroyOutsideScreen' && engine.DestroyOutsideScreen) {
             go.addComponent(new engine.DestroyOutsideScreen(spec.options || {}));
+          } else if (name === 'PlatformerCharacter' && engine.PlatformerCharacter) {
+            go.addComponent(new engine.PlatformerCharacter(spec.options || {}));
+          } else if (name === 'Platform' && engine.Platform) {
+            go.addComponent(new engine.Platform(spec.options || {}));
           }
         }
       }
