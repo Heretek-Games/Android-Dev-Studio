@@ -48,6 +48,11 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
     private var probeView: WebView? = null
     private var probeWarned = false
 
+    // ---- Experiment 2 (input round-trip probe) ----
+    @Volatile private var inputTarget = 0.0f // -1..1 from tap x-position
+    @Volatile private var lastTapNs: Long = 0
+    private var inputFrames = 0
+
     private inner class SyncBridge {
         @JavascriptInterface
         fun push(payload: String) {
@@ -122,6 +127,19 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         (surfaceView.parent as ViewGroup).addView(probeView)
         probeView.loadUrl("file:///android_asset/sync_probe.html")
         this.probeView = probeView
+
+        // Experiment 2: taps drive mover 0 via the JS stepper. Tap x maps to
+        // -1 (left edge) .. +1 (right edge); receipt is timestamped for the
+        // tap-to-photon measurement.
+        surfaceView.setOnTouchListener { v, event ->
+            if (event.action == android.view.MotionEvent.ACTION_DOWN) {
+                val nx = (event.x / v.width.toFloat() * 2f - 1f).coerceIn(-1f, 1f)
+                inputTarget = nx
+                lastTapNs = System.nanoTime()
+                android.util.Log.i("HeretekTier2", "INPUT_TAP x=${"%.3f".format(nx)} tNs=$lastTapNs")
+            }
+            true
+        }
     }
 
     private fun copyAsset(assetPath: String, target: File): File {
@@ -175,9 +193,11 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
                 lastFrameNs = nowNs
                 // Experiment 1: tick the JS stepper explicitly (hidden views
                 // throttle rAF), then apply the latest staged sync batch, timed.
+                // Experiment 2 passes the tap-driven input target into the tick.
+                val tickInput = inputTarget
                 try {
                     probeView?.evaluateJavascript(
-                        "window.__probeTick ? window.__probeTick(Date.now()) : 'no-probe'"
+                        "window.__probeTick ? window.__probeTick(Date.now(), $tickInput) : 'no-probe'"
                     ) { value ->
                         if (!probeWarned && value != null && (value.contains("no-probe") || value.contains("undefined"))) {
                             probeWarned = true
@@ -199,6 +219,15 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
                         android.util.Log.w(
                             "HeretekTier2",
                             "sync partial: applied=$applied of ${slots.size}"
+                        )
+                    }
+                    // Experiment 2: trace mover 0 (slot 0) for tap-to-photon.
+                    val zeroIdx = slots.indexOf(0)
+                    if (zeroIdx >= 0 && syncFrames % 10 == 0) {
+                        android.util.Log.i(
+                            "HeretekTier2",
+                            "INPUT_PROBE frame=$syncFrames m0x=${"%.3f".format(xyz[zeroIdx * 3])} " +
+                                "tapTNs=$lastTapNs tNs=$nowNs"
                         )
                     }
                 }
