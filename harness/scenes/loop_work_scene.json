@@ -16,318 +16,295 @@
         0.0,
         0.0
       ],
-      "color": "#4a4a55",
-      "physics": "fixed"
-    },
-    {
-      "name": "Dungeon Keeper",
-      "shape": "capsule",
-      "size": [
-        0.7,
-        1.4,
-        0.7
-      ],
-      "position": [
-        0.0,
-        1.15,
-        -6.0
-      ],
-      "color": "#6b4fa0",
-      "physics": "fixed"
-    },
-    {
-      "name": "Keeper Altar",
-      "shape": "box",
-      "size": [
-        3.0,
-        1.0,
-        1.5
-      ],
-      "position": [
-        0.0,
-        0.5,
-        -7.6
-      ],
-      "color": "#3b3b48",
+      "color": "#3a3550",
       "physics": "fixed"
     },
     {
       "name": "Adventurer",
       "shape": "capsule",
       "size": [
-        0.6,
+        0.7,
         1.6,
-        0.6
+        0.7
       ],
       "position": [
         0.0,
         1.4,
-        4.0
+        6.0
       ],
-      "color": "#d9a441",
+      "color": "#4aa3ff",
       "physics": "dynamic",
       "mass": 1.0,
       "controller": true,
       "weapon": {
         "damage": 50.0,
         "fireRate": 6.0,
-        "range": 60.0,
-        "maxAmmo": 30.0
+        "range": 40.0,
+        "maxAmmo": 99.0
       },
       "health": {
-        "maxHealth": 100.0
-      }
+        "maxHealth": 500.0
+      },
+      "events": [
+        {
+          "name": "blessing_shimmer",
+          "conditions": [
+            {
+              "type": "Timer",
+              "params": {
+                "interval": 2.0
+              }
+            }
+          ],
+          "actions": [
+            {
+              "type": "SetColor",
+              "params": {
+                "color": "#57c8ff"
+              }
+            }
+          ]
+        }
+      ]
     },
     {
-      "name": "Pillar Left",
+      "name": "Dungeon Keeper",
       "shape": "cylinder",
       "size": [
-        0.6,
-        4.0,
-        0.6
+        1.4,
+        2.6,
+        1.4
       ],
       "position": [
-        -5.0,
-        2.0,
-        -4.0
+        -6.0,
+        1.3,
+        -6.0
       ],
-      "color": "#5a5a68",
+      "color": "#7b5bd6",
       "physics": "fixed"
     },
     {
-      "name": "Pillar Right",
-      "shape": "cylinder",
-      "size": [
-        0.6,
-        4.0,
-        0.6
-      ],
-      "position": [
-        5.0,
-        2.0,
-        -4.0
-      ],
-      "color": "#5a5a68",
-      "physics": "fixed"
-    },
-    {
-      "name": "Hall Back Wall",
+      "name": "Keeper Altar",
       "shape": "box",
       "size": [
-        22.0,
-        4.0,
+        2.4,
+        0.8,
+        1.4
+      ],
+      "position": [
+        -6.0,
+        0.4,
+        -3.6
+      ],
+      "color": "#5d4a9e",
+      "physics": "fixed"
+    },
+    {
+      "name": "Pillar North",
+      "shape": "cylinder",
+      "size": [
+        1.0,
+        5.0,
         1.0
       ],
       "position": [
-        0.0,
-        2.0,
-        -10.0
+        -9.0,
+        2.5,
+        -9.0
       ],
-      "color": "#33333d",
+      "color": "#4d4a63",
       "physics": "fixed"
     },
     {
-      "name": "Torch Left",
-      "shape": "box",
+      "name": "Pillar South",
+      "shape": "cylinder",
       "size": [
-        0.25,
-        0.7,
-        0.25
+        1.0,
+        5.0,
+        1.0
       ],
       "position": [
-        -5.0,
-        3.2,
-        -3.6
+        9.0,
+        2.5,
+        -9.0
       ],
-      "color": "#ff8c2b",
+      "color": "#4d4a63",
+      "physics": "fixed"
+    },
+    {
+      "name": "Pillar East",
+      "shape": "cylinder",
+      "size": [
+        1.0,
+        5.0,
+        1.0
+      ],
+      "position": [
+        9.0,
+        2.5,
+        9.0
+      ],
+      "color": "#4d4a63",
+      "physics": "fixed"
+    },
+    {
+      "name": "Hall Chest",
+      "shape": "box",
+      "size": [
+        1.6,
+        1.0,
+        1.1
+      ],
+      "position": [
+        -7.0,
+        0.5,
+        7.0
+      ],
+      "color": "#8a6a2f",
       "physics": "fixed",
-      "events": [
-        {
-          "name": "TorchFlickerLeft",
-          "conditions": [
-            {
-              "type": "Timer",
-              "params": {
-                "interval": 1.5
-              }
-            }
-          ],
-          "actions": [
-            {
-              "type": "SetColor",
-              "params": {
-                "color": "#ffb054"
-              }
-            }
-          ]
-        }
-      ]
+      "biome": "dungeon hall"
+    },
+    {
+      "name": "Torch Left",
+      "shape": "cylinder",
+      "size": [
+        0.2,
+        1.2,
+        0.2
+      ],
+      "position": [
+        -9.0,
+        3.2,
+        0.0
+      ],
+      "color": "#ff9c3a",
+      "physics": "none",
+      "biome": "dungeon hall"
     },
     {
       "name": "Torch Right",
+      "shape": "cylinder",
+      "size": [
+        0.2,
+        1.2,
+        0.2
+      ],
+      "position": [
+        9.0,
+        3.2,
+        0.0
+      ],
+      "color": "#ff9c3a",
+      "physics": "none",
+      "biome": "dungeon hall"
+    },
+    {
+      "name": "Rune Slab",
       "shape": "box",
       "size": [
-        0.25,
-        0.7,
-        0.25
-      ],
-      "position": [
-        5.0,
-        3.2,
-        -3.6
-      ],
-      "color": "#ff8c2b",
-      "physics": "fixed",
-      "events": [
-        {
-          "name": "TorchFlickerRight",
-          "conditions": [
-            {
-              "type": "Timer",
-              "params": {
-                "interval": 1.5
-              }
-            }
-          ],
-          "actions": [
-            {
-              "type": "SetColor",
-              "params": {
-                "color": "#ff9040"
-              }
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "name": "Crypt Wraith One",
-      "shape": "capsule",
-      "size": [
-        0.7,
-        1.5,
-        0.7
-      ],
-      "position": [
-        3.2,
-        1.1,
-        -2.0
-      ],
-      "color": "#2f8f8f",
-      "physics": "none",
-      "health": {
-        "maxHealth": 100.0
-      },
-      "ai": {
-        "targetName": "Adventurer",
-        "moveSpeed": 2.2,
-        "attackRange": 2.0
-      }
-    },
-    {
-      "name": "Crypt Wraith Two",
-      "shape": "capsule",
-      "size": [
-        0.7,
-        1.5,
-        0.7
-      ],
-      "position": [
-        -3.2,
-        1.1,
-        -2.0
-      ],
-      "color": "#2f8f8f",
-      "physics": "none",
-      "health": {
-        "maxHealth": 100.0
-      },
-      "ai": {
-        "targetName": "Adventurer",
-        "moveSpeed": 2.2,
-        "attackRange": 2.0
-      }
-    },
-    {
-      "name": "Rubble A",
-      "shape": "box",
-      "size": [
-        0.8,
-        0.5,
-        0.8
-      ],
-      "position": [
-        2.0,
-        0.8,
+        3.0,
+        0.2,
         3.0
       ],
-      "color": "#55555f",
-      "physics": "dynamic",
-      "mass": 1.0
+      "position": [
+        0.0,
+        0.11,
+        -6.0
+      ],
+      "color": "#2f6fa8",
+      "physics": "fixed",
+      "biome": "dungeon hall"
     },
     {
-      "name": "Rubble B",
-      "shape": "box",
+      "name": "Imp Attacker",
+      "shape": "sphere",
       "size": [
-        0.7,
-        0.4,
-        0.7
+        0.9,
+        0.9,
+        0.9
       ],
       "position": [
-        -2.4,
-        0.75,
-        2.2
+        -3.0,
+        1.0,
+        -4.0
       ],
-      "color": "#55555f",
-      "physics": "dynamic",
-      "mass": 1.0
+      "color": "#d1462f",
+      "physics": "none",
+      "health": {
+        "maxHealth": 40.0
+      },
+      "ai": {
+        "targetName": "Adventurer",
+        "moveSpeed": 1.4,
+        "attackRange": 2.0
+      },
+      "elemental": {
+        "aura": "Pyro",
+        "maxHealth": 40.0
+      }
+    },
+    {
+      "name": "Imp Guard",
+      "shape": "sphere",
+      "size": [
+        0.9,
+        0.9,
+        0.9
+      ],
+      "position": [
+        3.0,
+        1.0,
+        -4.0
+      ],
+      "color": "#d1462f",
+      "physics": "none",
+      "health": {
+        "maxHealth": 40.0
+      },
+      "ai": {
+        "targetName": "Adventurer",
+        "moveSpeed": 1.4,
+        "attackRange": 2.0
+      },
+      "elemental": {
+        "aura": "Pyro",
+        "maxHealth": 40.0
+      }
     },
     {
       "kind": "light",
       "name": "Key Light",
       "lightType": "directional",
-      "color": "#fff2d8",
+      "color": "#ffe6c2",
       "intensity": 1.4,
       "position": [
         8.0,
         14.0,
-        8.0
+        6.0
+      ]
+    },
+    {
+      "kind": "light",
+      "name": "Altar Glow",
+      "lightType": "point",
+      "color": "#66c2ff",
+      "intensity": 2.2,
+      "position": [
+        -6.0,
+        3.2,
+        -3.6
       ]
     },
     {
       "kind": "light",
       "name": "Hall Ambient",
       "lightType": "ambient",
-      "color": "#5a6a8a",
-      "intensity": 0.6,
+      "color": "#4a4a66",
+      "intensity": 0.7,
       "position": [
         0.0,
-        6.0,
-        0.0
-      ]
-    },
-    {
-      "kind": "light",
-      "name": "Torch Glow Left",
-      "lightType": "point",
-      "color": "#ff9a3c",
-      "intensity": 2.2,
-      "position": [
-        -5.0,
-        3.4,
-        -3.4
-      ]
-    },
-    {
-      "kind": "light",
-      "name": "Torch Glow Right",
-      "lightType": "point",
-      "color": "#ff9a3c",
-      "intensity": 2.2,
-      "position": [
         5.0,
-        3.4,
-        -3.4
+        0.0
       ]
     }
   ],
@@ -377,13 +354,6 @@
       "id": "sim-fps"
     }
   ],
-  "game": {
-    "mode": "waves",
-    "playerName": "Adventurer",
-    "totalWaves": 1.0,
-    "enemiesPerWave": 2.0,
-    "hitDamage": 50.0
-  },
   "dialogues": {
     "DungeonKeeper": {
       "id": "DungeonKeeper",
@@ -393,16 +363,16 @@
           "id": "greet",
           "type": "choice",
           "speaker": "Dungeon Keeper",
-          "text": "Kneel, wanderer. The deep waters remember those who ask politely. Do you seek my blessing?",
+          "text": "Tired bones in my halls again... Will you accept the blessing of the deep waters, Adventurer?",
           "choices": [
             {
               "id": "accept",
-              "text": "Yes, Keeper, bless me.",
+              "text": "Yes, Keeper. Grant me the Hydro blessing.",
               "nextNodeId": "blessed"
             },
             {
               "id": "decline",
-              "text": "Not now.",
+              "text": "Not now, Keeper.",
               "nextNodeId": "farewell"
             }
           ]
@@ -410,55 +380,42 @@
         "blessed": {
           "id": "blessed",
           "type": "action",
-          "speaker": "Dungeon Keeper",
-          "text": "Then drink of the hydro light.",
           "action": {
             "setVariables": {
               "hydroBlessing": true
             },
-            "event": "hydro_blessing",
-            "fireEvent": "hydro_blessing"
-          },
-          "nextNodeId": "offer"
-        },
-        "offer": {
-          "id": "offer",
-          "type": "choice",
-          "speaker": "Dungeon Keeper",
-          "text": "Two wraiths haunt this hall. Take the blessing and clear them, or walk away unfavored.",
-          "choices": [
-            {
-              "id": "take",
-              "text": "I take the blessing and will clear the hall.",
-              "nextNodeId": "thanks"
-            },
-            {
-              "id": "refuse",
-              "text": "I'll leave them be.",
-              "nextNodeId": "farewell"
+            "emitEvent": {
+              "eventName": "hydro_blessing"
             }
-          ]
-        },
-        "thanks": {
-          "id": "thanks",
-          "type": "action",
-          "speaker": "Dungeon Keeper",
-          "text": "Go then. The hall answers to the blessed.",
-          "action": {
-            "setVariables": {
-              "blessingTaken": true
-            },
-            "event": "keeper_thanks",
-            "fireEvent": "keeper_thanks"
           },
+          "nextNodeId": "blessingFlows"
+        },
+        "blessingFlows": {
+          "id": "blessingFlows",
+          "type": "text",
+          "speaker": "Dungeon Keeper",
+          "text": "Then let the current run through your blade. Wash the ember spawn from my halls.",
           "nextNodeId": "farewell"
         },
         "farewell": {
           "id": "farewell",
-          "type": "end",
-          "speaker": "Dungeon Keeper",
-          "text": "The waters watch you."
+          "type": "end"
         }
+      }
+    }
+  },
+  "game": {
+    "mode": "waves",
+    "playerName": "Adventurer",
+    "totalWaves": 2.0,
+    "enemiesPerWave": 2.0,
+    "hitDamage": 50.0,
+    "hitElement": "Hydro",
+    "hitGauge": 1.0,
+    "enemy": {
+      "elemental": {
+        "aura": "Pyro",
+        "maxHealth": 40.0
       }
     }
   }

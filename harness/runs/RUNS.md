@@ -725,3 +725,16 @@ Loop-level defect: iters 3–6 burned on **empty LLM responses** (0 actions, ide
 Loop trace: generate (21 actions incl. valid game + dialogue) → gate rejected penetrations → repair (3 position fixes) → QA 5/8 → 4× empty responses → budget exhausted.
 
 Evidence: `harness/runs/loop_runs/20260925-151042-*.json`. Relaunched with all three fixes.
+
+### Second run (2026-09-25 15:15): GREEN 8/8 — rung 3 closed ✅
+
+Generate (19 actions incl. valid `dialogue` + `game`) → gate rejected a penetration
+AND the new elemental validator fired (`unknown game enemy elemental key 'moveSpeed'`)
+→ repair (3 actions: fixed positions, moved the tunable out of the elemental block) →
+QA **SUCCEEDED 8/8** in 2 iterations, 9,884 tokens — all 8 automatable
+(`keeper-present`, `adventurer-ready`, `blessing-taken`, `blessing-flagged`,
+`reactions-fired`, `hall-cleared`, `draw-budget`, `sim-fps`); 2 critic-owned
+(`dungeon-read`, `brief-faithful`) listed, not passed. Every fix shipped for the
+first run demonstrably fired in the second. **Phase 3 rung 3 PASSED.**
+
+Evidence: `harness/runs/loop_runs/20260925-151528-*.json`.
