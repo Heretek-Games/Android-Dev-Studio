@@ -738,3 +738,22 @@ QA **SUCCEEDED 8/8** in 2 iterations, 9,884 tokens — all 8 automatable
 first run demonstrably fired in the second. **Phase 3 rung 3 PASSED.**
 
 Evidence: `harness/runs/loop_runs/20260925-151528-*.json`.
+
+---
+
+## Run Block 19 — 2026-09-25, Phase 3 Rung 4: Checkpoint Keep (Save/Load) ✅
+
+**Save/load brief** (`harness/briefs/examples/checkpoint_keep.json`: 10 criteria, 8 automatable
+incl. `game_save_restore`) through the production loop — **GREEN** first pass at the
+repair round. **Phase 3 complete: all four rungs green.**
+
+### Verification
+
+| Check | Evidence |
+|-------|----------|
+| Milestone run | **GREEN** — 8/8 automatable (`keep-floor`, `defender-ready`, `kills-scored`, `wave-advanced`, `save-compatible`, `run-won`, `draw-budget`, `sim-fps`); 2 critic-owned (`keep-read`, `brief-faithful`) listed, not passed |
+| Loop trace | generate (17 actions: keep, defender, props — no game action) → QA 4/8, all four game_* failing `no game config in scenario` → repair (1 action: the game action) → QA **SUCCEEDED 8/8** in 2 iterations, 9,266 tokens |
+| Save proof | `save=ok; envelope=ok; restore=ok; monotonic=ok` (kills 7→12, wave 2→3, score 70→120 across the mid-run restore) |
+| DAG + memory | brief persisted and retrievable; tasks reflect the outcome |
+
+Evidence: `harness/runs/loop_runs/20260925-151800-*.json`.

@@ -1,10 +1,10 @@
 {
   "id": "loop_work_scene",
   "name": "Loop Work Scene",
-  "goal": "Keeper Blessing",
+  "goal": "Checkpoint Keep",
   "gameObjects": [
     {
-      "name": "Ground Plane",
+      "name": "Keep Floor",
       "shape": "plane",
       "size": [
         40.0,
@@ -13,335 +13,320 @@
       ],
       "position": [
         0.0,
-        0.0,
+        -0.5,
         0.0
       ],
-      "color": "#3a3550",
-      "physics": "fixed"
+      "color": "#8a8f96",
+      "physics": "fixed",
+      "biome": "stone keep"
     },
     {
-      "name": "Adventurer",
+      "name": "Defender",
       "shape": "capsule",
       "size": [
-        0.7,
-        1.6,
-        0.7
+        0.8,
+        1.8,
+        0.8
       ],
       "position": [
         0.0,
-        1.4,
-        6.0
+        1.1,
+        0.0
       ],
-      "color": "#4aa3ff",
+      "color": "#3f7fd6",
       "physics": "dynamic",
-      "mass": 1.0,
+      "mass": 80.0,
       "controller": true,
       "weapon": {
         "damage": 50.0,
         "fireRate": 6.0,
-        "range": 40.0,
-        "maxAmmo": 99.0
+        "range": 60.0,
+        "maxAmmo": 120.0
       },
       "health": {
-        "maxHealth": 500.0
-      },
-      "events": [
-        {
-          "name": "blessing_shimmer",
-          "conditions": [
-            {
-              "type": "Timer",
-              "params": {
-                "interval": 2.0
-              }
-            }
-          ],
-          "actions": [
-            {
-              "type": "SetColor",
-              "params": {
-                "color": "#57c8ff"
-              }
-            }
-          ]
-        }
-      ]
+        "maxHealth": 600.0
+      }
     },
     {
-      "name": "Dungeon Keeper",
-      "shape": "cylinder",
+      "name": "Raider One",
+      "shape": "capsule",
       "size": [
-        1.4,
-        2.6,
-        1.4
-      ],
-      "position": [
-        -6.0,
-        1.3,
-        -6.0
-      ],
-      "color": "#7b5bd6",
-      "physics": "fixed"
-    },
-    {
-      "name": "Keeper Altar",
-      "shape": "box",
-      "size": [
-        2.4,
         0.8,
-        1.4
+        1.7,
+        0.8
       ],
       "position": [
         -6.0,
-        0.4,
-        -3.6
+        1.0,
+        -8.0
       ],
-      "color": "#5d4a9e",
-      "physics": "fixed"
+      "color": "#d64a3f",
+      "physics": "none",
+      "health": {
+        "maxHealth": 80.0
+      },
+      "ai": {
+        "targetName": "Defender",
+        "moveSpeed": 2.2,
+        "attackRange": 2.4
+      },
+      "elemental": {
+        "aura": "Pyro",
+        "maxHealth": 80.0
+      }
     },
     {
-      "name": "Pillar North",
-      "shape": "cylinder",
+      "name": "Raider Two",
+      "shape": "capsule",
       "size": [
-        1.0,
-        5.0,
-        1.0
+        0.8,
+        1.7,
+        0.8
       ],
       "position": [
-        -9.0,
-        2.5,
-        -9.0
+        6.0,
+        1.0,
+        -8.0
       ],
-      "color": "#4d4a63",
-      "physics": "fixed"
+      "color": "#d64a3f",
+      "physics": "none",
+      "health": {
+        "maxHealth": 80.0
+      },
+      "ai": {
+        "targetName": "Defender",
+        "moveSpeed": 2.2,
+        "attackRange": 2.4
+      },
+      "elemental": {
+        "aura": "Pyro",
+        "maxHealth": 80.0
+      }
     },
     {
-      "name": "Pillar South",
-      "shape": "cylinder",
+      "name": "Raider Three",
+      "shape": "capsule",
       "size": [
-        1.0,
-        5.0,
-        1.0
-      ],
-      "position": [
-        9.0,
-        2.5,
-        -9.0
-      ],
-      "color": "#4d4a63",
-      "physics": "fixed"
-    },
-    {
-      "name": "Pillar East",
-      "shape": "cylinder",
-      "size": [
-        1.0,
-        5.0,
-        1.0
-      ],
-      "position": [
-        9.0,
-        2.5,
-        9.0
-      ],
-      "color": "#4d4a63",
-      "physics": "fixed"
-    },
-    {
-      "name": "Hall Chest",
-      "shape": "box",
-      "size": [
-        1.6,
-        1.0,
-        1.1
+        0.8,
+        1.7,
+        0.8
       ],
       "position": [
         -7.0,
-        0.5,
+        1.0,
         7.0
       ],
-      "color": "#8a6a2f",
-      "physics": "fixed",
-      "biome": "dungeon hall"
+      "color": "#c9452f",
+      "physics": "none",
+      "health": {
+        "maxHealth": 80.0
+      },
+      "ai": {
+        "targetName": "Defender",
+        "moveSpeed": 2.4,
+        "attackRange": 2.4
+      },
+      "elemental": {
+        "aura": "Pyro",
+        "maxHealth": 80.0
+      }
     },
     {
-      "name": "Torch Left",
-      "shape": "cylinder",
+      "name": "Raider Four",
+      "shape": "capsule",
       "size": [
-        0.2,
-        1.2,
-        0.2
+        0.8,
+        1.7,
+        0.8
       ],
       "position": [
-        -9.0,
-        3.2,
-        0.0
+        7.0,
+        1.0,
+        7.0
       ],
-      "color": "#ff9c3a",
+      "color": "#c9452f",
       "physics": "none",
-      "biome": "dungeon hall"
+      "health": {
+        "maxHealth": 80.0
+      },
+      "ai": {
+        "targetName": "Defender",
+        "moveSpeed": 2.4,
+        "attackRange": 2.4
+      },
+      "elemental": {
+        "aura": "Pyro",
+        "maxHealth": 80.0
+      }
     },
     {
-      "name": "Torch Right",
-      "shape": "cylinder",
-      "size": [
-        0.2,
-        1.2,
-        0.2
-      ],
-      "position": [
-        9.0,
-        3.2,
-        0.0
-      ],
-      "color": "#ff9c3a",
-      "physics": "none",
-      "biome": "dungeon hall"
-    },
-    {
-      "name": "Rune Slab",
+      "name": "North Wall",
       "shape": "box",
       "size": [
+        16.0,
         3.0,
-        0.2,
-        3.0
+        1.0
       ],
       "position": [
         0.0,
-        0.11,
-        -6.0
+        1.5,
+        -10.0
       ],
-      "color": "#2f6fa8",
+      "color": "#6f6a63",
       "physics": "fixed",
-      "biome": "dungeon hall"
+      "biome": "stone keep"
     },
     {
-      "name": "Imp Attacker",
-      "shape": "sphere",
+      "name": "South Wall",
+      "shape": "box",
       "size": [
-        0.9,
-        0.9,
-        0.9
+        16.0,
+        3.0,
+        1.0
+      ],
+      "position": [
+        0.0,
+        1.5,
+        10.0
+      ],
+      "color": "#6f6a63",
+      "physics": "fixed",
+      "biome": "stone keep"
+    },
+    {
+      "name": "West Wall",
+      "shape": "box",
+      "size": [
+        1.0,
+        3.0,
+        20.0
+      ],
+      "position": [
+        -10.0,
+        1.5,
+        0.0
+      ],
+      "color": "#6f6a63",
+      "physics": "fixed",
+      "biome": "stone keep"
+    },
+    {
+      "name": "East Wall",
+      "shape": "box",
+      "size": [
+        1.0,
+        3.0,
+        20.0
+      ],
+      "position": [
+        10.0,
+        1.5,
+        0.0
+      ],
+      "color": "#6f6a63",
+      "physics": "fixed",
+      "biome": "stone keep"
+    },
+    {
+      "name": "Keep Banner",
+      "shape": "box",
+      "size": [
+        0.4,
+        4.0,
+        0.4
+      ],
+      "position": [
+        0.0,
+        2.0,
+        3.0
+      ],
+      "color": "#e0b23c",
+      "physics": "fixed"
+    },
+    {
+      "name": "Supply Crate",
+      "shape": "box",
+      "size": [
+        1.2,
+        1.2,
+        1.2
       ],
       "position": [
         -3.0,
-        1.0,
-        -4.0
+        0.6,
+        4.0
       ],
-      "color": "#d1462f",
-      "physics": "none",
-      "health": {
-        "maxHealth": 40.0
-      },
-      "ai": {
-        "targetName": "Adventurer",
-        "moveSpeed": 1.4,
-        "attackRange": 2.0
-      },
-      "elemental": {
-        "aura": "Pyro",
-        "maxHealth": 40.0
-      }
-    },
-    {
-      "name": "Imp Guard",
-      "shape": "sphere",
-      "size": [
-        0.9,
-        0.9,
-        0.9
-      ],
-      "position": [
-        3.0,
-        1.0,
-        -4.0
-      ],
-      "color": "#d1462f",
-      "physics": "none",
-      "health": {
-        "maxHealth": 40.0
-      },
-      "ai": {
-        "targetName": "Adventurer",
-        "moveSpeed": 1.4,
-        "attackRange": 2.0
-      },
-      "elemental": {
-        "aura": "Pyro",
-        "maxHealth": 40.0
-      }
+      "color": "#8b5a2b",
+      "physics": "dynamic",
+      "mass": 15.0
     },
     {
       "kind": "light",
-      "name": "Key Light",
+      "name": "Sun Light",
       "lightType": "directional",
-      "color": "#ffe6c2",
-      "intensity": 1.4,
+      "color": "#fff2d6",
+      "intensity": 2.0,
       "position": [
-        8.0,
-        14.0,
-        6.0
+        10.0,
+        20.0,
+        8.0
       ]
     },
     {
       "kind": "light",
-      "name": "Altar Glow",
-      "lightType": "point",
-      "color": "#66c2ff",
-      "intensity": 2.2,
-      "position": [
-        -6.0,
-        3.2,
-        -3.6
-      ]
-    },
-    {
-      "kind": "light",
-      "name": "Hall Ambient",
+      "name": "Ambient Glow",
       "lightType": "ambient",
-      "color": "#4a4a66",
-      "intensity": 0.7,
+      "color": "#5a6a8a",
+      "intensity": 0.6,
       "position": [
         0.0,
         5.0,
         0.0
+      ]
+    },
+    {
+      "kind": "light",
+      "name": "Torch Light",
+      "lightType": "point",
+      "color": "#ff9a3c",
+      "intensity": 2.5,
+      "position": [
+        0.0,
+        4.0,
+        -6.0
       ]
     }
   ],
   "rules": [
     {
       "type": "entity_exists",
-      "target": "Dungeon Keeper",
-      "id": "keeper-present"
+      "target": "Keep Floor",
+      "id": "keep-floor"
     },
     {
       "type": "entity_component",
-      "target": "Adventurer",
+      "target": "Defender",
       "component": "WeaponController",
-      "id": "adventurer-ready"
+      "id": "defender-ready"
     },
     {
-      "type": "dialogue_event_fired",
-      "tree": "DungeonKeeper",
-      "event": "hydro_blessing",
-      "id": "blessing-taken"
-    },
-    {
-      "type": "dialogue_sets_variable",
-      "tree": "DungeonKeeper",
-      "variable": "hydroBlessing",
-      "value": true,
-      "id": "blessing-flagged"
-    },
-    {
-      "type": "game_reactions_min",
+      "type": "game_kills_min",
       "min": 2,
-      "id": "reactions-fired"
+      "id": "kills-scored"
+    },
+    {
+      "type": "game_wave_reached",
+      "wave": 2,
+      "id": "wave-advanced"
+    },
+    {
+      "type": "game_save_restore",
+      "id": "save-compatible"
     },
     {
       "type": "game_phase",
       "phase": "won",
-      "id": "hall-cleared"
+      "id": "run-won"
     },
     {
       "type": "draw_call_budget",
@@ -355,47 +340,47 @@
     }
   ],
   "dialogues": {
-    "DungeonKeeper": {
-      "id": "DungeonKeeper",
+    "Gatekeeper": {
+      "id": "Gatekeeper",
       "startNodeId": "greet",
       "nodes": {
         "greet": {
           "id": "greet",
           "type": "choice",
-          "speaker": "Dungeon Keeper",
-          "text": "Tired bones in my halls again... Will you accept the blessing of the deep waters, Adventurer?",
+          "speaker": "Gatekeeper",
+          "text": "The keep holds, Defender. Ready to seal this checkpoint?",
           "choices": [
             {
-              "id": "accept",
-              "text": "Yes, Keeper. Grant me the Hydro blessing.",
-              "nextNodeId": "blessed"
+              "id": "seal",
+              "text": "Seal the checkpoint.",
+              "nextNodeId": "sealed"
             },
             {
-              "id": "decline",
-              "text": "Not now, Keeper.",
-              "nextNodeId": "farewell"
+              "id": "wait",
+              "text": "Hold a moment.",
+              "nextNodeId": "waitline"
             }
           ]
         },
-        "blessed": {
-          "id": "blessed",
+        "sealed": {
+          "id": "sealed",
           "type": "action",
           "action": {
             "setVariables": {
-              "hydroBlessing": true
+              "checkpointSealed": true
             },
             "emitEvent": {
-              "eventName": "hydro_blessing"
+              "eventName": "checkpoint_sealed"
             }
           },
-          "nextNodeId": "blessingFlows"
-        },
-        "blessingFlows": {
-          "id": "blessingFlows",
-          "type": "text",
-          "speaker": "Dungeon Keeper",
-          "text": "Then let the current run through your blade. Wash the ember spawn from my halls.",
           "nextNodeId": "farewell"
+        },
+        "waitline": {
+          "id": "waitline",
+          "type": "text",
+          "speaker": "Gatekeeper",
+          "text": "Then stand fast on the Keep Floor.",
+          "nextNodeId": "greet"
         },
         "farewell": {
           "id": "farewell",
@@ -406,16 +391,19 @@
   },
   "game": {
     "mode": "waves",
-    "playerName": "Adventurer",
-    "totalWaves": 2.0,
-    "enemiesPerWave": 2.0,
+    "playerName": "Defender",
+    "totalWaves": 3.0,
+    "enemiesPerWave": 4.0,
     "hitDamage": 50.0,
+    "scorePerKill": 10.0,
     "hitElement": "Hydro",
     "hitGauge": 1.0,
+    "interWaveDelaySeconds": 3.0,
+    "spawnRadius": 8.0,
     "enemy": {
       "elemental": {
         "aura": "Pyro",
-        "maxHealth": 40.0
+        "maxHealth": 80.0
       }
     }
   }

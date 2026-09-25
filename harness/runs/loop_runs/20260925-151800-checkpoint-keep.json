@@ -1,0 +1,415 @@
+{
+  "goal": "Checkpoint Keep",
+  "rules": [
+    {
+      "type": "entity_exists",
+      "target": "Keep Floor",
+      "id": "keep-floor"
+    },
+    {
+      "type": "entity_component",
+      "target": "Defender",
+      "component": "WeaponController",
+      "id": "defender-ready"
+    },
+    {
+      "type": "game_kills_min",
+      "min": 2,
+      "id": "kills-scored"
+    },
+    {
+      "type": "game_wave_reached",
+      "wave": 2,
+      "id": "wave-advanced"
+    },
+    {
+      "type": "game_save_restore",
+      "id": "save-compatible"
+    },
+    {
+      "type": "game_phase",
+      "phase": "won",
+      "id": "run-won"
+    },
+    {
+      "type": "draw_call_budget",
+      "max": 100,
+      "id": "draw-budget"
+    },
+    {
+      "type": "fps_min",
+      "min": 30,
+      "id": "sim-fps"
+    }
+  ],
+  "verdict": "green",
+  "iterations": [
+    {
+      "iteration": 1,
+      "phase": "generate",
+      "visionNotes": [],
+      "llm": {
+        "model": "mimo-v2.6-flash",
+        "promptTokens": 2732,
+        "completionTokens": 1684,
+        "totalTokens": 4416,
+        "latencySeconds": 18.712,
+        "finishReason": "stop",
+        "attempts": 1
+      },
+      "parse": {
+        "strategy": "raw",
+        "actionCount": 17,
+        "summary": "A compact wave-defense scene where the armed Defender holds the Keep Floor against two waves of Pyro-aura invaders, satisfying all checkpoint rules within the draw budget.",
+        "error": null
+      },
+      "apply": {
+        "applied": 16,
+        "targetMissing": 0,
+        "invalid": 1,
+        "failed": 0,
+        "outcomes": [
+          {
+            "index": 0,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Keep Floor (plane) at [0.0, -0.5, 0.0]",
+            "target": "Keep Floor"
+          },
+          {
+            "index": 1,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Defender (capsule) at [0.0, 1.1, 0.0]",
+            "target": "Defender"
+          },
+          {
+            "index": 2,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Raider One (capsule) at [-6.0, 1.0, -8.0]",
+            "target": "Raider One"
+          },
+          {
+            "index": 3,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Raider Two (capsule) at [6.0, 1.0, -8.0]",
+            "target": "Raider Two"
+          },
+          {
+            "index": 4,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Raider Three (capsule) at [-7.0, 1.0, 7.0]",
+            "target": "Raider Three"
+          },
+          {
+            "index": 5,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Raider Four (capsule) at [7.0, 1.0, 7.0]",
+            "target": "Raider Four"
+          },
+          {
+            "index": 6,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned North Wall (box) at [0.0, 1.5, -10.0]",
+            "target": "North Wall"
+          },
+          {
+            "index": 7,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned South Wall (box) at [0.0, 1.5, 10.0]",
+            "target": "South Wall"
+          },
+          {
+            "index": 8,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned West Wall (box) at [-10.0, 1.5, 0.0]",
+            "target": "West Wall"
+          },
+          {
+            "index": 9,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned East Wall (box) at [10.0, 1.5, 0.0]",
+            "target": "East Wall"
+          },
+          {
+            "index": 10,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Keep Banner (box) at [0.0, 2.0, 3.0]",
+            "target": "Keep Banner"
+          },
+          {
+            "index": 11,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Supply Crate (box) at [-3.0, 0.6, 4.0]",
+            "target": "Supply Crate"
+          },
+          {
+            "index": 12,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added directional light 'Sun Light' (intensity 2.0)",
+            "target": "Sun Light"
+          },
+          {
+            "index": 13,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added ambient light 'Ambient Glow' (intensity 0.6)",
+            "target": "Ambient Glow"
+          },
+          {
+            "index": 14,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added point light 'Torch Light' (intensity 2.5)",
+            "target": "Torch Light"
+          },
+          {
+            "index": 15,
+            "type": "game",
+            "status": "invalid",
+            "detail": "game config rejected \u2014 unknown game key 'saveRestore' (allowed: mode, playerName, ['enemiesPerWave', 'hitDamage', 'hitEveryFrames', 'hitGauge', 'interWaveDelaySeconds', 'scorePerKill', 'spawnRadius', 'targetScore', 'timeLimitSeconds', 'totalWaves'], hitElement, enemy, settlement)"
+          },
+          {
+            "index": 16,
+            "type": "dialogue",
+            "status": "applied",
+            "detail": "Registered dialogue tree 'Gatekeeper' (4 nodes from 'greet')"
+          }
+        ],
+        "appliedDescriptions": [
+          "Spawned Keep Floor (plane) at [0.0, -0.5, 0.0]",
+          "Spawned Defender (capsule) at [0.0, 1.1, 0.0]",
+          "Spawned Raider One (capsule) at [-6.0, 1.0, -8.0]",
+          "Spawned Raider Two (capsule) at [6.0, 1.0, -8.0]",
+          "Spawned Raider Three (capsule) at [-7.0, 1.0, 7.0]",
+          "Spawned Raider Four (capsule) at [7.0, 1.0, 7.0]",
+          "Spawned North Wall (box) at [0.0, 1.5, -10.0]",
+          "Spawned South Wall (box) at [0.0, 1.5, 10.0]",
+          "Spawned West Wall (box) at [-10.0, 1.5, 0.0]",
+          "Spawned East Wall (box) at [10.0, 1.5, 0.0]",
+          "Spawned Keep Banner (box) at [0.0, 2.0, 3.0]",
+          "Spawned Supply Crate (box) at [-3.0, 0.6, 4.0]",
+          "Added directional light 'Sun Light' (intensity 2.0)",
+          "Added ambient light 'Ambient Glow' (intensity 0.6)",
+          "Added point light 'Torch Light' (intensity 2.5)",
+          "Registered dialogue tree 'Gatekeeper' (4 nodes from 'greet')"
+        ]
+      },
+      "gate": {
+        "valid": true,
+        "violations": []
+      },
+      "qa": {
+        "verdict": "FAILED",
+        "passed": 4,
+        "total": 8,
+        "failedRules": [
+          {
+            "id": "kills-scored",
+            "type": "game_kills_min",
+            "detail": "no game config in scenario"
+          },
+          {
+            "id": "wave-advanced",
+            "type": "game_wave_reached",
+            "detail": "no game config in scenario"
+          },
+          {
+            "id": "save-compatible",
+            "type": "game_save_restore",
+            "detail": "no game config in scenario"
+          },
+          {
+            "id": "run-won",
+            "type": "game_phase",
+            "detail": "no game config in scenario"
+          }
+        ],
+        "metrics": {
+          "avgFrameTimeMs": 0.1697,
+          "p95FrameTimeMs": 0.361,
+          "maxFrameTimeMs": 31.327,
+          "simFpsEstimate": 5891.36,
+          "drawCallEstimate": 12,
+          "instancedBatches": 0,
+          "memoryHeapMb": 15.77,
+          "objectCount": 15,
+          "physicsBodyCount": 8,
+          "eventCount": 0
+        }
+      }
+    },
+    {
+      "iteration": 2,
+      "phase": "repair",
+      "visionNotes": [],
+      "llm": {
+        "model": "mimo-v2.6-flash",
+        "promptTokens": 4546,
+        "completionTokens": 304,
+        "totalTokens": 4850,
+        "latencySeconds": 6.812,
+        "finishReason": "stop",
+        "attempts": 1
+      },
+      "parse": {
+        "strategy": "raw",
+        "actionCount": 1,
+        "summary": "Emit a single valid 'game' action (using only allowed keys) targeting the existing Defender so the wave/kills/save/phase rules get a game runtime.",
+        "error": null
+      },
+      "apply": {
+        "applied": 1,
+        "targetMissing": 0,
+        "invalid": 0,
+        "failed": 0,
+        "outcomes": [
+          {
+            "index": 0,
+            "type": "game",
+            "status": "applied",
+            "detail": "Set waves-mode quest config for player 'Defender'"
+          }
+        ],
+        "appliedDescriptions": [
+          "Set waves-mode quest config for player 'Defender'"
+        ]
+      },
+      "gate": {
+        "valid": true,
+        "violations": []
+      },
+      "qa": {
+        "verdict": "SUCCEEDED",
+        "passed": 8,
+        "total": 8,
+        "failedRules": [],
+        "metrics": {
+          "avgFrameTimeMs": 0.1811,
+          "p95FrameTimeMs": 0.3485,
+          "maxFrameTimeMs": 41.0559,
+          "simFpsEstimate": 5523.08,
+          "drawCallEstimate": 12,
+          "instancedBatches": 0,
+          "memoryHeapMb": 17.78,
+          "objectCount": 15,
+          "physicsBodyCount": 8,
+          "eventCount": 0
+        }
+      }
+    }
+  ],
+  "totalTokens": 9266,
+  "totalLatencySeconds": 25.524,
+  "finalReport": {
+    "schemaVersion": 1,
+    "runner": "qa_scenario_runner.mjs",
+    "scenario": "loop_work_scene.json",
+    "goal": "Checkpoint Keep",
+    "timestamp": 1790363880.491,
+    "frames": 600,
+    "fixedDeltaSeconds": 0.016666666666666666,
+    "metrics": {
+      "avgFrameTimeMs": 0.1811,
+      "p95FrameTimeMs": 0.3485,
+      "maxFrameTimeMs": 41.0559,
+      "simFpsEstimate": 5523.08,
+      "drawCallEstimate": 12,
+      "instancedBatches": 0,
+      "memoryHeapMb": 17.78,
+      "objectCount": 15,
+      "physicsBodyCount": 8,
+      "eventCount": 0
+    },
+    "game": {
+      "mode": "waves",
+      "phase": "won",
+      "score": 120,
+      "kills": 12,
+      "wave": 3,
+      "traveledDistance": 0,
+      "settlement": null,
+      "reactions": 12,
+      "shots": 12,
+      "maxEnemyDisplacement": 3.208
+    },
+    "dialogue": {
+      "Gatekeeper": {
+        "visited": [
+          "greet"
+        ],
+        "events": [
+          "checkpoint_sealed"
+        ],
+        "error": null
+      }
+    },
+    "rules": [
+      {
+        "id": "keep-floor",
+        "type": "entity_exists",
+        "pass": true,
+        "detail": "found \"Keep Floor\""
+      },
+      {
+        "id": "defender-ready",
+        "type": "entity_component",
+        "pass": true,
+        "detail": "Defender components: [MeshRenderer, RigidBody3D, Collider3D, MobileController, WeaponController, HealthComponent]"
+      },
+      {
+        "id": "kills-scored",
+        "type": "game_kills_min",
+        "pass": true,
+        "detail": "kills=12 (min 2)"
+      },
+      {
+        "id": "wave-advanced",
+        "type": "game_wave_reached",
+        "pass": true,
+        "detail": "wave=3 (min 2)"
+      },
+      {
+        "id": "save-compatible",
+        "type": "game_save_restore",
+        "pass": true,
+        "detail": "save=ok; envelope=ok; restore=ok; monotonic=ok(kills 7\u219212, wave 2\u21923, score 70\u2192120)"
+      },
+      {
+        "id": "run-won",
+        "type": "game_phase",
+        "pass": true,
+        "detail": "phase=won (expected won)"
+      },
+      {
+        "id": "draw-budget",
+        "type": "draw_call_budget",
+        "pass": true,
+        "detail": "drawCallEstimate=12 (budget 100)"
+      },
+      {
+        "id": "sim-fps",
+        "type": "fps_min",
+        "pass": true,
+        "detail": "simFpsEstimate=5523.1 (min 30)"
+      }
+    ],
+    "passed": 8,
+    "total": 8,
+    "verdict": "SUCCEEDED",
+    "confidence": 1
+  },
+  "error": null,
+  "workScene": "/home/john/Projects/Android-Dev-Studio/harness/scenes/loop_work_scene.json"
+}
