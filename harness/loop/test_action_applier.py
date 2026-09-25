@@ -146,7 +146,13 @@ class VehicleTests(unittest.TestCase):
                     "name": "Player Car",
                     "shape": "box",
                     "physics": "dynamic",
-                    "vehicle": {"throttle": 1.0, "wheels": [{"offset": [-0.8, 0, 1.2]}, {"offset": [0.8, 0, -1.2]}]},
+                    "vehicle": {
+                        "throttle": 1.0,
+                        "wheels": [
+                            {"offset": [-0.8, 0, 1.2]},
+                            {"offset": [0.8, 0, -1.2]},
+                        ],
+                    },
                 }
             ],
         )
@@ -170,18 +176,36 @@ class VehicleTests(unittest.TestCase):
             base_scene(), [{"type": "spawn", "name": "Car", "vehicle": {"warp": 9}}]
         )
         self.assertEqual(result.invalid, 1)
+
     def test_spawn_vehicle_requires_wheels(self):
         _, result = apply_actions(
-            base_scene(), [{"type": "spawn", "name": "Car", "vehicle": {"throttle": 1.0}}]
-        )
-        self.assertEqual(result.invalid, 1)
-        _, result = apply_actions(
-            base_scene(), [{"type": "spawn", "name": "Car", "vehicle": {"throttle": 1.0, "wheels": []}}]
+            base_scene(),
+            [{"type": "spawn", "name": "Car", "vehicle": {"throttle": 1.0}}],
         )
         self.assertEqual(result.invalid, 1)
         _, result = apply_actions(
             base_scene(),
-            [{"type": "spawn", "name": "Car", "vehicle": {"throttle": 1.0, "wheels": [{"offset": [0, "high", 0]}]}}],
+            [
+                {
+                    "type": "spawn",
+                    "name": "Car",
+                    "vehicle": {"throttle": 1.0, "wheels": []},
+                }
+            ],
+        )
+        self.assertEqual(result.invalid, 1)
+        _, result = apply_actions(
+            base_scene(),
+            [
+                {
+                    "type": "spawn",
+                    "name": "Car",
+                    "vehicle": {
+                        "throttle": 1.0,
+                        "wheels": [{"offset": [0, "high", 0]}],
+                    },
+                }
+            ],
         )
         self.assertEqual(result.invalid, 1)
         _, result = apply_actions(
@@ -195,7 +219,11 @@ class VehicleTests(unittest.TestCase):
             base_scene(),
             [
                 {"type": "spawn", "name": "Car", "physics": "dynamic"},
-                {"type": "modify", "target": "Car", "vehicle": {"throttle": 0.5, "wheels": [{"offset": [0, 0, 0]}]}},
+                {
+                    "type": "modify",
+                    "target": "Car",
+                    "vehicle": {"throttle": 0.5, "wheels": [{"offset": [0, 0, 0]}]},
+                },
             ],
         )
         self.assertEqual(result.applied, 2)
@@ -215,6 +243,61 @@ class VehicleTests(unittest.TestCase):
         self.assertEqual(result.applied, 1)
         self.assertEqual(result.invalid, 1)
         self.assertNotIn("vehicle", scene["gameObjects"][1])
+
+
+class StreamerTests(unittest.TestCase):
+    def test_spawn_streamer_config_applies(self):
+        scene, result = apply_actions(
+            base_scene(),
+            [
+                {
+                    "type": "spawn",
+                    "name": "Player Hero",
+                    "streamer": {"chunkSize": 16, "renderDistance": 1},
+                }
+            ],
+        )
+        self.assertEqual(result.applied, 1)
+        self.assertEqual(
+            scene["gameObjects"][1]["streamer"],
+            {"chunkSize": 16.0, "renderDistance": 1.0},
+        )
+
+    def test_spawn_streamer_defaults_to_empty_config(self):
+        scene, result = apply_actions(
+            base_scene(),
+            [{"type": "spawn", "name": "Player Hero", "streamer": {}}],
+        )
+        self.assertEqual(result.applied, 1)
+        self.assertEqual(scene["gameObjects"][1]["streamer"], {})
+
+    def test_spawn_streamer_rejects_malformed(self):
+        for bad in (
+            "fast",
+            {"chunkSize": -16},
+            {"chunkSize": "big"},
+            {"warp": 9},
+            {"chunkSize": 0},
+        ):
+            _, result = apply_actions(
+                base_scene(), [{"type": "spawn", "name": "Car", "streamer": bad}]
+            )
+            self.assertEqual(result.invalid, 1, f"should reject {bad!r}")
+
+    def test_modify_streamer_replaces_config(self):
+        scene, result = apply_actions(
+            base_scene(),
+            [
+                {"type": "spawn", "name": "Player Hero"},
+                {
+                    "type": "modify",
+                    "target": "Player Hero",
+                    "streamer": {"renderDistance": 2},
+                },
+            ],
+        )
+        self.assertEqual(result.applied, 2)
+        self.assertEqual(scene["gameObjects"][1]["streamer"], {"renderDistance": 2.0})
 
 
 class ModifyTests(unittest.TestCase):

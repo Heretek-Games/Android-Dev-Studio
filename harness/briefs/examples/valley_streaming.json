@@ -1,0 +1,95 @@
+{
+  "title": "Streaming Valley",
+  "fantasy": {
+    "genre": "driving exploration",
+    "inspirations": ["valley test tracks", "open trial courses"],
+    "tone": "wide-open shakedown valley",
+    "loop": "Drive the valley floor, confirm every reach is traversable and streams cleanly."
+  },
+  "experience": {
+    "beats": ["first full transect without a stuck zone", "streaming holds at speed"],
+    "feedback": ["steady cruising", "visible terrain chunks popping in at range"],
+    "inputs": ["touch steering slider", "throttle and brake pedals"]
+  },
+  "world": {
+    "areaKm2": 0.06,
+    "biomes": ["valley floor", "ridge rim"],
+    "poiDensityPerKm2": 60,
+    "traversalSpeedsMps": {"drive": 12},
+    "streamingRadiusM": 120
+  },
+  "systems": {
+    "components": ["RigidBody3D", "Collider3D", "VehicleController", "MobileController", "WorldStreamer"],
+    "physics": ["raycast vehicle suspension", "static ground collider"],
+    "ai": [],
+    "dialogue": [],
+    "inventory": [],
+    "questStates": [],
+    "saveSchema": {}
+  },
+  "lookdev": {
+    "palette": ["#7fb069", "#8d99ae", "#edf2f4"],
+    "lighting": "stylized",
+    "silhouette": "ridge rim readable against the sky at all times",
+    "post": ["none (mobile budget)"]
+  },
+  "performance": {
+    "deviceProfile": "android16-snapdragon8elite",
+    "targetFps": 60,
+    "maxDrawCalls": 100,
+    "maxTrisPerChunk": 150000,
+    "maxTrisPerScene": 1200000,
+    "maxTextureMb": 256,
+    "maxPhysicsBodies": 256,
+    "maxApkMb": 200,
+    "maxLoadSeconds": 8.0
+  },
+  "acceptance": [
+    {
+      "id": "valley-ground",
+      "axis": "Functional",
+      "description": "a drivable valley ground plane exists",
+      "qaRule": {"type": "entity_exists", "target": "Valley Ground"}
+    },
+    {
+      "id": "player-car",
+      "axis": "Functional",
+      "description": "a player car with vehicle physics and streaming focus exists",
+      "qaRule": {"type": "entity_component", "target": "Player Car", "component": "VehicleController"}
+    },
+    {
+      "id": "valley-traversable",
+      "axis": "Playable",
+      "description": "the valley floor has no void holes under the play area",
+      "qaRule": {"type": "traversal_coverage_min", "min": 0.8}
+    },
+    {
+      "id": "streaming-seamless",
+      "axis": "Playable",
+      "description": "terrain chunks stream seamlessly around the player with no gaps",
+      "qaRule": {"type": "streaming_coherence_min", "min": 1.0}
+    },
+    {
+      "id": "draw-budget",
+      "axis": "Performant",
+      "description": "scene stays within the mobile draw-call budget",
+      "qaRule": {"type": "draw_call_budget", "max": 100}
+    },
+    {
+      "id": "sim-fps",
+      "axis": "Performant",
+      "description": "headless simulation holds interactive frame rates",
+      "qaRule": {"type": "fps_min", "min": 30}
+    },
+    {
+      "id": "valley-read",
+      "axis": "Visually Coherent",
+      "description": "the valley reads as open floor with a distinct rim at a glance"
+    },
+    {
+      "id": "brief-faithful",
+      "axis": "Spec-Accurate",
+      "description": "the scene matches this brief: streaming valley, drivable, sunset light"
+    }
+  ]
+}

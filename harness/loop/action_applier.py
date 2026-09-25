@@ -44,6 +44,7 @@ MODIFY_FIELDS = (
     "intensity",
     "controller",
     "vehicle",
+    "streamer",
 )
 
 
@@ -99,6 +100,25 @@ def _validate_vehicle(value: Any) -> Optional[Dict[str, Any]]:
         if key not in allowed or not _is_finite_number(item):
             return None
         normalized[key] = float(item)
+    return normalized
+
+
+def _validate_streamer(value: Any) -> Optional[Dict[str, Any]]:
+    """WorldStreamer configs pass straight to the QA runner (objSpec.streamer).
+
+    Returns the normalized config, or None when malformed. All fields are
+    optional (the engine supplies defaults); present fields must be positive
+    finite numbers, and unknown keys are rejected so typos surface as repair
+    input instead of silent no-ops.
+    """
+    if not isinstance(value, dict):
+        return None
+    allowed = {"chunkSize", "renderDistance", "resolution", "maxHeight", "seed"}
+    normalized: Dict[str, Any] = {}
+    for key, item in value.items():
+        if key not in allowed or not _is_finite_number(item) or item <= 0:
+            return None
+        normalized[key] = float(item) if key != "seed" else int(item)
     return normalized
 
 
@@ -260,6 +280,19 @@ def _apply_spawn(
                 "steering, brake, engineForce, maxSteerAngle)",
             )
         obj["vehicle"] = vehicle
+    if action.get("streamer") is not None:
+        # Maps to a WorldStreamer in the QA runner (objSpec.streamer).
+        streamer = _validate_streamer(action.get("streamer"))
+        if streamer is None:
+            return _outcome(
+                result,
+                index,
+                "spawn",
+                "invalid",
+                "spawn 'streamer' must be an object of positive numbers "
+                "(allowed: chunkSize, renderDistance, resolution, maxHeight, seed)",
+            )
+        obj["streamer"] = streamer
 
     scene.setdefault("gameObjects", []).append(obj)
     _outcome(
@@ -446,6 +479,18 @@ def _apply_modify(
                     "(each wheel needs an 'offset' [x,y,z])",
                 )
             obj["vehicle"] = vehicle
+        elif field_name == "streamer":
+            streamer = _validate_streamer(value)
+            if streamer is None:
+                return _outcome(
+                    result,
+                    index,
+                    "modify",
+                    "invalid",
+                    "modify 'streamer' must be an object of positive numbers "
+                    "(allowed: chunkSize, renderDistance, resolution, maxHeight, seed)",
+                )
+            obj["streamer"] = streamer
         changed.append(field_name)
 
     if not changed:

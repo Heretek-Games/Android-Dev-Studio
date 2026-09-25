@@ -792,12 +792,12 @@ async function main() {
     }
   }
 
-  if (spec.streaming) {
+  if (spec.streaming || (spec.rules || []).some((r) => r && r.type === 'streaming_coherence_min')) {
     const audit = runStreamingAudit(scene, ctx, {
       dt: args.dt,
-      samples: spec.streaming.samples,
-      settleFrames: spec.streaming.settleFrames,
-      path: spec.streaming.path,
+      samples: (spec.streaming || {}).samples,
+      settleFrames: (spec.streaming || {}).settleFrames,
+      path: (spec.streaming || {}).path,
     });
     if (audit) {
       metrics.streaming = audit;

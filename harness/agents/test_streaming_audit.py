@@ -83,11 +83,36 @@ class StreamingAuditTests(unittest.TestCase):
         rule = next(r for r in report["rules"] if r["id"] == "coherent")
         self.assertTrue(rule["pass"])
 
-    def test_rule_without_streaming_config_fails_explicitly(self):
+    def test_rule_presence_opts_into_audit_with_defaults(self):
         spec = {
-            "name": "NoStream",
+            "name": "RuleDriven",
             "goal": "streaming audit",
             "gameObjects": [player_with_streamer()],
+            "rules": [
+                {"id": "coherent", "type": "streaming_coherence_min", "min": 1.0}
+            ],
+        }
+        proc = run_scenario(spec)
+        report = json.loads(proc.stdout)
+        # No spec.streaming block, but the rule alone triggers the audit.
+        streaming = report["metrics"]["streaming"]
+        self.assertEqual(streaming["coverage"], 1)
+        rule = next(r for r in report["rules"] if r["id"] == "coherent")
+        self.assertTrue(rule["pass"])
+
+    def test_rule_without_streamer_fails_explicitly(self):
+        spec = {
+            "name": "NoStreamer",
+            "goal": "streaming audit",
+            "gameObjects": [
+                {
+                    "name": "Player Hero",
+                    "shape": "box",
+                    "size": [1, 2, 1],
+                    "position": [0, 5, 0],
+                    "color": "#3b82f6",
+                }
+            ],
             "rules": [
                 {"id": "coherent", "type": "streaming_coherence_min", "min": 1.0}
             ],
