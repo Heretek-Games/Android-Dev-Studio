@@ -52,3 +52,4 @@ __pycache__/
 *.sqlite3
 *.sqlite-journal
 harness/scenes/stress_scene.json
+harness/scenes/foliage_grove.json
