@@ -239,9 +239,11 @@ python3 -m harness.loop.regression_bisect --good <rev> --bad <rev> \
 - `llm_client.py` — OpenAI-compatible client (.env.prod), token/latency/retry telemetry,
   vision messages (`chat_with_image`).
 - `action_applier.py` — pure spawn/light/modify/delete/event applier over the flat scene
-  schema; malformed actions become explicit outcomes (repair input), never exceptions.
+  schema (incl. `vehicle` with required wheels, `streamer`, and `biome` tags);
+  malformed actions become explicit outcomes (repair input), never exceptions.
 - `prompts.py` — generation + repair prompts; maps QA rule types onto schema fields
-  (`physics` → RigidBody3D, `controller` → MobileController, events → EventSheet).
+  (`physics` → RigidBody3D, `controller` → MobileController, events → EventSheet,
+  `vehicle` → VehicleController, `streamer` → WorldStreamer, `biome` → composition audit).
 - `iterate_loop.py` — orchestrator: parse (codeblock/raw/salvaged), gate-before-QA
   (violations skip QA and feed back as failures), budgets (iterations / tokens / wall clock),
   run-log JSON + markdown per run under `harness/runs/loop_runs/`.
@@ -341,7 +343,7 @@ All studio↔harness bridges run through the Vite dev server (dev-only, like `/a
 
 ### Headless QA Pipeline (`harness/agents/`)
 - `qa_scenario_runner.mjs`: Node runner that builds a scenario spec into a real `Scene`, initializes Rapier3D WASM physics, steps the `EngineContext` for N fixed-dt frames, and emits a JSON report (metrics + per-rule pass/fail). GameObjects support `vehicle` configs (Rapier raycast vehicle + throttle/steering/brake inputs) and `events`/`controller` components.
-- Rule vocabulary: `entity_exists`, `entity_component`, `event_attached`, `object_count`, `transform_changes`, `transform_bounds`, `distance_traveled`, `speed_min`, `no_nan_transforms`, `draw_call_budget`, `fps_min`.
+- Rule vocabulary: `entity_exists`, `entity_component`, `event_attached`, `object_count`, `transform_changes`, `transform_bounds`, `distance_traveled`, `speed_min`, `no_nan_transforms`, `draw_call_budget`, `fps_min`, `traversal_coverage_min`, `streaming_coherence_min`, `biome_coverage_min`, `game_phase`, `game_score_min`, `game_kills_min`, `game_wave_reached`, `game_reactions_min`, `game_enemy_chase_min`, `game_settlement_pop_min`, `game_settlement_gold_min`.
 - `artemis_qa_runner.py`: Orchestrator — invokes the Node runner, compares metrics against the persisted baseline (FPS drop >20%, frame time rise >20%, draw calls rise >25%, heap rise >30% ⇒ `REGRESSED`), records benchmarks into `project_memory.sqlite`, and writes `harness/artemis_report.json`.
 - Scenario specs live in `harness/config/scenarios/` (e.g. `mini_arena.json`, `driving_course.json`); the live MCP-controlled scene is `harness/scenes/active_scene.json`.
 - Tier 2 scene export: `harness/build/scene_exporter.py` emits `scene.native` (meshes/instances/lights) plus optional focus-driven `terrain_lod` quadtree leaves (`--quadtree --lod-depth N --lod-focus X Z`), consumed by `templates/vulkan-container`.

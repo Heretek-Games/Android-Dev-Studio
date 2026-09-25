@@ -1,214 +1,249 @@
 {
   "id": "loop_work_scene",
   "name": "Loop Work Scene",
-  "goal": "Streaming Valley",
+  "goal": "Two-Biome Valley",
   "gameObjects": [
-    {
-      "kind": "light",
-      "name": "Sun Light",
-      "lightType": "directional",
-      "color": "#fff4e0",
-      "intensity": 2.2,
-      "position": [
-        40.0,
-        60.0,
-        30.0
-      ]
-    },
-    {
-      "kind": "light",
-      "name": "Valley Ambient",
-      "lightType": "ambient",
-      "color": "#8fb7de",
-      "intensity": 0.6,
-      "position": [
-        0.0,
-        20.0,
-        0.0
-      ]
-    },
     {
       "name": "Valley Ground",
       "shape": "plane",
       "size": [
-        240.0,
+        80.0,
         1.0,
-        240.0
+        80.0
       ],
       "position": [
         0.0,
-        -0.5,
+        0.0,
         0.0
       ],
-      "color": "#4e8f4a",
+      "color": "#8b8157",
       "physics": "fixed",
       "streamer": {
         "chunkSize": 16.0,
-        "renderDistance": 3.0,
+        "renderDistance": 2.0,
         "resolution": 8.0
       }
+    },
+    {
+      "name": "Sand Basin",
+      "shape": "box",
+      "size": [
+        30.0,
+        0.4,
+        30.0
+      ],
+      "position": [
+        -15.0,
+        0.2,
+        0.0
+      ],
+      "color": "#d8b878",
+      "physics": "fixed",
+      "biome": "sand"
+    },
+    {
+      "name": "Grass Basin",
+      "shape": "box",
+      "size": [
+        30.0,
+        0.4,
+        30.0
+      ],
+      "position": [
+        15.0,
+        0.2,
+        0.0
+      ],
+      "color": "#6f9a4a",
+      "physics": "fixed",
+      "biome": "grass"
+    },
+    {
+      "name": "Sand Dune One",
+      "shape": "sphere",
+      "size": [
+        7.0,
+        3.5,
+        7.0
+      ],
+      "position": [
+        -22.0,
+        1.4,
+        -9.0
+      ],
+      "color": "#e0c287",
+      "physics": "fixed",
+      "biome": "sand"
+    },
+    {
+      "name": "Sand Dune Two",
+      "shape": "sphere",
+      "size": [
+        6.0,
+        3.0,
+        6.0
+      ],
+      "position": [
+        -8.0,
+        1.2,
+        10.0
+      ],
+      "color": "#dcbc7c",
+      "physics": "fixed",
+      "biome": "sand"
+    },
+    {
+      "name": "Sand Rock",
+      "shape": "box",
+      "size": [
+        3.0,
+        2.5,
+        3.0
+      ],
+      "position": [
+        -26.0,
+        1.4,
+        7.0
+      ],
+      "color": "#a98c5f",
+      "physics": "fixed",
+      "biome": "sand"
+    },
+    {
+      "name": "Grass Tree One",
+      "shape": "cylinder",
+      "size": [
+        1.2,
+        6.0,
+        1.2
+      ],
+      "position": [
+        21.0,
+        3.2,
+        -9.0
+      ],
+      "color": "#4f7a35",
+      "physics": "fixed",
+      "biome": "grass"
+    },
+    {
+      "name": "Grass Tree Two",
+      "shape": "cylinder",
+      "size": [
+        1.4,
+        7.0,
+        1.4
+      ],
+      "position": [
+        9.0,
+        3.7,
+        11.0
+      ],
+      "color": "#557f3a",
+      "physics": "fixed",
+      "biome": "grass"
+    },
+    {
+      "name": "Grass Bush One",
+      "shape": "sphere",
+      "size": [
+        3.0,
+        2.4,
+        3.0
+      ],
+      "position": [
+        26.0,
+        1.4,
+        8.0
+      ],
+      "color": "#67934a",
+      "physics": "fixed",
+      "biome": "grass"
+    },
+    {
+      "name": "Grass Bush Two",
+      "shape": "sphere",
+      "size": [
+        2.6,
+        2.0,
+        2.6
+      ],
+      "position": [
+        6.0,
+        1.2,
+        -11.0
+      ],
+      "color": "#5f8c44",
+      "physics": "fixed",
+      "biome": "grass"
     },
     {
       "name": "Player Car",
       "shape": "box",
       "size": [
-        2.0,
-        1.2,
-        4.2
+        1.8,
+        0.8,
+        3.6
       ],
       "position": [
         0.0,
         1.4,
         0.0
       ],
-      "color": "#d83a2f",
+      "color": "#c8392f",
       "physics": "dynamic",
-      "mass": 1200.0,
+      "mass": 900.0,
       "vehicle": {
         "wheels": [
           {
             "offset": [
-              -1.0,
-              -0.3,
-              1.4
+              -0.9,
+              0.0,
+              1.3
             ]
           },
           {
             "offset": [
-              1.0,
-              -0.3,
-              1.4
+              0.9,
+              0.0,
+              1.3
             ]
           },
           {
             "offset": [
-              -1.0,
-              -0.3,
-              -1.4
+              -0.9,
+              0.0,
+              -1.3
             ]
           },
           {
             "offset": [
-              1.0,
-              -0.3,
-              -1.4
+              0.9,
+              0.0,
+              -1.3
             ]
           }
         ],
         "throttle": 1.0
-      }
-    },
-    {
-      "name": "Valley Rock A",
-      "shape": "sphere",
-      "size": [
-        3.0,
-        3.0,
-        3.0
-      ],
-      "position": [
-        -18.0,
-        1.5,
-        -14.0
-      ],
-      "color": "#7d7d78",
-      "physics": "fixed"
-    },
-    {
-      "name": "Valley Rock B",
-      "shape": "sphere",
-      "size": [
-        2.4,
-        2.4,
-        2.4
-      ],
-      "position": [
-        22.0,
-        1.2,
-        16.0
-      ],
-      "color": "#8a8a84",
-      "physics": "fixed"
-    },
-    {
-      "name": "Valley Rock C",
-      "shape": "box",
-      "size": [
-        4.0,
-        3.0,
-        3.0
-      ],
-      "position": [
-        -25.0,
-        1.5,
-        20.0
-      ],
-      "color": "#6f6f6a",
-      "physics": "fixed"
-    },
-    {
-      "name": "Trail Cabin",
-      "shape": "box",
-      "size": [
-        6.0,
-        4.0,
-        5.0
-      ],
-      "position": [
-        30.0,
-        2.0,
-        -24.0
-      ],
-      "color": "#8a5a32",
-      "physics": "fixed"
-    },
-    {
-      "name": "Cabin Roof",
-      "shape": "box",
-      "size": [
-        7.0,
-        1.2,
-        6.0
-      ],
-      "position": [
-        30.0,
-        4.6,
-        -24.0
-      ],
-      "color": "#5c3a20",
-      "physics": "fixed"
-    },
-    {
-      "name": "Gate Marker",
-      "shape": "cylinder",
-      "size": [
-        1.0,
-        6.0,
-        1.0
-      ],
-      "position": [
-        -6.0,
-        3.0,
-        -40.0
-      ],
-      "color": "#f2c14e",
-      "physics": "fixed",
+      },
       "events": [
         {
-          "name": "MarkerPulse",
+          "name": "Car Hop",
           "conditions": [
             {
-              "type": "Timer",
+              "type": "OnTouchTap",
               "params": {
-                "interval": 1.0
+                "name": "Player Car"
               }
             }
           ],
           "actions": [
             {
-              "type": "RotateY",
+              "type": "ApplyImpulse",
               "params": {
-                "degrees": 30
+                "x": 0,
+                "y": 8,
+                "z": 0
               }
             }
           ]
@@ -216,28 +251,50 @@
       ]
     },
     {
-      "name": "Gate Marker Far",
-      "shape": "cylinder",
+      "name": "Terrain Streamer",
+      "shape": "box",
       "size": [
         1.0,
-        6.0,
+        1.0,
         1.0
       ],
       "position": [
-        6.0,
-        3.0,
-        45.0
+        0.0,
+        0.6,
+        0.0
       ],
-      "color": "#f2c14e",
+      "color": "#444444",
+      "physics": "none",
+      "streamer": {
+        "chunkSize": 16.0,
+        "renderDistance": 2.0,
+        "resolution": 8.0
+      }
+    },
+    {
+      "name": "Goal Marker",
+      "shape": "torus",
+      "size": [
+        4.0,
+        4.0,
+        4.0
+      ],
+      "position": [
+        26.0,
+        4.0,
+        -12.0
+      ],
+      "color": "#ffd447",
       "physics": "fixed",
+      "biome": "grass",
       "events": [
         {
-          "name": "MarkerPulseFar",
+          "name": "Spin Goal Ring",
           "conditions": [
             {
-              "type": "Timer",
+              "type": "EveryFrame",
               "params": {
-                "interval": 1.0
+                "interval": 0.05
               }
             }
           ],
@@ -245,11 +302,99 @@
             {
               "type": "RotateY",
               "params": {
-                "degrees": -30
+                "degrees": 10
               }
             }
           ]
         }
+      ]
+    },
+    {
+      "name": "Valley Wall North",
+      "shape": "box",
+      "size": [
+        80.0,
+        4.0,
+        1.0
+      ],
+      "position": [
+        0.0,
+        2.0,
+        -40.0
+      ],
+      "color": "#7d7459",
+      "physics": "fixed"
+    },
+    {
+      "name": "Valley Wall South",
+      "shape": "box",
+      "size": [
+        80.0,
+        4.0,
+        1.0
+      ],
+      "position": [
+        0.0,
+        2.0,
+        40.0
+      ],
+      "color": "#7d7459",
+      "physics": "fixed"
+    },
+    {
+      "name": "Valley Wall West",
+      "shape": "box",
+      "size": [
+        1.0,
+        4.0,
+        80.0
+      ],
+      "position": [
+        -40.0,
+        2.0,
+        0.0
+      ],
+      "color": "#7d7459",
+      "physics": "fixed"
+    },
+    {
+      "name": "Valley Wall East",
+      "shape": "box",
+      "size": [
+        1.0,
+        4.0,
+        80.0
+      ],
+      "position": [
+        40.0,
+        2.0,
+        0.0
+      ],
+      "color": "#7d7459",
+      "physics": "fixed"
+    },
+    {
+      "kind": "light",
+      "name": "Valley Sun",
+      "lightType": "directional",
+      "color": "#fff3d6",
+      "intensity": 2.0,
+      "position": [
+        20.0,
+        40.0,
+        20.0
+      ]
+    },
+    {
+      "kind": "light",
+      "name": "Valley Fill",
+      "lightType": "ambient",
+      "color": "#bcd4ff",
+      "intensity": 0.6,
+      "position": [
+        0.0,
+        10.0,
+        0.0
       ]
     }
   ],
@@ -264,6 +409,30 @@
       "target": "Player Car",
       "component": "VehicleController",
       "id": "player-car"
+    },
+    {
+      "type": "biome_coverage_min",
+      "biome": "sand",
+      "min": 2,
+      "region": {
+        "minX": -30,
+        "maxX": 0,
+        "minZ": -15,
+        "maxZ": 15
+      },
+      "id": "sand-held"
+    },
+    {
+      "type": "biome_coverage_min",
+      "biome": "grass",
+      "min": 2,
+      "region": {
+        "minX": 0,
+        "maxX": 30,
+        "minZ": -15,
+        "maxZ": 15
+      },
+      "id": "grass-held"
     },
     {
       "type": "traversal_coverage_min",

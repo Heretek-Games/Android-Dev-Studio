@@ -1,0 +1,604 @@
+{
+  "goal": "Two-Biome Valley",
+  "rules": [
+    {
+      "type": "entity_exists",
+      "target": "Valley Ground",
+      "id": "valley-ground"
+    },
+    {
+      "type": "entity_component",
+      "target": "Player Car",
+      "component": "VehicleController",
+      "id": "player-car"
+    },
+    {
+      "type": "biome_coverage_min",
+      "biome": "sand",
+      "min": 2,
+      "region": {
+        "minX": -30,
+        "maxX": 0,
+        "minZ": -15,
+        "maxZ": 15
+      },
+      "id": "sand-held"
+    },
+    {
+      "type": "biome_coverage_min",
+      "biome": "grass",
+      "min": 2,
+      "region": {
+        "minX": 0,
+        "maxX": 30,
+        "minZ": -15,
+        "maxZ": 15
+      },
+      "id": "grass-held"
+    },
+    {
+      "type": "traversal_coverage_min",
+      "min": 0.8,
+      "id": "valley-traversable"
+    },
+    {
+      "type": "streaming_coherence_min",
+      "min": 1.0,
+      "id": "streaming-seamless"
+    },
+    {
+      "type": "draw_call_budget",
+      "max": 100,
+      "id": "draw-budget"
+    },
+    {
+      "type": "fps_min",
+      "min": 30,
+      "id": "sim-fps"
+    }
+  ],
+  "verdict": "green",
+  "iterations": [
+    {
+      "iteration": 1,
+      "phase": "generate",
+      "visionNotes": [],
+      "llm": {
+        "model": "mimo-v2.6-flash",
+        "promptTokens": 1329,
+        "completionTokens": 2852,
+        "totalTokens": 4181,
+        "latencySeconds": 36.196,
+        "finishReason": "stop",
+        "attempts": 1
+      },
+      "parse": {
+        "strategy": "raw",
+        "actionCount": 21,
+        "summary": "A compact two-biome valley with a large traversable ground, sand dunes on the west half, grass groves on the east half, a streaming terrain controller, and a drivable Player Car.",
+        "error": null
+      },
+      "apply": {
+        "applied": 21,
+        "targetMissing": 0,
+        "invalid": 0,
+        "failed": 0,
+        "outcomes": [
+          {
+            "index": 0,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Valley Ground (plane) at [0.0, 0.0, 0.0]",
+            "target": "Valley Ground"
+          },
+          {
+            "index": 1,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Sand Basin (box) at [-15.0, 0.2, 0.0]",
+            "target": "Sand Basin"
+          },
+          {
+            "index": 2,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Grass Basin (box) at [15.0, 0.2, 0.0]",
+            "target": "Grass Basin"
+          },
+          {
+            "index": 3,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Sand Dune One (sphere) at [-22.0, 1.4, -9.0]",
+            "target": "Sand Dune One"
+          },
+          {
+            "index": 4,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Sand Dune Two (sphere) at [-8.0, 1.2, 10.0]",
+            "target": "Sand Dune Two"
+          },
+          {
+            "index": 5,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Sand Rock (box) at [-26.0, 1.4, 7.0]",
+            "target": "Sand Rock"
+          },
+          {
+            "index": 6,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Grass Tree One (cylinder) at [21.0, 3.2, -9.0]",
+            "target": "Grass Tree One"
+          },
+          {
+            "index": 7,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Grass Tree Two (cylinder) at [9.0, 3.7, 11.0]",
+            "target": "Grass Tree Two"
+          },
+          {
+            "index": 8,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Grass Bush One (sphere) at [26.0, 1.4, 8.0]",
+            "target": "Grass Bush One"
+          },
+          {
+            "index": 9,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Grass Bush Two (sphere) at [6.0, 1.2, -11.0]",
+            "target": "Grass Bush Two"
+          },
+          {
+            "index": 10,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Player Car (box) at [0.0, 1.4, 0.0]",
+            "target": "Player Car"
+          },
+          {
+            "index": 11,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Terrain Streamer (box) at [0.0, 0.6, 0.0]",
+            "target": "Terrain Streamer"
+          },
+          {
+            "index": 12,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Goal Marker (torus) at [26.0, 4.0, -12.0]",
+            "target": "Goal Marker"
+          },
+          {
+            "index": 13,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Valley Wall North (box) at [0.0, 2.0, -40.0]",
+            "target": "Valley Wall North"
+          },
+          {
+            "index": 14,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Valley Wall South (box) at [0.0, 2.0, 40.0]",
+            "target": "Valley Wall South"
+          },
+          {
+            "index": 15,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Valley Wall West (box) at [-40.0, 2.0, 0.0]",
+            "target": "Valley Wall West"
+          },
+          {
+            "index": 16,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Valley Wall East (box) at [40.0, 2.0, 0.0]",
+            "target": "Valley Wall East"
+          },
+          {
+            "index": 17,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added directional light 'Valley Sun' (intensity 2.0)",
+            "target": "Valley Sun"
+          },
+          {
+            "index": 18,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added ambient light 'Valley Fill' (intensity 0.6)",
+            "target": "Valley Fill"
+          },
+          {
+            "index": 19,
+            "type": "event",
+            "status": "applied",
+            "detail": "Wired EveryFrame -> RotateY on Goal Marker",
+            "target": "Goal Marker"
+          },
+          {
+            "index": 20,
+            "type": "event",
+            "status": "applied",
+            "detail": "Wired OnTouchTap -> ApplyImpulse on Player Car",
+            "target": "Player Car"
+          }
+        ],
+        "appliedDescriptions": [
+          "Spawned Valley Ground (plane) at [0.0, 0.0, 0.0]",
+          "Spawned Sand Basin (box) at [-15.0, 0.2, 0.0]",
+          "Spawned Grass Basin (box) at [15.0, 0.2, 0.0]",
+          "Spawned Sand Dune One (sphere) at [-22.0, 1.4, -9.0]",
+          "Spawned Sand Dune Two (sphere) at [-8.0, 1.2, 10.0]",
+          "Spawned Sand Rock (box) at [-26.0, 1.4, 7.0]",
+          "Spawned Grass Tree One (cylinder) at [21.0, 3.2, -9.0]",
+          "Spawned Grass Tree Two (cylinder) at [9.0, 3.7, 11.0]",
+          "Spawned Grass Bush One (sphere) at [26.0, 1.4, 8.0]",
+          "Spawned Grass Bush Two (sphere) at [6.0, 1.2, -11.0]",
+          "Spawned Player Car (box) at [0.0, 1.4, 0.0]",
+          "Spawned Terrain Streamer (box) at [0.0, 0.6, 0.0]",
+          "Spawned Goal Marker (torus) at [26.0, 4.0, -12.0]",
+          "Spawned Valley Wall North (box) at [0.0, 2.0, -40.0]",
+          "Spawned Valley Wall South (box) at [0.0, 2.0, 40.0]",
+          "Spawned Valley Wall West (box) at [-40.0, 2.0, 0.0]",
+          "Spawned Valley Wall East (box) at [40.0, 2.0, 0.0]",
+          "Added directional light 'Valley Sun' (intensity 2.0)",
+          "Added ambient light 'Valley Fill' (intensity 0.6)",
+          "Wired EveryFrame -> RotateY on Goal Marker",
+          "Wired OnTouchTap -> ApplyImpulse on Player Car"
+        ]
+      },
+      "gate": {
+        "valid": true,
+        "violations": []
+      },
+      "qa": {
+        "verdict": "SUCCEEDED",
+        "passed": 8,
+        "total": 8,
+        "failedRules": [],
+        "metrics": {
+          "avgFrameTimeMs": 0.2596,
+          "p95FrameTimeMs": 0.4097,
+          "maxFrameTimeMs": 25.1665,
+          "simFpsEstimate": 3852.19,
+          "drawCallEstimate": 17,
+          "instancedBatches": 0,
+          "memoryHeapMb": 16.83,
+          "objectCount": 69,
+          "physicsBodyCount": 16,
+          "eventCount": 2,
+          "traversal": {
+            "grid": 9,
+            "cells": 81,
+            "hits": 81,
+            "coverage": 1,
+            "holes": [],
+            "steep": [
+              {
+                "x": 27,
+                "z": 9,
+                "normalY": 0.333
+              }
+            ],
+            "stepHazards": [
+              {
+                "from": {
+                  "x": -18,
+                  "z": 9
+                },
+                "to": {
+                  "x": -9,
+                  "z": 9
+                },
+                "drop": 3.346
+              },
+              {
+                "from": {
+                  "x": -9,
+                  "z": 0
+                },
+                "to": {
+                  "x": -9,
+                  "z": 9
+                },
+                "drop": 3.346
+              },
+              {
+                "from": {
+                  "x": -9,
+                  "z": 9
+                },
+                "to": {
+                  "x": 0,
+                  "z": 9
+                },
+                "drop": 3.346
+              },
+              {
+                "from": {
+                  "x": -9,
+                  "z": 9
+                },
+                "to": {
+                  "x": -9,
+                  "z": 18
+                },
+                "drop": 3.346
+              },
+              {
+                "from": {
+                  "x": 18,
+                  "z": 9
+                },
+                "to": {
+                  "x": 27,
+                  "z": 9
+                },
+                "drop": 1.4
+              },
+              {
+                "from": {
+                  "x": 27,
+                  "z": 0
+                },
+                "to": {
+                  "x": 27,
+                  "z": 9
+                },
+                "drop": 1.4
+              },
+              {
+                "from": {
+                  "x": 27,
+                  "z": 9
+                },
+                "to": {
+                  "x": 36,
+                  "z": 9
+                },
+                "drop": 1.4
+              },
+              {
+                "from": {
+                  "x": 27,
+                  "z": 9
+                },
+                "to": {
+                  "x": 27,
+                  "z": 18
+                },
+                "drop": 1.4
+              }
+            ],
+            "bounds": {
+              "minX": -40.5,
+              "maxX": 40.5,
+              "minZ": -40.5,
+              "maxZ": 40.5
+            }
+          },
+          "streaming": {
+            "samples": 5,
+            "settleFrames": 27,
+            "coverage": 1,
+            "gaps": [],
+            "thrashReloads": 0,
+            "maxActiveChunks": 25,
+            "uniqueChunks": 50,
+            "chunkSize": 16,
+            "renderDistance": 2
+          }
+        }
+      }
+    }
+  ],
+  "totalTokens": 4181,
+  "totalLatencySeconds": 36.196,
+  "finalReport": {
+    "schemaVersion": 1,
+    "runner": "qa_scenario_runner.mjs",
+    "scenario": "loop_work_scene.json",
+    "goal": "Two-Biome Valley",
+    "timestamp": 1790360138.618,
+    "frames": 300,
+    "fixedDeltaSeconds": 0.016666666666666666,
+    "metrics": {
+      "avgFrameTimeMs": 0.2596,
+      "p95FrameTimeMs": 0.4097,
+      "maxFrameTimeMs": 25.1665,
+      "simFpsEstimate": 3852.19,
+      "drawCallEstimate": 17,
+      "instancedBatches": 0,
+      "memoryHeapMb": 16.83,
+      "objectCount": 69,
+      "physicsBodyCount": 16,
+      "eventCount": 2,
+      "traversal": {
+        "grid": 9,
+        "cells": 81,
+        "hits": 81,
+        "coverage": 1,
+        "holes": [],
+        "steep": [
+          {
+            "x": 27,
+            "z": 9,
+            "normalY": 0.333
+          }
+        ],
+        "stepHazards": [
+          {
+            "from": {
+              "x": -18,
+              "z": 9
+            },
+            "to": {
+              "x": -9,
+              "z": 9
+            },
+            "drop": 3.346
+          },
+          {
+            "from": {
+              "x": -9,
+              "z": 0
+            },
+            "to": {
+              "x": -9,
+              "z": 9
+            },
+            "drop": 3.346
+          },
+          {
+            "from": {
+              "x": -9,
+              "z": 9
+            },
+            "to": {
+              "x": 0,
+              "z": 9
+            },
+            "drop": 3.346
+          },
+          {
+            "from": {
+              "x": -9,
+              "z": 9
+            },
+            "to": {
+              "x": -9,
+              "z": 18
+            },
+            "drop": 3.346
+          },
+          {
+            "from": {
+              "x": 18,
+              "z": 9
+            },
+            "to": {
+              "x": 27,
+              "z": 9
+            },
+            "drop": 1.4
+          },
+          {
+            "from": {
+              "x": 27,
+              "z": 0
+            },
+            "to": {
+              "x": 27,
+              "z": 9
+            },
+            "drop": 1.4
+          },
+          {
+            "from": {
+              "x": 27,
+              "z": 9
+            },
+            "to": {
+              "x": 36,
+              "z": 9
+            },
+            "drop": 1.4
+          },
+          {
+            "from": {
+              "x": 27,
+              "z": 9
+            },
+            "to": {
+              "x": 27,
+              "z": 18
+            },
+            "drop": 1.4
+          }
+        ],
+        "bounds": {
+          "minX": -40.5,
+          "maxX": 40.5,
+          "minZ": -40.5,
+          "maxZ": 40.5
+        }
+      },
+      "streaming": {
+        "samples": 5,
+        "settleFrames": 27,
+        "coverage": 1,
+        "gaps": [],
+        "thrashReloads": 0,
+        "maxActiveChunks": 25,
+        "uniqueChunks": 50,
+        "chunkSize": 16,
+        "renderDistance": 2
+      }
+    },
+    "rules": [
+      {
+        "id": "valley-ground",
+        "type": "entity_exists",
+        "pass": true,
+        "detail": "found \"Valley Ground\""
+      },
+      {
+        "id": "player-car",
+        "type": "entity_component",
+        "pass": true,
+        "detail": "Player Car components: [MeshRenderer, RigidBody3D, Collider3D, VehicleController, EventSheet]"
+      },
+      {
+        "id": "sand-held",
+        "type": "biome_coverage_min",
+        "pass": true,
+        "detail": "biome 'sand': 4 live objects in region (min 2)"
+      },
+      {
+        "id": "grass-held",
+        "type": "biome_coverage_min",
+        "pass": true,
+        "detail": "biome 'grass': 6 live objects in region (min 2)"
+      },
+      {
+        "id": "valley-traversable",
+        "type": "traversal_coverage_min",
+        "pass": true,
+        "detail": "coverage=1 (min 0.8), holes=0, steep=1, stepHazards=8"
+      },
+      {
+        "id": "streaming-seamless",
+        "type": "streaming_coherence_min",
+        "pass": true,
+        "detail": "coverage=1 (min 1), gaps=0, thrashReloads=0, maxActive=25"
+      },
+      {
+        "id": "draw-budget",
+        "type": "draw_call_budget",
+        "pass": true,
+        "detail": "drawCallEstimate=17 (budget 100)"
+      },
+      {
+        "id": "sim-fps",
+        "type": "fps_min",
+        "pass": true,
+        "detail": "simFpsEstimate=3852.2 (min 30)"
+      }
+    ],
+    "passed": 8,
+    "total": 8,
+    "verdict": "SUCCEEDED",
+    "confidence": 1
+  },
+  "error": null,
+  "workScene": "/home/john/Projects/Android-Dev-Studio/harness/scenes/loop_work_scene.json"
+}

@@ -518,6 +518,25 @@ Evidence: `harness/runs/loop_runs/20260925-133811-*.json` + `harness/scenes/loop
 
 ---
 
+## Run Block 13 — 2026-09-25, Phase 2 Rung 2: Two-Biome Valley ✅
+
+**Valley-biomes brief** (`harness/briefs/examples/valley_biomes.json`: 10 criteria, 8 automatable
+incl. two regional `biome_coverage_min` rules) through the full production loop — **GREEN**.
+
+### Verification
+
+| Check | Evidence |
+|-------|----------|
+| Milestone run | **GREEN** — 8/8 automatable (`valley-ground`, `player-car`, `sand-held`, `grass-held`, `valley-traversable`, `streaming-seamless`, `draw-budget`, `sim-fps`); 2 critic-owned (`valley-read`, `brief-faithful`) listed, not passed |
+| Loop trace | generate (21 actions incl. streamer config + sand/grass tags) → gate clean → QA **SUCCEEDED 8/8** in 1 iteration, 4,181 tokens |
+| Composition | 4 live `sand` + 6 live `grass` objects; regional bounds enforced by the rule |
+| Gates | traversal sweep coverage=1.0 (0 holes); streaming transect coverage=1, 0 gaps, 0 thrash reloads |
+| DAG + memory | 20 tasks in the ledger, all completed; brief persisted and retrievable |
+
+Evidence: `harness/runs/loop_runs/20260925-141538-*.json`.
+
+---
+
 ## Run Block 12 — 2026-09-25, Phase 2 Rung 1: Streaming Valley ✅
 
 **Valley brief** (`harness/briefs/examples/valley_streaming.json`: 8 criteria, 6 automatable
