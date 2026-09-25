@@ -8,8 +8,9 @@ import copy
 import os
 import sys
 import unittest
+from pathlib import Path
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from harness.loop.action_applier import apply_actions  # noqa: E402
 from harness.validation.scene_invariants import validate_scene_invariants  # noqa: E402

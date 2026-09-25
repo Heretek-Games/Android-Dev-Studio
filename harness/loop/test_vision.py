@@ -8,8 +8,9 @@ import json
 import os
 import sys
 import unittest
+from pathlib import Path
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from harness.loop.llm_client import LlmResponse  # noqa: E402
 from harness.loop.scene_preview import render_layout_png  # noqa: E402
