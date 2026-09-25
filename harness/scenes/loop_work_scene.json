@@ -1,0 +1,796 @@
+{
+  "id": "loop_work_scene",
+  "name": "Loop Work Scene",
+  "goal": "Build a mini arena game: a ground arena, a player capsule with mobile controls, 6 tall pillar obstacles in an obstacle course, at least 15 spinning gold coins, and a warm sunset directional light",
+  "gameObjects": [
+    {
+      "name": "Arena Ground",
+      "shape": "plane",
+      "size": [
+        40.0,
+        1.0,
+        40.0
+      ],
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "color": "#c9a26b",
+      "physics": "fixed"
+    },
+    {
+      "name": "Player Capsule",
+      "shape": "capsule",
+      "size": [
+        0.8,
+        1.4,
+        0.8
+      ],
+      "position": [
+        0.0,
+        1.5,
+        0.0
+      ],
+      "color": "#4ea3ff",
+      "physics": "dynamic",
+      "mass": 1.0,
+      "controller": true,
+      "events": [
+        {
+          "name": "PlayerIdleBob",
+          "conditions": [
+            {
+              "type": "Timer",
+              "params": {
+                "interval": 2.0
+              }
+            }
+          ],
+          "actions": [
+            {
+              "type": "RotateY",
+              "params": {
+                "degrees": 0
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Pillar 1",
+      "shape": "cylinder",
+      "size": [
+        1.2,
+        6.0,
+        1.2
+      ],
+      "position": [
+        -6.0,
+        3.0,
+        -6.0
+      ],
+      "color": "#8d7b68",
+      "physics": "fixed"
+    },
+    {
+      "name": "Pillar 2",
+      "shape": "cylinder",
+      "size": [
+        1.2,
+        6.0,
+        1.2
+      ],
+      "position": [
+        0.0,
+        3.0,
+        -8.0
+      ],
+      "color": "#8d7b68",
+      "physics": "fixed"
+    },
+    {
+      "name": "Pillar 3",
+      "shape": "cylinder",
+      "size": [
+        1.2,
+        6.0,
+        1.2
+      ],
+      "position": [
+        6.0,
+        3.0,
+        -6.0
+      ],
+      "color": "#8d7b68",
+      "physics": "fixed"
+    },
+    {
+      "name": "Pillar 4",
+      "shape": "cylinder",
+      "size": [
+        1.2,
+        6.0,
+        1.2
+      ],
+      "position": [
+        -6.0,
+        3.0,
+        6.0
+      ],
+      "color": "#8d7b68",
+      "physics": "fixed"
+    },
+    {
+      "name": "Pillar 5",
+      "shape": "cylinder",
+      "size": [
+        1.2,
+        6.0,
+        1.2
+      ],
+      "position": [
+        0.0,
+        3.0,
+        8.0
+      ],
+      "color": "#8d7b68",
+      "physics": "fixed"
+    },
+    {
+      "name": "Pillar 6",
+      "shape": "cylinder",
+      "size": [
+        1.2,
+        6.0,
+        1.2
+      ],
+      "position": [
+        6.0,
+        3.0,
+        6.0
+      ],
+      "color": "#8d7b68",
+      "physics": "fixed"
+    },
+    {
+      "name": "Gold Coin 1",
+      "shape": "cylinder",
+      "size": [
+        0.7,
+        0.12,
+        0.7
+      ],
+      "position": [
+        -4.0,
+        0.8,
+        -4.0
+      ],
+      "color": "#ffd23f",
+      "physics": "none",
+      "events": [
+        {
+          "name": "CoinSpin",
+          "conditions": [
+            {
+              "type": "EveryFrame",
+              "params": {
+                "interval": 0.016
+              }
+            }
+          ],
+          "actions": [
+            {
+              "type": "RotateY",
+              "params": {
+                "degrees": 4
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Gold Coin 2",
+      "shape": "cylinder",
+      "size": [
+        0.7,
+        0.12,
+        0.7
+      ],
+      "position": [
+        -2.0,
+        0.8,
+        -4.0
+      ],
+      "color": "#ffd23f",
+      "physics": "none",
+      "events": [
+        {
+          "name": "CoinSpin",
+          "conditions": [
+            {
+              "type": "EveryFrame",
+              "params": {
+                "interval": 0.016
+              }
+            }
+          ],
+          "actions": [
+            {
+              "type": "RotateY",
+              "params": {
+                "degrees": 4
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Gold Coin 3",
+      "shape": "cylinder",
+      "size": [
+        0.7,
+        0.12,
+        0.7
+      ],
+      "position": [
+        2.0,
+        0.8,
+        -4.0
+      ],
+      "color": "#ffd23f",
+      "physics": "none",
+      "events": [
+        {
+          "name": "CoinSpin",
+          "conditions": [
+            {
+              "type": "EveryFrame",
+              "params": {
+                "interval": 0.016
+              }
+            }
+          ],
+          "actions": [
+            {
+              "type": "RotateY",
+              "params": {
+                "degrees": 4
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Gold Coin 4",
+      "shape": "cylinder",
+      "size": [
+        0.7,
+        0.12,
+        0.7
+      ],
+      "position": [
+        4.0,
+        0.8,
+        -4.0
+      ],
+      "color": "#ffd23f",
+      "physics": "none",
+      "events": [
+        {
+          "name": "CoinSpin",
+          "conditions": [
+            {
+              "type": "EveryFrame",
+              "params": {
+                "interval": 0.016
+              }
+            }
+          ],
+          "actions": [
+            {
+              "type": "RotateY",
+              "params": {
+                "degrees": 4
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Gold Coin 5",
+      "shape": "cylinder",
+      "size": [
+        0.7,
+        0.12,
+        0.7
+      ],
+      "position": [
+        -4.0,
+        0.8,
+        0.0
+      ],
+      "color": "#ffd23f",
+      "physics": "none",
+      "events": [
+        {
+          "name": "CoinSpin",
+          "conditions": [
+            {
+              "type": "EveryFrame",
+              "params": {
+                "interval": 0.016
+              }
+            }
+          ],
+          "actions": [
+            {
+              "type": "RotateY",
+              "params": {
+                "degrees": 4
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Gold Coin 6",
+      "shape": "cylinder",
+      "size": [
+        0.7,
+        0.12,
+        0.7
+      ],
+      "position": [
+        4.0,
+        0.8,
+        0.0
+      ],
+      "color": "#ffd23f",
+      "physics": "none",
+      "events": [
+        {
+          "name": "CoinSpin",
+          "conditions": [
+            {
+              "type": "EveryFrame",
+              "params": {
+                "interval": 0.016
+              }
+            }
+          ],
+          "actions": [
+            {
+              "type": "RotateY",
+              "params": {
+                "degrees": 4
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Gold Coin 7",
+      "shape": "cylinder",
+      "size": [
+        0.7,
+        0.12,
+        0.7
+      ],
+      "position": [
+        -3.0,
+        0.8,
+        4.0
+      ],
+      "color": "#ffd23f",
+      "physics": "none",
+      "events": [
+        {
+          "name": "CoinSpin",
+          "conditions": [
+            {
+              "type": "EveryFrame",
+              "params": {
+                "interval": 0.016
+              }
+            }
+          ],
+          "actions": [
+            {
+              "type": "RotateY",
+              "params": {
+                "degrees": 4
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Gold Coin 8",
+      "shape": "cylinder",
+      "size": [
+        0.7,
+        0.12,
+        0.7
+      ],
+      "position": [
+        3.0,
+        0.8,
+        4.0
+      ],
+      "color": "#ffd23f",
+      "physics": "none",
+      "events": [
+        {
+          "name": "CoinSpin",
+          "conditions": [
+            {
+              "type": "EveryFrame",
+              "params": {
+                "interval": 0.016
+              }
+            }
+          ],
+          "actions": [
+            {
+              "type": "RotateY",
+              "params": {
+                "degrees": 4
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Gold Coin 9",
+      "shape": "cylinder",
+      "size": [
+        0.7,
+        0.12,
+        0.7
+      ],
+      "position": [
+        -8.0,
+        0.8,
+        0.0
+      ],
+      "color": "#ffd23f",
+      "physics": "none",
+      "events": [
+        {
+          "name": "CoinSpin",
+          "conditions": [
+            {
+              "type": "EveryFrame",
+              "params": {
+                "interval": 0.016
+              }
+            }
+          ],
+          "actions": [
+            {
+              "type": "RotateY",
+              "params": {
+                "degrees": 4
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Gold Coin 10",
+      "shape": "cylinder",
+      "size": [
+        0.7,
+        0.12,
+        0.7
+      ],
+      "position": [
+        8.0,
+        0.8,
+        0.0
+      ],
+      "color": "#ffd23f",
+      "physics": "none",
+      "events": [
+        {
+          "name": "CoinSpin",
+          "conditions": [
+            {
+              "type": "EveryFrame",
+              "params": {
+                "interval": 0.016
+              }
+            }
+          ],
+          "actions": [
+            {
+              "type": "RotateY",
+              "params": {
+                "degrees": 4
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Gold Coin 11",
+      "shape": "cylinder",
+      "size": [
+        0.7,
+        0.12,
+        0.7
+      ],
+      "position": [
+        0.0,
+        0.8,
+        -2.0
+      ],
+      "color": "#ffd23f",
+      "physics": "none",
+      "events": [
+        {
+          "name": "CoinSpin",
+          "conditions": [
+            {
+              "type": "EveryFrame",
+              "params": {
+                "interval": 0.016
+              }
+            }
+          ],
+          "actions": [
+            {
+              "type": "RotateY",
+              "params": {
+                "degrees": 4
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Gold Coin 12",
+      "shape": "cylinder",
+      "size": [
+        0.7,
+        0.12,
+        0.7
+      ],
+      "position": [
+        0.0,
+        0.8,
+        2.0
+      ],
+      "color": "#ffd23f",
+      "physics": "none",
+      "events": [
+        {
+          "name": "CoinSpin",
+          "conditions": [
+            {
+              "type": "EveryFrame",
+              "params": {
+                "interval": 0.016
+              }
+            }
+          ],
+          "actions": [
+            {
+              "type": "RotateY",
+              "params": {
+                "degrees": 4
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Gold Coin 13",
+      "shape": "cylinder",
+      "size": [
+        0.7,
+        0.12,
+        0.7
+      ],
+      "position": [
+        -6.0,
+        0.8,
+        -2.0
+      ],
+      "color": "#ffd23f",
+      "physics": "none",
+      "events": [
+        {
+          "name": "CoinSpin",
+          "conditions": [
+            {
+              "type": "EveryFrame",
+              "params": {
+                "interval": 0.016
+              }
+            }
+          ],
+          "actions": [
+            {
+              "type": "RotateY",
+              "params": {
+                "degrees": 4
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Gold Coin 14",
+      "shape": "cylinder",
+      "size": [
+        0.7,
+        0.12,
+        0.7
+      ],
+      "position": [
+        6.0,
+        0.8,
+        2.0
+      ],
+      "color": "#ffd23f",
+      "physics": "none",
+      "events": [
+        {
+          "name": "CoinSpin",
+          "conditions": [
+            {
+              "type": "EveryFrame",
+              "params": {
+                "interval": 0.016
+              }
+            }
+          ],
+          "actions": [
+            {
+              "type": "RotateY",
+              "params": {
+                "degrees": 4
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Gold Coin 15",
+      "shape": "cylinder",
+      "size": [
+        0.7,
+        0.12,
+        0.7
+      ],
+      "position": [
+        0.0,
+        0.8,
+        6.0
+      ],
+      "color": "#ffd23f",
+      "physics": "none",
+      "events": [
+        {
+          "name": "CoinSpin",
+          "conditions": [
+            {
+              "type": "EveryFrame",
+              "params": {
+                "interval": 0.016
+              }
+            }
+          ],
+          "actions": [
+            {
+              "type": "RotateY",
+              "params": {
+                "degrees": 4
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "light",
+      "name": "Sunset Sun",
+      "lightType": "directional",
+      "color": "#ff9a4d",
+      "intensity": 2.4,
+      "position": [
+        12.0,
+        16.0,
+        -10.0
+      ]
+    },
+    {
+      "kind": "light",
+      "name": "Warm Ambient",
+      "lightType": "ambient",
+      "color": "#ffd7b0",
+      "intensity": 0.6,
+      "position": [
+        0.0,
+        10.0,
+        0.0
+      ]
+    }
+  ],
+  "rules": [
+    {
+      "id": "player_exists",
+      "type": "entity_exists",
+      "target": "Player Capsule"
+    },
+    {
+      "id": "player_has_physics",
+      "type": "entity_component",
+      "target": "Player Capsule",
+      "component": "RigidBody3D"
+    },
+    {
+      "id": "player_has_mobile_controls",
+      "type": "entity_component",
+      "target": "Player Capsule",
+      "component": "MobileController"
+    },
+    {
+      "id": "coin_count",
+      "type": "object_count",
+      "min": 15,
+      "max": 40
+    },
+    {
+      "id": "coins_have_spin_events",
+      "type": "event_attached",
+      "target": "Gold Coin 1",
+      "action": "RotateY"
+    },
+    {
+      "id": "coins_actually_spin",
+      "type": "transform_changes",
+      "target": "Gold Coin 1",
+      "field": "rotationY",
+      "minDelta": 0.05
+    },
+    {
+      "id": "player_stays_above_floor",
+      "type": "transform_bounds",
+      "target": "Player Capsule",
+      "axis": "y",
+      "min": -5
+    },
+    {
+      "id": "finite_transforms",
+      "type": "no_nan_transforms"
+    },
+    {
+      "id": "mobile_draw_budget",
+      "type": "draw_call_budget",
+      "max": 100
+    },
+    {
+      "id": "sim_performance",
+      "type": "fps_min",
+      "min": 30
+    }
+  ]
+}

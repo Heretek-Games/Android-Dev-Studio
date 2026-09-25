@@ -46,6 +46,19 @@ class SpawnTests(unittest.TestCase):
         self.assertEqual(obj["shape"], "box")
         self.assertEqual(obj["physics"], "none")
 
+    def test_spawn_controller_flag_maps_to_mobile_controller(self):
+        scene, result = apply_actions(
+            base_scene(),
+            [{"type": "spawn", "name": "Player Capsule", "shape": "capsule", "physics": "dynamic", "controller": True}],
+        )
+        self.assertEqual(result.applied, 1)
+        self.assertIs(scene["gameObjects"][1]["controller"], True)
+
+    def test_modify_controller_flag(self):
+        scene, result = apply_actions(base_scene(), [{"type": "modify", "target": "Ground", "controller": True}])
+        self.assertEqual(result.applied, 1)
+        self.assertIs(scene["gameObjects"][0]["controller"], True)
+
     def test_spawn_dynamic_carries_mass(self):
         scene, result = apply_actions(
             base_scene(),

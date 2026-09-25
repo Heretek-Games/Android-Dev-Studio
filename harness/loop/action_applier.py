@@ -42,6 +42,7 @@ MODIFY_FIELDS = (
     "mass",
     "lightType",
     "intensity",
+    "controller",
 )
 
 
@@ -186,6 +187,9 @@ def _apply_spawn(
                 f"dynamic spawn needs a positive mass (got {mass!r})",
             )
         obj["mass"] = float(mass)
+    if action.get("controller") is True:
+        # Maps to a MobileController component in the engine scene adapter.
+        obj["controller"] = True
 
     scene.setdefault("gameObjects", []).append(obj)
     _outcome(
@@ -350,6 +354,16 @@ def _apply_modify(
                     f"intensity must be non-negative (got {value!r})",
                 )
             obj["intensity"] = float(value)
+        elif field_name == "controller":
+            if not isinstance(value, bool):
+                return _outcome(
+                    result,
+                    index,
+                    "modify",
+                    "invalid",
+                    f"controller must be true/false (got {value!r})",
+                )
+            obj["controller"] = value
         changed.append(field_name)
 
     if not changed:
