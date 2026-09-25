@@ -51,3 +51,4 @@ __pycache__/
 *.sqlite
 *.sqlite3
 *.sqlite-journal
+harness/scenes/stress_scene.json
