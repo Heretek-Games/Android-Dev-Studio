@@ -193,6 +193,50 @@ class LoopTests(unittest.TestCase):
         self.assertIn("REJECTED actions", repair_user)
         self.assertIn("unknown game settlement key 'name'", repair_user)
 
+    def test_consecutive_noops_stop_early_with_stall_error(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            client = FakeClient(
+                [llm_response({"summary": "x", "actions": []}, tokens=50)] * 6
+            )
+            qa = FakeQaRunner([qa_report(False)] * 6)
+            loop = self._loop(tmp, client, qa, max_iterations=6)
+            result = loop.run()
+
+        self.assertEqual(result.verdict, "unresolved")
+        self.assertEqual(len(result.iterations), 2)
+        self.assertIn("stalled", result.error)
+        self.assertEqual(len(qa.calls), 2)
+
+    def test_single_noop_does_not_trigger_stall(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            client = FakeClient(
+                [
+                    llm_response({"summary": "x", "actions": []}, tokens=50),
+                    llm_response(
+                        {
+                            "summary": "add ground",
+                            "actions": [
+                                {
+                                    "type": "spawn",
+                                    "name": "Ground",
+                                    "shape": "plane",
+                                    "size": [20, 1, 20],
+                                    "position": [0, -0.5, 0],
+                                    "physics": "fixed",
+                                }
+                            ],
+                        },
+                        tokens=50,
+                    ),
+                ]
+            )
+            qa = FakeQaRunner([qa_report(False), qa_report(True)])
+            loop = self._loop(tmp, client, qa, max_iterations=4)
+            result = loop.run()
+
+        self.assertEqual(result.verdict, "green")
+        self.assertIsNone(result.error)
+
     def test_budget_exhaustion_is_unresolved(self):
         with tempfile.TemporaryDirectory() as tmp:
             client = FakeClient(

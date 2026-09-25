@@ -343,6 +343,7 @@ class IterateLoop:
         metrics: Dict[str, Any] = {}
         final_report: Optional[Dict[str, Any]] = None
         rejected: List[str] = []
+        consecutive_noops = 0
 
         for iteration in range(1, self.max_iterations + 1):
             phase = "generate" if iteration == 1 else "repair"
@@ -409,6 +410,13 @@ class IterateLoop:
 
             scene, apply_result = apply_actions(scene, actions)
             record["apply"] = apply_result.as_dict()
+            # A repair round that applies nothing cannot move QA: two in a row
+            # (empty responses, all-rejected patches) means the loop is stalled,
+            # so stop early with a precise verdict instead of burning budget.
+            if apply_result.applied == 0:
+                consecutive_noops += 1
+            else:
+                consecutive_noops = 0
             # Rejected actions never reach the scene or QA: carry their details
             # into the next repair prompt so the model sees the actual offense,
             # not just downstream symptoms.
@@ -486,6 +494,13 @@ class IterateLoop:
             result.iterations.append(record)
 
             # Budgets
+            if consecutive_noops >= 2:
+                result.error = (
+                    "stalled: 2 consecutive iterations applied no actions "
+                    "(empty responses or fully rejected patches); "
+                    "QA could not move, stopping early"
+                )
+                break
             if (
                 self.max_total_tokens is not None
                 and result.total_tokens >= self.max_total_tokens
