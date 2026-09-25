@@ -1,0 +1,408 @@
+{
+  "goal": "Founding Hollow",
+  "rules": [
+    {
+      "type": "entity_exists",
+      "target": "Settlement Ground",
+      "id": "settlement-ground"
+    },
+    {
+      "type": "game_settlement_pop_min",
+      "min": 6,
+      "id": "population-grown"
+    },
+    {
+      "type": "game_settlement_gold_min",
+      "min": 1,
+      "id": "treasury-healthy"
+    },
+    {
+      "type": "game_phase",
+      "phase": "won",
+      "id": "charter-granted"
+    },
+    {
+      "type": "draw_call_budget",
+      "max": 100,
+      "id": "draw-budget"
+    },
+    {
+      "type": "fps_min",
+      "min": 30,
+      "id": "sim-fps"
+    }
+  ],
+  "verdict": "green",
+  "iterations": [
+    {
+      "iteration": 1,
+      "phase": "generate",
+      "visionNotes": [],
+      "llm": {
+        "model": "mimo-v2.6-flash",
+        "promptTokens": 2042,
+        "completionTokens": 711,
+        "totalTokens": 2753,
+        "latencySeconds": 11.763,
+        "finishReason": "stop",
+        "attempts": 1
+      },
+      "parse": {
+        "strategy": "raw",
+        "actionCount": 9,
+        "summary": "A compact settlement scene with a named Settlement Ground, a player actor, starter buildings, lighting, and a build-mode game config that grows population to 6, keeps gold above 1, and reaches the won charter phase.",
+        "error": null
+      },
+      "apply": {
+        "applied": 8,
+        "targetMissing": 0,
+        "invalid": 1,
+        "failed": 0,
+        "outcomes": [
+          {
+            "index": 0,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Settlement Ground (plane) at [0.0, 0.0, 0.0]",
+            "target": "Settlement Ground"
+          },
+          {
+            "index": 1,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Player Hero (capsule) at [0.0, 1.0, 0.0]",
+            "target": "Player Hero"
+          },
+          {
+            "index": 2,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Old Oak (cylinder) at [-6.0, 2.5, -5.0]",
+            "target": "Old Oak"
+          },
+          {
+            "index": 3,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Oak Canopy (sphere) at [-6.0, 6.0, -5.0]",
+            "target": "Oak Canopy"
+          },
+          {
+            "index": 4,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Stone Well (cylinder) at [5.0, 0.6, 4.0]",
+            "target": "Stone Well"
+          },
+          {
+            "index": 5,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Founding Banner (box) at [3.0, 1.6, -4.0]",
+            "target": "Founding Banner"
+          },
+          {
+            "index": 6,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added directional light 'Sun Light' (intensity 2.0)",
+            "target": "Sun Light"
+          },
+          {
+            "index": 7,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added ambient light 'Hollow Ambient' (intensity 0.6)",
+            "target": "Hollow Ambient"
+          },
+          {
+            "index": 8,
+            "type": "game",
+            "status": "invalid",
+            "detail": "game config rejected \u2014 settlement placements[1].x must be an integer plot inside the 8x8 grid (got -2)"
+          }
+        ],
+        "appliedDescriptions": [
+          "Spawned Settlement Ground (plane) at [0.0, 0.0, 0.0]",
+          "Spawned Player Hero (capsule) at [0.0, 1.0, 0.0]",
+          "Spawned Old Oak (cylinder) at [-6.0, 2.5, -5.0]",
+          "Spawned Oak Canopy (sphere) at [-6.0, 6.0, -5.0]",
+          "Spawned Stone Well (cylinder) at [5.0, 0.6, 4.0]",
+          "Spawned Founding Banner (box) at [3.0, 1.6, -4.0]",
+          "Added directional light 'Sun Light' (intensity 2.0)",
+          "Added ambient light 'Hollow Ambient' (intensity 0.6)"
+        ]
+      },
+      "gate": {
+        "valid": false,
+        "violations": [
+          {
+            "code": "COLLIDER_PENETRATION_AT_SPAWN",
+            "message": "Dynamic collider 'Player Hero' penetrates fixed collider 'Settlement Ground' at spawn",
+            "entity": "Player Hero"
+          }
+        ]
+      },
+      "qa": {
+        "verdict": "skipped",
+        "reason": "invariant gate violation"
+      }
+    },
+    {
+      "iteration": 2,
+      "phase": "repair",
+      "visionNotes": [],
+      "llm": {
+        "model": "mimo-v2.6-flash",
+        "promptTokens": 2793,
+        "completionTokens": 306,
+        "totalTokens": 3099,
+        "latencySeconds": 5.831,
+        "finishReason": "stop",
+        "attempts": 1
+      },
+      "parse": {
+        "strategy": "raw",
+        "actionCount": 2,
+        "summary": "Raise Player Hero above the ground slab to clear collider penetration and re-emit the settlement game config with valid integer grid plots.",
+        "error": null
+      },
+      "apply": {
+        "applied": 2,
+        "targetMissing": 0,
+        "invalid": 0,
+        "failed": 0,
+        "outcomes": [
+          {
+            "index": 0,
+            "type": "modify",
+            "status": "applied",
+            "detail": "Modified Player Hero: position",
+            "target": "Player Hero"
+          },
+          {
+            "index": 1,
+            "type": "game",
+            "status": "applied",
+            "detail": "Set build-mode quest config for player 'Player Hero'"
+          }
+        ],
+        "appliedDescriptions": [
+          "Modified Player Hero: position",
+          "Set build-mode quest config for player 'Player Hero'"
+        ]
+      },
+      "gate": {
+        "valid": true,
+        "violations": []
+      },
+      "qa": {
+        "verdict": "FAILED",
+        "passed": 5,
+        "total": 6,
+        "failedRules": [
+          {
+            "id": "treasury-healthy",
+            "type": "game_settlement_gold_min",
+            "detail": "gold=-6 (min 1); plots placed 1/3; first failure: insufficient gold (need 40, have 0)"
+          }
+        ],
+        "metrics": {
+          "avgFrameTimeMs": 0.1434,
+          "p95FrameTimeMs": 0.2522,
+          "maxFrameTimeMs": 32.4957,
+          "simFpsEstimate": 6973.68,
+          "drawCallEstimate": 6,
+          "instancedBatches": 0,
+          "memoryHeapMb": 15.6,
+          "objectCount": 8,
+          "physicsBodyCount": 5,
+          "eventCount": 0
+        }
+      }
+    },
+    {
+      "iteration": 3,
+      "phase": "repair",
+      "visionNotes": [],
+      "llm": {
+        "model": "mimo-v2.6-flash",
+        "promptTokens": 2946,
+        "completionTokens": 1101,
+        "totalTokens": 4047,
+        "latencySeconds": 22.017,
+        "finishReason": "stop",
+        "attempts": 1
+      },
+      "parse": {
+        "strategy": "raw",
+        "actionCount": 1,
+        "summary": "Fix the settlement config by moving all plot placements into the valid inner grid range (0-3) and raising starting gold so construction costs don't bankrupt the treasury.",
+        "error": null
+      },
+      "apply": {
+        "applied": 1,
+        "targetMissing": 0,
+        "invalid": 0,
+        "failed": 0,
+        "outcomes": [
+          {
+            "index": 0,
+            "type": "game",
+            "status": "applied",
+            "detail": "Set build-mode quest config for player 'Player Hero'"
+          }
+        ],
+        "appliedDescriptions": [
+          "Set build-mode quest config for player 'Player Hero'"
+        ]
+      },
+      "gate": {
+        "valid": true,
+        "violations": []
+      },
+      "qa": {
+        "verdict": "SUCCEEDED",
+        "passed": 6,
+        "total": 6,
+        "failedRules": [],
+        "metrics": {
+          "avgFrameTimeMs": 0.1416,
+          "p95FrameTimeMs": 0.1894,
+          "maxFrameTimeMs": 36.721,
+          "simFpsEstimate": 7060.85,
+          "drawCallEstimate": 6,
+          "instancedBatches": 0,
+          "memoryHeapMb": 15.46,
+          "objectCount": 8,
+          "physicsBodyCount": 5,
+          "eventCount": 0
+        }
+      }
+    }
+  ],
+  "totalTokens": 9899,
+  "totalLatencySeconds": 39.611,
+  "finalReport": {
+    "schemaVersion": 1,
+    "runner": "qa_scenario_runner.mjs",
+    "scenario": "loop_work_scene.json",
+    "goal": "Founding Hollow",
+    "timestamp": 1790362894.781,
+    "frames": 600,
+    "fixedDeltaSeconds": 0.016666666666666666,
+    "metrics": {
+      "avgFrameTimeMs": 0.1416,
+      "p95FrameTimeMs": 0.1894,
+      "maxFrameTimeMs": 36.721,
+      "simFpsEstimate": 7060.85,
+      "drawCallEstimate": 6,
+      "instancedBatches": 0,
+      "memoryHeapMb": 15.46,
+      "objectCount": 8,
+      "physicsBodyCount": 5,
+      "eventCount": 0
+    },
+    "game": {
+      "mode": "build",
+      "phase": "won",
+      "score": 0,
+      "kills": 0,
+      "wave": 0,
+      "traveledDistance": 0,
+      "settlement": {
+        "gold": 184,
+        "food": 233,
+        "population": 6,
+        "housing": 12,
+        "buildings": [
+          {
+            "id": 1,
+            "type": "house",
+            "x": 0,
+            "z": 0
+          },
+          {
+            "id": 2,
+            "type": "farm",
+            "x": 1,
+            "z": 1
+          },
+          {
+            "id": 3,
+            "type": "market",
+            "x": 2,
+            "z": 0
+          },
+          {
+            "id": 4,
+            "type": "house",
+            "x": 3,
+            "z": 1
+          },
+          {
+            "id": 5,
+            "type": "farm",
+            "x": 0,
+            "z": 2
+          },
+          {
+            "id": 6,
+            "type": "market",
+            "x": 2,
+            "z": 3
+          }
+        ],
+        "simTime": 6,
+        "steps": 6
+      },
+      "reactions": 0,
+      "shots": 0,
+      "maxEnemyDisplacement": 0
+    },
+    "rules": [
+      {
+        "id": "settlement-ground",
+        "type": "entity_exists",
+        "pass": true,
+        "detail": "found \"Settlement Ground\""
+      },
+      {
+        "id": "population-grown",
+        "type": "game_settlement_pop_min",
+        "pass": true,
+        "detail": "population=6 (min 6)"
+      },
+      {
+        "id": "treasury-healthy",
+        "type": "game_settlement_gold_min",
+        "pass": true,
+        "detail": "gold=184 (min 1)"
+      },
+      {
+        "id": "charter-granted",
+        "type": "game_phase",
+        "pass": true,
+        "detail": "phase=won (expected won)"
+      },
+      {
+        "id": "draw-budget",
+        "type": "draw_call_budget",
+        "pass": true,
+        "detail": "drawCallEstimate=6 (budget 100)"
+      },
+      {
+        "id": "sim-fps",
+        "type": "fps_min",
+        "pass": true,
+        "detail": "simFpsEstimate=7060.9 (min 30)"
+      }
+    ],
+    "passed": 6,
+    "total": 6,
+    "verdict": "SUCCEEDED",
+    "confidence": 1
+  },
+  "error": null,
+  "workScene": "/home/john/Projects/Android-Dev-Studio/harness/scenes/loop_work_scene.json"
+}

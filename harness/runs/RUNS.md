@@ -688,3 +688,17 @@ settlement rule details/metrics, turning `population=0` into `0/17 plots
 placed: insufficient gold (need 50, have 12)`.
 
 Evidence: `harness/runs/loop_runs/20260925-144150-*.json`.
+
+### Fifth run (2026-09-25 15:01): GREEN 6/6 — rung 2 closed ✅
+
+With placement surfacing in the repair loop: generate (9 actions) → gate
+rejected a penetration AND the indexed plot reason fired
+(`settlement placements[1].x must be an integer plot inside the 8x8 grid`) →
+repair (2 actions, game applied) → QA 5/6 with the placement footnote
+(`plots placed 1/3; first failure: insufficient gold (need 40, have 0)`) →
+repair (1 action: funded startingGold 500, 6 plots) → QA **SUCCEEDED 6/6** in
+3 iterations, 9,899 tokens. Every fix in the Run Block 17 chain demonstrably
+fired: specific rejection → REJECTED channel → strict plots → placement
+footnote → green. **Phase 3 rung 2 PASSED.**
+
+Evidence: `harness/runs/loop_runs/20260925-150134-*.json`.
