@@ -222,3 +222,52 @@ Suggestion: Reduce coin density in the central region or spread coins out to imp
 on the attached lavapipe emulator. Two real bugs were caught while validating it: the logcat
 collector broke on the first frame line (before the 300-frame status line), and `adb install`
 failures were silently ignored. 18 unit tests cover the pure assertion checks.
+
+---
+
+## Run Block 4 — 2026-09-25, Vertical Slice #1: Arena FPS (Phase 3)
+
+The first complete playable game: menu → gameplay → win/lose → restart, with audio,
+save/load, real weapon damage, and on-device validation.
+
+### Engine additions (268 tests green, +27 for this block)
+
+| Module | Purpose |
+|--------|---------|
+| `audio/AudioManager` + `AudioBackend`/`WebAudioBackend` | Clip registry, master volume, linear spatial attenuation; headless null backend |
+| `components/AudioSource` | Per-entity playback (one-shot/loop/spatial), position tracking |
+| `game/GameFlow` | menu/playing/paused/won/lost state machine; explicit rejections |
+| `game/GameSession` | Score/waves/kills/timer + win/lose conditions; snapshot/restore |
+| `game/SaveSystem` | Slot save/load over injectable storage; explicit corrupt/version errors |
+| `components/HealthComponent` | HP, invulnerability window, damage/death events |
+| `components/EnemyAI` + `AttackNode` | Behavior-tree enemy: attack in range, chase in aggro, idle |
+| `game/WaveSpawner` | Deterministic ring spawns, wave clearing, inter-wave delay |
+| `game/DamageRouter` | Hit events → target HealthComponent → kill reporting |
+| `game/GameRuntime` | Wires session + spawner + damage routing + player death + win/lose |
+| `ui/GameShell` | DOM menu/HUD/pause/win/lose/restart with a headless view model |
+
+### Genre QA scenario (`harness/config/scenarios/fps_arena.json`) — 12/12 rules
+
+Runner gained `weapon`/`health`/`ai` scene specs, real `GameRuntime` boot, and rule
+types `game_phase`, `game_score_min`, `game_kills_min`, `game_wave_reached`,
+`game_enemy_chase_min`. Verified: phase=won, kills=2, score=200, wave=2, max enemy
+displacement 0.75m, 2/100 draw calls; Artemis baseline recorded.
+
+### Bug found and fixed (the FPS damage path never worked end-to-end)
+
+`WeaponController` named hits from `threeMesh.name` (never set by MeshRenderer), so
+every hit reported `"Environment"` and the damage router could never resolve the target —
+waves advanced only because enemies were never damaged. Hits now resolve through
+`userData.gameObject.name`; MeshRenderer names its mesh after the entity. Regression
+coverage: DecalDispatcher e2e asserts the entity name; a new DamageRouter e2e test drives
+a real WeaponController raycast → hit event → router → health → kill.
+
+### On-device validation (Tier 1 APK, emulator)
+
+1. `python3 harness/build/apk_builder.py` → installed + launched on emulator-5554
+2. Header **Game** button → `?play=1` → arena menu (screenshot: `docs/screenshots`-style capture in the session log)
+3. Tap **Start** → run completes → **Victory — 200 points / Score 200 · Wave 2 · Kills 2 · 1.1s**
+4. Tap **Restart** → mid-run HUD: **Score 100 · Wave 2 · Kills 1 · 0.8s**, health bar full, player capsule visible
+5. Save/load (dev-server verification): pause → Save → Menu → Continue restores score 200 / kills 2
+
+Screenshots captured during the session: studio-in-APK, arena menu, victory, mid-run HUD.

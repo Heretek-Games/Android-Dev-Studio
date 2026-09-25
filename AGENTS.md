@@ -24,6 +24,9 @@ implemented and verified:
   confirmed on-display and via in-renderer frame readback — see
   [`harness/runs/RUNS.md`](file:///home/john/Projects/Android-Dev-Studio/harness/runs/RUNS.md) (Run Block 2).
 - **Native host checks** — 61 checks (scene loader, culling, terrain meshing/packing, Vulkan projection).
+- **Playable slice** — `?play=1` (or the studio header **Game** button) boots a full arena run:
+  menu → waves → HUD → win/lose → restart, with audio, save/load, and real weapon damage.
+  Validated on-device in the Tier 1 APK (Victory 200 points, 2 kills, wave 2).
 
 Known gaps and follow-up work are tracked as GitHub issues on
 [`Heretek-Games/Android-Dev-Studio`](https://github.com/Heretek-Games/Android-Dev-Studio/issues):
@@ -59,6 +62,9 @@ Android-Dev-Studio/
 │   ├── src/terrain/                  # TerrainChunk, WorldStreamer, HierarchicalStreamingCells, QuadtreeTerrain (LOD blend + async loading)
 │   ├── src/rendering/                # InstancedMeshBatcher, FoliageInstancer, LODManager, DecalDispatcher
 │   ├── src/dialogue/                 # DialogueManager (visual nodes, gated choices, script DSL)
+│   ├── src/audio/                    # AudioManager (spatial attenuation), AudioBackend/WebAudioBackend
+│   ├── src/game/                     # GameFlow, GameSession, GameRuntime, WaveSpawner, DamageRouter, SaveSystem
+│   ├── src/ui/                       # GameShell (menu/HUD/pause/win-lose/restart)
 │   └── src/combat/, src/weapons/     # Elemental matrix + ballistic WeaponController (hit events)
 │
 ├── app/                              # Desktop Studio UI (Vite + React 18 + TailwindCSS)
