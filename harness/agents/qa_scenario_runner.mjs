@@ -309,6 +309,10 @@ function buildScene(spec, engine) {
             go.addComponent(new engine.PlatformerCharacter(spec.options || {}));
           } else if (name === 'Platform' && engine.Platform) {
             go.addComponent(new engine.Platform(spec.options || {}));
+          } else if (name === 'Pathfollow' && engine.Pathfollow) {
+            go.addComponent(new engine.Pathfollow(spec.options || {}));
+          } else if (name === 'Timer' && engine.Timer) {
+            go.addComponent(new engine.Timer(spec.options || {}));
           }
         }
       }

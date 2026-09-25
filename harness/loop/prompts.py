@@ -155,7 +155,9 @@ How acceptance rules map onto the schema (the QA runner checks these exact compo
     for animation specs driven by play() calls. Draggable takes
     axisLock/dragTarget/snapBack; DestroyOutsideScreen takes margin;
     PlatformerCharacter takes moveSpeed/jumpForce/gravity/coyoteTime/maxJumps/simulate;
-    Platform takes platformType solid|jumpthru|ladder.
+    Platform takes platformType solid|jumpthru|ladder; Pathfollow takes
+    waypoints[{x,z}], moveSpeed, mode loop|pingpong|once, arrivalRadius, groundOffset;
+    Timer takes duration, repeat, autostart.
   - "EventSheet" / event_attached rules -> emit an "event" action targeting that object
   - "LightComponent" -> emit a "light" action
   - object_count rules count every entry in gameObjects (lights included)

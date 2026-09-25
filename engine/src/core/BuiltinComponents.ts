@@ -23,6 +23,8 @@ import { Draggable } from '../behaviors/Draggable.js';
 import { DestroyOutsideScreen } from '../behaviors/DestroyOutsideScreen.js';
 import { PlatformerCharacter } from '../behaviors/PlatformerCharacter.js';
 import { Platform } from '../behaviors/Platform.js';
+import { Pathfollow } from '../behaviors/Pathfollow.js';
+import { Timer } from '../behaviors/Timer.js';
 
 /**
  * Registers every restorable built-in component by its toJSON type name.
@@ -53,6 +55,8 @@ export function registerBuiltinComponents(): void {  registerComponent('MeshRend
   registerComponent('DestroyOutsideScreen', DestroyOutsideScreen);
   registerComponent('PlatformerCharacter', PlatformerCharacter);
   registerComponent('Platform', Platform);
+  registerComponent('Pathfollow', Pathfollow);
+  registerComponent('Timer', Timer);
 }
 
 // Self-register on import so restores work without a manual init call.

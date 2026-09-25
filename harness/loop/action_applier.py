@@ -259,6 +259,8 @@ BEHAVIOR_TYPES = {
     "DestroyOutsideScreen",
     "PlatformerCharacter",
     "Platform",
+    "Pathfollow",
+    "Timer",
 }
 
 
@@ -363,6 +365,16 @@ def _validate_behaviors(
             normalized.append({"type": btype, "options": checked})
         elif btype == "Platform":
             checked = _validate_platform_options(options, i, errors)
+            if checked is None:
+                return None
+            normalized.append({"type": btype, "options": checked})
+        elif btype == "Pathfollow":
+            checked = _validate_pathfollow_options(options, i, errors)
+            if checked is None:
+                return None
+            normalized.append({"type": btype, "options": checked})
+        elif btype == "Timer":
+            checked = _validate_timer_options(options, i, errors)
             if checked is None:
                 return None
             normalized.append({"type": btype, "options": checked})
@@ -569,6 +581,93 @@ def _validate_platform_options(
             fail(
                 f"behaviors[{index}] unknown Platform option '{key}' "
                 "(allowed: platformType)"
+            )
+            return None
+    return normalized
+
+
+def _validate_pathfollow_options(
+    options: Dict[str, Any], index: int, errors: Optional[List[str]]
+) -> Optional[Dict[str, Any]]:
+    def fail(reason: str) -> None:
+        if errors is not None:
+            errors.append(reason)
+        return None
+
+    normalized: Dict[str, Any] = {}
+    for key, item in options.items():
+        if key == "waypoints":
+            if (
+                not isinstance(item, list)
+                or not item
+                or not all(
+                    isinstance(w, dict)
+                    and _is_finite_number(w.get("x"))
+                    and _is_finite_number(w.get("z"))
+                    for w in item
+                )
+            ):
+                fail(
+                    f"behaviors[{index}] Pathfollow 'waypoints' must be a "
+                    f"non-empty [{'{'}x, z{'}'}] array (got {item!r})"
+                )
+                return None
+            normalized[key] = [{"x": float(w["x"]), "z": float(w["z"])} for w in item]
+        elif key in ("moveSpeed", "arrivalRadius", "groundOffset"):
+            if not _is_finite_number(item) or item < 0:
+                fail(
+                    f"behaviors[{index}] Pathfollow '{key}' must be a "
+                    f"non-negative finite number (got {item!r})"
+                )
+                return None
+            normalized[key] = float(item)
+        elif key == "mode":
+            if item not in ("loop", "pingpong", "once"):
+                fail(
+                    f"behaviors[{index}] Pathfollow 'mode' must be "
+                    f"loop|pingpong|once (got {item!r})"
+                )
+                return None
+            normalized[key] = item
+        else:
+            fail(
+                f"behaviors[{index}] unknown Pathfollow option '{key}' "
+                "(allowed: waypoints, moveSpeed, mode, arrivalRadius, groundOffset)"
+            )
+            return None
+    return normalized
+
+
+def _validate_timer_options(
+    options: Dict[str, Any], index: int, errors: Optional[List[str]]
+) -> Optional[Dict[str, Any]]:
+    def fail(reason: str) -> None:
+        if errors is not None:
+            errors.append(reason)
+        return None
+
+    normalized: Dict[str, Any] = {}
+    for key, item in options.items():
+        if key == "duration":
+            if not _is_finite_number(item) or item <= 0:
+                fail(
+                    f"behaviors[{index}] Timer 'duration' must be a "
+                    f"positive finite number (got {item!r})"
+                )
+                return None
+            normalized[key] = float(item)
+        elif key in ("repeat", "autostart"):
+            if not isinstance(item, bool):
+                fail(
+                    f"behaviors[{index}] Timer '{key}' must be "
+                    f"true/false (got {item!r})"
+                )
+                return None
+            normalized[key] = item
+        else:
+            fail(
+                f"behaviors[{index}] unknown Timer option '{key}' "
+                "(allowed: duration, repeat, autostart)"
             )
             return None
     return normalized

@@ -902,6 +902,51 @@ class BehaviorArrayTests(unittest.TestCase):
             self.assertEqual(result.invalid, 1, f"should reject {bad!r}")
             self.assertIn(hint, result.outcomes[0]["detail"])
 
+    def test_pathfollow_and_timer_validate(self):
+        scene, result = apply_actions(
+            base_scene(),
+            [
+                {
+                    "type": "spawn",
+                    "name": "Patrol",
+                    "physics": "none",
+                    "behaviors": [
+                        {
+                            "type": "Pathfollow",
+                            "options": {
+                                "waypoints": [{"x": -5, "z": 0}, {"x": 5, "z": 0}],
+                                "moveSpeed": 4,
+                                "mode": "pingpong",
+                            },
+                        },
+                        {"type": "Timer", "options": {"duration": 2, "repeat": True}},
+                    ],
+                }
+            ],
+        )
+        self.assertEqual(result.applied, 1)
+        behaviors = scene["gameObjects"][1]["behaviors"]
+        self.assertEqual(len(behaviors[0]["options"]["waypoints"]), 2)
+        self.assertEqual(behaviors[1]["options"], {"duration": 2.0, "repeat": True})
+
+        for bad, hint in (
+            ([{"type": "Pathfollow", "options": {"waypoints": []}}], "waypoints"),
+            (
+                [{"type": "Pathfollow", "options": {"waypoints": [{"x": 1}]}}],
+                "waypoints",
+            ),
+            ([{"type": "Pathfollow", "options": {"mode": "random"}}], "mode"),
+            ([{"type": "Pathfollow", "options": {"moveSpeed": -1}}], "moveSpeed"),
+            ([{"type": "Timer", "options": {"duration": 0}}], "duration"),
+            ([{"type": "Timer", "options": {"repeat": "yes"}}], "repeat"),
+            ([{"type": "Timer", "options": {"period": 5}}], "period"),
+        ):
+            _, result = apply_actions(
+                base_scene(), [{"type": "spawn", "name": "W", "behaviors": bad}]
+            )
+            self.assertEqual(result.invalid, 1, f"should reject {bad!r}")
+            self.assertIn(hint, result.outcomes[0]["detail"])
+
 
 def keeper_tree():
     return {
