@@ -1,0 +1,95 @@
+{
+  "title": "Founding Hollow",
+  "fantasy": {
+    "genre": "settlement builder",
+    "inspirations": ["cozy town founders", "idle-hamlet trial maps"],
+    "tone": "raise a hamlet from one house to a living village",
+    "loop": "Place homes, farms, and a market, then watch population and treasury grow to the founding charter."
+  },
+  "experience": {
+    "beats": ["first rooftop placed", "village charter granted at target population"],
+    "feedback": ["placement ticks", "population counter and win phase"],
+    "inputs": ["tap-to-place plots"]
+  },
+  "world": {
+    "areaKm2": 0.002,
+    "biomes": ["hamlet"],
+    "poiDensityPerKm2": 500,
+    "traversalSpeedsMps": {"walk": 5},
+    "streamingRadiusM": 60
+  },
+  "systems": {
+    "components": ["RigidBody3D", "Collider3D", "Settlement"],
+    "physics": ["static settlement ground"],
+    "ai": [],
+    "dialogue": [],
+    "inventory": [],
+    "questStates": ["founding-active", "won"],
+    "saveSchema": {}
+  },
+  "lookdev": {
+    "palette": ["#4d8b3a", "#c9a86a", "#8a93a6"],
+    "lighting": "stylized",
+    "silhouette": "flat green, house blocks, farm rows, market hall",
+    "post": ["none (mobile budget)"]
+  },
+  "performance": {
+    "deviceProfile": "android16-snapdragon8elite",
+    "targetFps": 60,
+    "maxDrawCalls": 100,
+    "maxTrisPerChunk": 150000,
+    "maxTrisPerScene": 1200000,
+    "maxTextureMb": 256,
+    "maxPhysicsBodies": 256,
+    "maxApkMb": 200,
+    "maxLoadSeconds": 8.0
+  },
+  "acceptance": [
+    {
+      "id": "settlement-ground",
+      "axis": "Functional",
+      "description": "a fixed settlement ground plane exists",
+      "qaRule": {"type": "entity_exists", "target": "Settlement Ground"}
+    },
+    {
+      "id": "population-grown",
+      "axis": "Playable",
+      "description": "placements grow the village to at least 6 population",
+      "qaRule": {"type": "game_settlement_pop_min", "min": 6}
+    },
+    {
+      "id": "treasury-healthy",
+      "axis": "Playable",
+      "description": "the treasury holds at least 1 gold at charter time",
+      "qaRule": {"type": "game_settlement_gold_min", "min": 1}
+    },
+    {
+      "id": "charter-granted",
+      "axis": "Playable",
+      "description": "the founding run ends in the won phase",
+      "qaRule": {"type": "game_phase", "phase": "won"}
+    },
+    {
+      "id": "draw-budget",
+      "axis": "Performant",
+      "description": "scene stays within the mobile draw-call budget",
+      "qaRule": {"type": "draw_call_budget", "max": 100}
+    },
+    {
+      "id": "sim-fps",
+      "axis": "Performant",
+      "description": "headless simulation holds interactive frame rates",
+      "qaRule": {"type": "fps_min", "min": 30}
+    },
+    {
+      "id": "hamlet-read",
+      "axis": "Visually Coherent",
+      "description": "the hamlet reads as homes, farms, and a market on green"
+    },
+    {
+      "id": "brief-faithful",
+      "axis": "Spec-Accurate",
+      "description": "the scene matches this brief: found a hamlet, grow to charter, warm light"
+    }
+  ]
+}
