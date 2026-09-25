@@ -13,7 +13,8 @@ import {
   Save,
   AlertTriangle,
   CheckCircle2,
-  Database
+  Database,
+  Mountain
 } from 'lucide-react';
 import { useStudio } from '../state/StudioState';
 import { sceneStore, type HarnessScene } from '../services/SceneStore';
@@ -31,7 +32,9 @@ import {
   EconomyTick,
   ALifeSimulator,
   HierarchicalStreamingCells,
-  type StreamingStats
+  QuadtreeTerrain,
+  type StreamingStats,
+  type QuadtreeStats
 } from '@heretek/engine';
 
 const DRAW_BUDGET = 100;
@@ -51,7 +54,7 @@ const HOSTILES: Record<string, string[]> = {
 
 export const LargeScaleWorldDock: React.FC = () => {
   const { cameraPosition, addLog } = useStudio();
-  const [activeTab, setActiveTab] = useState<'lod' | 'spatial' | 'pathfinding' | 'economy' | 'alife' | 'streaming'>('lod');
+  const [activeTab, setActiveTab] = useState<'lod' | 'spatial' | 'pathfinding' | 'economy' | 'alife' | 'streaming' | 'quadtree'>('lod');
 
   // ---- Canonical harness scene -------------------------------------------
   const [harnessScene, setHarnessScene] = useState<HarnessScene | null>(null);
@@ -517,6 +520,51 @@ export const LargeScaleWorldDock: React.FC = () => {
       };
     }, `Streaming config saved (budget ${streamingBudget} draws)`);
 
+  // =========================================================================
+  // Terrain LOD — real QuadtreeTerrain focused on the live camera
+  // =========================================================================
+  const [quadtreeDepth, setQuadtreeDepth] = useState<number>(
+    () => (harnessScene as any)?.quadtree?.maxDepth ?? 3
+  );
+  const [quadtreeStats, setQuadtreeStats] = useState<QuadtreeStats | null>(null);
+  const quadtreeRef = useRef<QuadtreeTerrain | null>(null);
+
+  useEffect(() => {
+    const terrain = new QuadtreeTerrain({ maxDepth: quadtreeDepth, frameBudget: 64 });
+    terrain.setLoader(() => {}); // sync loader: leaves become ready immediately
+    terrain.setFocus(cameraPosition.x, cameraPosition.z);
+    quadtreeRef.current = terrain;
+    setQuadtreeStats(terrain.update());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [harnessScene, quadtreeDepth]);
+
+  useEffect(() => {
+    const terrain = quadtreeRef.current;
+    if (!terrain) return;
+    terrain.setFocus(cameraPosition.x, cameraPosition.z);
+    setQuadtreeStats(terrain.update());
+  }, [cameraPosition]);
+
+  // Drain the budgeted load queue while the tab is visible (the engine
+  // processes at most `frameBudget` nodes per update call).
+  useEffect(() => {
+    if (activeTab !== 'quadtree') return;
+    const interval = setInterval(() => {
+      const terrain = quadtreeRef.current;
+      if (!terrain) return;
+      setQuadtreeStats(terrain.update());
+    }, 200);
+    return () => clearInterval(interval);
+  }, [activeTab]);
+
+  const saveQuadtreeConfig = () =>
+    saveToScene(scene => {
+      scene.quadtree = {
+        maxDepth: quadtreeDepth,
+        focus: [cameraPosition.x, cameraPosition.z]
+      };
+    }, `Terrain LOD config saved (depth ${quadtreeDepth})`);
+
   const meshObjects = (harnessScene?.gameObjects || []).filter(o => o.kind !== 'light');
 
   // =========================================================================
@@ -535,7 +583,8 @@ export const LargeScaleWorldDock: React.FC = () => {
             ['pathfinding', 'Hierarchical A*', Compass, 'text-cyan-400'],
             ['economy', 'Economy Ticks', Coins, 'text-amber-400'],
             ['alife', 'A-Life Simulation', Radio, 'text-rose-400'],
-            ['streaming', 'Streaming Cells', Globe, 'text-sky-400']
+            ['streaming', 'Streaming Cells', Globe, 'text-sky-400'],
+            ['quadtree', 'Terrain LOD', Mountain, 'text-lime-400']
           ] as const
         ).map(([id, label, Icon, color]) => (
           <button
@@ -1149,6 +1198,87 @@ export const LargeScaleWorldDock: React.FC = () => {
                 the budget (persistent trim scale — no boundary thrash) and recover with headroom. Scene-bound
                 assets toggle their GameObject visibility on stream in/out in the derived scene; config persists
                 to the canonical scene for agents and QA.
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ============ TERRAIN LOD ============ */}
+        {activeTab === 'quadtree' && (
+          <div className="space-y-4">
+            <div className="bg-[#202023] border border-zinc-800 rounded-lg p-3 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-zinc-100 flex items-center gap-2">
+                  <Mountain className="w-4 h-4 text-lime-400" />
+                  Quadtree Terrain LOD (focus-driven subdivision + async loading)
+                </span>
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 rounded text-[11px] font-mono bg-lime-500/15 text-lime-300 border border-lime-500/30">
+                    {quadtreeStats?.leaves ?? 0} leaves · max depth {quadtreeStats?.maxDepthReached ?? 0}
+                  </span>
+                  <button
+                    onClick={saveQuadtreeConfig}
+                    className="flex items-center gap-1 px-2 py-1 rounded bg-lime-600 hover:bg-lime-500 text-white text-[11px] font-medium"
+                  >
+                    <Save className="w-3 h-3" /> Save Config
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-4 gap-2 text-center text-[10px]">
+                <div className="bg-[#18181b] p-2 rounded border border-zinc-800">
+                  <div className="text-zinc-400">Leaves</div>
+                  <div className="text-lime-300 font-bold text-sm">{quadtreeStats?.leaves ?? 0}</div>
+                </div>
+                <div className="bg-[#18181b] p-2 rounded border border-zinc-800">
+                  <div className="text-zinc-400">Ready</div>
+                  <div className="text-emerald-400 font-bold text-sm">{quadtreeStats?.ready ?? 0}</div>
+                </div>
+                <div className="bg-[#18181b] p-2 rounded border border-zinc-800">
+                  <div className="text-zinc-400">Loading / Queued</div>
+                  <div className="text-amber-400 font-bold text-sm">
+                    {quadtreeStats?.loading ?? 0} / {quadtreeStats?.queued ?? 0}
+                  </div>
+                </div>
+                <div className="bg-[#18181b] p-2 rounded border border-zinc-800">
+                  <div className="text-zinc-400">Nodes</div>
+                  <div className="text-zinc-200 font-bold text-sm">{quadtreeStats?.totalNodes ?? 0}</div>
+                </div>
+              </div>
+
+              <div className="space-y-2 pt-1">
+                <div className="flex justify-between items-center text-zinc-400">
+                  <span>Maximum Depth</span>
+                  <span className="font-mono text-zinc-200">{quadtreeDepth}</span>
+                </div>
+                <input
+                  type="range"
+                  min={1}
+                  max={6}
+                  value={quadtreeDepth}
+                  onChange={e => setQuadtreeDepth(Number(e.target.value))}
+                  className="w-full h-1 bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-lime-500"
+                />
+              </div>
+
+              <div className="bg-[#18181b] p-2 rounded border border-zinc-800 text-[10px] text-zinc-400">
+                <div className="font-medium text-zinc-300 mb-1">Leaf distribution by LOD level:</div>
+                <div className="flex gap-3 flex-wrap font-mono">
+                  {(quadtreeStats?.lodCounts ?? []).map((count, lod) =>
+                    count > 0 ? (
+                      <span key={lod}>
+                        LOD {lod}: <span className="text-lime-300">{count}</span>
+                      </span>
+                    ) : null
+                  )}
+                </div>
+              </div>
+
+              <div className="text-[10px] text-zinc-500">
+                Focus = live viewport camera ({cameraPosition.x.toFixed(1)}, {cameraPosition.z.toFixed(1)}). Nodes
+                subdivide toward the camera and merge behind it with hysteresis; every leaf blends continuously
+                (1 at the split radius → 0 at 1.25×) so LOD transitions never pop. The native Tier 2 container
+                exports the same subdivision as `terrain_lod` records for GPU terrain streaming.
               </div>
             </div>
           </div>

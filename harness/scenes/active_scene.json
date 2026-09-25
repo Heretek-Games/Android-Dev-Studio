@@ -268,5 +268,12 @@
         "drawsPerCell": 8
       }
     ]
+  },
+  "quadtree": {
+    "maxDepth": 3,
+    "focus": [
+      8.999999999999998,
+      9
+    ]
   }
 }
