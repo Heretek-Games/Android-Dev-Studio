@@ -301,6 +301,10 @@ function buildScene(spec, engine) {
             go.addComponent(new engine.Tween());
           } else if (name === 'TopDownMovement' && engine.TopDownMovement) {
             go.addComponent(new engine.TopDownMovement(spec.options || {}));
+          } else if (name === 'Draggable' && engine.Draggable) {
+            go.addComponent(new engine.Draggable(spec.options || {}));
+          } else if (name === 'DestroyOutsideScreen' && engine.DestroyOutsideScreen) {
+            go.addComponent(new engine.DestroyOutsideScreen(spec.options || {}));
           }
         }
       }

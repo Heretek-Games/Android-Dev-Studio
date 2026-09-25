@@ -812,6 +812,44 @@ class BehaviorArrayTests(unittest.TestCase):
         valid, violations = validate_scene_invariants(scene)
         self.assertTrue(valid, f"gate rejected behavior scene: {violations}")
 
+    def test_draggable_and_destroy_outside_validate(self):
+        scene, result = apply_actions(
+            base_scene(),
+            [
+                {
+                    "type": "spawn",
+                    "name": "Crate",
+                    "physics": "none",
+                    "behaviors": [
+                        {
+                            "type": "Draggable",
+                            "options": {"axisLock": "x", "snapBack": True},
+                        },
+                        {"type": "DestroyOutsideScreen", "options": {"margin": 25}},
+                    ],
+                }
+            ],
+        )
+        self.assertEqual(result.applied, 1)
+        behaviors = scene["gameObjects"][1]["behaviors"]
+        self.assertEqual(behaviors[0]["options"], {"axisLock": "x", "snapBack": True})
+        self.assertEqual(behaviors[1]["options"], {"margin": 25.0})
+
+        for bad, hint in (
+            ([{"type": "Draggable", "options": {"axisLock": "diagonal"}}], "axisLock"),
+            (
+                [{"type": "Draggable", "options": {"dragTarget": {"x": 1}}}],
+                "dragTarget",
+            ),
+            ([{"type": "DestroyOutsideScreen", "options": {"margin": -5}}], "margin"),
+            ([{"type": "DestroyOutsideScreen", "options": {"radius": 5}}], "radius"),
+        ):
+            _, result = apply_actions(
+                base_scene(), [{"type": "spawn", "name": "W", "behaviors": bad}]
+            )
+            self.assertEqual(result.invalid, 1, f"should reject {bad!r}")
+            self.assertIn(hint, result.outcomes[0]["detail"])
+
 
 def keeper_tree():
     return {

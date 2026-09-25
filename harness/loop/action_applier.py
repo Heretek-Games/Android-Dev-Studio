@@ -252,7 +252,7 @@ CEL_NUMERICS = {"outlineThickness", "rimPower"}
 #: Behaviors the loop may attach via the `behaviors` array (mirrors the engine
 #: BuiltinComponents registry; Tween options pass through unvalidated since
 #: every key is a valid tween spec field trio).
-BEHAVIOR_TYPES = {"Tween", "TopDownMovement"}
+BEHAVIOR_TYPES = {"Tween", "TopDownMovement", "Draggable", "DestroyOutsideScreen"}
 
 
 def _validate_cel(
@@ -339,6 +339,16 @@ def _validate_behaviors(
             if checked is None:
                 return None
             normalized.append({"type": btype, "options": checked})
+        elif btype == "Draggable":
+            checked = _validate_draggable_options(options, i, errors)
+            if checked is None:
+                return None
+            normalized.append({"type": btype, "options": checked})
+        elif btype == "DestroyOutsideScreen":
+            checked = _validate_destroy_outside_options(options, i, errors)
+            if checked is None:
+                return None
+            normalized.append({"type": btype, "options": checked})
         else:
             normalized.append({"type": btype, "options": dict(options)})
     return normalized
@@ -386,6 +396,80 @@ def _validate_topdown_options(
             fail(
                 f"behaviors[{index}] unknown TopDownMovement option '{key}' "
                 "(allowed: moveSpeed, allowDiagonals, rotateToHeading, simulate)"
+            )
+            return None
+    return normalized
+
+
+def _validate_draggable_options(
+    options: Dict[str, Any], index: int, errors: Optional[List[str]]
+) -> Optional[Dict[str, Any]]:
+    def fail(reason: str) -> None:
+        if errors is not None:
+            errors.append(reason)
+        return None
+
+    normalized: Dict[str, Any] = {}
+    for key, item in options.items():
+        if key == "axisLock":
+            if item not in ("x", "z", None):
+                fail(
+                    f"behaviors[{index}] Draggable 'axisLock' must be "
+                    f"'x', 'z', or null (got {item!r})"
+                )
+                return None
+            normalized[key] = item
+        elif key == "dragTarget":
+            if (
+                not isinstance(item, dict)
+                or not _is_finite_number(item.get("x"))
+                or not _is_finite_number(item.get("z"))
+            ):
+                fail(
+                    f"behaviors[{index}] Draggable 'dragTarget' must be "
+                    f"an {{x, z}} finite pair (got {item!r})"
+                )
+                return None
+            normalized[key] = {"x": float(item["x"]), "z": float(item["z"])}
+        elif key == "snapBack":
+            if not isinstance(item, bool):
+                fail(
+                    f"behaviors[{index}] Draggable 'snapBack' must be "
+                    f"true/false (got {item!r})"
+                )
+                return None
+            normalized[key] = item
+        else:
+            fail(
+                f"behaviors[{index}] unknown Draggable option '{key}' "
+                "(allowed: axisLock, dragTarget, snapBack)"
+            )
+            return None
+    return normalized
+
+
+def _validate_destroy_outside_options(
+    options: Dict[str, Any], index: int, errors: Optional[List[str]]
+) -> Optional[Dict[str, Any]]:
+    def fail(reason: str) -> None:
+        if errors is not None:
+            errors.append(reason)
+        return None
+
+    normalized: Dict[str, Any] = {}
+    for key, item in options.items():
+        if key == "margin":
+            if not _is_finite_number(item) or item < 0:
+                fail(
+                    f"behaviors[{index}] DestroyOutsideScreen 'margin' must be "
+                    f"a non-negative finite number (got {item!r})"
+                )
+                return None
+            normalized[key] = float(item)
+        else:
+            fail(
+                f"behaviors[{index}] unknown DestroyOutsideScreen option '{key}' "
+                "(allowed: margin)"
             )
             return None
     return normalized

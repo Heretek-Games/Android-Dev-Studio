@@ -60,6 +60,8 @@ export * from './combat/ElementalSystem.js';
 export * from './prefabs/Prefab.js';
 export * from './behaviors/Tween.js';
 export * from './behaviors/TopDownMovement.js';
+export * from './behaviors/Draggable.js';
+export * from './behaviors/DestroyOutsideScreen.js';
 export * from './combat/ElementalReactionComponent.js';
 export * from './vehicles/VehicleController.js';
 export * from './ai/TrafficSystem.js';
