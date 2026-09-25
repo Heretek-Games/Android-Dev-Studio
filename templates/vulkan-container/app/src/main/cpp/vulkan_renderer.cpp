@@ -617,6 +617,9 @@ bool VulkanRenderer::createSurface(ANativeWindow* window, int width, int height)
     lastError_ = "renderer not initialized";
     return false;
   }
+  window_ = window;
+  surfaceWidth_ = width;
+  surfaceHeight_ = height;
   if (!swapchain_.create(instance_, physicalDevice_, device_, queueFamily_, window, width, height)) {
     lastError_ = swapchain_.lastError();
     return false;
@@ -634,20 +637,28 @@ bool VulkanRenderer::createSurface(ANativeWindow* window, int width, int height)
     return false;
   }
 
-  inFlightFences_.resize(commandBuffers_.size());
   VkFenceCreateInfo fenceInfo{};
   fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
   fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+  inFlightFences_.assign(kMaxFramesInFlight, VK_NULL_HANDLE);
   for (auto& fence : inFlightFences_) {
-    vkCreateFence(device_, &fenceInfo, nullptr, &fence);
+    if (vkCreateFence(device_, &fenceInfo, nullptr, &fence) != VK_SUCCESS) {
+      lastError_ = "vkCreateFence failed";
+      return false;
+    }
   }
-  LOGI("createSurface complete: swapchain=%p images=%u commandBuffers=%zu", (void*)swapchain_.handle(),
-       swapchain_.imageCount(), commandBuffers_.size());
-
   VkSemaphoreCreateInfo semaphoreInfo{};
   semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-  vkCreateSemaphore(device_, &semaphoreInfo, nullptr, &imageAvailable_);
-  vkCreateSemaphore(device_, &semaphoreInfo, nullptr, &renderFinished_);
+  for (uint32_t i = 0; i < kMaxFramesInFlight; i++) {
+    if (vkCreateSemaphore(device_, &semaphoreInfo, nullptr, &imageAvailable_[i]) != VK_SUCCESS ||
+        vkCreateSemaphore(device_, &semaphoreInfo, nullptr, &renderFinished_[i]) != VK_SUCCESS) {
+      lastError_ = "vkCreateSemaphore failed";
+      return false;
+    }
+  }
+  currentFrame_ = 0;
+  LOGI("createSurface complete: swapchain=%p images=%u commandBuffers=%zu framesInFlight=%u",
+       (void*)swapchain_.handle(), swapchain_.imageCount(), commandBuffers_.size(), kMaxFramesInFlight);
   return true;
 }
 
@@ -863,23 +874,32 @@ void VulkanRenderer::renderFrame() {
     return;
   }
 
+  // Each in-flight slot owns its synchronisation objects; wait for that slot's
+  // fence before reusing its semaphores (the previous frame may still signal them).
+  const uint32_t frame = currentFrame_ % kMaxFramesInFlight;
+  vkWaitForFences(device_, 1, &inFlightFences_[frame], VK_TRUE, UINT64_MAX);
+
   uint32_t imageIndex = 0;
-  const VkResult acquire =
-      acquireImage_(device_, swapchain_.handle(), UINT64_MAX, imageAvailable_,
-                    VK_NULL_HANDLE, &imageIndex);
+  const VkResult acquire = acquireImage_(device_, swapchain_.handle(), UINT64_MAX,
+                                         imageAvailable_[frame], VK_NULL_HANDLE, &imageIndex);
   lastAcquire = acquire;
+  if (acquire == VK_ERROR_OUT_OF_DATE_KHR || acquire == VK_SUBOPTIMAL_KHR) {
+    if (!recreateSwapchain()) {
+      LOGE("swapchain recreation failed: %s", lastError_.c_str());
+    }
+    return;
+  }
   if (acquire != VK_SUCCESS) {
     static bool loggedAcquire = false;
     if (!loggedAcquire) {
-      LOGE("vkAcquireNextImageKHR failed: %d (swapchain out of date)", static_cast<int>(acquire));
+      LOGE("vkAcquireNextImageKHR failed: %d", static_cast<int>(acquire));
       loggedAcquire = true;
     }
-    lastError_ = "vkAcquireNextImageKHR failed (swapchain out of date)";
+    lastError_ = "vkAcquireNextImageKHR failed";
     return;
   }
 
-  vkWaitForFences(device_, 1, &inFlightFences_[imageIndex], VK_TRUE, UINT64_MAX);
-  vkResetFences(device_, 1, &inFlightFences_[imageIndex]);
+  vkResetFences(device_, 1, &inFlightFences_[frame]);
 
   VkCommandBuffer cmd = commandBuffers_[imageIndex];
   vkResetCommandBuffer(cmd, 0);
@@ -887,18 +907,18 @@ void VulkanRenderer::renderFrame() {
 
   VkSubmitInfo submit{};
   submit.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-  VkSemaphore waitSemaphores[] = {imageAvailable_};
+  VkSemaphore waitSemaphores[] = {imageAvailable_[frame]};
   VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
   submit.waitSemaphoreCount = 1;
   submit.pWaitSemaphores = waitSemaphores;
   submit.pWaitDstStageMask = waitStages;
   submit.commandBufferCount = 1;
   submit.pCommandBuffers = &cmd;
-  VkSemaphore signalSemaphores[] = {renderFinished_};
+  VkSemaphore signalSemaphores[] = {renderFinished_[frame]};
   submit.signalSemaphoreCount = 1;
   submit.pSignalSemaphores = signalSemaphores;
 
-  const VkResult submitResult = vkQueueSubmit(queue_, 1, &submit, inFlightFences_[imageIndex]);
+  const VkResult submitResult = vkQueueSubmit(queue_, 1, &submit, inFlightFences_[frame]);
   lastSubmit = submitResult;
   if (submitResult != VK_SUCCESS) {
     lastError_ = "vkQueueSubmit failed";
@@ -915,7 +935,11 @@ void VulkanRenderer::renderFrame() {
   present.pImageIndices = &imageIndex;
   const VkResult presented = queuePresent_(queue_, &present);
   lastPresent = presented;
-  if (presented != VK_SUCCESS) {
+  if (presented == VK_ERROR_OUT_OF_DATE_KHR || presented == VK_SUBOPTIMAL_KHR) {
+    if (!recreateSwapchain()) {
+      LOGE("swapchain recreation failed after present: %s", lastError_.c_str());
+    }
+  } else if (presented != VK_SUCCESS) {
     LOGE("vkQueuePresentKHR failed: %d", static_cast<int>(presented));
     lastError_ = "vkQueuePresentKHR failed";
   }
@@ -929,11 +953,87 @@ void VulkanRenderer::renderFrame() {
   // One-shot readback: the copy was recorded into this frame's command buffer,
   // so waiting on its fence guarantees the staging buffer holds the frame.
   if (captureRequested_) {
-    vkWaitForFences(device_, 1, &inFlightFences_[imageIndex], VK_TRUE, UINT64_MAX);
+    vkWaitForFences(device_, 1, &inFlightFences_[frame], VK_TRUE, UINT64_MAX);
     const bool written = writeCapturePpm();
     LOGI("frame capture %s: %s", written ? "written" : "FAILED", capturePath_.c_str());
     captureRequested_ = false;
   }
+
+  currentFrame_++;
+}
+
+bool VulkanRenderer::recreateSwapchain() {
+  if (device_ == VK_NULL_HANDLE || window_ == nullptr) return false;
+  vkDeviceWaitIdle(device_);
+
+  // Tear down swapchain-dependent resources (scene/terrain buffers survive: they
+  // are independent of the swapchain; only the capture staging buffer is extent-bound).
+  for (auto& fence : inFlightFences_) {
+    if (fence != VK_NULL_HANDLE) vkDestroyFence(device_, fence, nullptr);
+    fence = VK_NULL_HANDLE;
+  }
+  for (uint32_t i = 0; i < kMaxFramesInFlight; i++) {
+    if (imageAvailable_[i] != VK_NULL_HANDLE) vkDestroySemaphore(device_, imageAvailable_[i], nullptr);
+    imageAvailable_[i] = VK_NULL_HANDLE;
+    if (renderFinished_[i] != VK_NULL_HANDLE) vkDestroySemaphore(device_, renderFinished_[i], nullptr);
+    renderFinished_[i] = VK_NULL_HANDLE;
+  }
+  if (!commandBuffers_.empty()) {
+    vkFreeCommandBuffers(device_, commandPool_, static_cast<uint32_t>(commandBuffers_.size()),
+                         commandBuffers_.data());
+    commandBuffers_.clear();
+  }
+  if (captureBuffer_ != VK_NULL_HANDLE) vkDestroyBuffer(device_, captureBuffer_, nullptr);
+  captureBuffer_ = VK_NULL_HANDLE;
+  if (captureMemory_ != VK_NULL_HANDLE) vkFreeMemory(device_, captureMemory_, nullptr);
+  captureMemory_ = VK_NULL_HANDLE;
+  captureMapped_ = nullptr;
+  captureRequested_ = false;
+
+  swapchain_.destroy(device_);
+  if (!swapchain_.create(instance_, physicalDevice_, device_, queueFamily_, window_, surfaceWidth_,
+                         surfaceHeight_)) {
+    lastError_ = swapchain_.lastError();
+    return false;
+  }
+
+  commandBuffers_.resize(swapchain_.imageCount());
+  VkCommandBufferAllocateInfo allocInfo{};
+  allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+  allocInfo.commandPool = commandPool_;
+  allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+  allocInfo.commandBufferCount = static_cast<uint32_t>(commandBuffers_.size());
+  if (vkAllocateCommandBuffers(device_, &allocInfo, commandBuffers_.data()) != VK_SUCCESS) {
+    lastError_ = "vkAllocateCommandBuffers failed during recreation";
+    return false;
+  }
+  VkFenceCreateInfo fenceInfo{};
+  fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+  fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+  inFlightFences_.assign(kMaxFramesInFlight, VK_NULL_HANDLE);
+  for (auto& fence : inFlightFences_) {
+    vkCreateFence(device_, &fenceInfo, nullptr, &fence);
+  }
+  VkSemaphoreCreateInfo semaphoreInfo{};
+  semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+  for (uint32_t i = 0; i < kMaxFramesInFlight; i++) {
+    vkCreateSemaphore(device_, &semaphoreInfo, nullptr, &imageAvailable_[i]);
+    vkCreateSemaphore(device_, &semaphoreInfo, nullptr, &renderFinished_[i]);
+  }
+
+  const VkExtent2D extent = swapchain_.extent();
+  if (extent.width > 0 && extent.height > 0) {
+    const VkDeviceSize captureBytes = static_cast<VkDeviceSize>(extent.width) * extent.height * 4;
+    if (!createBuffer(captureBytes, VK_BUFFER_USAGE_TRANSFER_DST_BIT, &captureBuffer_, &captureMemory_,
+                      &captureMapped_)) {
+      lastError_ = "capture buffer recreation failed";
+      return false;
+    }
+  }
+
+  currentFrame_ = 0;
+  LOGI("swapchain recreated: %ux%u images=%u", extent.width, extent.height, swapchain_.imageCount());
+  return true;
 }
 
 bool VulkanRenderer::captureNextFrame(const std::string& path) {
@@ -983,12 +1083,18 @@ void VulkanRenderer::destroySurface() {
   captureMapped_ = nullptr;
   captureRequested_ = false;
 
-  for (auto fence : inFlightFences_) vkDestroyFence(device_, fence, nullptr);
-  inFlightFences_.clear();
-  if (imageAvailable_ != VK_NULL_HANDLE) vkDestroySemaphore(device_, imageAvailable_, nullptr);
-  imageAvailable_ = VK_NULL_HANDLE;
-  if (renderFinished_ != VK_NULL_HANDLE) vkDestroySemaphore(device_, renderFinished_, nullptr);
-  renderFinished_ = VK_NULL_HANDLE;
+  for (auto fence : inFlightFences_) {
+    if (fence != VK_NULL_HANDLE) vkDestroyFence(device_, fence, nullptr);
+  }
+  inFlightFences_.assign(kMaxFramesInFlight, VK_NULL_HANDLE);
+  for (uint32_t i = 0; i < kMaxFramesInFlight; i++) {
+    if (imageAvailable_[i] != VK_NULL_HANDLE) vkDestroySemaphore(device_, imageAvailable_[i], nullptr);
+    imageAvailable_[i] = VK_NULL_HANDLE;
+    if (renderFinished_[i] != VK_NULL_HANDLE) vkDestroySemaphore(device_, renderFinished_[i], nullptr);
+    renderFinished_[i] = VK_NULL_HANDLE;
+  }
+  window_ = nullptr;
+  currentFrame_ = 0;
 
   if (!commandBuffers_.empty()) {
     vkFreeCommandBuffers(device_, commandPool_, static_cast<uint32_t>(commandBuffers_.size()),

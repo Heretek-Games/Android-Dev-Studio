@@ -8,6 +8,7 @@
 #pragma once
 
 #include <cstdint>
+#include <array>
 #include <string>
 #include <vector>
 
@@ -29,6 +30,8 @@ class VulkanRenderer {
   bool createSurface(ANativeWindow* window, int width, int height);
   void destroySurface();
   void renderFrame();
+  /** Rebuilds the swapchain (and extent-dependent resources) after OUT_OF_DATE/SUBOPTIMAL. */
+  bool recreateSwapchain();
   /** Requests a one-shot readback of the next rendered frame (writes a PPM P6 file). */
   bool captureNextFrame(const std::string& path);
   void uploadScene(const NativeScene& scene);
@@ -62,9 +65,17 @@ class VulkanRenderer {
   VulkanSwapchain swapchain_;
   VkCommandPool commandPool_ = VK_NULL_HANDLE;
   std::vector<VkCommandBuffer> commandBuffers_;
-  std::vector<VkFence> inFlightFences_;
-  VkSemaphore imageAvailable_ = VK_NULL_HANDLE;
-  VkSemaphore renderFinished_ = VK_NULL_HANDLE;
+  // Canonical per-frame-in-flight synchronisation: semaphores must not be reused
+  // while a previous frame may still wait on them, so each in-flight slot owns a
+  // pair (fences are signalled on submit and waited before reuse).
+  static constexpr uint32_t kMaxFramesInFlight = 2;
+  std::vector<VkFence> inFlightFences_ = std::vector<VkFence>(kMaxFramesInFlight, VK_NULL_HANDLE);
+  std::array<VkSemaphore, kMaxFramesInFlight> imageAvailable_{};
+  std::array<VkSemaphore, kMaxFramesInFlight> renderFinished_{};
+  // Surface identity for swapchain recreation (rotation/resize/OUT_OF_DATE).
+  ANativeWindow* window_ = nullptr;
+  int surfaceWidth_ = 0;
+  int surfaceHeight_ = 0;
 
   VkDescriptorSetLayout computeSetLayout_ = VK_NULL_HANDLE;
   VkDescriptorSetLayout graphicsSetLayout_ = VK_NULL_HANDLE;

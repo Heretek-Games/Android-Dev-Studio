@@ -25,8 +25,9 @@ VULKAN_BUILD_DIR = PROJECT_ROOT / "harness" / "build" / "tier2-build"
 
 
 class AndroidApkBuilder:
-    def __init__(self, verbose: bool = False):
+    def __init__(self, verbose: bool = False, scene_path: Optional[str] = None):
         self.verbose = verbose
+        self.scene_path = scene_path
 
     def log(self, msg: str):
         # MCP stdio framing owns stdout; all human-readable logs go to stderr.
@@ -114,7 +115,7 @@ class AndroidApkBuilder:
         shaders and cross-compiles libheretek_native.so with the NDK.
         """
         if tier == 2:
-            return self.build_tier2(dry_run=dry_run)
+            return self.build_tier2(dry_run=dry_run, scene_path=self.scene_path)
 
         result = {
             "success": False,
@@ -311,7 +312,7 @@ class AndroidApkBuilder:
                 return candidate
         return None
 
-    def build_tier2(self, dry_run: bool = False) -> Dict[str, Any]:
+    def build_tier2(self, dry_run: bool = False, scene_path: Optional[str] = None) -> Dict[str, Any]:
         """
         Tier 2 native Vulkan container pipeline:
         1. Export the canonical scene (+ focus-driven quadtree from scene.quadtree)
@@ -330,11 +331,10 @@ class AndroidApkBuilder:
         }
 
         # 1. Scene export — honor the scene's persisted terrain LOD config
+        source_scene = Path(scene_path) if scene_path else PROJECT_ROOT / "harness" / "scenes" / "active_scene.json"
         quadtree_cfg = {}
         try:
-            scene_data = json.loads(
-                (PROJECT_ROOT / "harness" / "scenes" / "active_scene.json").read_text()
-            )
+            scene_data = json.loads(source_scene.read_text())
             quadtree_cfg = scene_data.get("quadtree") or {}
         except Exception:
             pass
@@ -344,6 +344,8 @@ class AndroidApkBuilder:
         export_cmd = [
             sys.executable,
             str(PROJECT_ROOT / "harness" / "build" / "scene_exporter.py"),
+            "--scene",
+            str(source_scene),
             "--out",
             str(VULKAN_ASSETS_DIR),
             "--quadtree",
@@ -501,10 +503,15 @@ def main():
         action="store_true",
         help="Target the native Vulkan container (export scene + NDK cross-compile)",
     )
+    parser.add_argument(
+        "--scene",
+        default=None,
+        help="Scene JSON to export for Tier 2 (default: the canonical active scene)",
+    )
     parser.add_argument("--verbose", action="store_true", help="Verbose output")
     args = parser.parse_args()
 
-    builder = AndroidApkBuilder(verbose=args.verbose)
+    builder = AndroidApkBuilder(verbose=args.verbose, scene_path=args.scene)
     res = builder.build_and_deploy(
         device_serial=args.device,
         dry_run=args.dry_run,

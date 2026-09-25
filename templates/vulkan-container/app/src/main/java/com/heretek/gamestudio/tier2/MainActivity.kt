@@ -71,11 +71,15 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
     }
 
     private fun copyAsset(assetPath: String, target: File): File {
-        if (!target.exists()) {
-            assets.open(assetPath).use { input ->
-                FileOutputStream(target).use { output -> input.copyTo(output) }
+        // Always refresh extracted assets: the APK's bundled scene/shaders are the
+        // source of truth, and a stale copy silently renders the previous build.
+        var bytes = 0L
+        assets.open(assetPath).use { input ->
+            FileOutputStream(target).use { output ->
+                bytes = input.copyTo(output)
             }
         }
+        android.util.Log.i("HeretekTier2", "Synced asset $assetPath (${bytes} bytes)")
         return target
     }
 
