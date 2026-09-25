@@ -1,4 +1,4 @@
-package com.heretek.gamestudio.native
+package com.heretek.gamestudio.tier2
 
 import android.app.Activity
 import android.os.Bundle
@@ -60,7 +60,13 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
 
         surfaceView = SurfaceView(this)
         surfaceView.holder.addCallback(this)
-        setContentView(surfaceView, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+        setContentView(
+            surfaceView,
+            ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+        )
     }
 
     private fun copyAsset(assetPath: String, target: File): File {

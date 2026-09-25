@@ -50,11 +50,17 @@ g++ -std=c++17 -Wall -Wextra scene_loader.cpp culling.cpp tests/native_scene_tes
 
 ## Android NDK build
 
-```bash
-# Via Gradle (requires AGP download):
-cd templates/vulkan-container && ./gradlew :app:assembleDebug
+The Gradle wrapper is vendored (`./gradlew`, Gradle 8.11.1); the build requires
+a JDK 17–23 (Gradle 8.11 supports up to Java 23 — an incompatible `JAVA_HOME`
+fails fast with a clear message).
 
-# Or directly with CMake + the NDK toolchain (what CI verification uses):
+```bash
+# Via Gradle (downloads AGP 8.5.2/Kotlin 1.9.24 on first run):
+cd templates/vulkan-container && ./gradlew :app:assembleDebug
+# → app/build/outputs/apk/debug/app-debug.apk
+#   (verified locally: arm64-v8a libheretek_native.so + scene.native + 4 SPIR-V shaders)
+
+# Or directly with CMake + the NDK toolchain (fast CI verification path):
 cmake -S app/src/main/cpp -B /tmp/tier2-build \
   -DCMAKE_TOOLCHAIN_FILE=$ANDROID_HOME/ndk/<version>/build/cmake/android.toolchain.cmake \
   -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-24 -DCMAKE_BUILD_TYPE=Release
@@ -75,6 +81,7 @@ cmake --build /tmp/tier2-build
 | JNI bridge + SurfaceView frame loop + surface lifecycle | ✅ implemented, compiles |
 | Quadtree terrain LOD export + native parsing | ✅ focus-driven leaves exported (`--quadtree`), parsed into `TerrainLodRecord` (with `terrain_meta` depth), host-tested |
 | Native terrain mesh generation + GPU upload | ✅ heightmap-displaced grid meshes packed into shared vertex/index buffers with per-leaf indirect draw commands; one `vkCmdDrawIndexedIndirect` renders every LOD leaf (terrain pipeline from `terrain.vert`), host-tested packing |
+| Gradle APK assembly | ✅ vendored wrapper builds `app-debug.apk` (arm64-v8a `.so` + `scene.native` + 4 SPIR-V shaders); on-device runtime validation pending |
 
 Shaders are compiled with the NDK's bundled glslc:
 

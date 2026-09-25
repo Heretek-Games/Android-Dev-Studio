@@ -164,13 +164,33 @@ class AndroidApkBuilder:
             return result
 
         # Execute Gradle
-        self.log(f"Executing Gradle build in {CONTAINER_DIR}...")
+        jdk = self.find_jdk()
+        if jdk is None:
+            result["message"] = (
+                "Gradle wrapper present, but no JDK 17-23 found (set JAVA_HOME to a compatible JDK)."
+            )
+            return result
+        self.log(f"Executing Gradle build in {CONTAINER_DIR} (JDK: {jdk})...")
         try:
             cmd = ["./gradlew", "assembleDebug"]
-            subprocess.run(cmd, cwd=str(CONTAINER_DIR), check=True)
+            env = dict(os.environ)
+            env["JAVA_HOME"] = str(jdk)
+            env["PATH"] = str(jdk / "bin") + os.pathsep + env.get("PATH", "")
+            gradle = subprocess.run(
+                cmd,
+                cwd=str(CONTAINER_DIR),
+                check=True,
+                capture_output=True,
+                text=True,
+                env=env,
+            )
+            if self.verbose:
+                self.log(f"Gradle output tail: {gradle.stdout[-400:]}")
             result["apk_path"] = str(apk_output_path)
         except subprocess.CalledProcessError as e:
-            result["message"] = f"Gradle assembleDebug failed: {e}"
+            result["message"] = (
+                f"Gradle assembleDebug failed: {(e.stderr or '')[-300:]}"
+            )
             return result
 
         if build_only:
@@ -192,11 +212,14 @@ class AndroidApkBuilder:
 
         self.log(f"Deploying to device {target_device}...")
         try:
-            subprocess.run(
+            install = subprocess.run(
                 ["adb", "-s", target_device, "install", "-r", str(apk_output_path)],
                 check=True,
+                capture_output=True,
+                text=True,
             )
-            subprocess.run(
+            self.log(f"adb install: {install.stdout.strip()[-200:]}")
+            launch = subprocess.run(
                 [
                     "adb",
                     "-s",
@@ -208,7 +231,10 @@ class AndroidApkBuilder:
                     "com.heretek.gamestudio/.MainActivity",
                 ],
                 check=True,
+                capture_output=True,
+                text=True,
             )
+            self.log(f"adb launch: {launch.stdout.strip()[-200:]}")
             result["deployed"] = True
             result["success"] = True
             result["message"] = (
@@ -234,6 +260,56 @@ class AndroidApkBuilder:
             key=lambda d: [int(p) if p.isdigit() else p for p in d.name.split(".")],
         )
         return versions[-1] if versions else None
+
+    @staticmethod
+    def _java_major(java_bin: Path) -> Optional[int]:
+        """Return the major version of a java binary, or None if unusable."""
+        try:
+            res = subprocess.run(
+                [str(java_bin), "-version"], capture_output=True, text=True, timeout=30
+            )
+            first = (res.stderr or res.stdout).splitlines()[0]
+            token = first.split('"')[1] if '"' in first else ""
+            major = int(token.split(".")[0])
+            return major if major > 1 else int(token.split(".")[1])
+        except Exception:
+            return None
+
+    def _jdk_candidates(self) -> List[Path]:
+        """Ordered candidate JAVA_HOME locations (env first, then common installs)."""
+        candidates: List[Path] = []
+        env_home = os.environ.get("JAVA_HOME")
+        if env_home:
+            candidates.append(Path(env_home))
+        candidates += [
+            Path("/home/linuxbrew/.linuxbrew/opt/openjdk@21"),
+            Path("/home/linuxbrew/.linuxbrew/opt/openjdk@17"),
+        ]
+        jvm_root = Path("/usr/lib/jvm")
+        if jvm_root.exists():
+            candidates += sorted([d for d in jvm_root.iterdir() if d.is_dir()])
+        candidates += sorted(
+            Path(p)
+            for p in __import__("glob").glob(
+                "/var/lib/flatpak/app/com.google.AndroidStudio/*/stable/*/files/extra/jbr"
+            )
+        )
+        return candidates
+
+    def find_jdk(self) -> Optional[Path]:
+        """
+        Best-effort JAVA_HOME for the Gradle wrapper. Gradle 8.11 supports
+        running on JDK 17-23, so candidates are version-checked; an invalid or
+        too-new JAVA_HOME (e.g. a stale flatpak path) is skipped.
+        """
+        for candidate in self._jdk_candidates():
+            java_bin = candidate / "bin" / "java"
+            if not java_bin.exists():
+                continue
+            major = self._java_major(java_bin)
+            if major is not None and 17 <= major <= 23:
+                return candidate
+        return None
 
     def build_tier2(self, dry_run: bool = False) -> Dict[str, Any]:
         """
@@ -347,10 +423,21 @@ class AndroidApkBuilder:
             return result
         result["native_library"] = str(so_path)
 
-        # 3. APK assembly (requires the vendored Gradle wrapper)
+        # 3. APK assembly (requires the vendored Gradle wrapper + a JDK 17-23)
         gradlew = VULKAN_CONTAINER_DIR / "gradlew"
         if gradlew.exists() and os.access(str(gradlew), os.X_OK):
-            self.log("Assembling Tier 2 APK with Gradle...")
+            jdk = self.find_jdk()
+            if jdk is None:
+                result["success"] = True
+                result["message"] = (
+                    f"Tier 2 native library built for arm64-v8a: {so_path}. "
+                    "APK assembly skipped (no JDK 17-23 found for the Gradle wrapper — set JAVA_HOME)."
+                )
+                return result
+            self.log(f"Assembling Tier 2 APK with Gradle (JDK: {jdk})...")
+            env = dict(os.environ)
+            env["JAVA_HOME"] = str(jdk)
+            env["PATH"] = str(jdk / "bin") + os.pathsep + env.get("PATH", "")
             try:
                 subprocess.run(
                     [str(gradlew), ":app:assembleDebug"],
@@ -358,6 +445,7 @@ class AndroidApkBuilder:
                     check=True,
                     capture_output=True,
                     text=True,
+                    env=env,
                 )
                 apk = (
                     VULKAN_CONTAINER_DIR

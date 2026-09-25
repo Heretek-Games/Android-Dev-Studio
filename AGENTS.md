@@ -157,7 +157,9 @@ All studio↔harness bridges run through the Vite dev server (dev-only, like `/a
 - `GET /api/devices` — real ADB device detection (`harness/agents/device_cli.py`); returns the actual
   `adb devices -l` result — the DeviceBar shows "No device detected" when nothing is attached
   (no mocked devices).
-- `POST /api/deploy` — real packaging through `harness/build/apk_builder.py` (dry-run by default,
+- `POST /api/deploy` — real packaging through `harness/build/apk_builder.py` (dry-run by default;
+  both containers now assemble real debug APKs — Tier 1 `app-debug.apk` with the synced web bundle,
+  Tier 2 `app-debug.apk` with `libheretek_native.so` + `scene.native` + SPIR-V shaders;
   `{real:true}` attempts the Gradle build; `{tier:2}` targets the native Vulkan container and runs a
   real NDK cross-compile of `libheretek_native.so`); the studio header logs
   bundle-built/assets-synced/APK-path or scene-exported/native-library/scene.native-counts results
@@ -197,7 +199,8 @@ All studio↔harness bridges run through the Vite dev server (dev-only, like `/a
 - Tier 2 scene export: `harness/build/scene_exporter.py` emits `scene.native` (meshes/instances/lights) plus optional focus-driven `terrain_lod` quadtree leaves (`--quadtree --lod-depth N --lod-focus X Z`), consumed by `templates/vulkan-container`.
 - Tier 2 packaging: `python3 harness/build/apk_builder.py --tier2` exports the canonical scene (honoring
   the persisted `scene.quadtree` config) and cross-compiles `libheretek_native.so` (arm64-v8a) with the
-  NDK toolchain into `harness/build/tier2-build/`; APK assembly runs when a Gradle wrapper is present.
+  NDK toolchain into `harness/build/tier2-build/`, then assembles `app-debug.apk` with the vendored
+  Gradle wrapper (requires a JDK 17-23; the builder auto-detects one and reports honestly when absent).
 
 ---
 
