@@ -143,3 +143,76 @@ describe('GameRuntime — full run wiring', () => {
     assert.strictEqual(runtime.isRunning(), false);
   });
 });
+
+function makeDistanceRuntime(options: { targetScore?: number; timeLimitSeconds?: number } = {}) {
+  const scene = new Scene('DriveArena');
+  const player = new GameObject('Player Hero');
+  scene.addGameObject(player);
+  const runtime = new GameRuntime({
+    scene,
+    mode: 'distance',
+    playerName: 'Player Hero',
+    targetScore: options.targetScore ?? 30,
+    timeLimitSeconds: options.timeLimitSeconds ?? 60
+  });
+  return { scene, player, runtime };
+}
+
+describe('GameRuntime — distance mode (driving slice)', () => {
+  test('start enters playing without spawning enemies', () => {
+    const { runtime } = makeDistanceRuntime();
+    runtime.start();
+    assert.strictEqual(runtime.flow.getPhase(), 'playing');
+    assert.strictEqual(runtime.spawner.getAliveCount(), 0);
+  });
+
+  test('scores travelled metres and wins at the target', () => {
+    const { player, runtime } = makeDistanceRuntime({ targetScore: 30 });
+    runtime.start();
+
+    for (let step = 0; step < 40; step++) {
+      player.transform.setPosition(step + 1, 0, 0);
+      runtime.update(1 / 60);
+    }
+    assert.strictEqual(runtime.flow.getPhase(), 'won', 'target distance wins');
+    // Travel stops at the winning distance: the loop no longer accumulates score.
+    assert.ok(Math.abs(runtime.getTraveledDistance() - 30) < 1e-6, `distance=${runtime.getTraveledDistance()}`);
+    assert.ok(Math.abs(runtime.session.getScore() - 30) < 1e-6);
+  });
+
+  test('loses when the time limit expires before the target', () => {
+    const { runtime } = makeDistanceRuntime({ targetScore: 1000, timeLimitSeconds: 2 });
+    runtime.start();
+    runtime.update(2.5);
+    assert.strictEqual(runtime.flow.getPhase(), 'lost');
+  });
+
+  test('ignores teleport-sized jumps and non-finite deltas', () => {
+    const { player, runtime } = makeDistanceRuntime({ targetScore: 1000 });
+    runtime.start();
+    player.transform.setPosition(0, 0, 0);
+    runtime.update(1 / 60);
+    player.transform.setPosition(500, 0, 0);   // far teleport
+    runtime.update(1 / 60);
+    assert.strictEqual(runtime.getTraveledDistance(), 0);
+
+    player.transform.setPosition(Number.NaN, 0, 0);
+    runtime.update(1 / 60);
+    assert.strictEqual(runtime.getTraveledDistance(), 0);
+  });
+
+  test('restart resets the travelled distance', () => {
+    const { player, runtime } = makeDistanceRuntime({ targetScore: 10 });
+    runtime.start();
+    player.transform.setPosition(5, 0, 0);
+    runtime.update(1 / 60);
+    player.transform.setPosition(10, 0, 0);
+    runtime.update(1 / 60);
+    assert.ok(runtime.getTraveledDistance() > 0);
+
+    runtime.restart();
+    assert.strictEqual(runtime.getTraveledDistance(), 0);
+    assert.strictEqual(runtime.session.getScore(), 0);
+    assert.strictEqual(runtime.flow.getPhase(), 'playing');
+  });
+});
