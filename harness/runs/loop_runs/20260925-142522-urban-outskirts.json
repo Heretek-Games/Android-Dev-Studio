@@ -1,0 +1,490 @@
+{
+  "goal": "Urban Outskirts",
+  "rules": [
+    {
+      "type": "entity_exists",
+      "target": "Urban Ground",
+      "id": "urban-ground"
+    },
+    {
+      "type": "entity_component",
+      "target": "Player Car",
+      "component": "VehicleController",
+      "id": "player-car"
+    },
+    {
+      "type": "biome_coverage_min",
+      "biome": "downtown",
+      "min": 4,
+      "region": {
+        "minX": -15,
+        "maxX": 15,
+        "minZ": -25,
+        "maxZ": 25
+      },
+      "id": "downtown-held"
+    },
+    {
+      "type": "biome_coverage_min",
+      "biome": "suburbs",
+      "min": 3,
+      "region": {
+        "minX": -60,
+        "maxX": -15,
+        "minZ": -25,
+        "maxZ": 25
+      },
+      "id": "suburbs-held"
+    },
+    {
+      "type": "biome_coverage_min",
+      "biome": "park",
+      "min": 2,
+      "region": {
+        "minX": 15,
+        "maxX": 60,
+        "minZ": -25,
+        "maxZ": 25
+      },
+      "id": "park-held"
+    },
+    {
+      "type": "traversal_coverage_min",
+      "min": 0.8,
+      "id": "urban-traversable"
+    },
+    {
+      "type": "streaming_coherence_min",
+      "min": 1.0,
+      "id": "streaming-seamless"
+    },
+    {
+      "type": "draw_call_budget",
+      "max": 100,
+      "id": "draw-budget"
+    },
+    {
+      "type": "fps_min",
+      "min": 30,
+      "id": "sim-fps"
+    }
+  ],
+  "verdict": "green",
+  "iterations": [
+    {
+      "iteration": 1,
+      "phase": "generate",
+      "visionNotes": [],
+      "llm": {
+        "model": "mimo-v2.6-flash",
+        "promptTokens": 1405,
+        "completionTokens": 4000,
+        "totalTokens": 5405,
+        "latencySeconds": 52.821,
+        "finishReason": "length",
+        "attempts": 1
+      },
+      "parse": {
+        "strategy": "salvaged",
+        "actionCount": 17,
+        "summary": "An urban-outskirts driveable scene with a streamed ground plane, a wheeled Player Car, a downtown block of buildings, suburban houses to the west, and a park to the east, all within budget.",
+        "error": "primary parse failed (raw: Unterminated string starting at: line 1 column 2968 (char 2967)); salvaged complete actions"
+      },
+      "apply": {
+        "applied": 17,
+        "targetMissing": 0,
+        "invalid": 0,
+        "failed": 0,
+        "outcomes": [
+          {
+            "index": 0,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Urban Ground (plane) at [0.0, 0.0, 0.0]",
+            "target": "Urban Ground"
+          },
+          {
+            "index": 1,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Player Car (box) at [0.0, 1.0, 0.0]",
+            "target": "Player Car"
+          },
+          {
+            "index": 2,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Downtown Road (box) at [0.0, 0.05, 0.0]",
+            "target": "Downtown Road"
+          },
+          {
+            "index": 3,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Downtown Tower A (box) at [-9.0, 10.0, -12.0]",
+            "target": "Downtown Tower A"
+          },
+          {
+            "index": 4,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Downtown Tower B (box) at [9.0, 8.0, -14.0]",
+            "target": "Downtown Tower B"
+          },
+          {
+            "index": 5,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Downtown Shop Block (box) at [-9.0, 3.0, 12.0]",
+            "target": "Downtown Shop Block"
+          },
+          {
+            "index": 6,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Downtown Office Block (box) at [10.0, 5.0, 10.0]",
+            "target": "Downtown Office Block"
+          },
+          {
+            "index": 7,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Street Lamp (cylinder) at [6.5, 3.0, 0.0]",
+            "target": "Street Lamp"
+          },
+          {
+            "index": 8,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Suburb House 1 (box) at [-25.0, 2.5, -10.0]",
+            "target": "Suburb House 1"
+          },
+          {
+            "index": 9,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Suburb House 2 (box) at [-38.0, 2.5, 5.0]",
+            "target": "Suburb House 2"
+          },
+          {
+            "index": 10,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Suburb House 3 (box) at [-50.0, 2.5, -8.0]",
+            "target": "Suburb House 3"
+          },
+          {
+            "index": 11,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Suburb House 4 (box) at [-25.0, 2.5, 10.0]",
+            "target": "Suburb House 4"
+          },
+          {
+            "index": 12,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Park Tree 1 (cylinder) at [28.0, 4.0, -8.0]",
+            "target": "Park Tree 1"
+          },
+          {
+            "index": 13,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Park Tree 2 (cylinder) at [40.0, 4.5, 6.0]",
+            "target": "Park Tree 2"
+          },
+          {
+            "index": 14,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Park Pavilion (box) at [32.0, 2.0, 10.0]",
+            "target": "Park Pavilion"
+          },
+          {
+            "index": 15,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Park Pond (cylinder) at [50.0, 0.15, -6.0]",
+            "target": "Park Pond"
+          },
+          {
+            "index": 16,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added directional light 'Sun Light' (intensity 1.4)",
+            "target": "Sun Light"
+          }
+        ],
+        "appliedDescriptions": [
+          "Spawned Urban Ground (plane) at [0.0, 0.0, 0.0]",
+          "Spawned Player Car (box) at [0.0, 1.0, 0.0]",
+          "Spawned Downtown Road (box) at [0.0, 0.05, 0.0]",
+          "Spawned Downtown Tower A (box) at [-9.0, 10.0, -12.0]",
+          "Spawned Downtown Tower B (box) at [9.0, 8.0, -14.0]",
+          "Spawned Downtown Shop Block (box) at [-9.0, 3.0, 12.0]",
+          "Spawned Downtown Office Block (box) at [10.0, 5.0, 10.0]",
+          "Spawned Street Lamp (cylinder) at [6.5, 3.0, 0.0]",
+          "Spawned Suburb House 1 (box) at [-25.0, 2.5, -10.0]",
+          "Spawned Suburb House 2 (box) at [-38.0, 2.5, 5.0]",
+          "Spawned Suburb House 3 (box) at [-50.0, 2.5, -8.0]",
+          "Spawned Suburb House 4 (box) at [-25.0, 2.5, 10.0]",
+          "Spawned Park Tree 1 (cylinder) at [28.0, 4.0, -8.0]",
+          "Spawned Park Tree 2 (cylinder) at [40.0, 4.5, 6.0]",
+          "Spawned Park Pavilion (box) at [32.0, 2.0, 10.0]",
+          "Spawned Park Pond (cylinder) at [50.0, 0.15, -6.0]",
+          "Added directional light 'Sun Light' (intensity 1.4)"
+        ]
+      },
+      "gate": {
+        "valid": true,
+        "violations": []
+      },
+      "qa": {
+        "verdict": "SUCCEEDED",
+        "passed": 9,
+        "total": 9,
+        "failedRules": [],
+        "metrics": {
+          "avgFrameTimeMs": 0.3107,
+          "p95FrameTimeMs": 0.5417,
+          "maxFrameTimeMs": 36.8257,
+          "simFpsEstimate": 3218.59,
+          "drawCallEstimate": 16,
+          "instancedBatches": 0,
+          "memoryHeapMb": 17.51,
+          "objectCount": 66,
+          "physicsBodyCount": 16,
+          "eventCount": 0,
+          "traversal": {
+            "grid": 9,
+            "cells": 81,
+            "hits": 81,
+            "coverage": 1,
+            "holes": [],
+            "steep": [],
+            "stepHazards": [
+              {
+                "from": {
+                  "x": -24.444,
+                  "z": 0
+                },
+                "to": {
+                  "x": 0,
+                  "z": 0
+                },
+                "drop": 1.57
+              },
+              {
+                "from": {
+                  "x": 0,
+                  "z": -24.444
+                },
+                "to": {
+                  "x": 0,
+                  "z": 0
+                },
+                "drop": 1.57
+              },
+              {
+                "from": {
+                  "x": 0,
+                  "z": 0
+                },
+                "to": {
+                  "x": 24.444,
+                  "z": 0
+                },
+                "drop": 1.57
+              },
+              {
+                "from": {
+                  "x": 0,
+                  "z": 0
+                },
+                "to": {
+                  "x": 0,
+                  "z": 24.444
+                },
+                "drop": 1.57
+              }
+            ],
+            "bounds": {
+              "minX": -110,
+              "maxX": 110,
+              "minZ": -110,
+              "maxZ": 110
+            }
+          },
+          "streaming": {
+            "samples": 5,
+            "settleFrames": 51,
+            "coverage": 1,
+            "gaps": [],
+            "thrashReloads": 0,
+            "maxActiveChunks": 49,
+            "uniqueChunks": 140,
+            "chunkSize": 16,
+            "renderDistance": 3
+          }
+        }
+      }
+    }
+  ],
+  "totalTokens": 5405,
+  "totalLatencySeconds": 52.821,
+  "finalReport": {
+    "schemaVersion": 1,
+    "runner": "qa_scenario_runner.mjs",
+    "scenario": "loop_work_scene.json",
+    "goal": "Urban Outskirts",
+    "timestamp": 1790360722.758,
+    "frames": 300,
+    "fixedDeltaSeconds": 0.016666666666666666,
+    "metrics": {
+      "avgFrameTimeMs": 0.3107,
+      "p95FrameTimeMs": 0.5417,
+      "maxFrameTimeMs": 36.8257,
+      "simFpsEstimate": 3218.59,
+      "drawCallEstimate": 16,
+      "instancedBatches": 0,
+      "memoryHeapMb": 17.51,
+      "objectCount": 66,
+      "physicsBodyCount": 16,
+      "eventCount": 0,
+      "traversal": {
+        "grid": 9,
+        "cells": 81,
+        "hits": 81,
+        "coverage": 1,
+        "holes": [],
+        "steep": [],
+        "stepHazards": [
+          {
+            "from": {
+              "x": -24.444,
+              "z": 0
+            },
+            "to": {
+              "x": 0,
+              "z": 0
+            },
+            "drop": 1.57
+          },
+          {
+            "from": {
+              "x": 0,
+              "z": -24.444
+            },
+            "to": {
+              "x": 0,
+              "z": 0
+            },
+            "drop": 1.57
+          },
+          {
+            "from": {
+              "x": 0,
+              "z": 0
+            },
+            "to": {
+              "x": 24.444,
+              "z": 0
+            },
+            "drop": 1.57
+          },
+          {
+            "from": {
+              "x": 0,
+              "z": 0
+            },
+            "to": {
+              "x": 0,
+              "z": 24.444
+            },
+            "drop": 1.57
+          }
+        ],
+        "bounds": {
+          "minX": -110,
+          "maxX": 110,
+          "minZ": -110,
+          "maxZ": 110
+        }
+      },
+      "streaming": {
+        "samples": 5,
+        "settleFrames": 51,
+        "coverage": 1,
+        "gaps": [],
+        "thrashReloads": 0,
+        "maxActiveChunks": 49,
+        "uniqueChunks": 140,
+        "chunkSize": 16,
+        "renderDistance": 3
+      }
+    },
+    "rules": [
+      {
+        "id": "urban-ground",
+        "type": "entity_exists",
+        "pass": true,
+        "detail": "found \"Urban Ground\""
+      },
+      {
+        "id": "player-car",
+        "type": "entity_component",
+        "pass": true,
+        "detail": "Player Car components: [MeshRenderer, RigidBody3D, Collider3D, VehicleController]"
+      },
+      {
+        "id": "downtown-held",
+        "type": "biome_coverage_min",
+        "pass": true,
+        "detail": "biome 'downtown': 6 live objects in region (min 4)"
+      },
+      {
+        "id": "suburbs-held",
+        "type": "biome_coverage_min",
+        "pass": true,
+        "detail": "biome 'suburbs': 4 live objects in region (min 3)"
+      },
+      {
+        "id": "park-held",
+        "type": "biome_coverage_min",
+        "pass": true,
+        "detail": "biome 'park': 4 live objects in region (min 2)"
+      },
+      {
+        "id": "urban-traversable",
+        "type": "traversal_coverage_min",
+        "pass": true,
+        "detail": "coverage=1 (min 0.8), holes=0, steep=0, stepHazards=4"
+      },
+      {
+        "id": "streaming-seamless",
+        "type": "streaming_coherence_min",
+        "pass": true,
+        "detail": "coverage=1 (min 1), gaps=0, thrashReloads=0, maxActive=49"
+      },
+      {
+        "id": "draw-budget",
+        "type": "draw_call_budget",
+        "pass": true,
+        "detail": "drawCallEstimate=16 (budget 100)"
+      },
+      {
+        "id": "sim-fps",
+        "type": "fps_min",
+        "pass": true,
+        "detail": "simFpsEstimate=3218.6 (min 30)"
+      }
+    ],
+    "passed": 9,
+    "total": 9,
+    "verdict": "SUCCEEDED",
+    "confidence": 1
+  },
+  "error": null,
+  "workScene": "/home/john/Projects/Android-Dev-Studio/harness/scenes/loop_work_scene.json"
+}

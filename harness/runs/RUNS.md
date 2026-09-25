@@ -573,3 +573,26 @@ the happy path.
 | DAG + memory | brief persisted and retrievable; tasks reflect the outcome |
 
 Evidence: `harness/runs/loop_runs/20260925-142226-*.json`.
+
+---
+
+## Run Block 15 — 2026-09-25, Phase 2 Rung 4: Urban Center with Outskirts ✅
+
+**Urban brief** (`harness/briefs/examples/urban_outskirts.json`: 11 criteria, 9 automatable
+incl. three regional `biome_coverage_min` rules: downtown/suburbs/park) through the full
+production loop — **GREEN**, first try. The Phase 2 ladder
+(valley → two-biome valley → open county → urban center with outskirts) is complete:
+all four rungs green, every automatable criterion verified on the real headless engine
+runtime, every run committed with its loop trace as evidence.
+
+### Verification
+
+| Check | Evidence |
+|-------|----------|
+| Milestone run | **GREEN** — 9/9 automatable (`urban-ground`, `player-car`, `downtown-held`, `suburbs-held`, `park-held`, `urban-traversable`, `streaming-seamless`, `draw-budget`, `sim-fps`); 2 critic-owned (`urban-read`, `brief-faithful`) listed, not passed |
+| Loop trace | generate (17 actions incl. streamer config + downtown/suburbs/park tags) → gate clean → QA **SUCCEEDED 9/9** in 1 iteration, 5,405 tokens |
+| Composition | 6 live `downtown` + 4 live `suburbs` + 4 live `park` objects, each inside its district region |
+| Gates | traversal sweep coverage=1.0 (0 holes); streaming transect coverage=1, 0 gaps, 0 thrash reloads |
+| DAG + memory | brief persisted and retrievable; tasks reflect the outcome |
+
+Evidence: `harness/runs/loop_runs/20260925-142522-*.json`.

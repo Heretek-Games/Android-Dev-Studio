@@ -1,26 +1,26 @@
 {
   "id": "loop_work_scene",
   "name": "Loop Work Scene",
-  "goal": "Open County",
+  "goal": "Urban Outskirts",
   "gameObjects": [
     {
-      "name": "County Ground",
-      "shape": "box",
+      "name": "Urban Ground",
+      "shape": "plane",
       "size": [
-        140.0,
+        220.0,
         1.0,
-        80.0
+        220.0
       ],
       "position": [
         0.0,
-        -0.5,
+        0.0,
         0.0
       ],
-      "color": "#6b8e4e",
+      "color": "#5a6350",
       "physics": "fixed",
       "streamer": {
         "chunkSize": 16.0,
-        "renderDistance": 1.0,
+        "renderDistance": 3.0,
         "resolution": 8.0
       }
     },
@@ -28,46 +28,46 @@
       "name": "Player Car",
       "shape": "box",
       "size": [
-        1.8,
+        2.0,
         1.0,
         4.0
       ],
       "position": [
         0.0,
-        1.2,
-        6.0
+        1.0,
+        0.0
       ],
-      "color": "#c0392b",
+      "color": "#d23b3b",
       "physics": "dynamic",
       "mass": 1200.0,
       "vehicle": {
         "wheels": [
           {
             "offset": [
-              -0.8,
-              0.0,
-              1.2
+              -0.9,
+              -0.4,
+              1.4
             ]
           },
           {
             "offset": [
-              0.8,
-              0.0,
-              1.2
+              0.9,
+              -0.4,
+              1.4
             ]
           },
           {
             "offset": [
-              -0.8,
-              0.0,
-              -1.2
+              -0.9,
+              -0.4,
+              -1.4
             ]
           },
           {
             "offset": [
-              0.8,
-              0.0,
-              -1.2
+              0.9,
+              -0.4,
+              -1.4
             ]
           }
         ],
@@ -75,142 +75,261 @@
       }
     },
     {
-      "name": "Town Hall",
-      "shape": "box",
-      "size": [
-        8.0,
-        10.0,
-        8.0
-      ],
-      "position": [
-        -35.0,
-        5.0,
-        0.0
-      ],
-      "color": "#8e6b4e",
-      "physics": "fixed",
-      "biome": "town"
-    },
-    {
-      "name": "Town Houses",
-      "shape": "box",
-      "size": [
-        12.0,
-        6.0,
-        6.0
-      ],
-      "position": [
-        -25.0,
-        3.0,
-        -8.0
-      ],
-      "color": "#a08060",
-      "physics": "fixed",
-      "biome": "town"
-    },
-    {
-      "name": "Town Market",
-      "shape": "box",
-      "size": [
-        6.0,
-        4.0,
-        6.0
-      ],
-      "position": [
-        -18.0,
-        2.0,
-        8.0
-      ],
-      "color": "#b09070",
-      "physics": "fixed",
-      "biome": "town"
-    },
-    {
-      "name": "Farm Barn",
+      "name": "Downtown Road",
       "shape": "box",
       "size": [
         10.0,
-        6.0,
-        8.0
+        0.1,
+        80.0
       ],
       "position": [
         0.0,
-        3.0,
-        -5.0
+        0.05,
+        0.0
       ],
-      "color": "#a33b20",
+      "color": "#2e2e33",
       "physics": "fixed",
-      "biome": "farm"
+      "biome": "downtown"
     },
     {
-      "name": "Farm Silo",
-      "shape": "cylinder",
-      "size": [
-        4.0,
-        10.0,
-        4.0
-      ],
-      "position": [
-        12.0,
-        5.0,
-        5.0
-      ],
-      "color": "#c9c9c9",
-      "physics": "fixed",
-      "biome": "farm"
-    },
-    {
-      "name": "Wilds Rocks",
-      "shape": "sphere",
+      "name": "Downtown Tower A",
+      "shape": "box",
       "size": [
         6.0,
-        6.0,
+        20.0,
         6.0
       ],
       "position": [
-        30.0,
-        3.0,
-        -6.0
+        -9.0,
+        10.0,
+        -12.0
       ],
-      "color": "#7a7a6a",
+      "color": "#8a8f99",
       "physics": "fixed",
-      "biome": "wilds"
+      "biome": "downtown"
     },
     {
-      "name": "Wilds Grove",
+      "name": "Downtown Tower B",
+      "shape": "box",
+      "size": [
+        6.0,
+        16.0,
+        6.0
+      ],
+      "position": [
+        9.0,
+        8.0,
+        -14.0
+      ],
+      "color": "#9b8f86",
+      "physics": "fixed",
+      "biome": "downtown"
+    },
+    {
+      "name": "Downtown Shop Block",
       "shape": "box",
       "size": [
         8.0,
+        6.0,
+        6.0
+      ],
+      "position": [
+        -9.0,
+        3.0,
+        12.0
+      ],
+      "color": "#c2a46b",
+      "physics": "fixed",
+      "biome": "downtown"
+    },
+    {
+      "name": "Downtown Office Block",
+      "shape": "box",
+      "size": [
         8.0,
+        10.0,
         8.0
       ],
       "position": [
-        48.0,
+        10.0,
+        5.0,
+        10.0
+      ],
+      "color": "#7f8ea3",
+      "physics": "fixed",
+      "biome": "downtown"
+    },
+    {
+      "name": "Street Lamp",
+      "shape": "cylinder",
+      "size": [
+        0.4,
+        6.0,
+        0.4
+      ],
+      "position": [
+        6.5,
+        3.0,
+        0.0
+      ],
+      "color": "#3c3c42",
+      "physics": "fixed",
+      "biome": "downtown"
+    },
+    {
+      "name": "Suburb House 1",
+      "shape": "box",
+      "size": [
+        8.0,
+        5.0,
+        8.0
+      ],
+      "position": [
+        -25.0,
+        2.5,
+        -10.0
+      ],
+      "color": "#c8b7a0",
+      "physics": "fixed",
+      "biome": "suburbs"
+    },
+    {
+      "name": "Suburb House 2",
+      "shape": "box",
+      "size": [
+        8.0,
+        5.0,
+        8.0
+      ],
+      "position": [
+        -38.0,
+        2.5,
+        5.0
+      ],
+      "color": "#b0c4b2",
+      "physics": "fixed",
+      "biome": "suburbs"
+    },
+    {
+      "name": "Suburb House 3",
+      "shape": "box",
+      "size": [
+        8.0,
+        5.0,
+        8.0
+      ],
+      "position": [
+        -50.0,
+        2.5,
+        -8.0
+      ],
+      "color": "#c9a3a3",
+      "physics": "fixed",
+      "biome": "suburbs"
+    },
+    {
+      "name": "Suburb House 4",
+      "shape": "box",
+      "size": [
+        8.0,
+        5.0,
+        8.0
+      ],
+      "position": [
+        -25.0,
+        2.5,
+        10.0
+      ],
+      "color": "#d8cfa8",
+      "physics": "fixed",
+      "biome": "suburbs"
+    },
+    {
+      "name": "Park Tree 1",
+      "shape": "cylinder",
+      "size": [
+        1.4,
+        8.0,
+        1.4
+      ],
+      "position": [
+        28.0,
         4.0,
+        -8.0
+      ],
+      "color": "#3f7d3a",
+      "physics": "fixed",
+      "biome": "park"
+    },
+    {
+      "name": "Park Tree 2",
+      "shape": "cylinder",
+      "size": [
+        1.6,
+        9.0,
+        1.6
+      ],
+      "position": [
+        40.0,
+        4.5,
         6.0
       ],
-      "color": "#3f6b3f",
+      "color": "#357033",
       "physics": "fixed",
-      "biome": "wilds"
+      "biome": "park"
+    },
+    {
+      "name": "Park Pavilion",
+      "shape": "box",
+      "size": [
+        7.0,
+        4.0,
+        7.0
+      ],
+      "position": [
+        32.0,
+        2.0,
+        10.0
+      ],
+      "color": "#a7b56a",
+      "physics": "fixed",
+      "biome": "park"
+    },
+    {
+      "name": "Park Pond",
+      "shape": "cylinder",
+      "size": [
+        8.0,
+        0.3,
+        8.0
+      ],
+      "position": [
+        50.0,
+        0.15,
+        -6.0
+      ],
+      "color": "#4b7fa8",
+      "physics": "fixed",
+      "biome": "park"
     },
     {
       "kind": "light",
-      "name": "Sun",
+      "name": "Sun Light",
       "lightType": "directional",
-      "color": "#fff4e0",
-      "intensity": 2.0,
+      "color": "#fff3dd",
+      "intensity": 1.4,
       "position": [
-        30.0,
         60.0,
-        30.0
+        80.0,
+        40.0
       ]
     }
   ],
   "rules": [
     {
       "type": "entity_exists",
-      "target": "County Ground",
-      "id": "county-ground"
+      "target": "Urban Ground",
+      "id": "urban-ground"
     },
     {
       "type": "entity_component",
@@ -220,44 +339,44 @@
     },
     {
       "type": "biome_coverage_min",
-      "biome": "town",
+      "biome": "downtown",
+      "min": 4,
+      "region": {
+        "minX": -15,
+        "maxX": 15,
+        "minZ": -25,
+        "maxZ": 25
+      },
+      "id": "downtown-held"
+    },
+    {
+      "type": "biome_coverage_min",
+      "biome": "suburbs",
       "min": 3,
       "region": {
         "minX": -60,
-        "maxX": -10,
-        "minZ": -20,
-        "maxZ": 20
+        "maxX": -15,
+        "minZ": -25,
+        "maxZ": 25
       },
-      "id": "town-held"
+      "id": "suburbs-held"
     },
     {
       "type": "biome_coverage_min",
-      "biome": "farm",
+      "biome": "park",
       "min": 2,
       "region": {
-        "minX": -10,
-        "maxX": 20,
-        "minZ": -20,
-        "maxZ": 20
-      },
-      "id": "farms-held"
-    },
-    {
-      "type": "biome_coverage_min",
-      "biome": "wilds",
-      "min": 2,
-      "region": {
-        "minX": 20,
+        "minX": 15,
         "maxX": 60,
-        "minZ": -20,
-        "maxZ": 20
+        "minZ": -25,
+        "maxZ": 25
       },
-      "id": "wilds-held"
+      "id": "park-held"
     },
     {
       "type": "traversal_coverage_min",
       "min": 0.8,
-      "id": "county-traversable"
+      "id": "urban-traversable"
     },
     {
       "type": "streaming_coherence_min",
