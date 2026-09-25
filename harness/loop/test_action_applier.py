@@ -1695,6 +1695,68 @@ class CineActionTests(unittest.TestCase):
             self.assertIn(hint, result.outcomes[0]["detail"])
 
 
+class DestructActionTests(unittest.TestCase):
+    def test_destruct_options_validate(self):
+        scene, result = apply_actions(
+            base_scene(),
+            [
+                {
+                    "type": "spawn",
+                    "name": "Crate",
+                    "physics": "dynamic",
+                    "mass": 2.0,
+                    "destruct": {
+                        "shardGrid": [2, 2, 2],
+                        "impulseThreshold": 60,
+                        "dustBurst": 12,
+                    },
+                }
+            ],
+        )
+        self.assertEqual(result.applied, 1)
+        destruct = scene["gameObjects"][1]["destruct"]
+        self.assertEqual(destruct["shardGrid"], [2, 2, 2])
+        self.assertEqual(destruct["impulseThreshold"], 60.0)
+
+    def test_destruct_rejects_malformed_and_physics_none(self):
+        for action, hint in (
+            (
+                {"type": "spawn", "name": "W", "destruct": {"impulseThreshold": 5}},
+                "physics",
+            ),
+            (
+                {
+                    "type": "spawn",
+                    "name": "W",
+                    "physics": "dynamic",
+                    "destruct": {"shardGrid": [0, 2, 2]},
+                },
+                "shardGrid",
+            ),
+            (
+                {
+                    "type": "spawn",
+                    "name": "W",
+                    "physics": "dynamic",
+                    "destruct": {"dustColor": "brown"},
+                },
+                "dustColor",
+            ),
+            (
+                {
+                    "type": "spawn",
+                    "name": "W",
+                    "physics": "dynamic",
+                    "destruct": {"fuse": 3},
+                },
+                "fuse",
+            ),
+        ):
+            _, result = apply_actions(base_scene(), [action])
+            self.assertEqual(result.invalid, 1, f"should reject {action!r}")
+            self.assertIn(hint, result.outcomes[0]["detail"])
+
+
 class PrefabActionTests(unittest.TestCase):
     def test_prefab_define_registers_template(self):
         scene, result = apply_actions(

@@ -11,6 +11,10 @@ export interface ColliderOptions {
   isTrigger?: boolean;
   friction?: number;
   restitution?: number;
+  /** Emit contact-force events (Chaos-lite fracture triggers; off by default). */
+  contactEvents?: boolean;
+  /** Force threshold for contact events. Default 10. */
+  contactThreshold?: number;
 }
 
 export class Collider3D extends Component {
@@ -21,6 +25,8 @@ export class Collider3D extends Component {
   public restitution: number = 0.0;
   /** Explicit collider mass override (null = derive from density × volume). */
   public massOverride: number | null = null;
+  public contactEvents: boolean = false;
+  public contactThreshold: number = 10;
 
   public rapierCollider: RAPIER.Collider | null = null;
   private physicsWorld: PhysicsWorld | null = null;
@@ -33,6 +39,8 @@ export class Collider3D extends Component {
       if (options.isTrigger !== undefined) this.isTrigger = options.isTrigger;
       if (options.friction !== undefined) this.friction = options.friction;
       if (options.restitution !== undefined) this.restitution = options.restitution;
+      if (options.contactEvents !== undefined) this.contactEvents = options.contactEvents;
+      if (options.contactThreshold !== undefined) this.contactThreshold = options.contactThreshold;
     }
   }
 
@@ -62,6 +70,10 @@ export class Collider3D extends Component {
     colliderDesc.setSensor(this.isTrigger);
     colliderDesc.setFriction(this.friction);
     colliderDesc.setRestitution(this.restitution);
+    if (this.contactEvents) {
+      colliderDesc.setActiveEvents(RAPIER.ActiveEvents.CONTACT_FORCE_EVENTS);
+      colliderDesc.setContactForceEventThreshold(this.contactThreshold);
+    }
 
     const rb = this.gameObject.getComponent(RigidBody3D);
     if (rb && rb.rapierBody) {
@@ -114,7 +126,9 @@ export class Collider3D extends Component {
       size: this.size,
       isTrigger: this.isTrigger,
       friction: this.friction,
-      restitution: this.restitution
+      restitution: this.restitution,
+      contactEvents: this.contactEvents,
+      contactThreshold: this.contactThreshold
     };
   }
 
@@ -124,5 +138,7 @@ export class Collider3D extends Component {
     if (data.isTrigger !== undefined) this.isTrigger = data.isTrigger;
     if (data.friction !== undefined) this.friction = data.friction;
     if (data.restitution !== undefined) this.restitution = data.restitution;
+    if (data.contactEvents !== undefined) this.contactEvents = data.contactEvents;
+    if (data.contactThreshold !== undefined) this.contactThreshold = data.contactThreshold;
   }
 }

@@ -1,5 +1,11 @@
 import RAPIER from '@dimforge/rapier3d-compat';
 
+export interface ContactForce {
+  colliderA: number;
+  colliderB: number;
+  totalForce: number;
+}
+
 export class PhysicsWorld {
   public static isInitialized = false;
   public world: RAPIER.World | null = null;
@@ -7,6 +13,7 @@ export class PhysicsWorld {
   public isReady = false;
 
   private initPromise: Promise<void> | null = null;
+  private eventQueue: RAPIER.EventQueue | null = null;
 
   constructor(gx = 0, gy = -9.81, gz = 0) {
     this.gravity = { x: gx, y: gy, z: gz };
@@ -30,7 +37,47 @@ export class PhysicsWorld {
   public step(dt: number = 1 / 60): void {
     if (!this.world || !this.isReady) return;
     this.world.timestep = dt;
-    this.world.step();
+    if (this.eventQueue) {
+      this.world.step(this.eventQueue);
+    } else {
+      this.world.step();
+    }
+  }
+
+  /** Enables contact-force event collection (Chaos-lite fracture triggers). */
+  public enableContactForces(): void {
+    if (!this.eventQueue) {
+      this.eventQueue = new RAPIER.EventQueue(true);
+    }
+  }
+
+  public get contactForcesEnabled(): boolean {
+    return this.eventQueue !== null;
+  }
+
+  /** Drains this step's contact-force events (collider handles + magnitude). */
+  public drainContactForces(): ContactForce[] {
+    const out: ContactForce[] = [];
+    if (!this.eventQueue) return out;
+    this.eventQueue.drainContactForceEvents((event: RAPIER.TempContactForceEvent) => {
+      out.push({
+        colliderA: event.collider1(),
+        colliderB: event.collider2(),
+        totalForce: event.totalForceMagnitude()
+      });
+    });
+    return out;
+  }
+
+  /** Resolves a collider handle to its GameObject (via userData), if any. */
+  public gameObjectForCollider(handle: number): unknown | null {
+    if (!this.world) return null;
+    try {
+      const collider = this.world.getCollider(handle);
+      return (collider as unknown as { userData?: unknown }).userData ?? null;
+    } catch {
+      return null;
+    }
   }
 
   public setGravity(x: number, y: number, z: number): void {

@@ -332,6 +332,9 @@ function buildScene(spec, engine) {
       if (objSpec.cine) {
         go.addComponent(new engine.CineCamera(objSpec.cine));
       }
+      if (objSpec.destruct) {
+        go.addComponent(new engine.Destructible(objSpec.destruct));
+      }
       if (objSpec.health) {
         go.addComponent(new engine.HealthComponent(objSpec.health));
       }
@@ -577,6 +580,22 @@ function setupLighting(spec, scene, engine) {
     }
   }
   return { volume, grade, lightCount: lights.length };
+}
+/**
+ * Chaos-lite destruction (Track 2.4): fresh per-run pool bound to the
+ * physics world (contact-force queue on), Destructibles from objSpec.destruct.
+ * Pool steps each frame (threshold dispatch + sleep/merge budgets).
+ */
+function setupDestruction(spec, scene, engine, physicsWorld) {
+  const wants = (spec.gameObjects || []).some(o => o && o.destruct);
+  if (!wants) return null;
+  const pool = new engine.DestructionPool();
+  engine.setDestructionPool(pool);
+  if (physicsWorld) {
+    physicsWorld.enableContactForces();
+    pool.attachWorld(physicsWorld);
+  }
+  return { pool };
 }
 /**
  * Dialogue auto-play: register every spec.dialogues tree and walk each one
@@ -827,7 +846,7 @@ function placementNote(game) {
 }
 
 function evaluateRules(spec, ctxData) {
-  const { scene, samples, firstSamples, metrics, dt, game, dialogue, input, audio, nav, lighting } = ctxData;
+  const { scene, samples, firstSamples, metrics, dt, game, dialogue, input, audio, nav, lighting, destruction } = ctxData;
   const results = [];
 
   for (const rule of spec.rules || []) {
@@ -1020,6 +1039,22 @@ function evaluateRules(spec, ctxData) {
         if (!cine) { pass = false; detail = `no CineCamera on "${rule.target}"`; break; }
         pass = cine.trauma <= 0.02;
         detail = `"${rule.target}" trauma=${cine.trauma.toFixed(3)}`;
+        break;
+      }
+      case 'destruction_fractured': {
+        const go = scene.findByName(rule.target);
+        const destructible = go ? go.components.find(c => c.constructor.name === 'Destructible') : null;
+        if (!destructible) { pass = false; detail = `no Destructible on "${rule.target}"`; break; }
+        pass = destructible.fractured === true;
+        detail = `"${rule.target}" fractured=${destructible.fractured} (events=${destructible.fractureCount})`;
+        break;
+      }
+      case 'destruction_shards_max': {
+        if (!destruction) { pass = false; detail = 'no destructibles present'; break; }
+        const live = destruction.pool.liveShards;
+        const merged = destruction.pool.mergedShards;
+        pass = live <= (rule.max ?? 24);
+        detail = `live shards=${live} merged=${merged} (max=${rule.max ?? 24})`;
         break;
       }
       case 'object_count': {
@@ -1318,6 +1353,7 @@ async function main() {
   const audio = setupAudio(spec, scene, engine);
   const nav = setupNav(spec, scene, engine);
   const lighting = setupLighting(spec, scene, engine);
+  const destruction = setupDestruction(spec, scene, engine, physicsWorld);
 
   const eventCount = scene.gameObjects.reduce(
     (n, go) => n + go.components.filter(c => c.constructor.name === 'EventSheet').reduce((m, es) => m + es.events.length, 0), 0
@@ -1361,6 +1397,7 @@ async function main() {
     }
     if (input) input.map.endFrame();
     if (audio) audio.manager.update(args.dt);
+    if (destruction) destruction.pool.update(args.dt);
   }
 
   const sorted = [...times].sort((a, b) => a - b);
@@ -1417,7 +1454,7 @@ async function main() {
     }
   }
 
-  const ruleResults = evaluateRules(spec, { scene, samples, firstSamples, metrics, dt: args.dt, game, dialogue, input, audio, nav, lighting });
+  const ruleResults = evaluateRules(spec, { scene, samples, firstSamples, metrics, dt: args.dt, game, dialogue, input, audio, nav, lighting, destruction });
   const passed = ruleResults.filter(r => r.pass).length;
   const total = ruleResults.length;
   const allPass = total > 0 && passed === total;

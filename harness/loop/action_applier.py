@@ -1996,6 +1996,28 @@ def _apply_spawn(
                 f"spawn audio rejected — {audio_reasons[0] if audio_reasons else 'malformed'}",
             )
         obj["audio"] = audio
+    if action.get("destruct") is not None:
+        # Maps to a Destructible in the QA runner (objSpec.destruct).
+        # Contact forces need a collider: physics bodies only.
+        if obj.get("physics", "none") == "none":
+            return _outcome(
+                result,
+                index,
+                "spawn",
+                "invalid",
+                "spawn destruct needs physics dynamic|fixed (none has no collider for contact forces)",
+            )
+        destruct_reasons: List[str] = []
+        destruct = _validate_destruct(action.get("destruct"), destruct_reasons)
+        if destruct is None:
+            return _outcome(
+                result,
+                index,
+                "spawn",
+                "invalid",
+                f"spawn destruct rejected — {destruct_reasons[0] if destruct_reasons else 'malformed'}",
+            )
+        obj["destruct"] = destruct
     if action.get("anim") is not None:
         # Maps to an AnimFSM in the QA runner (objSpec.anim).
         anim_reasons: List[str] = []
@@ -2699,6 +2721,84 @@ def _apply_lightrig(
         + (" + LUT" if "lut" in config else "")
         + ")",
     )
+
+
+def _validate_destruct(
+    value: Any, errors: Optional[List[str]] = None
+) -> Optional[Dict[str, Any]]:
+    """Destructible specs pass straight to the QA runner (objSpec.destruct).
+
+    Returns the normalized spec, or None when malformed. Shard grid entries
+    are positive integers; dust color must be #rgb/#rrggbb; unknown keys
+    rejected so typos surface as repair input.
+    """
+
+    def fail(reason: str) -> None:
+        if errors is not None:
+            errors.append(reason)
+        return None
+
+    if not isinstance(value, dict):
+        fail("spawn 'destruct' must be an object")
+        return None
+    normalized: Dict[str, Any] = {}
+    if "shardGrid" in value:
+        grid = value["shardGrid"]
+        if (
+            not isinstance(grid, (list, tuple))
+            or len(grid) != 3
+            or any(
+                isinstance(v, bool)
+                or not isinstance(v, (int, float))
+                or int(v) != v
+                or v < 1
+                for v in grid
+            )
+        ):
+            fail("spawn destruct 'shardGrid' must be 3 positive integers")
+            return None
+        normalized["shardGrid"] = [int(grid[0]), int(grid[1]), int(grid[2])]
+    for numkey, floor in (
+        ("shardJitter", 0),
+        ("impulseThreshold", 0),
+        ("sleepDelay", 0),
+        ("dustBurst", 0),
+    ):
+        if numkey in value:
+            if not _is_finite_number(value[numkey]) or value[numkey] < floor:
+                fail(f"spawn destruct '{numkey}' must be >= {floor}")
+                return None
+            normalized[numkey] = float(value[numkey])
+    for intkey in ("seed", "maxLiveShards"):
+        if intkey in value:
+            item = value[intkey]
+            if (
+                isinstance(item, bool)
+                or not isinstance(item, (int, float))
+                or int(item) != item
+            ):
+                fail(f"spawn destruct '{intkey}' must be an integer")
+                return None
+            normalized[intkey] = int(item)
+    if "dustColor" in value:
+        if not _is_color(value["dustColor"]):
+            fail("spawn destruct 'dustColor' must be #rgb or #rrggbb")
+            return None
+        normalized["dustColor"] = value["dustColor"]
+    for key in value:
+        if key not in (
+            "shardGrid",
+            "shardJitter",
+            "seed",
+            "impulseThreshold",
+            "maxLiveShards",
+            "sleepDelay",
+            "dustBurst",
+            "dustColor",
+        ):
+            fail(f"unknown spawn destruct key '{key}'")
+            return None
+    return normalized
 
 
 def _validate_cine(

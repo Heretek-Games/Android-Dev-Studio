@@ -32,6 +32,7 @@ import { AnimFSM } from '../animation/AnimFSM.js';
 import { TimelineLite } from '../cinematics/TimelineLite.js';
 import { NavAgent } from '../navigation/NavAgent.js';
 import { CineCamera } from '../cinematics/CineCamera.js';
+import { Destructible } from '../destruction/Destructible.js';
 
 /**
  * Registers every restorable built-in component by its toJSON type name.
@@ -71,6 +72,7 @@ export function registerBuiltinComponents(): void {  registerComponent('MeshRend
   registerComponent('TimelineLite', TimelineLite);
   registerComponent('NavAgent', NavAgent);
   registerComponent('CineCamera', CineCamera);
+  registerComponent('Destructible', Destructible);
 }
 
 // Self-register on import so restores work without a manual init call.

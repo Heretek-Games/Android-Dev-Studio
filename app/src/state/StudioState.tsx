@@ -28,6 +28,8 @@ import {
   CineCamera,
   TFIntegrator,
   probeTransformFeedback,
+  Destructible,
+  getDestructionPool,
   type PrefabStore
 } from '@heretek/engine';
 
@@ -119,6 +121,14 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [snapping, setSnapping] = useState<boolean>(false);
 
   const sceneSnapshotRef = useRef<string | null>(null);
+  const isPlayingRef = useRef<boolean>(false);
+
+  // Destruction pool steps with the play loop (no-op when not playing).
+  useEffect(() => {
+    return engineContext.onTick((dt: number) => {
+      if (isPlayingRef.current) getDestructionPool().update(dt);
+    });
+  }, [engineContext]);
 
   const refreshScene = () => setTick(t => t + 1);
 
@@ -259,6 +269,39 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         refreshScene();
         addLog('info', 'Scene', 'Spawned cinematic camera probe.');
         return ['Probe Cine Cam', 'Probe Cine Director'];
+      },
+      getDestructionState: (name: string) => {
+        const go: any = scene.findByName(name);
+        if (!go) return null;
+        const d = go.components.find((c: any) => c.constructor.name === 'Destructible');
+        if (!d) return null;
+        const pool = getDestructionPool();
+        return {
+          fractured: d.fractured,
+          fractures: d.fractureCount,
+          live: pool.liveShards,
+          merged: pool.mergedShards
+        };
+      },
+      spawnWreckProbe: () => {
+        undoService.checkpoint(scene);
+        const crate = new GameObject('Probe Crate');
+        crate.transform.setPosition(0, 3, 0);
+        crate.addComponent(new MeshRenderer({ shape: 'box', size: [2, 2, 2], color: '#a16207' }));
+        crate.addComponent(new RigidBody3D({ bodyType: 'dynamic', mass: 2 }));
+        crate.addComponent(new Collider3D({ shape: 'box', size: [2, 2, 2] }));
+        crate.addComponent(new Destructible({ impulseThreshold: 5, dustBurst: 8 }));
+        scene.addGameObject(crate);
+        const ball = new GameObject('Probe Wrecker');
+        ball.transform.setPosition(0, 10, 0);
+        ball.addComponent(new MeshRenderer({ shape: 'sphere', size: [1, 1, 1], color: '#ef4444' }));
+        ball.addComponent(new RigidBody3D({ bodyType: 'dynamic', mass: 12 }));
+        ball.addComponent(new Collider3D({ shape: 'sphere', size: [1, 1, 1] }));
+        scene.addGameObject(ball);
+        setSelectedId(crate.id);
+        refreshScene();
+        addLog('info', 'Scene', 'Spawned wrecking-ball probe.');
+        return ['Probe Crate', 'Probe Wrecker'];
       },
       probeLightRig: () => {
         // Read-only rig audit over the live scene: bake one probe from the
@@ -808,6 +851,7 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     sceneSnapshotRef.current = JSON.stringify(scene.toJSON());
     setIsPlaying(true);
     setIsPaused(false);
+    isPlayingRef.current = true;
 
     // Attach physics world to scene so scene.update steps Rapier simulation every frame
     scene.physicsWorld = physicsWorld;
@@ -819,6 +863,9 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       if (rb) rb.initPhysics(physicsWorld);
       if (col) col.initPhysics(physicsWorld);
     }
+
+    // Destruction pool rides the play loop (contact dispatch + shard budgets).
+    getDestructionPool().attachWorld(physicsWorld);
 
     engineContext.start();
     addLog('info', 'PlayMode', '▶ Play mode started. Physics simulation and Mobile Input active.');
@@ -839,6 +886,7 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     engineContext.stop();
     setIsPlaying(false);
     setIsPaused(false);
+    isPlayingRef.current = false;
     scene.physicsWorld = null;
 
     // Reset player position cleanly

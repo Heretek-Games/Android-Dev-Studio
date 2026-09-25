@@ -52,6 +52,8 @@ RULE_DESCRIPTIONS = {
     ),
     "camera_framing": lambda r: f"camera '{r.get('target')}' must reach its framing",
     "camera_calm": lambda r: f"camera '{r.get('target')}' shake must decay to calm",
+    "destruction_fractured": lambda r: f"'{r.get('target')}' must fracture on impact",
+    "destruction_shards_max": lambda r: f"live shards must stay <= {r.get('max', 24)}",
     "probe_coverage_min": lambda r: (
         f"probe coverage must reach {r.get('min', 0.8)} over scene meshes"
     ),
@@ -109,7 +111,8 @@ ACTION_SCHEMA = """Action vocabulary (a JSON array named "actions"):
      "timeline": {"duration": 4, "tracks": [{"target": "Mover", "clips": [{"id": "m1", "start": 1, "dur": 2, "type": "move", "data": {"to": [6,0,0]}}]}]} (optional: adds a TimelineLite cutscene; clip types move|rotate|event|anim|camera),
      "audio": {"clipId": "coin", "bus": "sfx", "volume": 0.8} (optional: adds an AudioSource voice; bus routes through the scene mixer when present),
      "nav": {"target": [14, 14], "speed": 4} (optional: adds a NavAgent routed on the scene navgrid; links bridge gaps),
-     "cine": {"traumaDecay": 1.2} (optional: adds a CineCamera shot evaluator; choreography lives in timeline camera clips)}
+     "cine": {"traumaDecay": 1.2} (optional: adds a CineCamera shot evaluator; choreography lives in timeline camera clips),
+     "destruct": {"shardGrid": [2, 2, 2], "impulseThreshold": 60, "dustBurst": 12} (optional: adds a Chaos-lite Destructible; requires physics dynamic|fixed for contact forces)}
   - {"type": "light", "name": "...", "lightType": "directional"|"point"|"ambient",
      "color": "#rrggbb", "intensity": 2.0, "position": [x,y,z]}
   - {"type": "modify", "target": "...", "position": [x,y,z], "color": "#rrggbb",
