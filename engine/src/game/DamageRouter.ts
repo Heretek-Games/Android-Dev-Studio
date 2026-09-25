@@ -8,6 +8,8 @@
 
 import type { Scene } from '../core/Scene.js';
 import { HealthComponent } from '../components/HealthComponent.js';
+import { ElementalReactionComponent } from '../combat/ElementalReactionComponent.js';
+import type { ElementType, ReactionResult } from '../combat/ElementalSystem.js';
 
 export interface HitEventLike {
   hitObjectName: string;
@@ -23,6 +25,22 @@ export interface DamageRouterOptions {
   onKill?: (name: string, event: HitEventLike) => void;
   /** Called for every applied damage instance. */
   onDamage?: (name: string, applied: number, event: HitEventLike) => void;
+  /**
+   * When set, hits apply this element through the target's
+   * `ElementalReactionComponent` instead of the plain health path: reactions
+   * (Vaporize, Melt, Freeze, Overload, …) scale the damage and trigger their
+   * physics/visual effects, and the component's own health pool decides kills.
+   */
+  element?: ElementType;
+  /** Elemental gauge units applied per hit (default 1.0). */
+  gaugeUnits?: number;
+  /** Called whenever a hit produces a non-trivial elemental reaction. */
+  onReaction?: (name: string, reaction: ReactionResult) => void;
+  /**
+   * Remove the entity when its elemental health reaches zero (default true),
+   * mirroring HealthComponent.destroyOnDeath so wave/clear logic sees the kill.
+   */
+  destroyOnElementalDeath?: boolean;
 }
 
 /**
@@ -33,6 +51,26 @@ export function attachDamageRouter(scene: Scene, source: HitSource, options: Dam
   const unsubscribe = source.onHit((event) => {
     const target = scene.findByName(event.hitObjectName);
     if (!target) return;
+
+    // Elemental path: the reaction component owns health, auras and reactions.
+    const elemental = options.element ? target.getComponent(ElementalReactionComponent) : null;
+    if (elemental) {
+      const wasAlive = elemental.health > 0;
+      const reaction = elemental.receiveElementalAttack(
+        options.element!,
+        event.damage,
+        options.gaugeUnits ?? 1
+      );
+      if (reaction.reaction !== 'None') options.onReaction?.(event.hitObjectName, reaction);
+      const applied = Math.max(0, event.damage * reaction.damageMultiplier + reaction.bonusDamage);
+      if (applied > 0) options.onDamage?.(event.hitObjectName, applied, event);
+      if (wasAlive && elemental.health <= 0) {
+        options.onKill?.(event.hitObjectName, event);
+        if (options.destroyOnElementalDeath ?? true) target.destroy();
+      }
+      return;
+    }
+
     const health = target.getComponent(HealthComponent);
     if (!health) return;
 

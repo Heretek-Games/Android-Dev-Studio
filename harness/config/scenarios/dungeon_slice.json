@@ -1,0 +1,81 @@
+{
+  "name": "dungeon_slice",
+  "goal": "Dungeon slice: a hydro-armed adventurer clears two waves of pyro slimes in a torch-lit hall; vaporise reactions reward elemental play",
+  "game": {
+    "playerName": "Adventurer",
+    "totalWaves": 2,
+    "enemiesPerWave": 1,
+    "spawnRadius": 7,
+    "scorePerKill": 100,
+    "interWaveDelaySeconds": 1,
+    "hitEveryFrames": 20,
+    "hitDamage": 25,
+    "hitElement": "Hydro",
+    "hitGauge": 1,
+    "enemy": {
+      "shape": "sphere",
+      "size": [1.2, 1.2, 1.2],
+      "color": "#f97316",
+      "y": 0.8,
+      "elemental": { "aura": "Pyro", "maxHealth": 80 },
+      "ai": {
+        "targetName": "Adventurer",
+        "moveSpeed": 2.0,
+        "attackRange": 2.0,
+        "attackDamage": 6,
+        "attackIntervalSeconds": 1.2
+      }
+    }
+  },
+  "gameObjects": [
+    {
+      "name": "Dungeon Floor",
+      "shape": "box",
+      "size": [30, 1, 30],
+      "position": [0, -0.5, 0],
+      "color": "#1f1b16",
+      "physics": "fixed"
+    },
+    {
+      "name": "Adventurer",
+      "shape": "capsule",
+      "size": [1, 1.5, 1],
+      "position": [0, 1.5, 0],
+      "color": "#38bdf8",
+      "physics": "dynamic",
+      "mass": 1,
+      "controller": true,
+      "weapon": { "damage": 25, "fireRate": 6, "range": 60, "maxAmmo": 24 },
+      "health": { "maxHealth": 100, "destroyOnDeath": false }
+    },
+    {
+      "name": "Torch Light",
+      "kind": "light",
+      "lightType": "directional",
+      "color": "#ffb066",
+      "intensity": 2.2,
+      "position": [6, 10, 4]
+    },
+    {
+      "name": "Dungeon Glow",
+      "kind": "light",
+      "lightType": "ambient",
+      "color": "#7c3aed",
+      "intensity": 0.5,
+      "position": [0, 6, 0]
+    }
+  ],
+  "rules": [
+    { "id": "adventurer_exists", "type": "entity_exists", "target": "Adventurer" },
+    { "id": "adventurer_has_weapon", "type": "entity_component", "target": "Adventurer", "component": "WeaponController" },
+    { "id": "adventurer_has_controls", "type": "entity_component", "target": "Adventurer", "component": "MobileController" },
+    { "id": "adventurer_has_health", "type": "entity_component", "target": "Adventurer", "component": "HealthComponent" },
+    { "id": "enemies_chase", "type": "game_enemy_chase_min", "min": 0.5 },
+    { "id": "reactions_fired", "type": "game_reactions_min", "min": 2 },
+    { "id": "kills_scored", "type": "game_kills_min", "min": 2 },
+    { "id": "run_won", "type": "game_phase", "phase": "won" },
+    { "id": "finite_transforms", "type": "no_nan_transforms" },
+    { "id": "mobile_draw_budget", "type": "draw_call_budget", "max": 100 },
+    { "id": "sim_performance", "type": "fps_min", "min": 30 }
+  ]
+}

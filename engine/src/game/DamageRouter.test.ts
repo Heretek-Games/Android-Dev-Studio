@@ -2,6 +2,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert';
 import { attachDamageRouter, type HitEventLike } from './DamageRouter.js';
 import { HealthComponent } from '../components/HealthComponent.js';
+import { ElementalReactionComponent } from '../combat/ElementalReactionComponent.js';
 import { MeshRenderer } from '../components/MeshRenderer.js';
 import { WeaponController } from '../weapons/WeaponController.js';
 import { GameObject } from '../core/GameObject.js';
@@ -132,5 +133,62 @@ describe('DamageRouter — end-to-end with a real weapon raycast', () => {
     weapon.fire();
     assert.strictEqual(health.health, 0);
     assert.deepStrictEqual(kills, ['Enemy'], 'lethal hit reports the kill through the router');
+  });
+});
+
+describe('DamageRouter — elemental path', () => {
+  function elementalArena(aura: 'Pyro' | 'Hydro' | null) {
+    const scene = new Scene('ElementalArena');
+    const slime = new GameObject('Pyro Slime');
+    scene.addGameObject(slime);
+    const elemental = slime.addComponent(new ElementalReactionComponent());
+    elemental.maxHealth = 100;
+    elemental.health = 100;
+    if (aura) elemental.receiveElementalAttack(aura, 0, 1);
+    return { scene, elemental, source: new FakeHitSource() };
+  }
+
+  test('hydro on a pyro aura vaporises and boosts damage', () => {
+    const { scene, elemental, source } = elementalArena('Pyro');
+    const reactions: string[] = [];
+    attachDamageRouter(scene, source, {
+      element: 'Hydro',
+      onReaction: (_name, reaction) => reactions.push(reaction.reaction)
+    });
+
+    source.emit({ hitObjectName: 'Pyro Slime', damage: 20 });
+    assert.deepStrictEqual(reactions, ['Vaporize']);
+    // Forward Vaporize doubles the damage: 20 -> 40, so health 100 -> 60.
+    assert.strictEqual(elemental.health, 60);
+  });
+
+  test('plain element applications report no reaction', () => {
+    const { scene, elemental, source } = elementalArena(null);
+    const reactions: string[] = [];
+    attachDamageRouter(scene, source, { element: 'Cryo', onReaction: (_n, r) => reactions.push(r.reaction) });
+    source.emit({ hitObjectName: 'Pyro Slime', damage: 20 });
+    assert.deepStrictEqual(reactions, []);
+    assert.ok(elemental.currentAura?.element === 'Cryo', 'aura applied');
+  });
+
+  test('elemental death reports the kill exactly once', () => {
+    const { scene, elemental, source } = elementalArena('Pyro');
+    const kills: string[] = [];
+    attachDamageRouter(scene, source, { element: 'Hydro', onKill: (name) => kills.push(name) });
+
+    source.emit({ hitObjectName: 'Pyro Slime', damage: 20 });   // vaporise: 40 damage
+    assert.ok(elemental.health > 0, 'survives the first hit');
+    source.emit({ hitObjectName: 'Pyro Slime', damage: 60 });   // aura spent: plain 60
+    assert.ok(elemental.health <= 0, 'second hit kills');
+    assert.deepStrictEqual(kills, ['Pyro Slime']);
+    source.emit({ hitObjectName: 'Pyro Slime', damage: 60 });
+    assert.deepStrictEqual(kills, ['Pyro Slime'], 'no duplicate kills after death');
+  });
+
+  test('targets without an elemental component keep the health path', () => {
+    const { scene, health, source } = arena();
+    attachDamageRouter(scene, source, { element: 'Hydro' });
+    source.emit({ hitObjectName: 'Enemy', damage: 20 });
+    assert.strictEqual(health.health, 30, 'plain health damage still applied');
   });
 });

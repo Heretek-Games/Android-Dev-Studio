@@ -108,6 +108,7 @@ function buildScene(spec, engine) {
       if (objSpec.ai) {
         go.addComponent(new engine.EnemyAI(objSpec.ai));
       }
+      addElementalComponent(go, objSpec.elemental, engine);
       if (objSpec.vehicle) {
         const vehicle = new engine.VehicleController(objSpec.vehicle);
         if (objSpec.vehicle.throttle !== undefined) vehicle.throttle = objSpec.vehicle.throttle;
@@ -136,6 +137,22 @@ function buildScene(spec, engine) {
  * enemy every `hitEveryFrames` frames — the real damage router, health, kill and
  * wave-clear code paths execute; only aiming is simulated.
  */
+/** Adds an ElementalReactionComponent from a spec ({aura, maxHealth}). */
+function addElementalComponent(go, spec, engine) {
+  if (!spec) return;
+  const elemental = new engine.ElementalReactionComponent();
+  if (spec.maxHealth !== undefined) {
+    elemental.maxHealth = spec.maxHealth;
+    elemental.health = spec.maxHealth;
+  }
+  // Attach before seeding: receiveElementalAttack touches gameObject (visual tint).
+  go.addComponent(elemental);
+  if (spec.aura) {
+    // Seed the aura without damage so reactions fire on the first hit.
+    elemental.receiveElementalAttack(spec.aura, 0, 1);
+  }
+}
+
 function setupGame(spec, scene, engine) {
   const config = spec.game;
   if (!config) return null;
@@ -168,6 +185,8 @@ function setupGame(spec, scene, engine) {
     scorePerKill: config.scorePerKill ?? 100,
     interWaveDelaySeconds: config.interWaveDelaySeconds ?? 1,
     weapon: mode === 'waves' ? hitSource : undefined,
+    hitElement: config.hitElement,
+    hitGauge: config.hitGauge,
     buildEnemy: mode === 'waves' ? ({ name, position }) => {
       const enemy = new engine.GameObject(name);
       enemy.transform.setPosition(position[0], position[1] + (enemySpec.y ?? 0.8), position[2]);
@@ -179,7 +198,10 @@ function setupGame(spec, scene, engine) {
           roughness: 0.5
         })
       );
-      enemy.addComponent(new engine.HealthComponent(enemyHealth));
+      addElementalComponent(enemy, enemySpec.elemental, engine);
+      if (!enemySpec.elemental) {
+        enemy.addComponent(new engine.HealthComponent(enemyHealth));
+      }
       enemy.addComponent(new engine.EnemyAI(enemyAi));
       scene.addGameObject(enemy);
       return enemy;
@@ -391,6 +413,13 @@ function evaluateRules(spec, ctxData) {
         detail = `wave=${wave} (min ${rule.wave ?? 1})`;
         break;
       }
+      case 'game_reactions_min': {
+        if (!game) { pass = false; detail = 'no game config in scenario'; break; }
+        const reactions = game.runtime.getReactionCount();
+        pass = reactions >= (rule.min ?? 1);
+        detail = `reactions=${reactions} (min ${rule.min ?? 1})`;
+        break;
+      }
       case 'game_enemy_chase_min': {
         if (!game) { pass = false; detail = 'no game config in scenario'; break; }
         const moved = game.maxEnemyDisplacement();
@@ -516,6 +545,7 @@ async function main() {
             kills: game.runtime.session.getKills(),
             wave: game.runtime.spawner.getWave(),
             traveledDistance: Number(game.runtime.getTraveledDistance().toFixed(2)),
+            reactions: game.runtime.getReactionCount(),
             shots: game.fireCount,
             maxEnemyDisplacement: Number(game.maxEnemyDisplacement().toFixed(3))
           }

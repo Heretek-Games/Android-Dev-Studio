@@ -10,6 +10,7 @@ import type { GameObject } from '../core/GameObject.js';
 import type { Scene } from '../core/Scene.js';
 import type { HitSource } from './DamageRouter.js';
 import { attachDamageRouter } from './DamageRouter.js';
+import type { ElementType } from '../combat/ElementalSystem.js';
 import { GameFlow } from './GameFlow.js';
 import { GameSession, type GameSessionConfig } from './GameSession.js';
 import { WaveSpawner, type EnemySpawnContext } from './WaveSpawner.js';
@@ -38,6 +39,10 @@ export interface GameRuntimeConfig {
   buildEnemy?: (context: EnemySpawnContext) => GameObject | null;
   /** Player weapon (or any hit source) whose hits damage enemies. */
   weapon?: HitSource;
+  /** Element applied by weapon hits (enables the elemental reaction path). */
+  hitElement?: ElementType;
+  /** Elemental gauge units per hit (default 1.0). */
+  hitGauge?: number;
   /** Optional UI shell to drive. */
   shell?: GameShell;
 }
@@ -58,6 +63,7 @@ export class GameRuntime {
   private lastPlayerZ = 0;
   private traveledDistance = 0;
   private hasLastPosition = false;
+  private reactionCount = 0;
 
   constructor(config: GameRuntimeConfig) {
     this.config = config;
@@ -158,6 +164,11 @@ export class GameRuntime {
     return this.traveledDistance;
   }
 
+  /** Elemental reactions produced by weapon hits so far. */
+  public getReactionCount(): number {
+    return this.reactionCount;
+  }
+
   /** Detach listeners and stop spawning (scene teardown). */
   public stop(): void {
     this.running = false;
@@ -173,7 +184,12 @@ export class GameRuntime {
   private wire(): void {
     if (this.config.weapon) {
       this.detachRouter = attachDamageRouter(this.scene, this.config.weapon, {
-        onKill: () => this.session.registerKill()
+        onKill: () => this.session.registerKill(),
+        element: this.config.hitElement,
+        gaugeUnits: this.config.hitGauge,
+        onReaction: () => {
+          this.reactionCount += 1;
+        }
       });
     }
 
