@@ -253,7 +253,9 @@ GAME_NUMERICS = {
 }
 
 
-def _validate_game(value: Any) -> Optional[Dict[str, Any]]:
+def _validate_game(
+    value: Any, errors: Optional[List[str]] = None
+) -> Optional[Dict[str, Any]]:
     """GameRuntime quest/combat configs pass straight to the QA runner (spec.game).
 
     Returns the normalized config, or None when malformed. `mode` must be
@@ -262,88 +264,147 @@ def _validate_game(value: Any) -> Optional[Dict[str, Any]]:
     finite and positive; the optional `enemy`/`settlement` blocks are validated
     lightly (shape allow-list, positive health/population numbers) with the
     engine supplying defaults for everything omitted. Unknown keys are rejected
-    so typos surface as repair input instead of silent no-ops.
+    so typos surface as repair input instead of silent no-ops. When `errors`
+    is given, the specific offense is appended so repair prompts can quote it.
     """
-    if not isinstance(value, dict) or not value:
+
+    def fail(reason: str) -> None:
+        if errors is not None:
+            errors.append(reason)
+        return None
+
+    if not isinstance(value, dict):
+        fail("game 'config' must be an object")
+        return None
+    if not value:
+        fail("game 'config' must not be empty (need at least mode/playerName/numerics)")
         return None
     normalized: Dict[str, Any] = {}
     for key, item in value.items():
         if key == "mode":
             if item not in GAME_MODES:
+                fail(f"game 'mode' must be one of {sorted(GAME_MODES)} (got {item!r})")
                 return None
             normalized[key] = item
         elif key == "playerName":
             if not isinstance(item, str) or not item.strip():
+                fail(f"game 'playerName' must be a non-empty string (got {item!r})")
                 return None
             normalized[key] = item.strip()
         elif key in GAME_NUMERICS:
             if not _is_finite_number(item) or item <= 0:
+                fail(f"game '{key}' must be a positive finite number (got {item!r})")
                 return None
             normalized[key] = float(item)
         elif key == "enemy":
-            enemy = _validate_game_enemy(item)
+            enemy = _validate_game_enemy(item, errors)
             if enemy is None:
+                if errors is not None and not any("enemy" in e for e in errors):
+                    errors.append("game 'enemy' block is malformed")
                 return None
             normalized[key] = enemy
         elif key == "settlement":
-            settlement = _validate_game_settlement(item)
+            settlement = _validate_game_settlement(item, errors)
             if settlement is None:
+                if errors is not None and not any("settlement" in e for e in errors):
+                    errors.append("game 'settlement' block is malformed")
                 return None
             normalized[key] = settlement
         else:
+            fail(
+                f"unknown game key '{key}' (allowed: mode, playerName, "
+                f"{sorted(GAME_NUMERICS)}, enemy, settlement)"
+            )
             return None
     return normalized
 
 
-def _validate_game_enemy(value: Any) -> Optional[Dict[str, Any]]:
+def _validate_game_enemy(
+    value: Any, errors: Optional[List[str]] = None
+) -> Optional[Dict[str, Any]]:
+    def fail(reason: str) -> None:
+        if errors is not None:
+            errors.append(reason)
+        return None
+
     if not isinstance(value, dict):
+        fail("game 'enemy' must be an object")
         return None
     normalized: Dict[str, Any] = {}
     for key, item in value.items():
         if key == "shape":
             if item not in SUPPORTED_SHAPES:
+                fail(
+                    f"game enemy 'shape' must be one of {sorted(SUPPORTED_SHAPES)} (got {item!r})"
+                )
                 return None
             normalized[key] = item
         elif key == "color":
             if not _is_color(item):
+                fail(f"game enemy 'color' must be #rgb or #rrggbb (got {item!r})")
                 return None
             normalized[key] = item
         elif key == "size":
             vec = _vec3(item)
             if vec is None:
+                fail(f"game enemy 'size' must be 3 finite numbers (got {item!r})")
                 return None
             normalized[key] = vec
         elif key == "y":
             if not _is_finite_number(item):
+                fail(f"game enemy 'y' must be a finite number (got {item!r})")
                 return None
             normalized[key] = float(item)
         elif key == "health":
             if not isinstance(item, dict):
+                fail("game enemy 'health' must be an object")
                 return None
             health: Dict[str, Any] = {}
             for hkey, hitem in item.items():
                 if hkey == "maxHealth":
                     if not _is_finite_number(hitem) or hitem <= 0:
+                        fail(
+                            f"game enemy health 'maxHealth' must be positive (got {hitem!r})"
+                        )
                         return None
                     health[hkey] = float(hitem)
                 elif hkey == "destroyOnDeath":
                     if not isinstance(hitem, bool):
+                        fail(
+                            f"game enemy health 'destroyOnDeath' must be true/false (got {hitem!r})"
+                        )
                         return None
                     health[hkey] = hitem
                 else:
+                    fail(
+                        f"unknown game enemy health key '{hkey}' (allowed: maxHealth, destroyOnDeath)"
+                    )
                     return None
             normalized[key] = health
         elif key == "ai":
             if not isinstance(item, dict):
+                fail("game 'enemy.ai' must be an object")
                 return None
             normalized[key] = dict(item)
         else:
+            fail(
+                f"unknown game enemy key '{key}' "
+                "(allowed: shape, color, size, y, health, ai)"
+            )
             return None
     return normalized
 
 
-def _validate_game_settlement(value: Any) -> Optional[Dict[str, Any]]:
+def _validate_game_settlement(
+    value: Any, errors: Optional[List[str]] = None
+) -> Optional[Dict[str, Any]]:
+    def fail(reason: str) -> None:
+        if errors is not None:
+            errors.append(reason)
+        return None
+
     if not isinstance(value, dict):
+        fail("game 'settlement' must be an object")
         return None
     normalized: Dict[str, Any] = {}
     for key, item in value.items():
@@ -354,13 +415,23 @@ def _validate_game_settlement(value: Any) -> Optional[Dict[str, Any]]:
             "startingFood",
         }:
             if not _is_finite_number(item) or item < 0:
+                fail(
+                    f"game settlement '{key}' must be a non-negative finite number (got {item!r})"
+                )
                 return None
             normalized[key] = float(item)
         elif key == "placements":
             if not isinstance(item, list):
+                fail(
+                    "game settlement 'placements' must be an array of {type, x, z} plots"
+                )
                 return None
             normalized[key] = list(item)
         else:
+            fail(
+                f"unknown game settlement key '{key}' (allowed: gridSize, "
+                "targetPopulation, startingGold, startingFood, placements)"
+            )
             return None
     return normalized
 
@@ -885,15 +956,15 @@ def _apply_game(
 ) -> None:
     config = _validate_game(action.get("config"))
     if config is None:
+        reasons: List[str] = []
+        _validate_game(action.get("config"), reasons)
+        detail = reasons[0] if reasons else "malformed config"
         return _outcome(
             result,
             index,
             "game",
             "invalid",
-            "game 'config' must be an object with mode 'waves'|'build', "
-            "a non-empty playerName, positive pacing numerics "
-            "(totalWaves, enemiesPerWave, hitDamage, ...), "
-            "and optional enemy/settlement blocks",
+            f"game config rejected — {detail}",
         )
     scene["game"] = config
     mode = config.get("mode", "waves")

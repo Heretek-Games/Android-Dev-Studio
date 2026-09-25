@@ -616,3 +616,22 @@ loop — **GREEN**. First campaign-structure milestone: the loop now authors que
 | DAG + memory | brief persisted and retrievable; tasks reflect the outcome |
 
 Evidence: `harness/runs/loop_runs/20260925-143005-*.json`.
+
+---
+
+## Run Block 17 — 2026-09-25, Phase 3 Rung 2: Settlement Run FAILED (Precise Defect) → Fix Forward ✅/❌
+
+**Settlement brief** (`harness/briefs/examples/founding_hollow.json`: 8 criteria, 6 automatable)
+through the production loop — **FAILED** 3/6 across all 4 iterations (13,698 tokens), with a
+precise, root-caused defect (no false success claimed).
+
+### Defect report
+
+| Check | Evidence |
+|-------|----------|
+| Verdict | **FAILED** — `settlement-ground`, `draw-budget`, `sim-fps` verified; `population-grown`, `treasury-healthy`, `charter-granted` failed with `no game config in scenario` |
+| Loop trace | generate (19 actions incl. a `game` action) → gate rejected a `Player Hero` penetration → repair (2 actions) → gate clean but still no game config → repair (1 action) → same → repair (0 actions, parse `failed`) → budget exhausted |
+| Root cause | the model emitted a `game` action in iters 1–3 but `_validate_game` rejected all three — and the rejection detail was a **monolithic generic blob** listing every allowed field, never naming the offending key. The model saw the same un-actionable text three times and could not repair (likely extra descriptive keys like `name`/`description`, which the strict allow-list rejects by design) |
+| Fix | validators now take an `errors` out-param: `_validate_game`/`_validate_game_enemy`/`_validate_game_settlement` report the **specific offense** (e.g. `unknown game key 'description' (allowed: …)`, `game 'totalWaves' must be a positive finite number (got 0)`), and `_apply_game` quotes it in the outcome detail that feeds the next repair prompt. 1 new test asserts rejections name the key (102 loop tests green) |
+
+Evidence: `harness/runs/loop_runs/20260925-143359-*.json`. Re-run queued after the fix.

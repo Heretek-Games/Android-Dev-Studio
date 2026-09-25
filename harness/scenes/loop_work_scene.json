@@ -1,10 +1,10 @@
 {
   "id": "loop_work_scene",
   "name": "Loop Work Scene",
-  "goal": "Arena Defense",
+  "goal": "Founding Hollow",
   "gameObjects": [
     {
-      "name": "Ground Arena",
+      "name": "Settlement Ground",
       "shape": "plane",
       "size": [
         40.0,
@@ -16,28 +16,282 @@
         0.0,
         0.0
       ],
-      "color": "#6b7a52",
+      "color": "#5a7d3a",
       "physics": "fixed",
-      "biome": "sand rim"
+      "biome": "hollow clearing"
+    },
+    {
+      "name": "Player Hero",
+      "shape": "capsule",
+      "size": [
+        0.7,
+        1.6,
+        0.7
+      ],
+      "position": [
+        0.0,
+        1.6,
+        0.0
+      ],
+      "color": "#d9b382",
+      "physics": "dynamic",
+      "mass": 80.0,
+      "controller": true,
+      "health": {
+        "maxHealth": 100.0
+      }
+    },
+    {
+      "name": "Great Hut",
+      "shape": "box",
+      "size": [
+        4.0,
+        3.0,
+        4.0
+      ],
+      "position": [
+        -6.0,
+        1.5,
+        -5.0
+      ],
+      "color": "#8b5a2b",
+      "physics": "fixed",
+      "biome": "hollow clearing"
+    },
+    {
+      "name": "Storehouse",
+      "shape": "box",
+      "size": [
+        3.0,
+        2.5,
+        3.0
+      ],
+      "position": [
+        6.0,
+        1.25,
+        -6.0
+      ],
+      "color": "#a0703c",
+      "physics": "fixed",
+      "biome": "hollow clearing"
+    },
+    {
+      "name": "Hut Roof",
+      "shape": "cylinder",
+      "size": [
+        3.4,
+        1.2,
+        3.4
+      ],
+      "position": [
+        -6.0,
+        3.6,
+        -5.0
+      ],
+      "color": "#6e3f1f",
+      "physics": "fixed",
+      "biome": "hollow clearing"
+    },
+    {
+      "name": "Market Stall",
+      "shape": "box",
+      "size": [
+        2.5,
+        1.8,
+        2.0
+      ],
+      "position": [
+        5.0,
+        0.9,
+        3.0
+      ],
+      "color": "#c98b4a",
+      "physics": "fixed",
+      "biome": "hollow clearing"
+    },
+    {
+      "name": "Well",
+      "shape": "cylinder",
+      "size": [
+        1.4,
+        1.2,
+        1.4
+      ],
+      "position": [
+        0.0,
+        0.6,
+        6.0
+      ],
+      "color": "#9a9a9a",
+      "physics": "fixed",
+      "biome": "hollow clearing"
+    },
+    {
+      "name": "Pine Tree A",
+      "shape": "cylinder",
+      "size": [
+        0.5,
+        5.0,
+        0.5
+      ],
+      "position": [
+        -12.0,
+        2.5,
+        4.0
+      ],
+      "color": "#3f6b2f",
+      "physics": "fixed",
+      "biome": "hollow rim"
+    },
+    {
+      "name": "Pine Tree B",
+      "shape": "cylinder",
+      "size": [
+        0.5,
+        5.5,
+        0.5
+      ],
+      "position": [
+        12.0,
+        2.75,
+        -2.0
+      ],
+      "color": "#3f6b2f",
+      "physics": "fixed",
+      "biome": "hollow rim"
+    },
+    {
+      "name": "Border Rock",
+      "shape": "sphere",
+      "size": [
+        1.6,
+        1.6,
+        1.6
+      ],
+      "position": [
+        -10.0,
+        0.8,
+        -8.0
+      ],
+      "color": "#7d7d7d",
+      "physics": "fixed",
+      "biome": "hollow rim"
+    },
+    {
+      "name": "Charter Banner",
+      "shape": "box",
+      "size": [
+        0.4,
+        4.0,
+        0.4
+      ],
+      "position": [
+        2.0,
+        2.0,
+        -3.0
+      ],
+      "color": "#d4af37",
+      "physics": "fixed",
+      "biome": "hollow clearing",
+      "events": [
+        {
+          "name": "BannerPulse",
+          "conditions": [
+            {
+              "type": "Timer",
+              "params": {
+                "interval": 2.0
+              }
+            }
+          ],
+          "actions": [
+            {
+              "type": "RotateY",
+              "params": {
+                "degrees": 90
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Villager Guard",
+      "shape": "capsule",
+      "size": [
+        0.6,
+        1.5,
+        0.6
+      ],
+      "position": [
+        -4.0,
+        1.05,
+        4.0
+      ],
+      "color": "#b0c4de",
+      "physics": "none",
+      "health": {
+        "maxHealth": 60.0
+      },
+      "ai": {
+        "targetName": "Player Hero",
+        "moveSpeed": 2.0
+      }
+    },
+    {
+      "name": "Treasury Chest",
+      "shape": "box",
+      "size": [
+        1.2,
+        0.8,
+        0.9
+      ],
+      "position": [
+        6.0,
+        0.4,
+        -3.0
+      ],
+      "color": "#b8860b",
+      "physics": "fixed",
+      "biome": "hollow clearing",
+      "events": [
+        {
+          "name": "ChestShimmer",
+          "conditions": [
+            {
+              "type": "EveryFrame",
+              "params": {}
+            }
+          ],
+          "actions": [
+            {
+              "type": "SetColor",
+              "params": {
+                "color": "#d4af37"
+              }
+            }
+          ]
+        }
+      ]
     },
     {
       "kind": "light",
-      "name": "Sun",
+      "name": "Sun Light",
       "lightType": "directional",
-      "color": "#fff3d6",
-      "intensity": 2.2,
+      "color": "#fff4e0",
+      "intensity": 2.0,
       "position": [
-        12.0,
+        10.0,
         20.0,
         8.0
       ]
     },
     {
       "kind": "light",
-      "name": "Fill",
+      "name": "Hollow Ambient",
       "lightType": "ambient",
-      "color": "#88a0c0",
-      "intensity": 0.7,
+      "color": "#8fb1d9",
+      "intensity": 0.6,
       "position": [
         0.0,
         10.0,
@@ -45,330 +299,38 @@
       ]
     },
     {
-      "name": "Player Hero",
-      "shape": "capsule",
-      "size": [
-        0.8,
-        1.6,
-        0.8
-      ],
+      "kind": "light",
+      "name": "Banner Glow",
+      "lightType": "point",
+      "color": "#ffd27a",
+      "intensity": 1.4,
       "position": [
-        0.0,
-        1.6,
-        6.0
-      ],
-      "color": "#2f7fe0",
-      "physics": "dynamic",
-      "mass": 1.0,
-      "controller": true,
-      "weapon": {
-        "damage": 50.0,
-        "fireRate": 8.0,
-        "range": 100.0,
-        "maxAmmo": 30.0
-      },
-      "health": {
-        "maxHealth": 100.0
-      }
-    },
-    {
-      "name": "Enemy Alpha",
-      "shape": "capsule",
-      "size": [
-        0.9,
-        1.7,
-        0.9
-      ],
-      "position": [
-        -6.0,
-        1.6,
-        -8.0
-      ],
-      "color": "#d0392f",
-      "physics": "dynamic",
-      "mass": 1.0,
-      "health": {
-        "maxHealth": 50.0
-      },
-      "events": [
-        {
-          "name": "Chase Hero",
-          "conditions": [
-            {
-              "type": "EveryFrame",
-              "params": {
-                "interval": 0.5
-              }
-            }
-          ],
-          "actions": [
-            {
-              "type": "Translate",
-              "params": {
-                "speed": 2.0
-              }
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "name": "Enemy Beta",
-      "shape": "capsule",
-      "size": [
-        0.9,
-        1.7,
-        0.9
-      ],
-      "position": [
-        6.0,
-        1.6,
-        -8.0
-      ],
-      "color": "#d0392f",
-      "physics": "dynamic",
-      "mass": 1.0,
-      "health": {
-        "maxHealth": 50.0
-      },
-      "events": [
-        {
-          "name": "Chase Hero",
-          "conditions": [
-            {
-              "type": "EveryFrame",
-              "params": {
-                "interval": 0.5
-              }
-            }
-          ],
-          "actions": [
-            {
-              "type": "Translate",
-              "params": {
-                "speed": 2.0
-              }
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "name": "Enemy Gamma",
-      "shape": "capsule",
-      "size": [
-        0.9,
-        1.7,
-        0.9
-      ],
-      "position": [
-        -8.0,
-        1.6,
-        -2.0
-      ],
-      "color": "#b8321f",
-      "physics": "dynamic",
-      "mass": 1.0,
-      "health": {
-        "maxHealth": 50.0
-      },
-      "events": [
-        {
-          "name": "Chase Hero",
-          "conditions": [
-            {
-              "type": "EveryFrame",
-              "params": {
-                "interval": 0.5
-              }
-            }
-          ],
-          "actions": [
-            {
-              "type": "Translate",
-              "params": {
-                "speed": 2.0
-              }
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "name": "Enemy Delta",
-      "shape": "capsule",
-      "size": [
-        0.9,
-        1.7,
-        0.9
-      ],
-      "position": [
-        8.0,
-        1.6,
-        -2.0
-      ],
-      "color": "#b8321f",
-      "physics": "dynamic",
-      "mass": 1.0,
-      "health": {
-        "maxHealth": 50.0
-      },
-      "events": [
-        {
-          "name": "Chase Hero",
-          "conditions": [
-            {
-              "type": "EveryFrame",
-              "params": {
-                "interval": 0.5
-              }
-            }
-          ],
-          "actions": [
-            {
-              "type": "Translate",
-              "params": {
-                "speed": 2.0
-              }
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "name": "Cover Left",
-      "shape": "box",
-      "size": [
-        3.0,
         2.0,
-        1.0
-      ],
-      "position": [
-        -7.0,
-        1.0,
-        3.0
-      ],
-      "color": "#8a8f96",
-      "physics": "fixed",
-      "biome": "sand rim"
-    },
-    {
-      "name": "Cover Right",
-      "shape": "box",
-      "size": [
-        3.0,
-        2.0,
-        1.0
-      ],
-      "position": [
-        7.0,
-        1.0,
-        3.0
-      ],
-      "color": "#8a8f96",
-      "physics": "fixed",
-      "biome": "sand rim"
-    },
-    {
-      "name": "Cover Center",
-      "shape": "box",
-      "size": [
-        4.0,
-        1.6,
-        1.0
-      ],
-      "position": [
-        0.0,
-        0.8,
+        3.5,
         -3.0
-      ],
-      "color": "#7d828a",
-      "physics": "fixed",
-      "biome": "sand rim"
-    },
-    {
-      "name": "Pillar North",
-      "shape": "cylinder",
-      "size": [
-        1.0,
-        4.0,
-        1.0
-      ],
-      "position": [
-        -12.0,
-        2.0,
-        -10.0
-      ],
-      "color": "#a89b7c",
-      "physics": "fixed",
-      "biome": "sand rim"
-    },
-    {
-      "name": "Pillar South",
-      "shape": "cylinder",
-      "size": [
-        1.0,
-        4.0,
-        1.0
-      ],
-      "position": [
-        12.0,
-        2.0,
-        -10.0
-      ],
-      "color": "#a89b7c",
-      "physics": "fixed",
-      "biome": "sand rim"
+      ]
     }
   ],
   "rules": [
     {
       "type": "entity_exists",
-      "target": "Ground Arena",
-      "id": "arena-ground"
+      "target": "Settlement Ground",
+      "id": "settlement-ground"
     },
     {
-      "type": "entity_component",
-      "target": "Player Hero",
-      "component": "MobileController",
-      "id": "player-hero"
+      "type": "game_settlement_pop_min",
+      "min": 6,
+      "id": "population-grown"
     },
     {
-      "type": "entity_component",
-      "target": "Player Hero",
-      "component": "WeaponController",
-      "id": "hero-armed"
-    },
-    {
-      "type": "entity_component",
-      "target": "Player Hero",
-      "component": "HealthComponent",
-      "id": "hero-tough"
-    },
-    {
-      "type": "game_enemy_chase_min",
-      "min": 0.5,
-      "id": "enemies-chase"
-    },
-    {
-      "type": "game_kills_min",
-      "min": 2,
-      "id": "kills-scored"
-    },
-    {
-      "type": "game_score_min",
-      "min": 200,
-      "id": "score-awarded"
-    },
-    {
-      "type": "game_wave_reached",
-      "wave": 2,
-      "id": "wave-advanced"
+      "type": "game_settlement_gold_min",
+      "min": 1,
+      "id": "treasury-healthy"
     },
     {
       "type": "game_phase",
       "phase": "won",
-      "id": "run-won"
+      "id": "charter-granted"
     },
     {
       "type": "draw_call_budget",
@@ -380,12 +342,5 @@
       "min": 30,
       "id": "sim-fps"
     }
-  ],
-  "game": {
-    "mode": "waves",
-    "playerName": "Player Hero",
-    "totalWaves": 2.0,
-    "enemiesPerWave": 2.0,
-    "hitDamage": 25.0
-  }
+  ]
 }

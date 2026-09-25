@@ -460,6 +460,21 @@ class CombatQuestTests(unittest.TestCase):
             _, result = apply_actions(base_scene(), [{"type": "game", "config": bad}])
             self.assertEqual(result.invalid, 1, f"should reject {bad!r}")
 
+    def test_game_rejection_names_the_offense(self):
+        cases = [
+            ({"mode": "boss-rush"}, "mode"),
+            ({"mode": "waves", "playerName": "  "}, "playerName"),
+            ({"mode": "waves", "totalWaves": 0}, "totalWaves"),
+            ({"mode": "waves", "cheat": True}, "cheat"),
+            ({"mode": "build", "settlement": {"placements": {}}}, "placements"),
+            ({"mode": "waves", "enemy": {"shape": "dragon"}}, "shape"),
+        ]
+        for bad, hint in cases:
+            _, result = apply_actions(base_scene(), [{"type": "game", "config": bad}])
+            self.assertEqual(result.invalid, 1, f"should reject {bad!r}")
+            detail = result.outcomes[0]["detail"]
+            self.assertIn(hint, detail, f"rejection should name '{hint}': {detail}")
+
     def test_quest_scene_passes_the_invariant_gate(self):
         scene, result = apply_actions(
             base_scene(),
