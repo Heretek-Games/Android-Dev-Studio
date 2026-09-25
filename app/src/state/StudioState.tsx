@@ -136,7 +136,9 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       },
       getComponents: (name: string) => {
         const go: any = scene.findByName(name);
-        return go ? go.components.map((c: any) => c.constructor.name) : null;
+        return go
+          ? go.components.map((c: any) => c.toJSON?.().type ?? c.constructor.name)
+          : null;
       },
       getLogs: () => logs.map((l: any) => `${l.level}|${l.source}|${l.message}`)
     };

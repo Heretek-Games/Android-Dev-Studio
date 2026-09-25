@@ -78,7 +78,7 @@ export class AiHarnessService {
     const sceneOverview = scene.gameObjects.map(g => ({
       name: g.name,
       pos: [g.transform.position.x, g.transform.position.y, g.transform.position.z],
-      components: g.components.map(c => c.constructor.name)
+      components: g.components.map(c => (c as any).toJSON?.().type ?? c.constructor.name)
     }));
 
     const systemPrompt = `You are the AI World & Logic Copilot for Heretek 3D Android Studio.
@@ -134,7 +134,7 @@ Respond ONLY with the JSON object wrapped in \`\`\`json ... \`\`\` or raw JSON.`
     const activeObjects = scene.gameObjects.map(g => ({
       name: g.name,
       pos: [g.transform.position.x, g.transform.position.y, g.transform.position.z],
-      components: g.components.map(c => c.constructor.name)
+      components: g.components.map(c => (c as any).toJSON?.().type ?? c.constructor.name)
     }));
 
     const systemPrompt = `You are the Autonomous Self-Healing Engine for Heretek 3D Android Studio.

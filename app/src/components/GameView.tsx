@@ -23,6 +23,7 @@ import {
   EnemyAI,
   VehicleController,
   RigidBody3D,
+  Collider3D,
   GameObject,
   type Scene as EngineScene
 } from '@heretek/engine';
@@ -93,10 +94,11 @@ export const GameView: React.FC = () => {
       await physicsWorld.initialize();
       if (disposed) return; // StrictMode/unmount raced the async boot: abort cleanly
       scene.physicsWorld = physicsWorld;
+      // instanceof dispatch: class names are mangled by the production minifier, so
+      // `constructor.name` checks silently skip physics initialisation in the APK.
       for (const go of scene.gameObjects) {
         for (const component of go.components) {
-          const name = component.constructor.name;
-          if (name === 'RigidBody3D' || name === 'Collider3D') {
+          if (component instanceof RigidBody3D || component instanceof Collider3D) {
             (component as unknown as { initPhysics(w: PhysicsWorld): void }).initPhysics(physicsWorld);
           }
         }
@@ -214,6 +216,24 @@ export const GameView: React.FC = () => {
             const e = scene.findByName(name);
             return e ? { name, x: e.transform.position.x, y: e.transform.position.y, z: e.transform.position.z } : { name, dead: true };
           }),
+        /** Driving telemetry (vehicle input + solver state). */
+        vehicle: () =>
+          vehicle
+            ? {
+                throttle: vehicle.throttle,
+                steering: vehicle.steering,
+                brake: vehicle.brake,
+                grounded: vehicle.wheelStates.some((wheel) => wheel.grounded),
+                wheelCount: vehicle.wheelStates.length
+              }
+            : null,
+        /** Physics-body position (independent of the transform sync). */
+        bodyPosition: () => {
+          const body = playerBody?.rapierBody;
+          if (!body) return null;
+          const t = body.translation();
+          return { x: Number(t.x.toFixed(2)), y: Number(t.y.toFixed(2)), z: Number(t.z.toFixed(2)) };
+        },
         /** Raw handles for deep diagnostics (tests/agents). */
         _raw: () => ({ scene, player, weapon, flow: runtime!.flow, runtime: runtime! }),
         /** Fire one shot and return the raw HitResult (raycast diagnostics). */
@@ -307,6 +327,12 @@ export const GameView: React.FC = () => {
         weapon.fire();
       };
 
+      // On-device telemetry: mirror key state into logcat through the native bridge
+      // (the packaged WebView has no devtools, so this is the only live view).
+      const nativeBridge = (window as unknown as { AndroidBridge?: { log?: (tag: string, message: string) => void } })
+        .AndroidBridge;
+      let lastTelemetryAt = 0;
+
       renderer.setAnimationLoop(() => {
         if (disposed || !renderer || !context || !runtime || !shell) return;
         const dt = Math.min(clock.getDelta(), 0.05);
@@ -320,6 +346,27 @@ export const GameView: React.FC = () => {
         }
         runtime.update(dt);
         shell.update(dt);
+
+        if (nativeBridge?.log && kind === 'driving') {
+          const now = performance.now();
+          if (now - lastTelemetryAt > 2000) {
+            lastTelemetryAt = now;
+            const body = playerBody?.rapierBody;
+            const t = body?.translation();
+            nativeBridge.log(
+              'DriveTelemetry',
+              JSON.stringify({
+                phase: runtime.flow.getPhase(),
+                distance: Number(runtime.getTraveledDistance().toFixed(2)),
+                throttle: vehicle?.throttle ?? null,
+                steering: vehicle?.steering ?? null,
+                wheels: vehicle?.wheelStates.length ?? 0,
+                grounded: vehicle?.wheelStates.filter((wheel) => wheel.grounded).length ?? 0,
+                body: t ? { x: Number(t.x.toFixed(2)), z: Number(t.z.toFixed(2)) } : null
+              })
+            );
+          }
+        }
 
         const p = player.transform.position;
         if (kind === 'driving') {
