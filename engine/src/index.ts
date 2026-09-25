@@ -75,6 +75,8 @@ export * from './animation/AnimFSM.js';
 export * from './cinematics/TimelineLite.js';
 export * from './navigation/NavAgent.js';
 export * from './navigation/NavBake.js';
+export * from './cinematics/CineCamera.js';
+export * from './cinematics/CineShots.js';
 export * from './lighting/LightProbe.js';
 export * from './lighting/ColorGrade.js';
 export * from './combat/ElementalReactionComponent.js';

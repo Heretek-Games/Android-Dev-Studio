@@ -1657,6 +1657,38 @@ class LightRigActionTests(unittest.TestCase):
             self.assertIn(hint, result.outcomes[0]["detail"])
 
 
+class CineActionTests(unittest.TestCase):
+    def test_cine_options_validate(self):
+        scene, result = apply_actions(
+            base_scene(),
+            [
+                {
+                    "type": "spawn",
+                    "name": "Cam",
+                    "physics": "none",
+                    "cine": {"traumaDecay": 1.5, "baseFov": 55},
+                }
+            ],
+        )
+        self.assertEqual(result.applied, 1)
+        self.assertEqual(
+            scene["gameObjects"][1]["cine"], {"traumaDecay": 1.5, "baseFov": 55.0}
+        )
+
+    def test_cine_options_reject_malformed(self):
+        for bad, hint in (
+            ({"traumaDecay": -1}, "traumaDecay"),
+            ({"baseFov": 0}, "baseFov"),
+            ({"fovKick": "high"}, "fovKick"),
+            ({"dolly": {}}, "dolly"),
+        ):
+            _, result = apply_actions(
+                base_scene(), [{"type": "spawn", "name": "W", "cine": bad}]
+            )
+            self.assertEqual(result.invalid, 1, f"should reject {bad!r}")
+            self.assertIn(hint, result.outcomes[0]["detail"])
+
+
 class PrefabActionTests(unittest.TestCase):
     def test_prefab_define_registers_template(self):
         scene, result = apply_actions(

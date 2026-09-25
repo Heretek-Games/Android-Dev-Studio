@@ -25,6 +25,7 @@ import {
   NavAgent,
   LightProbeVolume,
   ColorGrade,
+  CineCamera,
   type PrefabStore
 } from '@heretek/engine';
 
@@ -217,6 +218,45 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         refreshScene();
         addLog('info', 'Scene', 'Spawned nav crossing probe.');
         return ['Probe Nav A', 'Probe Nav B'];
+      },
+      getCineState: (name: string) => {
+        const go: any = scene.findByName(name);
+        if (!go) return null;
+        const cine = go.components.find((c: any) => c.constructor.name === 'CineCamera');
+        if (!cine) return null;
+        const p = go.transform.position;
+        return {
+          shot: cine.activeShotId,
+          trauma: Number(cine.trauma.toFixed(3)),
+          cuts: cine.cutsTaken,
+          lastCut: cine.lastCutShot,
+          pos: [Number(p.x.toFixed(2)), Number(p.y.toFixed(2)), Number(p.z.toFixed(2))]
+        };
+      },
+      spawnCineProbe: () => {
+        undoService.checkpoint(scene);
+        const cam = new GameObject('Probe Cine Cam');
+        cam.transform.setPosition(0, 2, 8);
+        cam.addComponent(new CameraComponent({ fov: 60 }));
+        cam.addComponent(new CineCamera());
+        scene.addGameObject(cam);
+        const director = new GameObject('Probe Cine Director');
+        director.addComponent(new TimelineLite({
+          duration: 6,
+          tracks: [{
+            target: 'Probe Cine Cam',
+            clips: [
+              { id: 'probe-wide', start: 0, dur: 2, type: 'camera', data: { shot: 'wide', to: [0, 2, 8], cut: true } },
+              { id: 'probe-push', start: 2, dur: 2, type: 'camera', data: { shot: 'push', to: [0, 1, 3], blend: 1.0, shake: { trauma: 1, decay: 1.5 } } },
+              { id: 'probe-settle', start: 4, dur: 2, type: 'camera', data: { shot: 'settle', to: [0, 1, 3] } }
+            ]
+          }]
+        }));
+        scene.addGameObject(director);
+        setSelectedId(cam.id);
+        refreshScene();
+        addLog('info', 'Scene', 'Spawned cinematic camera probe.');
+        return ['Probe Cine Cam', 'Probe Cine Director'];
       },
       probeLightRig: () => {
         // Read-only rig audit over the live scene: bake one probe from the

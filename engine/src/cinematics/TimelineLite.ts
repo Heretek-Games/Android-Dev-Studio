@@ -1,6 +1,7 @@
 import { Component } from '../core/Component.js';
 import type { GameObject } from '../core/GameObject.js';
 import { AnimFSM } from '../animation/AnimFSM.js';
+import { CineCamera } from './CineCamera.js';
 
 export type TimelineClipType = 'move' | 'rotate' | 'event' | 'anim' | 'camera';
 
@@ -11,7 +12,7 @@ export interface TimelineClip {
   /** Clip length in seconds (events fire at start; dur 0 allowed). */
   dur?: number;
   type: TimelineClipType;
-  /** move: {to:[x,y,z]} · rotate: {yawDeg} · event: {name} · anim: {trigger|param,value} · camera: {to:[x,y,z], fov?} */
+  /** move: {to:[x,y,z]} · rotate: {yawDeg} · event: {name} · anim: {trigger|param,value} · camera: {shot?, to?, cut?, blend?, lookTarget?, deadzone?, lookahead?, smoothTime?, dolly?|crane? {path, ease}, shake? {trauma, decay, freq, ampPos, ampRot}, fov? {from, to}, fovKick?} */
   data?: Record<string, unknown>;
 }
 
@@ -122,11 +123,11 @@ export class TimelineLite extends Component {
         this.playing = false;
       }
     }
-    this.applyWindow(prev, this.time);
+    this.applyWindow(prev, this.time, deltaTime);
   }
 
   /** Applies every clip overlapping (prev, now]; wrap clears in update(). */
-  private applyWindow(prev: number, now: number): void {
+  private applyWindow(prev: number, now: number, deltaTime: number): void {
     for (const track of this.tracks) {
       const target = this.gameObject.scene?.findByName(track.target);
       if (!target) continue;
@@ -147,22 +148,46 @@ export class TimelineLite extends Component {
         if (now < start || prev >= end) continue;
         const span = Math.max(end - start, 1e-9);
         const alpha = Math.min(1, Math.max(0, (now - start) / span));
-        this.applyContinuous(target, clip, alpha);
+        this.applyContinuous(target, clip, alpha, deltaTime);
       }
     }
   }
 
-  private applyContinuous(target: GameObject, clip: TimelineClip, alpha: number): void {
+  private originFor(target: GameObject, clipId: string): [number, number, number] {
+    let from = this.origins.get(clipId);
+    if (!from) {
+      const p = target.transform.position;
+      from = [p.x, p.y, p.z];
+      this.origins.set(clipId, from);
+    }
+    return from;
+  }
+
+  private applyContinuous(target: GameObject, clip: TimelineClip, alpha: number, deltaTime: number): void {
     const data = clip.data ?? {};
-    if ((clip.type === 'move' || clip.type === 'camera') && Array.isArray(data['to'])) {
-      // Camera clips steer any object (cameras included); FOV pokes are Phase 2.
-      const to = data['to'] as number[];
-      let from = this.origins.get(clip.id);
-      if (!from) {
-        const p = target.transform.position;
-        from = [p.x, p.y, p.z];
-        this.origins.set(clip.id, from);
+    if (clip.type === 'camera') {
+      // Cinematic shots delegate to CineCamera when present (cut/blend,
+      // look-target, dolly, shake, FOV); otherwise the legacy position lerp.
+      const to = (Array.isArray(data['to']) ? data['to'] : null) as number[] | null;
+      const from = this.originFor(target, clip.id);
+      const legacy: [number, number, number] = to
+        ? [
+          from[0] + (to[0] - from[0]) * alpha,
+          from[1] + (to[1] - from[1]) * alpha,
+          from[2] + (to[2] - from[2]) * alpha
+        ]
+        : [target.transform.position.x, target.transform.position.y, target.transform.position.z];
+      const cine = target.getComponent(CineCamera);
+      if (cine) {
+        cine.evaluateShot(clip, alpha, deltaTime, legacy);
+      } else {
+        target.transform.setPosition(legacy[0], legacy[1], legacy[2]);
       }
+      return;
+    }
+    if (clip.type === 'move' && Array.isArray(data['to'])) {
+      const to = data['to'] as number[];
+      const from = this.originFor(target, clip.id);
       target.transform.setPosition(
         from[0] + (to[0] - from[0]) * alpha,
         from[1] + (to[1] - from[1]) * alpha,

@@ -42,6 +42,11 @@ RULE_DESCRIPTIONS = {
         f"mixer bus '{r.get('bus')}' must stay at gain <= {r.get('max', 0.5)}"
     ),
     "nav_arrived": lambda r: f"'{r.get('target')}' must navigate to its destination",
+    "camera_cut": lambda r: (
+        f"camera '{r.get('target')}' must cut to shot '{r.get('shot')}'"
+    ),
+    "camera_framing": lambda r: f"camera '{r.get('target')}' must reach its framing",
+    "camera_calm": lambda r: f"camera '{r.get('target')}' shake must decay to calm",
     "probe_coverage_min": lambda r: (
         f"probe coverage must reach {r.get('min', 0.8)} over scene meshes"
     ),
@@ -98,7 +103,8 @@ ACTION_SCHEMA = """Action vocabulary (a JSON array named "actions"):
      "anim": {"states": {"Idle": {"clip": "idle", "clipLength": 2}, "Run": {"clip": "run", "clipLength": 1}}, "initial": "Idle", "transitions": [{"from": "Idle", "to": "Run", "conditions": [{"param": "speed", "op": ">", "value": 0.5}]}]} (optional: adds an AnimFSM state machine; ops ==,!=,>,<,>=,<=,trigger; from "*" matches any state),
      "timeline": {"duration": 4, "tracks": [{"target": "Mover", "clips": [{"id": "m1", "start": 1, "dur": 2, "type": "move", "data": {"to": [6,0,0]}}]}]} (optional: adds a TimelineLite cutscene; clip types move|rotate|event|anim|camera),
      "audio": {"clipId": "coin", "bus": "sfx", "volume": 0.8} (optional: adds an AudioSource voice; bus routes through the scene mixer when present),
-     "nav": {"target": [14, 14], "speed": 4} (optional: adds a NavAgent routed on the scene navgrid; links bridge gaps)}
+     "nav": {"target": [14, 14], "speed": 4} (optional: adds a NavAgent routed on the scene navgrid; links bridge gaps),
+     "cine": {"traumaDecay": 1.2} (optional: adds a CineCamera shot evaluator; choreography lives in timeline camera clips)}
   - {"type": "light", "name": "...", "lightType": "directional"|"point"|"ambient",
      "color": "#rrggbb", "intensity": 2.0, "position": [x,y,z]}
   - {"type": "modify", "target": "...", "position": [x,y,z], "color": "#rrggbb",
@@ -160,6 +166,10 @@ ACTION_SCHEMA = """Action vocabulary (a JSON array named "actions"):
   - {"type": "lightrig", "config": {"probes": [{"position": [0, 3, 0], "radius": 10}], "lut": {"preset": "sunset", "amount": 0.6}}}}
     (registers the stylized lighting rig for the probe/lut audits; LUT data arrays must
     hold size^3*3 numbers when given instead of a preset)
+  - Camera clips ride the timeline vocabulary: {"type": "timeline", ... "clips": [{"id": "wide", "start": 0, "dur": 2, "type": "camera", "data": {"shot": "wide", "to": [0, 2, 8], "cut": true}}]}
+    (cinematic data keys: shot id, cut bool, blend seconds, lookTarget name + deadzone/
+    lookahead/smoothTime, dolly|crane {path, ease}, shake {trauma, decay, freq, ampPos,
+    ampRot}, fov {from, to}, fovKick; asserted via camera_cut/framing/calm rules)
 
 How acceptance rules map onto the schema (the QA runner checks these exact components):
   - "RigidBody3D"/"Collider3D" component -> the spawn has "physics": "dynamic" (or "fixed")

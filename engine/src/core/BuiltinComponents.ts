@@ -31,6 +31,7 @@ import { ParticleSystem } from '../particles/ParticleSystem.js';
 import { AnimFSM } from '../animation/AnimFSM.js';
 import { TimelineLite } from '../cinematics/TimelineLite.js';
 import { NavAgent } from '../navigation/NavAgent.js';
+import { CineCamera } from '../cinematics/CineCamera.js';
 
 /**
  * Registers every restorable built-in component by its toJSON type name.
@@ -69,6 +70,7 @@ export function registerBuiltinComponents(): void {  registerComponent('MeshRend
   registerComponent('AnimFSM', AnimFSM);
   registerComponent('TimelineLite', TimelineLite);
   registerComponent('NavAgent', NavAgent);
+  registerComponent('CineCamera', CineCamera);
 }
 
 // Self-register on import so restores work without a manual init call.

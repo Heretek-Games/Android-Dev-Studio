@@ -1965,6 +1965,19 @@ def _apply_spawn(
                 f"spawn nav rejected — {nav_reasons[0] if nav_reasons else 'malformed'}",
             )
         obj["nav"] = nav
+    if action.get("cine") is not None:
+        # Maps to a CineCamera in the QA runner (objSpec.cine).
+        cine_reasons: List[str] = []
+        cine = _validate_cine(action.get("cine"), cine_reasons)
+        if cine is None:
+            return _outcome(
+                result,
+                index,
+                "spawn",
+                "invalid",
+                f"spawn cine rejected — {cine_reasons[0] if cine_reasons else 'malformed'}",
+            )
+        obj["cine"] = cine
     if action.get("audio") is not None:
         # Maps to an AudioSource in the QA runner (objSpec.audio).
         audio_reasons: List[str] = []
@@ -2681,6 +2694,39 @@ def _apply_lightrig(
         + (" + LUT" if "lut" in config else "")
         + ")",
     )
+
+
+def _validate_cine(
+    value: Any, errors: Optional[List[str]] = None
+) -> Optional[Dict[str, Any]]:
+    """CineCamera options pass straight to the QA runner (objSpec.cine).
+
+    Returns the normalized options, or None when malformed. All fields
+    optional (shot choreography lives in timeline camera clips); present
+    numerics must be positive, unknown keys rejected.
+    """
+
+    def fail(reason: str) -> None:
+        if errors is not None:
+            errors.append(reason)
+        return None
+
+    if not isinstance(value, dict):
+        fail("spawn 'cine' must be an object")
+        return None
+    normalized: Dict[str, Any] = {}
+    for key, item in value.items():
+        if key in ("traumaDecay", "baseFov", "fovKick"):
+            if not _is_finite_number(item) or item <= 0:
+                fail(f"spawn cine '{key}' must be positive (got {item!r})")
+                return None
+            normalized[key] = float(item)
+        else:
+            fail(
+                f"unknown spawn cine key '{key}' (allowed: traumaDecay, baseFov, fovKick)"
+            )
+            return None
+    return normalized
 
 
 def _validate_navgrid(

@@ -329,6 +329,9 @@ function buildScene(spec, engine) {
       if (objSpec.timeline) {
         go.addComponent(new engine.TimelineLite(objSpec.timeline));
       }
+      if (objSpec.cine) {
+        go.addComponent(new engine.CineCamera(objSpec.cine));
+      }
       if (objSpec.health) {
         go.addComponent(new engine.HealthComponent(objSpec.health));
       }
@@ -975,6 +978,33 @@ function evaluateRules(spec, ctxData) {
           grade.data.length === grade.size ** 3 * 3;
         pass = valid;
         detail = `lut size=${grade.size} amount=${grade.amount} entries=${grade.data.length}`;
+        break;
+      }
+      case 'camera_cut': {
+        const go = scene.findByName(rule.target);
+        const cine = go ? go.components.find(c => c.constructor.name === 'CineCamera') : null;
+        if (!cine) { pass = false; detail = `no CineCamera on "${rule.target}"`; break; }
+        pass = cine.lastCutShot === rule.shot;
+        detail = `"${rule.target}" lastCut=${cine.lastCutShot} (want ${rule.shot}, cuts=${cine.cutsTaken})`;
+        break;
+      }
+      case 'camera_framing': {
+        const go = scene.findByName(rule.target);
+        const cine = go ? go.components.find(c => c.constructor.name === 'CineCamera') : null;
+        if (!cine) { pass = false; detail = `no CineCamera on "${rule.target}"`; break; }
+        const want = rule.position || [0, 0, 0];
+        const p = go.transform.position;
+        const err = Math.hypot(p.x - want[0], p.y - want[1], p.z - want[2]);
+        pass = err <= (rule.tolerance ?? 0.5);
+        detail = `"${rule.target}" framing err=${err.toFixed(3)} (tol=${rule.tolerance ?? 0.5}, shot=${cine.activeShotId})`;
+        break;
+      }
+      case 'camera_calm': {
+        const go = scene.findByName(rule.target);
+        const cine = go ? go.components.find(c => c.constructor.name === 'CineCamera') : null;
+        if (!cine) { pass = false; detail = `no CineCamera on "${rule.target}"`; break; }
+        pass = cine.trauma <= 0.02;
+        detail = `"${rule.target}" trauma=${cine.trauma.toFixed(3)}`;
         break;
       }
       case 'object_count': {
