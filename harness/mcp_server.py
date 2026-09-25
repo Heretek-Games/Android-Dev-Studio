@@ -633,11 +633,24 @@ def save_active_scene_transactional(
     Validates scene against the 7 scene invariants before persisting.
     If valid, persists to disk and saves snapshot to project_memory.
     If invalid, aborts with zero disk changes and returns (False, error_reason).
+
+    When HERETEK_ASSETS_DIR points at an import sidecar directory, uid://
+    model refs are additionally audited (unknown uid / stale import fail the
+    save as reimport-needed failures — asset pipeline Phase 1). Unset by
+    default: remote-URL scenes validate exactly as before.
     """
     is_valid, violations = validate_scene_invariants(scene)
     if not is_valid:
         error_msgs = [f"[{v['code']}] {v['message']}" for v in violations]
         return False, "; ".join(error_msgs)
+    assets_dir = os.environ.get("HERETEK_ASSETS_DIR", "")
+    if assets_dir:
+        from .assets.importer import audit_scene_assets
+
+        asset_violations = audit_scene_assets(scene, assets_dir)
+        if asset_violations:
+            error_msgs = [f"[{v['code']}] {v['message']}" for v in asset_violations]
+            return False, "; ".join(error_msgs)
     save_active_scene(scene)
     return True, None
 
