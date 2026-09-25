@@ -21,6 +21,8 @@ import {
   AudioManager,
   NullAudioBackend,
   AudioMixer,
+  NavGrid,
+  NavAgent,
   type PrefabStore
 } from '@heretek/engine';
 
@@ -172,6 +174,47 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           maxParticles: ps.maxParticles,
           frame: engineContext.frameCount
         };
+      },
+      getNavState: (name: string) => {
+        const go: any = scene.findByName(name);
+        if (!go) return null;
+        const agent = go.components.find((c: any) => c.constructor.name === 'NavAgent');
+        if (!agent) return null;
+        return {
+          arrived: agent.arrived,
+          distToGoal: Number(agent.distanceToGoal().toFixed(2)),
+          waypointsLeft: agent.path.length,
+          traversing: agent.traversing
+        };
+      },
+      spawnNavProbe: () => {
+        undoService.checkpoint(scene);
+        const grid = new NavGrid(24, 24);
+        const mkAgent = (name: string, sx: number, sz: number, gx: number, gz: number) => {
+          const go = new GameObject(name);
+          go.transform.setPosition(sx, 0, sz);
+          const agent = go.addComponent(new NavAgent({ grid, speed: 3 }));
+          scene.addGameObject(go);
+          agent.setDestination(gx, gz);
+          return agent;
+        };
+        const a = mkAgent('Probe Nav A', 2, 12, 21, 12);
+        const b = mkAgent('Probe Nav B', 21, 12, 2, 12);
+        for (const agent of [a, b]) {
+          agent.setNeighborSampler(() => {
+            const out: Array<{ x: number; z: number }> = [];
+            for (const other of [a, b]) {
+              if (other === agent) continue;
+              const p = other.gameObject.transform.position;
+              out.push({ x: p.x, z: p.z });
+            }
+            return out;
+          });
+        }
+        setSelectedId(a.gameObject.id);
+        refreshScene();
+        addLog('info', 'Scene', 'Spawned nav crossing probe.');
+        return ['Probe Nav A', 'Probe Nav B'];
       },
       probeInputMap: () => {
         // End-to-end through the real capture path: synthetic key events on

@@ -73,6 +73,8 @@ export * from './behaviors/SaveSlot.js';
 export * from './particles/ParticleSystem.js';
 export * from './animation/AnimFSM.js';
 export * from './cinematics/TimelineLite.js';
+export * from './navigation/NavAgent.js';
+export * from './navigation/NavBake.js';
 export * from './combat/ElementalReactionComponent.js';
 export * from './vehicles/VehicleController.js';
 export * from './ai/TrafficSystem.js';

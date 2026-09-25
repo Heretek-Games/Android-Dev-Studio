@@ -1952,6 +1952,19 @@ def _apply_spawn(
                 f"spawn particle rejected — {particle_reasons[0] if particle_reasons else 'malformed'}",
             )
         obj["particle"] = particle
+    if action.get("nav") is not None:
+        # Maps to a NavAgent in the QA runner (objSpec.nav).
+        nav_reasons: List[str] = []
+        nav = _validate_nav(action.get("nav"), nav_reasons)
+        if nav is None:
+            return _outcome(
+                result,
+                index,
+                "spawn",
+                "invalid",
+                f"spawn nav rejected — {nav_reasons[0] if nav_reasons else 'malformed'}",
+            )
+        obj["nav"] = nav
     if action.get("audio") is not None:
         # Maps to an AudioSource in the QA runner (objSpec.audio).
         audio_reasons: List[str] = []
@@ -2537,6 +2550,197 @@ def _validate_audio(
     return normalized
 
 
+def _validate_navgrid(
+    value: Any, errors: Optional[List[str]] = None
+) -> Optional[Dict[str, Any]]:
+    """Walkability grid specs pass straight to the QA runner (spec.navgrid).
+
+    Returns the normalized spec, or None when malformed. Obstacles are
+    {x, z, hx, hz} world-space footprints baked with agent-radius erosion.
+    """
+
+    def fail(reason: str) -> None:
+        if errors is not None:
+            errors.append(reason)
+        return None
+
+    if not isinstance(value, dict):
+        fail("navgrid 'config' must be an object")
+        return None
+    normalized: Dict[str, Any] = {}
+    for dim in ("width", "height"):
+        size = value.get(dim, 32)
+        if (
+            isinstance(size, bool)
+            or not isinstance(size, (int, float))
+            or int(size) != size
+            or not 2 <= size <= 256
+        ):
+            fail(f"navgrid config '{dim}' must be an integer 2..256")
+            return None
+        normalized[dim] = int(size)
+    for numkey, floor, default in (
+        ("cellSize", 0, 1.0),
+        ("originX", None, 0.0),
+        ("originZ", None, 0.0),
+        ("agentRadius", 0, 0.4),
+        ("minHeight", 0, 2.0),
+    ):
+        raw = value.get(numkey, default)
+        if (
+            not _is_finite_number(raw)
+            or (floor is not None and raw < floor)
+            or (numkey == "cellSize" and raw <= 0)
+        ):
+            fail(f"navgrid config '{numkey}' must be a valid number")
+            return None
+        normalized[numkey] = float(raw)
+    raw_obstacles = value.get("obstacles", [])
+    if not isinstance(raw_obstacles, list):
+        fail("navgrid config 'obstacles' must be an array")
+        return None
+    obstacles: List[Dict[str, Any]] = []
+    for i, o in enumerate(raw_obstacles):
+        if not isinstance(o, dict):
+            fail(f"navgrid obstacles[{i}] must be an object")
+            return None
+        entry: Dict[str, Any] = {}
+        for axis in ("x", "z"):
+            if not _is_finite_number(o.get(axis)):
+                fail(f"navgrid obstacles[{i}].{axis} must be finite")
+                return None
+            entry[axis] = float(o[axis])
+        for half in ("hx", "hz"):
+            if not _is_finite_number(o.get(half)) or o[half] < 0:
+                fail(f"navgrid obstacles[{i}].{half} must be >= 0")
+                return None
+            entry[half] = float(o[half])
+        obstacles.append(entry)
+    normalized["obstacles"] = obstacles
+    for key in value:
+        if key not in (
+            "width",
+            "height",
+            "cellSize",
+            "originX",
+            "originZ",
+            "agentRadius",
+            "minHeight",
+            "obstacles",
+        ):
+            fail(f"unknown navgrid config key '{key}'")
+            return None
+    return normalized
+
+
+def _validate_nav(
+    value: Any, errors: Optional[List[str]] = None
+) -> Optional[Dict[str, Any]]:
+    """NavAgent specs pass straight to the QA runner (objSpec.nav)."""
+
+    def fail(reason: str) -> None:
+        if errors is not None:
+            errors.append(reason)
+        return None
+
+    if not isinstance(value, dict):
+        fail("spawn 'nav' must be an object with at least a target")
+        return None
+    target = value.get("target")
+    if (
+        not isinstance(target, (list, tuple))
+        or len(target) != 2
+        or not all(_is_finite_number(v) for v in target)
+    ):
+        fail("spawn nav 'target' must be a finite [x, z] pair")
+        return None
+    normalized: Dict[str, Any] = {"target": [float(target[0]), float(target[1])]}
+    options: Dict[str, Any] = {}
+    for numkey, floor in (
+        ("speed", 0),
+        ("radius", 0),
+        ("arriveRadius", 0),
+        ("waypointRadius", 0),
+        ("separationWeight", 0),
+        ("separationRadius", 0),
+        ("brakeRadius", 0),
+    ):
+        if numkey in value:
+            if not _is_finite_number(value[numkey]) or value[numkey] < floor:
+                fail(f"spawn nav '{numkey}' must be >= {floor}")
+                return None
+            options[numkey] = float(value[numkey])
+    if "links" in value:
+        if not isinstance(value["links"], list):
+            fail("spawn nav 'links' must be an array")
+            return None
+        links: List[Dict[str, Any]] = []
+        for i, link in enumerate(value["links"]):
+            if not isinstance(link, dict):
+                fail(f"spawn nav links[{i}] must be an object")
+                return None
+            entry_l: Dict[str, Any] = {}
+            for endpoint in ("ax", "az", "bx", "bz"):
+                if not _is_finite_number(link.get(endpoint)):
+                    fail(f"spawn nav links[{i}].{endpoint} must be finite")
+                    return None
+                entry_l[endpoint] = float(link[endpoint])
+            if "radius" in link:
+                if not _is_finite_number(link["radius"]) or link["radius"] <= 0:
+                    fail(f"spawn nav links[{i}].radius must be positive")
+                    return None
+                entry_l["radius"] = float(link["radius"])
+            if "traverseTime" in link:
+                if (
+                    not _is_finite_number(link["traverseTime"])
+                    or link["traverseTime"] <= 0
+                ):
+                    fail(f"spawn nav links[{i}].traverseTime must be positive")
+                    return None
+                entry_l["traverseTime"] = float(link["traverseTime"])
+            links.append(entry_l)
+        if links:
+            options["links"] = links
+    if options:
+        normalized["options"] = options
+    for key in value:
+        if key not in (
+            "target",
+            "speed",
+            "radius",
+            "arriveRadius",
+            "waypointRadius",
+            "separationWeight",
+            "separationRadius",
+            "brakeRadius",
+            "links",
+        ):
+            fail(f"unknown spawn nav key '{key}'")
+            return None
+    return normalized
+
+
+def _apply_navgrid(
+    scene: Dict[str, Any], action: Dict[str, Any], result: ApplyResult, index: int
+) -> None:
+    reasons: List[str] = []
+    config = _validate_navgrid(action.get("config"), reasons)
+    if config is None:
+        detail = reasons[0] if reasons else "malformed config"
+        return _outcome(
+            result, index, "navgrid", "invalid", f"navgrid config rejected — {detail}"
+        )
+    scene["navgrid"] = config
+    _outcome(
+        result,
+        index,
+        "navgrid",
+        "applied",
+        f"Registered navgrid {config['width']}x{config['height']} "
+        f"({len(config['obstacles'])} obstacle(s))",
+    )
+
+
 def _validate_mixer(
     value: Any, errors: Optional[List[str]] = None
 ) -> Optional[Dict[str, Any]]:
@@ -3048,6 +3252,7 @@ _HANDLERS = {
     "locale": _apply_locale,
     "input": _apply_input,
     "mixer": _apply_mixer,
+    "navgrid": _apply_navgrid,
 }
 
 

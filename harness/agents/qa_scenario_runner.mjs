@@ -467,6 +467,58 @@ function setupAudio(spec, scene, engine) {
   return { manager, mixer };
 }
 /**
+ * Navigation (Track 1.12): bakes walkability from spec.navgrid obstacles +
+ * scene fixed colliders, binds NavAgents from objSpec.nav, wires cross-agent
+ * separation samplers, and routes initial destinations. Agents step through
+ * the normal scene update (kinematic, no extra scheduling).
+ */
+function setupNav(spec, scene, engine) {
+  const wantsNav = (spec.gameObjects || []).some(o => o && o.nav) || spec.navgrid;
+  if (!wantsNav) return null;
+  const cfg = (spec.navgrid && typeof spec.navgrid === 'object') ? spec.navgrid : {};
+  const cellSize = cfg.cellSize ?? 1;
+  const originX = cfg.originX ?? 0;
+  const originZ = cfg.originZ ?? 0;
+  const width = cfg.width ?? 32;
+  const height = cfg.height ?? 32;
+  const staticObs = engine.collectStaticFootprints
+    ? engine.collectStaticFootprints(scene, cfg.minHeight ?? 2)
+    : [];
+  const cfgObs = Array.isArray(cfg.obstacles) ? cfg.obstacles : [];
+  const baked = engine.bakeWalkability(width, height, [...staticObs, ...cfgObs], {
+    cellSize, originX, originZ, agentRadius: cfg.agentRadius ?? 0.4
+  });
+  const agents = [];
+  for (const objSpec of spec.gameObjects || []) {
+    if (!objSpec || !objSpec.nav) continue;
+    const go = scene.findByName(objSpec.name);
+    if (!go) continue;
+    const agent = new engine.NavAgent({
+      ...(objSpec.nav.options || {}),
+      grid: baked.grid, cellSize, originX, originZ,
+      links: objSpec.nav.links
+    });
+    go.addComponent(agent);
+    agents.push(agent);
+    const target = objSpec.nav.target;
+    if (Array.isArray(target) && target.length >= 2) {
+      agent.setDestination(target[0], target[1]);
+    }
+  }
+  for (const agent of agents) {
+    agent.setNeighborSampler(self => {
+      const out = [];
+      for (const other of agents) {
+        if (other === self) continue;
+        const p = other.gameObject.transform.position;
+        out.push({ x: p.x, z: p.z });
+      }
+      return out;
+    });
+  }
+  return { grid: baked.grid, agents };
+}
+/**
  * Dialogue auto-play: register every spec.dialogues tree and walk each one
  * deterministically (first available choice, bounded steps), recording stable
  * node visits plus emitted events. Action/condition nodes self-resolve inside
@@ -715,7 +767,7 @@ function placementNote(game) {
 }
 
 function evaluateRules(spec, ctxData) {
-  const { scene, samples, firstSamples, metrics, dt, game, dialogue, input, audio } = ctxData;
+  const { scene, samples, firstSamples, metrics, dt, game, dialogue, input, audio, nav } = ctxData;
   const results = [];
 
   for (const rule of spec.rules || []) {
@@ -828,6 +880,14 @@ function evaluateRules(spec, ctxData) {
         const gain = audio.mixer.voiceGain(rule.bus, 1);
         pass = gain <= (rule.max ?? 0.5);
         detail = `bus '${rule.bus}' gain=${gain.toFixed(3)} (max=${rule.max ?? 0.5})`;
+        break;
+      }
+      case 'nav_arrived': {
+        const go = scene.findByName(rule.target);
+        const agent = go ? go.components.find(c => c.constructor.name === 'NavAgent') : null;
+        if (!agent) { pass = false; detail = `no NavAgent on "${rule.target}"`; break; }
+        pass = agent.arrived === true;
+        detail = `"${rule.target}" arrived=${agent.arrived} (distToGoal=${agent.distanceToGoal().toFixed(2)})`;
         break;
       }
       case 'object_count': {
@@ -1124,6 +1184,7 @@ async function main() {
   const dialogue = setupDialogue(spec, engine);
   const input = setupInput(spec, engine);
   const audio = setupAudio(spec, scene, engine);
+  const nav = setupNav(spec, scene, engine);
 
   const eventCount = scene.gameObjects.reduce(
     (n, go) => n + go.components.filter(c => c.constructor.name === 'EventSheet').reduce((m, es) => m + es.events.length, 0), 0
@@ -1223,7 +1284,7 @@ async function main() {
     }
   }
 
-  const ruleResults = evaluateRules(spec, { scene, samples, firstSamples, metrics, dt: args.dt, game, dialogue, input, audio });
+  const ruleResults = evaluateRules(spec, { scene, samples, firstSamples, metrics, dt: args.dt, game, dialogue, input, audio, nav });
   const passed = ruleResults.filter(r => r.pass).length;
   const total = ruleResults.length;
   const allPass = total > 0 && passed === total;

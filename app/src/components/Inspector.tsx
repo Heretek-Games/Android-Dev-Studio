@@ -11,6 +11,7 @@ import {
   ElementalReactionComponent,
   AnimeCelShader,
   ParticleSystem,
+  NavAgent,
   type ElementType
 } from '@heretek/engine';
 import {
@@ -101,6 +102,7 @@ export const Inspector: React.FC = () => {
     transform: true,
     prefab: true,
     particle: true,
+    nav: true,
     mesh: true,
     rigidBody: false,
     controller: false,
@@ -164,6 +166,7 @@ export const Inspector: React.FC = () => {
   const elementalComp = go.getComponent(ElementalReactionComponent);
   const celShader = go.getComponent(AnimeCelShader);
   const particleSys = go.getComponent(ParticleSystem);
+  const navAgent = go.getComponent(NavAgent);
 
   return (
     <div className="flex flex-col h-full bg-zinc-950 select-none border-l border-zinc-800 overflow-y-auto">
@@ -673,7 +676,74 @@ export const Inspector: React.FC = () => {
           </AccordionCard>
         )}
 
-        {/* Add Component Button */}        <div className="relative pt-2">
+        {/* 9. Navigation Agent */}
+        {navAgent && (
+          <AccordionCard
+            title="Navigation Agent"
+            icon={Compass}
+            colorClass="text-teal-300"
+            isOpen={openCards.nav}
+            onToggle={() => toggleCard('nav')}
+            onRemove={() => { go.removeComponent(navAgent); refreshScene(); }}
+            badge={
+              <span className={`font-mono text-[10px] px-1.5 py-0.5 rounded border ${
+                navAgent.arrived
+                  ? 'text-emerald-300 bg-emerald-950/40 border-emerald-800/40'
+                  : 'text-teal-300 bg-teal-950/40 border-teal-800/40'
+              }`}>
+                {navAgent.arrived ? 'ARRIVED' : `${navAgent.distanceToGoal().toFixed(1)}m`}
+              </span>
+            }
+          >
+            <div className="space-y-2 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-zinc-400">Speed</span>
+                <input
+                  type="number"
+                  step="0.5"
+                  value={navAgent.speed}
+                  onChange={(e) => { navAgent.speed = Math.max(0, parseFloat(e.target.value) || 0); refreshScene(); }}
+                  className="w-20 bg-zinc-950 border border-zinc-700 rounded px-2 py-0.5 text-right text-white outline-none font-mono"
+                />
+              </div>
+              <div className="flex items-center space-x-1.5">
+                <input
+                  type="number"
+                  step="1"
+                  defaultValue={Math.round(go.transform.position.x + 6)}
+                  id="nav-dest-x"
+                  title="Destination X"
+                  className="w-full bg-zinc-950 border border-zinc-700 rounded px-2 py-1 text-right text-white outline-none font-mono"
+                />
+                <input
+                  type="number"
+                  step="1"
+                  defaultValue={Math.round(go.transform.position.z + 6)}
+                  id="nav-dest-z"
+                  title="Destination Z"
+                  className="w-full bg-zinc-950 border border-zinc-700 rounded px-2 py-1 text-right text-white outline-none font-mono"
+                />
+                <button
+                  onClick={() => {
+                    const x = parseFloat((document.getElementById('nav-dest-x') as HTMLInputElement)?.value || '0');
+                    const z = parseFloat((document.getElementById('nav-dest-z') as HTMLInputElement)?.value || '0');
+                    navAgent.setDestination(x, z);
+                    refreshScene();
+                  }}
+                  className="px-3 py-1 rounded bg-teal-900/40 hover:bg-teal-800/50 border border-teal-700/50 text-teal-200 text-[11px] font-medium transition-colors shrink-0"
+                >
+                  Go
+                </button>
+              </div>
+              <p className="text-[11px] text-zinc-500 leading-snug">
+                Routes on the bound grid (set via dock or code). Badge tracks live distance during Play.
+              </p>
+            </div>
+          </AccordionCard>
+        )}
+
+        {/* Add Component Button */}
+        <div className="relative pt-2">
           <button
             onClick={() => setShowAddComponent(!showAddComponent)}
             className="w-full flex items-center justify-center space-x-1.5 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-200 text-xs font-medium border border-zinc-800 hover:border-zinc-700 transition-colors shadow-sm"

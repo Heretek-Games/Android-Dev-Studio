@@ -1549,6 +1549,63 @@ class MixerActionTests(unittest.TestCase):
             self.assertIn(hint, result.outcomes[0]["detail"])
 
 
+class NavGridActionTests(unittest.TestCase):
+    def test_navgrid_and_nav_validate(self):
+        scene, result = apply_actions(
+            base_scene(),
+            [
+                {
+                    "type": "navgrid",
+                    "config": {
+                        "width": 16,
+                        "height": 16,
+                        "obstacles": [{"x": 7.5, "z": 7.5, "hx": 4, "hz": 0.5}],
+                    },
+                },
+                {
+                    "type": "spawn",
+                    "name": "Scout",
+                    "physics": "none",
+                    "nav": {
+                        "target": [14, 14],
+                        "speed": 4,
+                        "links": [{"ax": 3.5, "az": 2.5, "bx": 8.5, "bz": 2.5}],
+                    },
+                },
+            ],
+        )
+        self.assertEqual(result.applied, 2)
+        self.assertEqual(scene["navgrid"]["width"], 16)
+        self.assertEqual(scene["gameObjects"][1]["nav"]["target"], [14.0, 14.0])
+
+    def test_navgrid_and_nav_reject_malformed(self):
+        scene, result = apply_actions(base_scene(), [{"type": "navgrid", "config": {}}])
+        self.assertEqual(result.applied, 1)
+        self.assertEqual(scene["navgrid"]["width"], 32)
+        for action, hint in (
+            ({"type": "navgrid", "config": {"width": 1}}, "2..256"),
+            ({"type": "navgrid", "config": {"width": 300}}, "2..256"),
+            ({"type": "navgrid", "config": {"obstacles": [{"x": 1}]}}, "finite"),
+            ({"type": "spawn", "name": "W", "nav": {}}, "target"),
+            ({"type": "spawn", "name": "W", "nav": {"target": [1]}}, "pair"),
+            (
+                {"type": "spawn", "name": "W", "nav": {"target": [1, 2], "speed": -1}},
+                "speed",
+            ),
+            (
+                {
+                    "type": "spawn",
+                    "name": "W",
+                    "nav": {"target": [1, 2], "links": [{"ax": 0}]},
+                },
+                "finite",
+            ),
+        ):
+            _, result = apply_actions(base_scene(), [action])
+            self.assertEqual(result.invalid, 1, f"should reject {action!r}")
+            self.assertIn(hint, result.outcomes[0]["detail"])
+
+
 class PrefabActionTests(unittest.TestCase):
     def test_prefab_define_registers_template(self):
         scene, result = apply_actions(
