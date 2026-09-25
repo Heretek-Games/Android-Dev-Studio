@@ -290,6 +290,9 @@ function buildScene(spec, engine) {
       if (objSpec.weapon) {
         go.addComponent(new engine.WeaponController(objSpec.weapon));
       }
+      if (objSpec.cel) {
+        go.addComponent(new engine.AnimeCelShader(objSpec.cel));
+      }
       if (objSpec.health) {
         go.addComponent(new engine.HealthComponent(objSpec.health));
       }

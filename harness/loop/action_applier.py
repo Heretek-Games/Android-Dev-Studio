@@ -52,6 +52,7 @@ MODIFY_FIELDS = (
     "health",
     "ai",
     "elemental",
+    "cel",
 )
 
 
@@ -237,6 +238,49 @@ def _validate_ai(value: Any) -> Optional[Dict[str, Any]]:
                 return None
             normalized[key] = float(item)
         else:
+            return None
+    return normalized
+
+
+CEL_COLORS = {"baseColor", "shadowColor", "rimColor", "outlineColor"}
+CEL_NUMERICS = {"outlineThickness", "rimPower"}
+
+
+def _validate_cel(
+    value: Any, errors: Optional[List[str]] = None
+) -> Optional[Dict[str, Any]]:
+    """AnimeCelShader calibration passes straight to the QA runner (objSpec.cel).
+
+    Returns the normalized options, or None when malformed. Color stops must
+    be #rgb/#rrggbb; outlineThickness/rimPower finite and non-negative;
+    unknown keys (incl. lightDirection — the engine default stands headless)
+    are rejected so typos surface as repair input instead of silent no-ops.
+    """
+
+    def fail(reason: str) -> None:
+        if errors is not None:
+            errors.append(reason)
+        return None
+
+    if not isinstance(value, dict):
+        fail("cel-shading options must be an object")
+        return None
+    normalized: Dict[str, Any] = {}
+    for key, item in value.items():
+        if key in CEL_COLORS:
+            if not _is_color(item):
+                fail(f"cel '{key}' must be #rgb or #rrggbb (got {item!r})")
+                return None
+            normalized[key] = item
+        elif key in CEL_NUMERICS:
+            if not _is_finite_number(item) or item < 0:
+                fail(f"cel '{key}' must be a non-negative finite number (got {item!r})")
+                return None
+            normalized[key] = float(item)
+        else:
+            fail(
+                f"unknown cel key '{key}' (allowed: {sorted(CEL_COLORS | CEL_NUMERICS)})"
+            )
             return None
     return normalized
 
@@ -942,6 +986,19 @@ def _apply_spawn(
                 f"spawn elemental rejected — {elemental_reasons[0] if elemental_reasons else 'malformed'}",
             )
         obj["elemental"] = elemental
+    if action.get("cel") is not None:
+        # Maps to an AnimeCelShader in the QA runner (objSpec.cel).
+        cel_reasons: List[str] = []
+        cel = _validate_cel(action.get("cel"), cel_reasons)
+        if cel is None:
+            return _outcome(
+                result,
+                index,
+                "spawn",
+                "invalid",
+                f"spawn cel-shading rejected — {cel_reasons[0] if cel_reasons else 'malformed'}",
+            )
+        obj["cel"] = cel
 
     scene.setdefault("gameObjects", []).append(obj)
     _outcome(
@@ -1203,6 +1260,18 @@ def _apply_modify(
                     f"modify elemental rejected — {elemental_reasons[0] if elemental_reasons else 'malformed'}",
                 )
             obj["elemental"] = elemental
+        elif field_name == "cel":
+            cel_reasons: List[str] = []
+            cel = _validate_cel(value, cel_reasons)
+            if cel is None:
+                return _outcome(
+                    result,
+                    index,
+                    "modify",
+                    "invalid",
+                    f"modify cel-shading rejected — {cel_reasons[0] if cel_reasons else 'malformed'}",
+                )
+            obj["cel"] = cel
         changed.append(field_name)
 
     if not changed:

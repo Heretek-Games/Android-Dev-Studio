@@ -60,7 +60,8 @@ ACTION_SCHEMA = """Action vocabulary (a JSON array named "actions"):
      "weapon": {"damage": 50, "fireRate": 8, "range": 100, "maxAmmo": 30} (optional: adds a WeaponController for combat quests),
      "health": {"maxHealth": 100} (optional: adds a HealthComponent; destroyOnDeath defaults true),
      "ai": {"targetName": "Player Hero", "moveSpeed": 2.5} (optional: adds an EnemyAI NPC routine that chases/attacks the named target),
-     "elemental": {"aura": "Pyro", "maxHealth": 80} (optional: seeds an elemental aura for reaction quests; aura is one of Pyro|Hydro|Cryo|Electro|Anemo|Geo|Dendro)}
+     "elemental": {"aura": "Pyro", "maxHealth": 80} (optional: seeds an elemental aura for reaction quests; aura is one of Pyro|Hydro|Cryo|Electro|Anemo|Geo|Dendro),
+     "cel": {"baseColor": "#38bdf8", "shadowColor": "#1e3a8a", "rimPower": 3.5} (optional: calibrates an AnimeCelShader look-dev pass; colors #rgb/#rrggbb, outlineThickness/rimPower non-negative numbers)}
   - {"type": "light", "name": "...", "lightType": "directional"|"point"|"ambient",
      "color": "#rrggbb", "intensity": 2.0, "position": [x,y,z]}
   - {"type": "modify", "target": "...", "position": [x,y,z], "color": "#rrggbb",
@@ -135,6 +136,10 @@ How acceptance rules map onto the schema (the QA runner checks these exact compo
     and HealthComponent destroys its owner at 0 HP by default — so a hero chewed down by
     its own quest enemies reads as 'missing "Hero"'. Give the hero generous maxHealth
     (or weaker/slower attackers) with margin, e.g. "health": {"maxHealth": 500}.
+  - "AnimeCelShader" component (look-dev calibration) -> the spawn (or a "modify") has
+    "cel", e.g. "cel": {"baseColor": "#38bdf8", "shadowColor": "#1e3a8a", "rimPower": 3.5}.
+    Headless QA verifies calibration presence + budget, never taste — true aesthetics
+    stay critic-owned.
   - "EventSheet" / event_attached rules -> emit an "event" action targeting that object
   - "LightComponent" -> emit a "light" action
   - object_count rules count every entry in gameObjects (lights included)

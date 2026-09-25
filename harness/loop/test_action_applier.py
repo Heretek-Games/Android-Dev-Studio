@@ -686,6 +686,63 @@ class ElementalTests(unittest.TestCase):
         self.assertIn("hitElement", result.outcomes[0]["detail"])
 
 
+class CelShadingTests(unittest.TestCase):
+    def test_spawn_cel_applies(self):
+        scene, result = apply_actions(
+            base_scene(),
+            [
+                {
+                    "type": "spawn",
+                    "name": "Hero",
+                    "shape": "capsule",
+                    "cel": {
+                        "baseColor": "#38bdf8",
+                        "shadowColor": "#1e3a8a",
+                        "rimPower": 3.5,
+                    },
+                }
+            ],
+        )
+        self.assertEqual(result.applied, 1)
+        self.assertEqual(
+            scene["gameObjects"][1]["cel"],
+            {"baseColor": "#38bdf8", "shadowColor": "#1e3a8a", "rimPower": 3.5},
+        )
+
+    def test_spawn_cel_rejects_malformed(self):
+        for bad, hint in (
+            (True, "object"),
+            ({"baseColor": "blue"}, "baseColor"),
+            ({"rimPower": -1}, "rimPower"),
+            ({"lightDirection": [0, 1, 0]}, "lightDirection"),
+        ):
+            _, result = apply_actions(
+                base_scene(), [{"type": "spawn", "name": "Hero", "cel": bad}]
+            )
+            self.assertEqual(result.invalid, 1, f"should reject {bad!r}")
+            self.assertIn(hint, result.outcomes[0]["detail"])
+
+    def test_modify_cel_replaces_config(self):
+        scene, result = apply_actions(
+            base_scene(),
+            [
+                {"type": "spawn", "name": "Hero"},
+                {"type": "modify", "target": "Hero", "cel": {"outlineThickness": 0.05}},
+            ],
+        )
+        self.assertEqual(result.applied, 2)
+        self.assertEqual(scene["gameObjects"][1]["cel"], {"outlineThickness": 0.05})
+
+    def test_cel_scene_passes_the_invariant_gate(self):
+        scene, result = apply_actions(
+            base_scene(),
+            [{"type": "spawn", "name": "Hero", "cel": {"rimPower": 3.5}}],
+        )
+        self.assertEqual(result.failures, 0)
+        valid, violations = validate_scene_invariants(scene)
+        self.assertTrue(valid, f"gate rejected cel scene: {violations}")
+
+
 def keeper_tree():
     return {
         "id": "DungeonKeeper",
