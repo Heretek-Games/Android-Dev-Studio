@@ -258,6 +258,13 @@ All studio↔harness bridges run through the Vite dev server (dev-only, like `/a
 - `GET /api/devices` — real ADB device detection (`harness/agents/device_cli.py`); returns the actual
   `adb devices -l` result — the DeviceBar shows "No device detected" when nothing is attached
   (no mocked devices).
+- `GET /api/device/screen?serial=` — live device screen PNG (`adb exec-out screencap -p`) for the
+  **Device Mirror & Profiler** dock (`DeviceMirrorDock.tsx`, also in the `mobile_qa` preset).
+- `POST /api/device/input` — remote input injection (`adb shell input`: tap/swipe/key/text);
+  clicking the mirrored screen injects a tap at the mapped device coordinate.
+- `GET /api/device/stats?serial=&package=` — parsed on-device profiler telemetry: FPS from
+  `gfxinfo framestats` INTENDED_VSYNC deltas (column resolved by header name), jank %,
+  p50/p90/p95/p99 frame times, and TOTAL PSS MB.
 - `POST /api/deploy` — real packaging through `harness/build/apk_builder.py` (dry-run by default;
   both containers assemble real debug APKs — Tier 1 `app-debug.apk` with the synced web bundle,
   Tier 2 `app-debug.apk` with `libheretek_native.so` + `scene.native` + SPIR-V shaders;

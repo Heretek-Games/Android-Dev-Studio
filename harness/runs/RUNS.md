@@ -271,3 +271,38 @@ a real WeaponController raycast → hit event → router → health → kill.
 5. Save/load (dev-server verification): pause → Save → Menu → Continue restores score 200 / kills 2
 
 Screenshots captured during the session: studio-in-APK, arena menu, victory, mid-run HUD.
+
+---
+
+## Run Block 5 — 2026-09-25, Studio ↔ Device Live Loop (Phase 4)
+
+### In-APK device context (issue #4, closed)
+
+`AndroidGameBridge.deviceInfo()` returns the device/build identity as JSON; the studio's
+`NativeBridge` service detects and parses it, and `refreshDevices` prefers it inside the
+container. Verified: mocked bridge in the dev server → header `Pixel 8 Pro (arm64-v8a) · API 35`
+plus an explicit log that the dev-server bridges are unavailable in the packaged build;
+on-device APK → the header shows the emulator device instead of "No device detected".
+
+### Device Mirror & Profiler (commit `011757c`)
+
+Bridge routes (dev-only):
+
+| Route | Backing command | Notes |
+|-------|-----------------|-------|
+| `GET /api/device/screen?serial=` | `adb exec-out screencap -p` | returns the live PNG frame (~991 KB, 2400×1080) |
+| `POST /api/device/input` | `adb shell input` | tap / swipe / key / text |
+| `GET /api/device/stats?serial=&package=` | `adb shell dumpsys gfxinfo <pkg> framestats` + `meminfo` | FPS from INTENDED_VSYNC deltas, jank %, p50/p90/p95/p99, TOTAL PSS |
+
+**FPS parser bug found and fixed:** newer Android inserts `FrameTimelineVsyncId` before
+`IntendedVsync` in the framestats CSV; the fixed-index parser reported 42,829,331 FPS. The
+parser now resolves the column by header name; the same device reports **9.7 FPS / 100% jank /
+p50 150 ms / PSS 124.6 MB** — honest telemetry for a software-GL emulator.
+
+**Dock:** `DeviceMirrorDock` — live mirror (1.5 s poll, pause/resume), click-to-tap with
+letterbox-correct coordinate mapping, profiler strip, explicit empty/packaged states;
+registered in the `mobile_qa` preset and the header Panels menu.
+
+**End-to-end proof:** clicking the Game button *inside the studio's mirror* injected
+`Tap injected at (1045, 51) on emulator-5554` and the device opened the arena game
+(device screenshot confirms the arena menu).
