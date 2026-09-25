@@ -29,11 +29,14 @@
 - **AI Studio Copilot**:
   - Natural language prompt-to-world ("Create a desert obstacle course with 5 pillars, floating platforms, sunset lighting, and a player sphere").
   - Automated code generation, component wiring, and self-healing.
-- **Google Artemis Autonomous Mobile QA**:
+- **Google Artemis Autonomous Game QA**:
   - Integrates with [Google Artemis](https://github.com/google/artemis) (99%+ AndroidWorld SOTA).
-  - Autonomous device playtesting on real Android phones or emulators via ADB: drives virtual touch joysticks, taps buttons, audits 60 FPS performance, and diagnoses Logcat crashes.
+  - **Headless engine runs**: boots scenario specs on the real runtime (Rapier3D + EventSheet) — real sim FPS, frame time, GPU draw-call estimate against the 100-call mobile budget, memory heap, and game-rule assertions.
+  - **Regression gate**: every run compares against the same-scenario baseline in `project_memory.sqlite` and emits `SUCCEEDED` / `REGRESSED` / `FAILED`.
+  - **On-device playtests**: autonomous touch automation on real Android phones or emulators via ADB; audits frame time and diagnoses Logcat crashes.
 - **Two-Tier Model Context Protocol (MCP)**:
-  - Built-in MCP server (`harness/mcp_server.py`) allowing external AI coding assistants (Antigravity, Claude Code, Cursor) to inspect the 3D scene and execute editor actions programmatically.
+  - Built-in MCP server (`harness/mcp_server.py`) allowing external AI coding assistants (Antigravity, Claude Code, Cursor) to inspect the 3D scene and execute editor actions programmatically (9 tools).
+  - Scene mutations persist to `harness/scenes/active_scene.json` and sync snapshots into project memory; `studio_run_artemis_qa` boots that exact live scene headless.
 
 ---
 
@@ -77,12 +80,21 @@ npm test
 
 ## 🤖 Google Artemis Autonomous QA
 
-Run autonomous playtests on your connected Android phone or emulator:
+**Headless scenario runs (default, deterministic)** — boots the scene on the real engine
+runtime with Rapier3D physics and EventSheet execution, then evaluates game rules and
+compares metrics against the same-scenario baseline:
 
 ```bash
-# Run Artemis playtest runner CLI
-python3 harness/agents/artemis_qa_runner.py --goal "Navigate player character past obstacle course and verify 60 FPS"
+# QA the live MCP-controlled scene (harness/scenes/active_scene.json)
+python3 harness/agents/artemis_qa_runner.py --goal "Verify player physics and spin events"
+
+# QA a named scenario spec
+python3 harness/agents/artemis_qa_runner.py --goal "Mini arena QA" --scenario harness/config/scenarios/mini_arena.json
 ```
+
+Verdicts: `SUCCEEDED` · `REGRESSED` (FPS −20% / frame time +20% / draw calls +25% / heap +30% vs same-scenario baseline) · `FAILED` (rule assertions). Reports land in `harness/artemis_report.json`. The Studio's Artemis dock drives the same runner through the dev-server bridge (`POST /api/qa/run`).
+
+**On-device playtests** on a connected Android phone or emulator via ADB (touch automation and frame-time/Logcat auditing) follow the locator pattern in `harness/config/artemis_game_rules.md`.
 
 To connect AI coding assistants to the Studio via Model Context Protocol:
 ```bash

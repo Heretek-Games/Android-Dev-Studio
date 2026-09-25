@@ -1,0 +1,118 @@
+{
+  "id": "active_scene",
+  "name": "MainArena",
+  "goal": "Live studio scene under MCP control \u2014 booted headless for Artemis QA",
+  "gameObjects": [
+    {
+      "name": "Ground Arena",
+      "shape": "box",
+      "size": [
+        24,
+        1,
+        24
+      ],
+      "position": [
+        0,
+        -0.5,
+        0
+      ],
+      "color": "#27272a",
+      "physics": "fixed"
+    },
+    {
+      "name": "Player Hero",
+      "shape": "capsule",
+      "size": [
+        1,
+        1.5,
+        1
+      ],
+      "position": [
+        0,
+        1.5,
+        0
+      ],
+      "color": "#3b82f6",
+      "physics": "dynamic",
+      "mass": 1.0,
+      "controller": true
+    },
+    {
+      "name": "Bonus Crate",
+      "shape": "box",
+      "size": [
+        1.5,
+        1.5,
+        1.5
+      ],
+      "position": [
+        3,
+        2,
+        -4
+      ],
+      "color": "#f59e0b",
+      "physics": "dynamic",
+      "events": [
+        {
+          "name": "CrateSpin",
+          "conditions": [
+            {
+              "type": "Timer",
+              "params": {
+                "name": "crate",
+                "interval": 1.0
+              }
+            }
+          ],
+          "actions": [
+            {
+              "type": "RotateY",
+              "params": {
+                "degrees": 15
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "light",
+      "name": "Directional Sun",
+      "lightType": "directional",
+      "color": "#ffffff",
+      "intensity": 2.5,
+      "position": [
+        5,
+        12,
+        6
+      ]
+    }
+  ],
+  "rules": [
+    {
+      "id": "player_exists",
+      "type": "entity_exists",
+      "target": "Player Hero"
+    },
+    {
+      "id": "player_has_physics",
+      "type": "entity_component",
+      "target": "Player Hero",
+      "component": "RigidBody3D"
+    },
+    {
+      "id": "finite_transforms",
+      "type": "no_nan_transforms"
+    },
+    {
+      "id": "mobile_draw_budget",
+      "type": "draw_call_budget",
+      "max": 100
+    },
+    {
+      "id": "sim_performance",
+      "type": "fps_min",
+      "min": 30
+    }
+  ]
+}

@@ -84,15 +84,24 @@ Live LLM settings are loaded from `.env.prod`:
 The Vite dev server proxies `/api/llm` to `https://llm.heretek.one/v1`, keeping credentials securely managed.
 
 ### Studio MCP Tools (`harness/mcp_server.py`)
-External coding agents can interact with the live studio session via 8 JSON-RPC tools:
+External coding agents can interact with the live studio session via 9 JSON-RPC tools.
+Scene-mutating tools persist to `harness/scenes/active_scene.json` (scenario format)
+and synchronize a snapshot into `project_memory.py` on every change; the QA tool
+boots that exact file headless on the real engine runtime.
 1. `studio_get_scene_hierarchy`: Inspect active GameObjects, components, and transforms.
 2. `studio_spawn_entity`: Spawn 3D meshes (box, sphere, capsule, etc.) with Rapier3D physics.
 3. `studio_modify_component`: Live-tune materials, velocities, light intensity, or controller speed.
 4. `studio_add_visual_event`: Wire GDevelop condition-action rules into entity EventSheets.
-5. `studio_search_and_install_asset`: Search CC0 3D models (Quaternius, Kenney, Poly Haven) and instantiate to scene.
-6. `studio_self_heal_error`: Run autonomous diagnosis and apply corrective restorative patches to corrupted scenes.
-7. `studio_build_and_deploy_apk`: Package and launch the hardware-accelerated WebView container on Android.
-8. `studio_run_artemis_qa`: Launch Google Artemis for autonomous gameplay validation and 60 FPS profiling.
+5. `studio_delete_entity`: Safely remove an entity by name and persist the change.
+6. `studio_search_and_install_asset`: Search CC0 3D models (Quaternius, Kenney, Poly Haven) and instantiate to scene.
+7. `studio_self_heal_error`: Run autonomous diagnosis and apply corrective restorative patches to corrupted scenes.
+8. `studio_build_and_deploy_apk`: Package and launch the hardware-accelerated WebView container on Android.
+9. `studio_run_artemis_qa`: Boot the active scene headless (real Rapier3D + EventSheet runtime), evaluate game-rule assertions, record real telemetry (sim FPS, frame time, GPU draw-call estimate, memory heap), and detect regressions against the `project_memory` baseline.
+
+### Headless QA Pipeline (`harness/agents/`)
+- `qa_scenario_runner.mjs`: Node runner that builds a scenario spec into a real `Scene`, initializes Rapier3D WASM physics, steps the `EngineContext` for N fixed-dt frames, and emits a JSON report (metrics + per-rule pass/fail).
+- `artemis_qa_runner.py`: Orchestrator — invokes the Node runner, compares metrics against the persisted baseline (FPS drop >20%, frame time rise >20%, draw calls rise >25%, heap rise >30% ⇒ `REGRESSED`), records benchmarks into `project_memory.sqlite`, and writes `harness/artemis_report.json`.
+- Scenario specs live in `harness/config/scenarios/`; the live MCP-controlled scene is `harness/scenes/active_scene.json`.
 
 ---
 
@@ -114,12 +123,24 @@ When testing frontend UI modifications:
    - `click` to test play mode buttons, tab switches, and entity selection.
    - `take_screenshot` to visually inspect rendered 3D meshes and gizmos.
 
-### 3. Autonomous Mobile QA with Google Artemis
-When testing mobile Android gameplay:
+### 3. Autonomous Game QA (real headless engine runs)
+Boot a scenario on the real engine runtime (Rapier3D + EventSheet + fixed-dt frame
+stepping) and get real telemetry plus rule evaluation:
 ```bash
-python3 harness/agents/artemis_qa_runner.py --goal "Navigate player character past obstacle course and verify 60 FPS"
+# Live MCP-controlled scene (harness/scenes/active_scene.json)
+python3 harness/agents/artemis_qa_runner.py --goal "Verify player physics and spin events"
+
+# A named scenario spec
+python3 harness/agents/artemis_qa_runner.py --goal "Mini arena QA" --scenario harness/config/scenarios/mini_arena.json --frames 600
 ```
-Adhere to the **Dynamic-First, Coordinate-Fallback** locator pattern for mobile touch controls documented in [`harness/config/artemis_game_rules.md`](file:///home/john/Projects/Android-Dev-Studio/harness/config/artemis_game_rules.md).
+- Verdicts: `SUCCEEDED` / `REGRESSED` (metrics worse than the same-scenario baseline:
+  FPS −20%, frame time +20%, draw calls +25%, heap +30%) / `FAILED` (rule assertions).
+- Reports: `harness/artemis_report.json`; benchmarks persist to `harness/project_memory.sqlite`
+  (baselines are only compared within the same scenario).
+- From the Studio UI: the Artemis dock calls `POST /api/qa/run` (Vite dev-server bridge in
+  `app/vite.config.ts`) — never simulated telemetry.
+- On-device touch automation still follows the **Dynamic-First, Coordinate-Fallback** locator
+  pattern documented in [`harness/config/artemis_game_rules.md`](file:///home/john/Projects/Android-Dev-Studio/harness/config/artemis_game_rules.md).
 
 ### 4. OpenCode Delegation for Token Savings
 To conserve subscription credits, Antigravity should delegate file generation, repetitive refactoring, and boilerplate implementation to OpenCode via `opencode-mcp` tools (`opencode_run`, `opencode_fire`, `opencode_review_changes`). Antigravity acts as the architect and reviewer.

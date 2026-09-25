@@ -462,19 +462,35 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
 
     try {
-      append(`🤖 Initializing Google Artemis autonomous agent on ${selectedDevice || 'emulator-5554'}...`);
-      await new Promise(r => setTimeout(r, 600));
-      append(`🎯 Task Dispatch: "${prompt}"`);
-      await new Promise(r => setTimeout(r, 700));
-      append('🔍 Artemis Perception: Capturing device screen & inspecting touch targets (Dynamic-First pattern)...');
-      await new Promise(r => setTimeout(r, 900));
-      append('🕹️ Artemis Action: Driving virtual joystick (x: 0.82, y: 0.54) to navigate player...');
-      await new Promise(r => setTimeout(r, 1000));
-      append('⚡ Artemis Performance Telemetry: Frame time 16.4ms (60.9 FPS) | VRAM: 142MB | CPU: 12%');
-      await new Promise(r => setTimeout(r, 800));
-      append('✅ Artemis Audit Checkpoint: No collision clipping detected, 0 unhandled exceptions in Logcat.');
-      await new Promise(r => setTimeout(r, 600));
-      append('🏆 Test Passed! Autonomous playtest completed with 100% success rate.');
+      append('🤖 Dispatching headless QA to the real engine runtime (Rapier3D + EventSheet)...');
+      const res = await fetch('/api/qa/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ goal: prompt })
+      });
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+        throw new Error(errBody.error || `HTTP ${res.status}`);
+      }
+      const report = await res.json();
+      append(`🎯 Task: "${report.goal || prompt}" — scenario: ${report.scenario || 'active_scene'}`);
+      for (const rule of report.rules || []) {
+        append(`${rule.pass ? '✅' : '❌'} [rule] ${rule.id}: ${rule.detail}`);
+      }
+      const m = report.metrics || {};
+      append(
+        `⚡ Telemetry (headless engine): ${m.simFpsEstimate} sim FPS | frame ${m.avgFrameTimeMs}ms (p95 ${m.p95FrameTimeMs}ms) | draw calls ${m.drawCallEstimate}/100 | heap ${m.memoryHeapMb}MB`
+      );
+      for (const finding of report.regressions || []) {
+        append(`⚠ Regression vs baseline: ${finding}`);
+      }
+      append(
+        `🏁 Verdict: ${report.verdict} — ${report.passed}/${report.total} rules passed (confidence ${(100 * (report.confidence || 0)).toFixed(0)}%)`
+      );
+      addLog(report.verdict === 'SUCCEEDED' ? 'info' : 'warn', 'Artemis', `QA verdict: ${report.verdict}`);
+    } catch (err: any) {
+      append(`⚠ QA bridge unavailable (${err.message}). The live runner needs the Vite dev server; offline equivalent: python3 harness/agents/artemis_qa_runner.py --goal "..."`);
+      addLog('warn', 'Artemis', `QA bridge error: ${err.message}`);
     } finally {
       setArtemisRunning(false);
     }

@@ -69,3 +69,8 @@ A phased roadmap tracking progress from foundational 3D engine systems to AAA-ti
 - [x] Configure `opencode-mcp` in `~/.gemini/config/mcp_config.json` with auto-serve on port 4096.
 - [x] Integrate Google Artemis autonomous mobile testing runner (`artemis_qa_runner.py`) for on-device 60 FPS profiling, telemetry reports, and crash reproduction.
 - [x] Expose 8 Studio MCP tools for external AI coding assistants (`mcp_server.py`).
+- [x] **Real headless QA pipeline:** `qa_scenario_runner.mjs` boots scenarios on the actual engine runtime (Rapier3D physics + EventSheet execution), measures real sim frame cost, GPU draw-call estimates (100-call mobile budget), and memory heap, and evaluates game-rule assertions against scenario specs.
+- [x] **Regression gate:** `artemis_qa_runner.py` compares each run against the `project_memory` benchmark baseline and emits `SUCCEEDED` / `REGRESSED` / `FAILED` verdicts; every benchmark is persisted with draw-call and heap columns.
+- [x] **Live scene store:** MCP mutations (spawn/modify/event/delete/import/terrain) persist to `harness/scenes/active_scene.json` and sync snapshots to `project_memory`; `studio_run_artemis_qa` boots that exact file.
+- [x] **Vite QA bridge:** `POST /api/qa/run` (`app/vite.config.ts`) spawns the real runner from the studio's Artemis dock (no more simulated telemetry in the UI).
+- [x] Added `studio_delete_entity` MCP tool (9 tools total).

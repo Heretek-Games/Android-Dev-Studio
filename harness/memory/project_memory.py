@@ -11,7 +11,10 @@ import os
 import time
 from typing import Any, Dict, List, Optional
 
-DEFAULT_DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "project_memory.sqlite")
+DEFAULT_DB_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "project_memory.sqlite"
+)
+
 
 class ProjectMemory:
     def __init__(self, db_path: str = DEFAULT_DB_PATH):
@@ -85,29 +88,51 @@ class ProjectMemory:
                     frame_time_ms REAL NOT NULL,
                     vram_mb REAL NOT NULL,
                     logcat_exceptions INTEGER NOT NULL DEFAULT 0,
+                    draw_calls INTEGER NOT NULL DEFAULT 0,
+                    heap_mb REAL NOT NULL DEFAULT 0,
+                    scenario TEXT NOT NULL DEFAULT '',
                     verdict TEXT NOT NULL,
                     created_at REAL NOT NULL
                 )
             """)
 
+            # Migration for databases created before draw_calls/heap_mb/scenario existed
+            for column_ddl in (
+                "ALTER TABLE qa_benchmarks ADD COLUMN draw_calls INTEGER NOT NULL DEFAULT 0",
+                "ALTER TABLE qa_benchmarks ADD COLUMN heap_mb REAL NOT NULL DEFAULT 0",
+                "ALTER TABLE qa_benchmarks ADD COLUMN scenario TEXT NOT NULL DEFAULT ''",
+            ):
+                try:
+                    conn.execute(column_ddl)
+                except sqlite3.OperationalError:
+                    pass  # column already exists
+
             conn.commit()
 
     # --- ADR Management ---
-    def record_adr(self, title: str, rationale: str, status: str = "accepted", tags: Optional[List[str]] = None) -> str:
+    def record_adr(
+        self,
+        title: str,
+        rationale: str,
+        status: str = "accepted",
+        tags: Optional[List[str]] = None,
+    ) -> str:
         adr_id = f"ADR-{int(time.time() * 1000)}"
         now = time.time()
         tags_str = json.dumps(tags or [])
         with self._get_connection() as conn:
             conn.execute(
                 "INSERT INTO adrs (id, title, rationale, status, tags, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (adr_id, title, rationale, status, tags_str, now, now)
+                (adr_id, title, rationale, status, tags_str, now, now),
             )
             conn.commit()
         return adr_id
 
     def list_adrs(self) -> List[Dict[str, Any]]:
         with self._get_connection() as conn:
-            rows = conn.execute("SELECT * FROM adrs ORDER BY created_at DESC").fetchall()
+            rows = conn.execute(
+                "SELECT * FROM adrs ORDER BY created_at DESC"
+            ).fetchall()
             return [
                 {
                     "id": r["id"],
@@ -115,32 +140,38 @@ class ProjectMemory:
                     "rationale": r["rationale"],
                     "status": r["status"],
                     "tags": json.loads(r["tags"]),
-                    "created_at": r["created_at"]
+                    "created_at": r["created_at"],
                 }
                 for r in rows
             ]
 
     # --- Scene Snapshots ---
-    def save_scene_snapshot(self, scene_id: str, scene_name: str, ast: Dict[str, Any]) -> int:
+    def save_scene_snapshot(
+        self, scene_id: str, scene_name: str, ast: Dict[str, Any]
+    ) -> int:
         ast_str = json.dumps(ast)
         entity_count = len(ast.get("gameObjects", []))
         now = time.time()
 
         with self._get_connection() as conn:
-            existing = conn.execute("SELECT version FROM scene_snapshots WHERE scene_id = ?", (scene_id,)).fetchone()
+            existing = conn.execute(
+                "SELECT version FROM scene_snapshots WHERE scene_id = ?", (scene_id,)
+            ).fetchone()
             version = (existing["version"] + 1) if existing else 1
 
             conn.execute(
                 """INSERT OR REPLACE INTO scene_snapshots (scene_id, scene_name, version, ast_json, entity_count, created_at)
                    VALUES (?, ?, ?, ?, ?, ?)""",
-                (scene_id, scene_name, version, ast_str, entity_count, now)
+                (scene_id, scene_name, version, ast_str, entity_count, now),
             )
             conn.commit()
         return version
 
     def get_scene_snapshot(self, scene_id: str) -> Optional[Dict[str, Any]]:
         with self._get_connection() as conn:
-            row = conn.execute("SELECT * FROM scene_snapshots WHERE scene_id = ?", (scene_id,)).fetchone()
+            row = conn.execute(
+                "SELECT * FROM scene_snapshots WHERE scene_id = ?", (scene_id,)
+            ).fetchone()
             if not row:
                 return None
             return {
@@ -149,11 +180,18 @@ class ProjectMemory:
                 "version": row["version"],
                 "ast": json.loads(row["ast_json"]),
                 "entity_count": row["entity_count"],
-                "created_at": row["created_at"]
+                "created_at": row["created_at"],
             }
 
     # --- Subagent Task DAG ---
-    def create_task(self, title: str, description: str, assigned_agent: str, dependencies: Optional[List[str]] = None, parent_id: Optional[str] = None) -> str:
+    def create_task(
+        self,
+        title: str,
+        description: str,
+        assigned_agent: str,
+        dependencies: Optional[List[str]] = None,
+        parent_id: Optional[str] = None,
+    ) -> str:
         task_id = f"task_{int(time.time() * 1000)}_{os.urandom(2).hex()}"
         now = time.time()
         deps_str = json.dumps(dependencies or [])
@@ -161,18 +199,20 @@ class ProjectMemory:
             conn.execute(
                 """INSERT INTO subagent_tasks (task_id, title, description, parent_task_id, assigned_agent, state, dependencies, created_at)
                    VALUES (?, ?, ?, ?, ?, 'pending', ?, ?)""",
-                (task_id, title, description, parent_id, assigned_agent, deps_str, now)
+                (task_id, title, description, parent_id, assigned_agent, deps_str, now),
             )
             conn.commit()
         return task_id
 
-    def update_task_state(self, task_id: str, state: str, result: Optional[Dict[str, Any]] = None):
+    def update_task_state(
+        self, task_id: str, state: str, result: Optional[Dict[str, Any]] = None
+    ):
         completed_at = time.time() if state in ("completed", "failed") else None
         res_str = json.dumps(result) if result else None
         with self._get_connection() as conn:
             conn.execute(
                 "UPDATE subagent_tasks SET state = ?, result_json = ?, completed_at = ? WHERE task_id = ?",
-                (state, res_str, completed_at, task_id)
+                (state, res_str, completed_at, task_id),
             )
             conn.commit()
 
@@ -194,27 +234,55 @@ class ProjectMemory:
                     "assigned_agent": r["assigned_agent"],
                     "state": r["state"],
                     "dependencies": json.loads(r["dependencies"]),
-                    "result": json.loads(r["result_json"]) if r["result_json"] else None,
+                    "result": json.loads(r["result_json"])
+                    if r["result_json"]
+                    else None,
                     "created_at": r["created_at"],
-                    "completed_at": r["completed_at"]
+                    "completed_at": r["completed_at"],
                 }
                 for r in rows
             ]
 
     # --- QA Benchmarks ---
-    def record_qa_benchmark(self, goal: str, device_serial: str, fps: float, frame_time_ms: float, vram_mb: float, exceptions: int, verdict: str):
+    def record_qa_benchmark(
+        self,
+        goal: str,
+        device_serial: str,
+        fps: float,
+        frame_time_ms: float,
+        vram_mb: float,
+        exceptions: int,
+        verdict: str,
+        draw_calls: int = 0,
+        heap_mb: float = 0.0,
+        scenario: str = "",
+    ):
         now = time.time()
         with self._get_connection() as conn:
             conn.execute(
-                """INSERT INTO qa_benchmarks (goal, device_serial, fps_average, frame_time_ms, vram_mb, logcat_exceptions, verdict, created_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-                (goal, device_serial, fps, frame_time_ms, vram_mb, exceptions, verdict, now)
+                """INSERT INTO qa_benchmarks (goal, device_serial, fps_average, frame_time_ms, vram_mb, logcat_exceptions, draw_calls, heap_mb, scenario, verdict, created_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    goal,
+                    device_serial,
+                    fps,
+                    frame_time_ms,
+                    vram_mb,
+                    exceptions,
+                    draw_calls,
+                    heap_mb,
+                    scenario,
+                    verdict,
+                    now,
+                ),
             )
             conn.commit()
 
     def get_latest_benchmarks(self, limit: int = 5) -> List[Dict[str, Any]]:
         with self._get_connection() as conn:
-            rows = conn.execute("SELECT * FROM qa_benchmarks ORDER BY created_at DESC LIMIT ?", (limit,)).fetchall()
+            rows = conn.execute(
+                "SELECT * FROM qa_benchmarks ORDER BY created_at DESC LIMIT ?", (limit,)
+            ).fetchall()
             return [
                 {
                     "id": r["id"],
@@ -224,8 +292,11 @@ class ProjectMemory:
                     "frame_time_ms": r["frame_time_ms"],
                     "vram_mb": r["vram_mb"],
                     "logcat_exceptions": r["logcat_exceptions"],
+                    "draw_calls": r["draw_calls"] if "draw_calls" in r.keys() else 0,
+                    "heap_mb": r["heap_mb"] if "heap_mb" in r.keys() else 0.0,
+                    "scenario": r["scenario"] if "scenario" in r.keys() else "",
                     "verdict": r["verdict"],
-                    "created_at": r["created_at"]
+                    "created_at": r["created_at"],
                 }
                 for r in rows
             ]
@@ -234,17 +305,22 @@ class ProjectMemory:
     def get_project_summary(self) -> Dict[str, Any]:
         with self._get_connection() as conn:
             adr_count = conn.execute("SELECT COUNT(*) FROM adrs").fetchone()[0]
-            scene_count = conn.execute("SELECT COUNT(*) FROM scene_snapshots").fetchone()[0]
-            task_pending = conn.execute("SELECT COUNT(*) FROM subagent_tasks WHERE state = 'pending'").fetchone()[0]
-            task_completed = conn.execute("SELECT COUNT(*) FROM subagent_tasks WHERE state = 'completed'").fetchone()[0]
-            latest_qa = conn.execute("SELECT * FROM qa_benchmarks ORDER BY created_at DESC LIMIT 1").fetchone()
+            scene_count = conn.execute(
+                "SELECT COUNT(*) FROM scene_snapshots"
+            ).fetchone()[0]
+            task_pending = conn.execute(
+                "SELECT COUNT(*) FROM subagent_tasks WHERE state = 'pending'"
+            ).fetchone()[0]
+            task_completed = conn.execute(
+                "SELECT COUNT(*) FROM subagent_tasks WHERE state = 'completed'"
+            ).fetchone()[0]
+            latest_qa = conn.execute(
+                "SELECT * FROM qa_benchmarks ORDER BY created_at DESC LIMIT 1"
+            ).fetchone()
 
             return {
                 "adr_count": adr_count,
                 "scene_snapshots": scene_count,
-                "tasks": {
-                    "pending": task_pending,
-                    "completed": task_completed
-                },
-                "latest_qa": dict(latest_qa) if latest_qa else None
+                "tasks": {"pending": task_pending, "completed": task_completed},
+                "latest_qa": dict(latest_qa) if latest_qa else None,
             }

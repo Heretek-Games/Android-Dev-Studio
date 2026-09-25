@@ -1,0 +1,38 @@
+{
+  "name": "MiniArena",
+  "goal": "Mini arena: player capsule navigates a pillar obstacle course and collects spinning gold coins at 60 FPS within the 100 draw call mobile budget",
+  "gameObjects": [
+    { "name": "Ground Arena", "shape": "box", "size": [24, 1, 24], "position": [0, -0.5, 0], "color": "#27272a", "physics": "fixed" },
+    { "name": "Player Capsule", "shape": "capsule", "size": [1, 1.5, 1], "position": [0, 1.5, 10], "color": "#3b82f6", "physics": "dynamic", "mass": 1.0, "controller": true },
+    { "name": "Pillar 1", "shape": "box", "size": [1.5, 6, 1.5], "position": [-6, 3, 4], "color": "#f472b6", "physics": "fixed" },
+    { "name": "Pillar 2", "shape": "box", "size": [1.5, 6, 1.5], "position": [-3, 3, 0], "color": "#fb923c", "physics": "fixed" },
+    { "name": "Pillar 3", "shape": "box", "size": [1.5, 6, 1.5], "position": [0, 3, 4], "color": "#a78bfa", "physics": "fixed" },
+    { "name": "Pillar 4", "shape": "box", "size": [1.5, 6, 1.5], "position": [3, 3, 0], "color": "#f472b6", "physics": "fixed" },
+    { "name": "Pillar 5", "shape": "box", "size": [1.5, 6, 1.5], "position": [6, 3, 4], "color": "#fb923c", "physics": "fixed" },
+    { "name": "Pillar 6", "shape": "box", "size": [1.5, 7, 1.5], "position": [0, 3.5, -6], "color": "#a78bfa", "physics": "fixed" },
+    { "name": "Gold Coin 1", "shape": "cylinder", "size": [0.8, 0.2, 0.8], "position": [-4, 1.2, 6], "color": "#fbbf24",
+      "events": [{ "name": "SpinCoin1", "conditions": [{ "type": "Timer", "params": { "name": "coin_1", "interval": 0.5 } }], "actions": [{ "type": "RotateY", "params": { "degrees": 20 } }] }] },
+    { "name": "Gold Coin 2", "shape": "cylinder", "size": [0.8, 0.2, 0.8], "position": [-2, 1.2, -2], "color": "#fbbf24",
+      "events": [{ "name": "SpinCoin2", "conditions": [{ "type": "Timer", "params": { "name": "coin_2", "interval": 0.5 } }], "actions": [{ "type": "RotateY", "params": { "degrees": 20 } }] }] },
+    { "name": "Gold Coin 3", "shape": "cylinder", "size": [0.8, 0.2, 0.8], "position": [2, 1.2, 6], "color": "#fbbf24",
+      "events": [{ "name": "SpinCoin3", "conditions": [{ "type": "Timer", "params": { "name": "coin_3", "interval": 0.5 } }], "actions": [{ "type": "RotateY", "params": { "degrees": 20 } }] }] },
+    { "name": "Gold Coin 4", "shape": "cylinder", "size": [0.8, 0.2, 0.8], "position": [4, 1.2, -2], "color": "#fbbf24",
+      "events": [{ "name": "SpinCoin4", "conditions": [{ "type": "Timer", "params": { "name": "coin_4", "interval": 0.5 } }], "actions": [{ "type": "RotateY", "params": { "degrees": 20 } }] }] },
+    { "name": "Gold Coin 5", "shape": "cylinder", "size": [0.8, 0.2, 0.8], "position": [0, 1.2, -8], "color": "#fbbf24",
+      "events": [{ "name": "SpinCoin5", "conditions": [{ "type": "Timer", "params": { "name": "coin_5", "interval": 0.5 } }], "actions": [{ "type": "RotateY", "params": { "degrees": 20 } }] }] },
+    { "kind": "light", "name": "Sunset Sun", "lightType": "directional", "color": "#ffb347", "intensity": 3.5, "position": [8, 12, 4] },
+    { "kind": "light", "name": "Ambient Fill", "lightType": "ambient", "color": "#4a3a6a", "intensity": 1.2, "position": [0, 10, 0] }
+  ],
+  "rules": [
+    { "id": "player_exists", "type": "entity_exists", "target": "Player Capsule" },
+    { "id": "player_has_physics", "type": "entity_component", "target": "Player Capsule", "component": "RigidBody3D" },
+    { "id": "player_has_mobile_controls", "type": "entity_component", "target": "Player Capsule", "component": "MobileController" },
+    { "id": "coin_count", "type": "object_count", "min": 15, "max": 40 },
+    { "id": "coins_have_spin_events", "type": "event_attached", "target": "Gold Coin 1", "action": "RotateY" },
+    { "id": "coins_actually_spin", "type": "transform_changes", "target": "Gold Coin 1", "field": "rotationY", "minDelta": 0.05 },
+    { "id": "player_stays_above_floor", "type": "transform_bounds", "target": "Player Capsule", "axis": "y", "min": -5 },
+    { "id": "finite_transforms", "type": "no_nan_transforms" },
+    { "id": "mobile_draw_budget", "type": "draw_call_budget", "max": 100 },
+    { "id": "sim_performance", "type": "fps_min", "min": 30 }
+  ]
+}
