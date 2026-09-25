@@ -26,14 +26,18 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ENGINE_DIST = path.resolve(__dirname, '../../engine/dist/index.js');
 
 function parseArgs(argv) {
-  const args = { frames: 600, dt: 1 / 60, scenario: null, out: null };
+  const args = { frames: 600, dt: 1 / 60, scenario: null, out: null, traverse: false, traverseGrid: 9, traverseMinCoverage: 0.8 };
   for (let i = 2; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--scenario') args.scenario = argv[++i];
     else if (a === '--frames') args.frames = parseInt(argv[++i], 10);
     else if (a === '--dt') args.dt = parseFloat(argv[++i]);
     else if (a === '--out') args.out = argv[++i];
+    else if (a === '--traverse') args.traverse = true;
+    else if (a === '--traverse-grid') args.traverseGrid = Math.max(2, parseInt(argv[++i], 10) || 9);
+    else if (a === '--traverse-min-coverage') args.traverseMinCoverage = parseFloat(argv[++i]);
   }
+  if (!(args.traverseMinCoverage >= 0 && args.traverseMinCoverage <= 1)) args.traverseMinCoverage = 0.8;
   return args;
 }
 
@@ -57,6 +61,102 @@ function estimateDrawCalls(scene, engine) {
   // Each instanced batch collapses N instances into a single draw call.
   draws += instancedBatches;
   return { drawCalls: draws, instancedBatches };
+}
+
+/**
+ * Traversal audit (Phase 2 world-generation ladder): grid raycast sweep over
+ * the scene's walkable bounds. Reports ground coverage plus geometric stuck
+ * hazards — void cells (no ground), steep cells (slope unwalkable), and step
+ * hazards (cliffs between adjacent cells). Pure geometry on the real Rapier
+ * collision hulls; no simulated walking, no fabricated movement.
+ */
+function sceneBounds(scene) {
+  let minX = Infinity, minZ = Infinity, maxX = -Infinity, maxZ = -Infinity;
+  let minY = Infinity, maxY = -Infinity;
+  let found = false;
+  for (const go of scene.gameObjects) {
+    const p = go.transform?.position;
+    if (!p || ![p.x, p.y, p.z].every(Number.isFinite)) continue;
+    let hx = 0.5, hz = 0.5, hy = 0.5;
+    for (const comp of go.components || []) {
+      const size = comp.size;
+      if (Array.isArray(size) && size.length >= 3 && size.every(Number.isFinite)) {
+        hx = Math.max(hx, Math.abs(size[0]) / 2);
+        hy = Math.max(hy, Math.abs(size[1]) / 2);
+        hz = Math.max(hz, Math.abs(size[2]) / 2);
+      }
+    }
+    minX = Math.min(minX, p.x - hx); maxX = Math.max(maxX, p.x + hx);
+    minZ = Math.min(minZ, p.z - hz); maxZ = Math.max(maxZ, p.z + hz);
+    minY = Math.min(minY, p.y - hy); maxY = Math.max(maxY, p.y + hy);
+    found = true;
+  }
+  if (!found) {
+    minX = minZ = -20; maxX = maxZ = 20; minY = -20; maxY = 20;
+  }
+  return { minX, minZ, maxX, maxZ, minY, maxY };
+}
+
+function runTraversalAudit(scene, physicsWorld, opts = {}) {
+  const grid = Math.max(2, opts.grid || 9);
+  const steepNormalY = opts.steepNormalY ?? 0.7;
+  const maxStep = opts.maxStep ?? 1.2;
+  const bounds = sceneBounds(scene);
+  const topY = bounds.maxY + 20;
+  const bottomY = bounds.minY - 20;
+  const maxToi = topY - bottomY;
+  const cells = [];
+  for (let ix = 0; ix < grid; ix++) {
+    for (let iz = 0; iz < grid; iz++) {
+      const x = bounds.minX + ((ix + 0.5) / grid) * (bounds.maxX - bounds.minX);
+      const z = bounds.minZ + ((iz + 0.5) / grid) * (bounds.maxZ - bounds.minZ);
+      const cast = physicsWorld.castRayAndGetNormal(
+        { x, y: topY, z }, { x: 0, y: -1, z: 0 }, maxToi
+      );
+      cells.push({
+        ix, iz,
+        x: Number(x.toFixed(3)), z: Number(z.toFixed(3)),
+        hit: cast.hit,
+        groundY: cast.hit ? Number((topY - cast.toi).toFixed(3)) : null,
+        normalY: cast.hit ? Number(cast.normal.y.toFixed(3)) : null,
+      });
+    }
+  }
+  const at = (ix, iz) => (ix >= 0 && iz >= 0 && ix < grid && iz < grid ? cells[ix * grid + iz] : null);
+  const holes = [];
+  const steep = [];
+  for (const cell of cells) {
+    if (!cell.hit) holes.push({ x: cell.x, z: cell.z });
+    else if (cell.normalY < steepNormalY) steep.push({ x: cell.x, z: cell.z, normalY: cell.normalY });
+  }
+  const stepHazards = [];
+  for (const cell of cells) {
+    if (!cell.hit) continue;
+    for (const [dx, dz] of [[1, 0], [0, 1]]) {
+      const neighbor = at(cell.ix + dx, cell.iz + dz);
+      if (neighbor && neighbor.hit && Math.abs(neighbor.groundY - cell.groundY) > maxStep) {
+        stepHazards.push({
+          from: { x: cell.x, z: cell.z },
+          to: { x: neighbor.x, z: neighbor.z },
+          drop: Number(Math.abs(neighbor.groundY - cell.groundY).toFixed(3)),
+        });
+      }
+    }
+  }
+  const hits = cells.filter(c => c.hit).length;
+  return {
+    grid,
+    cells: cells.length,
+    hits,
+    coverage: Number((hits / cells.length).toFixed(4)),
+    holes,
+    steep,
+    stepHazards,
+    bounds: {
+      minX: Number(bounds.minX.toFixed(2)), maxX: Number(bounds.maxX.toFixed(2)),
+      minZ: Number(bounds.minZ.toFixed(2)), maxZ: Number(bounds.maxZ.toFixed(2)),
+    },
+  };
 }
 
 function buildScene(spec, engine) {
@@ -400,6 +500,18 @@ function evaluateRules(spec, ctxData) {
         detail = `simFpsEstimate=${metrics.simFpsEstimate.toFixed(1)} (min ${rule.min})`;
         break;
       }
+      case 'traversal_coverage_min': {
+        const traversal = metrics.traversal;
+        if (!traversal) {
+          pass = false;
+          detail = 'traversal audit did not run (add spec.traversal or --traverse)';
+          break;
+        }
+        const min = rule.min ?? 0.8;
+        pass = traversal.coverage >= min;
+        detail = `coverage=${traversal.coverage} (min ${min}), holes=${traversal.holes.length}, steep=${traversal.steep.length}, stepHazards=${traversal.stepHazards.length}`;
+        break;
+      }
       case 'game_phase': {
         if (!game) { pass = false; detail = 'no game config in scenario'; break; }
         const phase = game.runtime.flow.getPhase();
@@ -473,7 +585,7 @@ function evaluateRules(spec, ctxData) {
 async function main() {
   const args = parseArgs(process.argv);
   if (!args.scenario) {
-    console.error('usage: qa_scenario_runner.mjs --scenario <file.json> [--frames N] [--dt S] [--out file]');
+    console.error('usage: qa_scenario_runner.mjs --scenario <file.json> [--frames N] [--dt S] [--out file] [--traverse [--traverse-grid N] [--traverse-min-coverage 0..1]]');
     process.exit(2);
   }
 
@@ -554,6 +666,26 @@ async function main() {
     physicsBodyCount,
     eventCount
   };
+
+  const traversalCfg = spec.traversal || (args.traverse ? {} : null);
+  if (traversalCfg) {
+    const audit = runTraversalAudit(scene, physicsWorld, {
+      grid: traversalCfg.grid || args.traverseGrid,
+      steepNormalY: traversalCfg.steepNormalY,
+      maxStep: traversalCfg.maxStep,
+    });
+    metrics.traversal = audit;
+    if (args.traverse) {
+      console.error(
+        `[traverse] grid=${audit.grid} coverage=${audit.coverage} ` +
+        `holes=${audit.holes.length} steep=${audit.steep.length} ` +
+        `stepHazards=${audit.stepHazards.length}`
+      );
+      for (const hole of audit.holes.slice(0, 10)) {
+        console.error(`[traverse] void at (${hole.x}, ${hole.z})`);
+      }
+    }
+  }
 
   const ruleResults = evaluateRules(spec, { scene, samples, firstSamples, metrics, dt: args.dt, game });
   const passed = ruleResults.filter(r => r.pass).length;
