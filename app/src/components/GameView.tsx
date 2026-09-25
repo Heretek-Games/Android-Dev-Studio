@@ -133,13 +133,14 @@ export const GameView: React.FC = () => {
       const enemySpec = gameConfig.enemy ?? {};
       const enemyHealth = enemySpec.health ?? { maxHealth: 50, destroyOnDeath: true };
 
-      // City mode starts with an empty settlement: the player founds the town.
-      // (The QA scenario ships scripted placements so the headless run is
-      // deterministic; the playable run lets the player place every building.)
+      // City mode starts with an empty settlement on a wide founding grid: the
+      // player founds the town. (The QA scenario ships its own small gridSize plus
+      // scripted placements so the headless run is fast and deterministic; the
+      // playable run shares only the economy targets and starting funds.)
       const settlementSpec = gameConfig.settlement ?? {};
       const settlement = isCity
         ? new Settlement(
-            settlementSpec.gridSize ?? 8,
+            24,
             settlementSpec.targetPopulation ?? 6,
             settlementSpec.startingGold ?? 500,
             settlementSpec.startingFood ?? 20
@@ -338,12 +339,18 @@ export const GameView: React.FC = () => {
         market: { color: '#38bdf8', size: [1.4, 1.6, 1.4], y: 0.8 }
       };
 
-      const gridSize = settlementSpec.gridSize ?? 8;
+      const gridSize = 24;
+      const cityBridge = (window as unknown as { AndroidBridge?: { log?: (tag: string, message: string) => void } })
+        .AndroidBridge;
       const worldOf = (gx: number, gz: number): [number, number] => [gx - gridSize / 2 + 0.5, gz - gridSize / 2 + 0.5];
 
       const placeBuildingAt = (gx: number, gz: number): void => {
         if (!settlement || runtime!.flow.getPhase() !== 'playing') return;
         const result = settlement.place(selectedBuilding, gx, gz);
+        cityBridge?.log?.(
+          'CityPlace',
+          JSON.stringify({ type: selectedBuilding, gx, gz, ok: result.id !== null, reason: result.reason ?? null })
+        );
         if (result.id === null) {
           showCityMessage(result.reason ?? 'Cannot build here.');
           return;
@@ -482,7 +489,12 @@ export const GameView: React.FC = () => {
           scene.findByName('Settlement Ground')?.getComponent(MeshRenderer)?.threeMesh ?? null;
         const raycaster = new THREE.Raycaster();
         renderer!.domElement.addEventListener('pointerdown', (event: PointerEvent) => {
-          if (!settlement || runtime!.flow.getPhase() !== 'playing' || !groundMesh) return;
+          const phase = runtime!.flow.getPhase();
+          if (!settlement || phase !== 'playing' || !groundMesh) {
+            showCityMessage(`tap ignored (phase=${phase}, ground=${groundMesh ? 'ok' : 'missing'})`);
+            cityBridge?.log?.('CityTap', JSON.stringify({ phase, ground: !!groundMesh }));
+            return;
+          }
           const rect = renderer!.domElement.getBoundingClientRect();
           const ndc = new THREE.Vector2(
             ((event.clientX - rect.left) / rect.width) * 2 - 1,
@@ -490,7 +502,14 @@ export const GameView: React.FC = () => {
           );
           raycaster.setFromCamera(ndc, camera);
           const hits = raycaster.intersectObject(groundMesh, false);
-          if (!hits.length) return;
+          cityBridge?.log?.(
+            'CityTap',
+            JSON.stringify({ ndc: [Number(ndc.x.toFixed(2)), Number(ndc.y.toFixed(2))], hits: hits.length })
+          );
+          if (!hits.length) {
+            showCityMessage('No ground under that tap — aim for the green plane.');
+            return;
+          }
           const point = hits[0].point;
           placeBuildingAt(Math.floor(point.x + gridSize / 2), Math.floor(point.z + gridSize / 2));
         });
