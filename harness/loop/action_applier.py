@@ -43,7 +43,26 @@ MODIFY_FIELDS = (
     "lightType",
     "intensity",
     "controller",
+    "vehicle",
 )
+
+
+def _validate_vehicle(value: Any) -> Optional[Dict[str, Any]]:
+    """Vehicle configs pass straight to the QA runner's VehicleController.
+
+    Returns the normalized config, or None when malformed. Numeric drive
+    inputs are validated when present; unknown keys are rejected so typos
+    surface as repair input instead of silent no-ops.
+    """
+    if not isinstance(value, dict):
+        return None
+    allowed = {"throttle", "steering", "brake", "engineForce", "maxSteerAngle"}
+    normalized: Dict[str, Any] = {}
+    for key, item in value.items():
+        if key not in allowed or not _is_finite_number(item):
+            return None
+        normalized[key] = float(item)
+    return normalized
 
 
 @dataclass
@@ -190,6 +209,19 @@ def _apply_spawn(
     if action.get("controller") is True:
         # Maps to a MobileController component in the engine scene adapter.
         obj["controller"] = True
+    if action.get("vehicle") is not None:
+        # Maps to a VehicleController in the QA runner (objSpec.vehicle).
+        vehicle = _validate_vehicle(action.get("vehicle"))
+        if vehicle is None:
+            return _outcome(
+                result,
+                index,
+                "spawn",
+                "invalid",
+                "spawn 'vehicle' must be an object of finite numbers "
+                "(allowed: throttle, steering, brake, engineForce, maxSteerAngle)",
+            )
+        obj["vehicle"] = vehicle
 
     scene.setdefault("gameObjects", []).append(obj)
     _outcome(
@@ -364,6 +396,18 @@ def _apply_modify(
                     f"controller must be true/false (got {value!r})",
                 )
             obj["controller"] = value
+        elif field_name == "vehicle":
+            vehicle = _validate_vehicle(value)
+            if vehicle is None:
+                return _outcome(
+                    result,
+                    index,
+                    "modify",
+                    "invalid",
+                    "modify 'vehicle' must be an object of finite numbers "
+                    "(allowed: throttle, steering, brake, engineForce, maxSteerAngle)",
+                )
+            obj["vehicle"] = vehicle
         changed.append(field_name)
 
     if not changed:

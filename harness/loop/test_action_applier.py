@@ -50,13 +50,23 @@ class SpawnTests(unittest.TestCase):
     def test_spawn_controller_flag_maps_to_mobile_controller(self):
         scene, result = apply_actions(
             base_scene(),
-            [{"type": "spawn", "name": "Player Capsule", "shape": "capsule", "physics": "dynamic", "controller": True}],
+            [
+                {
+                    "type": "spawn",
+                    "name": "Player Capsule",
+                    "shape": "capsule",
+                    "physics": "dynamic",
+                    "controller": True,
+                }
+            ],
         )
         self.assertEqual(result.applied, 1)
         self.assertIs(scene["gameObjects"][1]["controller"], True)
 
     def test_modify_controller_flag(self):
-        scene, result = apply_actions(base_scene(), [{"type": "modify", "target": "Ground", "controller": True}])
+        scene, result = apply_actions(
+            base_scene(), [{"type": "modify", "target": "Ground", "controller": True}]
+        )
         self.assertEqual(result.applied, 1)
         self.assertIs(scene["gameObjects"][0]["controller"], True)
 
@@ -124,6 +134,66 @@ class LightTests(unittest.TestCase):
             base_scene(), [{"type": "light", "name": "L", "lightType": "laser"}]
         )
         self.assertEqual(result.invalid, 1)
+
+
+class VehicleTests(unittest.TestCase):
+    def test_spawn_vehicle_config_applies(self):
+        scene, result = apply_actions(
+            base_scene(),
+            [
+                {
+                    "type": "spawn",
+                    "name": "Player Car",
+                    "shape": "box",
+                    "physics": "dynamic",
+                    "vehicle": {"throttle": 1.0, "steering": 0.0},
+                }
+            ],
+        )
+        self.assertEqual(result.applied, 1)
+        self.assertEqual(
+            scene["gameObjects"][1]["vehicle"], {"throttle": 1.0, "steering": 0.0}
+        )
+
+    def test_spawn_vehicle_rejects_non_dict(self):
+        _, result = apply_actions(
+            base_scene(), [{"type": "spawn", "name": "Car", "vehicle": "fast"}]
+        )
+        self.assertEqual(result.invalid, 1)
+
+    def test_spawn_vehicle_rejects_bad_keys_and_values(self):
+        _, result = apply_actions(
+            base_scene(), [{"type": "spawn", "name": "Car", "vehicle": {"warp": 9}}]
+        )
+        self.assertEqual(result.invalid, 1)
+        _, result = apply_actions(
+            base_scene(),
+            [{"type": "spawn", "name": "Car", "vehicle": {"throttle": "full"}}],
+        )
+        self.assertEqual(result.invalid, 1)
+
+    def test_modify_vehicle_replaces_config(self):
+        scene, result = apply_actions(
+            base_scene(),
+            [
+                {"type": "spawn", "name": "Car", "physics": "dynamic"},
+                {"type": "modify", "target": "Car", "vehicle": {"throttle": 0.5}},
+            ],
+        )
+        self.assertEqual(result.applied, 2)
+        self.assertEqual(scene["gameObjects"][1]["vehicle"], {"throttle": 0.5})
+
+    def test_modify_vehicle_rejects_malformed(self):
+        scene, result = apply_actions(
+            base_scene(),
+            [
+                {"type": "spawn", "name": "Car", "physics": "dynamic"},
+                {"type": "modify", "target": "Car", "vehicle": [1, 2]},
+            ],
+        )
+        self.assertEqual(result.applied, 1)
+        self.assertEqual(result.invalid, 1)
+        self.assertNotIn("vehicle", scene["gameObjects"][1])
 
 
 class ModifyTests(unittest.TestCase):

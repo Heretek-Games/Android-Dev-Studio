@@ -53,11 +53,13 @@ def format_rules(rules: List[Dict[str, Any]]) -> str:
 
 ACTION_SCHEMA = """Action vocabulary (a JSON array named "actions"):
   - {"type": "spawn", "name": "...", "shape": "box"|"sphere"|"cylinder"|"capsule"|"plane"|"torus",
-     "size": [x,y,z], "position": [x,y,z], "color": "#rrggbb", "physics": "dynamic"|"fixed"|"none", "mass": 1.0}
+     "size": [x,y,z], "position": [x,y,z], "color": "#rrggbb", "physics": "dynamic"|"fixed"|"none", "mass": 1.0,
+     "vehicle": {"throttle": 1.0, "steering": 0.0} (optional: adds a VehicleController)}
   - {"type": "light", "name": "...", "lightType": "directional"|"point"|"ambient",
      "color": "#rrggbb", "intensity": 2.0, "position": [x,y,z]}
   - {"type": "modify", "target": "...", "position": [x,y,z], "color": "#rrggbb",
-     "size": [x,y,z], "physics": "...", "mass": 1.0, "lightType": "...", "intensity": 1.0}
+     "size": [x,y,z], "physics": "...", "mass": 1.0, "lightType": "...", "intensity": 1.0,
+     "vehicle": {"throttle": 1.0} (optional: adds/replaces the VehicleController)}
   - {"type": "delete", "target": "..."}
   - {"type": "event", "target": "...", "event_name": "...",
      "condition": "OnStart"|"EveryFrame"|"OnTouchTap"|"OnButtonPress"|"Timer"|"TagNear",
@@ -68,6 +70,7 @@ ACTION_SCHEMA = """Action vocabulary (a JSON array named "actions"):
 How acceptance rules map onto the schema (the QA runner checks these exact components):
   - "RigidBody3D"/"Collider3D" component -> the spawn has "physics": "dynamic" (or "fixed")
   - "MobileController" component -> the spawn has "controller": true
+  - "VehicleController" component -> the spawn (or a "modify") has "vehicle": {"throttle": 1.0}
   - "EventSheet" / event_attached rules -> emit an "event" action targeting that object
   - "LightComponent" -> emit a "light" action
   - object_count rules count every entry in gameObjects (lights included)
