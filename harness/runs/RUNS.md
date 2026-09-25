@@ -306,3 +306,38 @@ registered in the `mobile_qa` preset and the header Panels menu.
 **End-to-end proof:** clicking the Game button *inside the studio's mirror* injected
 `Tap injected at (1045, 51) on emulator-5554` and the device opened the arena game
 (device screenshot confirms the arena menu).
+
+---
+
+## Run Block 6 — 2026-09-25, Tier 2 Hardening & Scale Characterization (issues #6, #3)
+
+### Renderer hardening (verified on-device)
+
+- **Per-frame-in-flight sync:** each in-flight slot owns its `imageAvailable`/`renderFinished`
+  semaphores + fence (kMaxFramesInFlight=2). Canonical-scene run: frames advance with
+  `acquire=0 submit=0 present=0`, `frame 0/300/600 presented`, frame readback still writes a
+  valid PPM.
+- **Swapchain recreation** on `OUT_OF_DATE`/`SUBOPTIMAL` (acquire + present) — rebuilds
+  swapchain/command buffers/fences/semaphores/capture buffer; scene buffers survive.
+- **Validation layers:** `VK_LAYER_KHRONOS_validation` is enabled automatically in debug builds
+  when present (verified in the Debug NDK build). The emulator image has no layer, so the
+  validation soak remains open in issue #6 (layer must be packaged in the APK).
+- **Asset freshness fix:** the Tier 2 container now always refreshes extracted assets — a stale
+  `scene.native` silently rendered the previous build (found while validating the stress scene).
+
+### Scale characterization (10k-instance export; emulator limit found)
+
+| Metric | Value |
+|--------|-------|
+| Exporter, 10,000 batched instances | 1 indirect draw · 66 total draws (budget 100) · within budget |
+| Host-side planning/packing coverage | 50k-scale dispatch planning + indirect packing (61 native host checks) |
+| Emulator, 3 instances | stable for hours (multiple sessions) |
+| Emulator, 500 instances | **emulator host process dies within ~60s** (gfxstream/lavapipe) |
+| Emulator, 2,000+ instances | **emulator host process dies within seconds** |
+
+The emulator's software Vulkan path cannot sustain multi-hundred-instance workloads; the app
+process and the emulator host both die, with no validation output (no layer) and no host OOM.
+This is an environment limitation rather than renderer logic: the CPU reference planning and
+GPU indirect packing remain host-verified at 50k, and the on-device path is correct at small
+scale. Multi-thousand-instance on-device validation therefore moves to physical hardware
+(issue #1); issue #3 stays open with this characterization.
