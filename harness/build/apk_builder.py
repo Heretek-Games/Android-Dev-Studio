@@ -25,9 +25,12 @@ VULKAN_BUILD_DIR = PROJECT_ROOT / "harness" / "build" / "tier2-build"
 
 
 class AndroidApkBuilder:
-    def __init__(self, verbose: bool = False, scene_path: Optional[str] = None):
+    def __init__(
+        self, verbose: bool = False, scene_path: Optional[str] = None, quadtree: bool = True
+    ):
         self.verbose = verbose
         self.scene_path = scene_path
+        self.quadtree = quadtree
 
     def log(self, msg: str):
         # MCP stdio framing owns stdout; all human-readable logs go to stderr.
@@ -115,7 +118,9 @@ class AndroidApkBuilder:
         shaders and cross-compiles libheretek_native.so with the NDK.
         """
         if tier == 2:
-            return self.build_tier2(dry_run=dry_run, scene_path=self.scene_path)
+            return self.build_tier2(
+                dry_run=dry_run, scene_path=self.scene_path, quadtree=self.quadtree
+            )
 
         result = {
             "success": False,
@@ -312,7 +317,9 @@ class AndroidApkBuilder:
                 return candidate
         return None
 
-    def build_tier2(self, dry_run: bool = False, scene_path: Optional[str] = None) -> Dict[str, Any]:
+    def build_tier2(
+        self, dry_run: bool = False, scene_path: Optional[str] = None, quadtree: bool = True
+    ) -> Dict[str, Any]:
         """
         Tier 2 native Vulkan container pipeline:
         1. Export the canonical scene (+ focus-driven quadtree from scene.quadtree)
@@ -348,13 +355,9 @@ class AndroidApkBuilder:
             str(source_scene),
             "--out",
             str(VULKAN_ASSETS_DIR),
-            "--quadtree",
-            "--lod-depth",
-            str(depth),
-            "--lod-focus",
-            str(focus[0]),
-            str(focus[1]),
         ]
+        if quadtree:
+            export_cmd += ["--quadtree", "--lod-depth", str(depth), "--lod-focus", str(focus[0]), str(focus[1])]
         self.log(
             f"Exporting scene to {VULKAN_ASSETS_DIR} (quadtree depth {depth}, focus {focus})..."
         )
@@ -508,10 +511,17 @@ def main():
         default=None,
         help="Scene JSON to export for Tier 2 (default: the canonical active scene)",
     )
+    parser.add_argument(
+        "--no-quadtree",
+        action="store_true",
+        help="Skip the terrain quadtree export (demo scenes without terrain occlusion)",
+    )
     parser.add_argument("--verbose", action="store_true", help="Verbose output")
     args = parser.parse_args()
 
-    builder = AndroidApkBuilder(verbose=args.verbose, scene_path=args.scene)
+    builder = AndroidApkBuilder(
+        verbose=args.verbose, scene_path=args.scene, quadtree=not args.no_quadtree
+    )
     res = builder.build_and_deploy(
         device_serial=args.device,
         dry_run=args.dry_run,

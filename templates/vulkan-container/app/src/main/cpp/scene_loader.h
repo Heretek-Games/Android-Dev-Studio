@@ -27,7 +27,12 @@ struct InstanceRecord {
   std::string batch;
   float px = 0, py = 0, pz = 0;
   float rotY = 0;
+  /** Foliage instances (batch key "foliage") get wind deformation on the GPU. */
+  bool foliage = false;
 };
+
+/** Batch key that marks instances for the wind-animated foliage pipeline. */
+constexpr const char* kFoliageBatch = "foliage";
 
 struct LightRecord {
   std::string name;

@@ -21,11 +21,21 @@ REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 
 
 def build_stress_scene(
-    count: int, name: str = "Stress Arena", spacing: float = 2.0
+    count: int = 0,
+    name: str = "Stress Arena",
+    spacing: float = 2.0,
+    foliage: int = 0,
+    foliage_radius: float = 10.0,
 ) -> Dict[str, Any]:
-    """Grid of `count` batched boxes + ground + light (deterministic layout)."""
-    if count < 1:
-        raise ValueError("count must be >= 1")
+    """Grid of `count` batched boxes + ground + light + optional foliage ring.
+
+    Foliage instances use the `foliage` batch key, which the Tier 2 renderer treats
+    as the wind-animated category (its own pipeline + compaction range).
+    """
+    if count < 0 or foliage < 0:
+        raise ValueError("count and foliage must be >= 0")
+    if count == 0 and foliage == 0:
+        raise ValueError("scene needs at least one instance (count or foliage)")
     side = max(1, math.ceil(math.sqrt(count)))
     objects = [
         {
@@ -56,6 +66,27 @@ def build_stress_scene(
                 "batch": "stress_unit",
             }
         )
+    # Foliage ring: windswept blades around the arena (category 1 in the renderer).
+    for index in range(foliage):
+        ring = 1.0 + (index % 7) * 0.35
+        angle = index * 0.61803398875 * 2.0 * math.pi
+        radius = (foliage_radius * ring) / 7.0 + (index % 5) * 0.8
+        objects.append(
+            {
+                "name": f"Blade {index}",
+                "shape": "box",
+                "size": [0.6, 3.0, 0.6],
+                "position": [
+                    round(math.cos(angle) * radius, 3),
+                    1.5,  # base at ground level for the 3-unit blade
+                    round(math.sin(angle) * radius, 3),
+                ],
+                "color": "#4d8b3a",
+                "physics": "none",
+                "batched": True,
+                "batch": "foliage",
+            }
+        )
     objects.append(
         {
             "name": "Stress Sun",
@@ -81,12 +112,15 @@ def main() -> int:
     )
     parser.add_argument("--count", type=int, default=10000)
     parser.add_argument("--spacing", type=float, default=2.0)
+    parser.add_argument("--foliage", type=int, default=0, help="Wind-animated foliage blades to add")
+    parser.add_argument("--foliage-radius", type=float, default=10.0)
     parser.add_argument(
         "--out", default=str(REPO_ROOT / "harness" / "scenes" / "stress_scene.json")
     )
     args = parser.parse_args()
 
-    scene = build_stress_scene(args.count, spacing=args.spacing)
+    scene = build_stress_scene(args.count, spacing=args.spacing, foliage=args.foliage,
+                               foliage_radius=args.foliage_radius)
     out_path = Path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(json.dumps(scene, indent=2), encoding="utf-8")

@@ -5,6 +5,7 @@
 #include <android/log.h>
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <cstdio>
 #include <cstring>
@@ -23,7 +24,9 @@ namespace {
 
 constexpr uint32_t kWorkgroupSize = 64;
 constexpr uint32_t kIndicesPerCube = 36;
-constexpr uint32_t kMaxFramesInFlight = 3;
+constexpr uint32_t kMaxInstances = 65536;
+/** Visible-index slot base for the foliage (category 1) compaction range. */
+constexpr uint32_t kFoliageVisibleBase = kMaxInstances;
 
 struct CullPushConstants {
   float planes[6][4];
@@ -31,10 +34,14 @@ struct CullPushConstants {
   uint32_t indicesPerInstance;
   uint32_t firstIndex;
   uint32_t firstVertex;
+  uint32_t visibleBase0;  // visible-buffer slot base for category 0 (scene)
+  uint32_t visibleBase1;  // visible-buffer slot base for category 1 (foliage)
 };
 
 struct GraphicsPushConstants {
   float viewProj[16];
+  float time;              // seconds; drives foliage wind
+  uint32_t foliageVisibleBase;
 };
 
 /** Unit cube (24 vertices: position + normal), scaled per-instance in the shader. */
@@ -252,8 +259,8 @@ bool VulkanRenderer::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, V
 
 bool VulkanRenderer::createBuffers() {
   const VkDeviceSize instanceBytes = sizeof(float) * 8 * 65536;  // 65k instances
-  const VkDeviceSize visibleBytes = sizeof(uint32_t) * 65536;
-  const VkDeviceSize indirectBytes = sizeof(IndirectDrawCommand);
+  const VkDeviceSize visibleBytes = sizeof(uint32_t) * kMaxInstances * 2;
+  const VkDeviceSize indirectBytes = sizeof(IndirectDrawCommand) * 2;
 
   if (!createBuffer(instanceBytes,
                     VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
@@ -573,6 +580,36 @@ bool VulkanRenderer::createPipelines() {
   vkDestroyShaderModule(device_, vertexModule, nullptr);
   vkDestroyShaderModule(device_, fragmentModule, nullptr);
 
+  // ---- Foliage pipeline (scene descriptors; wind in the vertex stage) -----
+  {
+    VkShaderModule foliageVertexModule = loadShader(shaderDir_ + "/foliage.vert.spv");
+    VkShaderModule foliageFragmentModule = loadShader(shaderDir_ + "/scene.frag.spv");
+    if (foliageVertexModule != VK_NULL_HANDLE && foliageFragmentModule != VK_NULL_HANDLE) {
+      VkPipelineShaderStageCreateInfo foliageStages[2]{};
+      foliageStages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+      foliageStages[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
+      foliageStages[0].module = foliageVertexModule;
+      foliageStages[0].pName = "main";
+      foliageStages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+      foliageStages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+      foliageStages[1].module = foliageFragmentModule;
+      foliageStages[1].pName = "main";
+
+      VkGraphicsPipelineCreateInfo foliageInfo = graphicsInfo;
+      foliageInfo.pStages = foliageStages;
+      foliageInfo.layout = graphicsPipelineLayout_;
+      if (vkCreateGraphicsPipelines(device_, VK_NULL_HANDLE, 1, &foliageInfo, nullptr,
+                                    &foliagePipeline_) != VK_SUCCESS) {
+        lastError_ = "foliage pipeline creation failed";
+        return false;
+      }
+      vkDestroyShaderModule(device_, foliageVertexModule, nullptr);
+      vkDestroyShaderModule(device_, foliageFragmentModule, nullptr);
+    } else {
+      LOGI("foliage shader missing — foliage drawn with the scene pipeline");
+    }
+  }
+
   // ---- Terrain pipeline (no descriptor sets; push-constant viewProj) ------
   VkShaderModule terrainVertexModule = loadShader(shaderDir_ + "/terrain.vert.spv");
   VkShaderModule terrainFragmentModule = loadShader(shaderDir_ + "/terrain.frag.spv");
@@ -690,8 +727,9 @@ void VulkanRenderer::uploadScene(const NativeScene& scene) {
   if (instanceMapped_ == nullptr) return;
 
   float* instances = static_cast<float*>(instanceMapped_);
-  auto writeInstance = [&](float x, float y, float z, float radius, float r, float g, float b) {
-    if (instanceCount_ >= 65536) return;
+  auto writeInstance = [&](float x, float y, float z, float radius, float r, float g, float b,
+                           float category) {
+    if (instanceCount_ >= kMaxInstances) return;
     float* slot = instances + static_cast<size_t>(instanceCount_) * 8;
     slot[0] = x;
     slot[1] = y;
@@ -700,27 +738,35 @@ void VulkanRenderer::uploadScene(const NativeScene& scene) {
     slot[4] = r;
     slot[5] = g;
     slot[6] = b;
-    slot[7] = 1.0f;
+    slot[7] = category;  // cull.comp reads the category from color.a
     instanceCount_++;
   };
 
   for (const auto& mesh : scene.meshes) {
     const float radius = 0.5f * std::max(mesh.sx, std::max(mesh.sy, mesh.sz));
-    writeInstance(mesh.px, mesh.py, mesh.pz, radius, mesh.r, mesh.g, mesh.b);
+    writeInstance(mesh.px, mesh.py, mesh.pz, radius, mesh.r, mesh.g, mesh.b, 0.0f);
   }
+  foliageCount_ = 0;
   for (const auto& inst : scene.instances) {
-    writeInstance(inst.px, inst.py, inst.pz, 0.3f, 0.45f, 0.65f, 0.35f);
+    if (inst.foliage) {
+      writeInstance(inst.px, inst.py, inst.pz, 1.5f, 0.30f, 0.52f, 0.24f, 1.0f);
+      foliageCount_++;
+    } else {
+      writeInstance(inst.px, inst.py, inst.pz, 0.3f, 0.45f, 0.65f, 0.35f, 0.0f);
+    }
   }
 
-  // One indirect command covers every instance (the compute pass rewrites the
-  // instanceCount; the CPU-side reference planner is exercised in host tests).
+  // Two indirect commands: [0] the static scene range, [1] the wind-animated
+  // foliage range. The compute pass rewrites each instanceCount during culling.
   auto* commands = static_cast<IndirectDrawCommand*>(indirectMapped_);
-  commands[0].indexCount = kIndicesPerCube;
-  commands[0].instanceCount = 0;  // GPU atomicAdd fills this during culling
-  commands[0].firstIndex = 0;
-  commands[0].vertexOffset = 0;
-  commands[0].firstInstance = 0;
-  indirectCommandCount_ = 1;
+  for (int category = 0; category < 2; category++) {
+    commands[category].indexCount = kIndicesPerCube;
+    commands[category].instanceCount = 0;
+    commands[category].firstIndex = 0;
+    commands[category].vertexOffset = 0;
+    commands[category].firstInstance = 0;
+  }
+  indirectCommandCount_ = 2;  // [0] scene range, [1] foliage range
 
   // ---- Terrain: pack all LOD leaf meshes + upload to shared buffers -------
   const TerrainGpuData terrain = packTerrainGpuData(scene.terrainLod, maxDepth, 1337, 12.0f);
@@ -761,8 +807,10 @@ void VulkanRenderer::recordFrame(VkCommandBuffer cmd, uint32_t imageIndex, bool 
          reinterpret_cast<void*>(terrainPipeline_), reinterpret_cast<void*>(scenePipeline_));
     loggedDrawState = true;
   }
+  static const auto startTime = std::chrono::steady_clock::now();
+  timeSeconds_ = std::chrono::duration<float>(std::chrono::steady_clock::now() - startTime).count();
   const Mat4 proj = perspectiveVulkan(1.0472f, 16.0f / 9.0f, 0.1f, 500.0f);
-  const Mat4 view = lookAt({12.0f, 14.0f, 24.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f});
+  const Mat4 view = lookAt({14.0f, 30.0f, 44.0f}, {0.0f, 2.0f, 0.0f}, {0.0f, 1.0f, 0.0f});
   const Mat4 viewProj = multiply(proj, view);
 
   CullPushConstants cullConstants{};
@@ -771,6 +819,19 @@ void VulkanRenderer::recordFrame(VkCommandBuffer cmd, uint32_t imageIndex, bool 
   cullConstants.indicesPerInstance = kIndicesPerCube;
   cullConstants.firstIndex = 0;
   cullConstants.firstVertex = 0;
+  cullConstants.visibleBase0 = 0;
+  cullConstants.visibleBase1 = kFoliageVisibleBase;
+
+  // Reset the per-category visible counts before the culling dispatch. The
+  // indirect buffer is host-visible/mapped, so the host writes below are visible
+  // to this submission; without the reset, atomicAdd accumulates across frames
+  // and the draws reference stale/garbage visible slots.
+  if (indirectMapped_ != nullptr && indirectCommandCount_ > 0) {
+    auto* counts = static_cast<IndirectDrawCommand*>(indirectMapped_);
+    for (uint32_t i = 0; i < indirectCommandCount_; i++) {
+      counts[i].instanceCount = 0;
+    }
+  }
 
   vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, cullPipeline_);
   vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, computePipelineLayout_, 0, 1,
@@ -815,6 +876,8 @@ void VulkanRenderer::recordFrame(VkCommandBuffer cmd, uint32_t imageIndex, bool 
   vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipelineLayout_, 0, 1,
                           &graphicsSet_, 0, nullptr);
   GraphicsPushConstants graphicsConstants{};
+  graphicsConstants.time = timeSeconds_;                        // drives foliage wind
+  graphicsConstants.foliageVisibleBase = kFoliageVisibleBase;   // category-1 slot base
   std::memcpy(graphicsConstants.viewProj, viewProj.m, sizeof(float) * 16);
   vkCmdPushConstants(cmd, graphicsPipelineLayout_, VK_SHADER_STAGE_VERTEX_BIT, 0,
                      sizeof(GraphicsPushConstants), &graphicsConstants);
@@ -823,7 +886,15 @@ void VulkanRenderer::recordFrame(VkCommandBuffer cmd, uint32_t imageIndex, bool 
   vkCmdBindVertexBuffers(cmd, 0, 1, &vertexBuffer_, &offset);
   vkCmdBindIndexBuffer(cmd, indexBuffer_, 0, VK_INDEX_TYPE_UINT16);
   if (indirectCommandCount_ > 0) {
-    vkCmdDrawIndexedIndirect(cmd, indirectBuffer_, 0, indirectCommandCount_,
+    // Command 0: static scene range (category 0).
+    vkCmdDrawIndexedIndirect(cmd, indirectBuffer_, 0, 1, sizeof(IndirectDrawCommand));
+  }
+  if (indirectCommandCount_ > 1 && foliagePipeline_ != VK_NULL_HANDLE) {
+    // Command 1: wind-animated foliage range (category 1).
+    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, foliagePipeline_);
+    vkCmdPushConstants(cmd, graphicsPipelineLayout_, VK_SHADER_STAGE_VERTEX_BIT, 0,
+                       sizeof(GraphicsPushConstants), &graphicsConstants);
+    vkCmdDrawIndexedIndirect(cmd, indirectBuffer_, sizeof(IndirectDrawCommand), 1,
                              sizeof(IndirectDrawCommand));
   }
 
@@ -964,10 +1035,18 @@ void VulkanRenderer::renderFrame() {
     lastError_ = "vkQueuePresentKHR failed";
   }
 
-  if (calls % 300 == 0) {
-    LOGI("renderFrame status: acquire=%d submit=%d present=%d capture=%d", static_cast<int>(lastAcquire),
-         static_cast<int>(lastSubmit), static_cast<int>(lastPresent),
-         captureRequested_ ? 1 : 0);
+  if (calls % 60 == 0) {
+    uint32_t sceneVisible = 0;
+    uint32_t foliageVisible = 0;
+    if (indirectMapped_ != nullptr) {
+      const auto* counts = static_cast<const IndirectDrawCommand*>(indirectMapped_);
+      sceneVisible = counts[0].instanceCount;
+      foliageVisible = indirectCommandCount_ > 1 ? counts[1].instanceCount : 0;
+    }
+    LOGI("renderFrame status: acquire=%d submit=%d present=%d capture=%d sceneVisible=%u "
+         "foliageVisible=%u time=%.2f",
+         static_cast<int>(lastAcquire), static_cast<int>(lastSubmit), static_cast<int>(lastPresent),
+         captureRequested_ ? 1 : 0, sceneVisible, foliageVisible, timeSeconds_);
   }
 
   // One-shot readback: the copy was recorded into this frame's command buffer,
@@ -1126,6 +1205,8 @@ void VulkanRenderer::destroySurface() {
   cullPipeline_ = VK_NULL_HANDLE;
   if (scenePipeline_ != VK_NULL_HANDLE) vkDestroyPipeline(device_, scenePipeline_, nullptr);
   scenePipeline_ = VK_NULL_HANDLE;
+  if (foliagePipeline_ != VK_NULL_HANDLE) vkDestroyPipeline(device_, foliagePipeline_, nullptr);
+  foliagePipeline_ = VK_NULL_HANDLE;
   if (terrainPipeline_ != VK_NULL_HANDLE) vkDestroyPipeline(device_, terrainPipeline_, nullptr);
   terrainPipeline_ = VK_NULL_HANDLE;
   if (computePipelineLayout_ != VK_NULL_HANDLE) {
@@ -1199,6 +1280,7 @@ void VulkanRenderer::shutdown() {
 #else  // !HERETEK_ENABLE_VULKAN
 
 #include <algorithm>
+#include <chrono>
 
 namespace heretek {
 

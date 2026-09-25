@@ -1,11 +1,12 @@
 #version 450
 // Heretek Tier 2 — instanced scene vertex shader.
 // Draw calls are issued indirectly after compute culling; the vertex shader
-// reads the surviving instance index from the visible-index SSBO.
+// reads the surviving instance index from the visible-index SSBO (category 0
+// range, which starts at slot 0).
 
 struct InstanceData {
     vec4 positionRadius;  // xyz = world position, w = bounding radius
-    vec4 color;
+    vec4 color;           // rgb = tint, a = category
 };
 
 layout(std430, binding = 0) readonly buffer InstanceBuffer {
@@ -18,6 +19,8 @@ layout(std430, binding = 1) readonly buffer VisibleIndexBuffer {
 
 layout(push_constant) uniform PushConstants {
     mat4 viewProj;
+    float time;                // seconds; used by the foliage pass
+    uint foliageVisibleBase;   // visible-buffer slot base for category 1
 } pc;
 
 layout(location = 0) in vec3 inPosition;

@@ -4,6 +4,7 @@ Run from the repository root:
     python3 -m unittest harness.agents.test_stress_scene_gen
 """
 
+import math
 import os
 import sys
 import unittest
@@ -42,9 +43,33 @@ class StressSceneTests(unittest.TestCase):
         self.assertTrue(any(o.get("kind") == "light" for o in scene["gameObjects"]))
         self.assertEqual(scene["rules"][0]["type"], "draw_call_budget")
 
-    def test_rejects_empty_count(self):
+    def test_rejects_empty_scene(self):
         with self.assertRaises(ValueError):
             build_stress_scene(0)
+        with self.assertRaises(ValueError):
+            build_stress_scene(0, foliage=0)
+
+    def test_foliage_ring_uses_the_wind_category(self):
+        scene = build_stress_scene(0, foliage=12)
+        blades = [o for o in scene["gameObjects"] if o.get("batch") == "foliage"]
+        self.assertEqual(len(blades), 12)
+        for blade in blades:
+            self.assertTrue(blade["batched"])
+            self.assertEqual(blade["physics"], "none")
+            self.assertGreater(blade["position"][1], 0, "blades sit above the ground")
+
+    def test_foliage_ring_is_radially_distributed(self):
+        scene = build_stress_scene(0, foliage=40)
+        blades = [o for o in scene["gameObjects"] if o.get("batch") == "foliage"]
+        radii = {
+            round(math.hypot(b["position"][0], b["position"][2]), 3) for b in blades
+        }
+        self.assertGreater(len(radii), 5, "blades spread over varied radii (not a single ring)")
+
+    def test_grid_and_foliage_combine(self):
+        scene = build_stress_scene(9, foliage=6)
+        self.assertEqual(len([o for o in scene["gameObjects"] if o.get("batch") == "stress_unit"]), 9)
+        self.assertEqual(len([o for o in scene["gameObjects"] if o.get("batch") == "foliage"]), 6)
 
 
 if __name__ == "__main__":

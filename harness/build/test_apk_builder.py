@@ -120,7 +120,7 @@ class TierDispatchTests(unittest.TestCase):
         with mock.patch.object(builder, "build_tier2", return_value=sentinel) as tier2:
             res = builder.build_and_deploy(dry_run=True, tier=2)
         self.assertIs(res, sentinel)
-        tier2.assert_called_once_with(dry_run=True, scene_path=None)
+        tier2.assert_called_once_with(dry_run=True, scene_path=None, quadtree=True)
 
     def test_default_tier_is_webview(self):
         builder = AndroidApkBuilder()

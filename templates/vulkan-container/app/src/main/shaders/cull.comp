@@ -1,16 +1,19 @@
 #version 450
-// Heretek Tier 2 — GPU compute frustum culling.
+// Heretek Tier 2 — GPU compute frustum culling with category compaction.
 //
-// Reads per-instance data (world position + radius), tests each instance
-// against the six frustum planes, and writes visible instance indices plus a
-// single indirect draw command whose instanceCount is the surviving count.
+// Reads per-instance data (world position + radius + category), tests each
+// instance against the six frustum planes, and appends visible indices into a
+// per-category range (0 = scene geometry, 1 = wind-animated foliage). Each
+// category owns an indirect draw command whose instanceCount is the surviving
+// count, so one dispatch feeds two category-specific draws.
+//
 // One workgroup per 64 instances; the CPU dispatches ceil(count/64) groups.
 
 layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
 
 struct InstanceData {
     vec4 positionRadius;  // xyz = world position, w = bounding radius
-    vec4 color;
+    vec4 color;           // rgb = tint, a = category (0 scene / 1 foliage)
 };
 
 layout(std430, binding = 0) readonly buffer InstanceBuffer {
@@ -21,23 +24,29 @@ layout(std430, binding = 1) writeonly buffer VisibleIndexBuffer {
     uint visibleIndices[];
 } visibleBuffer;
 
-// Six planes as vec4 (xyz = normal, w = distance) + dispatch parameters in
-// push constants (112 bytes, within the guaranteed 128-byte minimum).
+struct IndirectCommand {
+    uint indexCount;
+    uint instanceCount;
+    uint firstIndex;
+    int  vertexOffset;
+    uint firstInstance;
+};
+
+layout(std430, binding = 2) buffer IndirectDrawBlock {
+    IndirectCommand commands[2];
+} indirectDraw;
+
+// Six planes as vec4 (xyz = normal, w = distance) + dispatch parameters
+// (120 bytes, within the guaranteed 128-byte push-constant minimum).
 layout(push_constant) uniform CullParams {
     vec4 planes[6];
     uint instanceCount;
     uint indicesPerInstance;
     uint firstIndex;
     uint firstVertex;
+    uint visibleBase0;   // visible-buffer slot base for category 0
+    uint visibleBase1;   // visible-buffer slot base for category 1
 } params;
-
-layout(std430, binding = 2) buffer IndirectDrawBlock {
-    uint indexCount;
-    uint instanceCount;
-    uint firstIndex;
-    int  vertexOffset;
-    uint firstInstance;
-} indirectDraw;
 
 void main() {
     const uint id = gl_GlobalInvocationID.x;
@@ -54,12 +63,15 @@ void main() {
         }
     }
 
-    // Visible: append the instance index and grow the indirect instance count.
-    const uint slot = atomicAdd(indirectDraw.instanceCount, 1u);
-    visibleBuffer.visibleIndices[slot] = id;
+    // Visible: append the instance index into its category's range and grow that
+    // category's indirect instance count.
+    const uint category = uint(instanceBuffer.instances[id].color.a + 0.5);
+    const uint slotBase = (category == 1u) ? params.visibleBase1 : params.visibleBase0;
+    const uint slot = atomicAdd(indirectDraw.commands[category].instanceCount, 1u);
+    visibleBuffer.visibleIndices[slotBase + slot] = id;
     // The CPU pre-fills indexCount/firstIndex/vertexOffset/firstInstance; only
-    // instanceCount is written here, so the first dispatch writes indexCount too.
-    indirectDraw.indexCount = params.indicesPerInstance;
-    indirectDraw.firstIndex = params.firstIndex;
-    indirectDraw.vertexOffset = int(params.firstVertex);
+    // instanceCount is written here, so the first dispatch writes the rest too.
+    indirectDraw.commands[category].indexCount = params.indicesPerInstance;
+    indirectDraw.commands[category].firstIndex = params.firstIndex;
+    indirectDraw.commands[category].vertexOffset = int(params.firstVertex);
 }

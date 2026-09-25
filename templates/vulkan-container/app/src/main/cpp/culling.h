@@ -67,6 +67,8 @@ CullResult cullMeshes(const NativeScene& scene, const Mat4& viewProj);
 struct InstanceBatch {
   std::string batchKey;
   std::vector<const InstanceRecord*> instances;
+  /** 0 = scene geometry, 1 = wind-animated foliage (see kFoliageBatch). */
+  uint32_t category = 0;
 };
 
 /** Groups instances by batch key: one draw call per returned batch. */

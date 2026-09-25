@@ -186,13 +186,28 @@ int main(int argc, char** argv) {
   // ---- Instance batch packing (one draw per unique batch key) ----
   NativeScene instanced;
   instanced.name = "BatchTest";
-  instanced.instances.push_back({"foliage_blade", 1, 0, 1, 0});
-  instanced.instances.push_back({"foliage_blade", 2, 0, 2, 0});
-  instanced.instances.push_back({"foliage_blade", 3, 0, 3, 0});
+  instanced.instances.push_back({"foliage", 1, 0, 1, 0});
+  instanced.instances.push_back({"foliage", 2, 0, 2, 0});
+  instanced.instances.push_back({"foliage", 3, 0, 3, 0});
   instanced.instances.push_back({"rock_chunk", 4, 0, 4, 0});
   const auto batches = packInstanceBatches(instanced);
   CHECK(batches.size() == 2, "two unique batch keys -> two draw calls");
   CHECK(instanced.drawCallEstimate() == 2, "instanced draw estimate ignores instance count");
+  {
+    uint32_t foliageCategory = 99, sceneCategory = 99;
+    size_t foliageCount = 0;
+    for (const auto& batch : batches) {
+      if (batch.batchKey == kFoliageBatch) {
+        foliageCategory = batch.category;
+        foliageCount = batch.instances.size();
+      } else {
+        sceneCategory = batch.category;
+      }
+    }
+    CHECK(foliageCategory == 1, "foliage batches carry the wind category");
+    CHECK(sceneCategory == 0, "scene batches stay in the static category");
+    CHECK(foliageCount == 3, "foliage batch groups every blade instance");
+  }
 
   // ---- Compute dispatch planning + indirect draw packing (GPU cull path) ----
   const ComputeDispatchPlan empty = planComputeDispatch(0);

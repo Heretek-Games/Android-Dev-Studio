@@ -84,7 +84,10 @@ class VulkanRenderer {
   VkPipelineLayout terrainPipelineLayout_ = VK_NULL_HANDLE;
   VkPipeline cullPipeline_ = VK_NULL_HANDLE;
   VkPipeline scenePipeline_ = VK_NULL_HANDLE;
+  VkPipeline foliagePipeline_ = VK_NULL_HANDLE;
   VkPipeline terrainPipeline_ = VK_NULL_HANDLE;
+  uint32_t foliageCount_ = 0;
+  float timeSeconds_ = 0.0f;
   VkDescriptorPool descriptorPool_ = VK_NULL_HANDLE;
   VkDescriptorSet computeSet_ = VK_NULL_HANDLE;
   VkDescriptorSet graphicsSet_ = VK_NULL_HANDLE;

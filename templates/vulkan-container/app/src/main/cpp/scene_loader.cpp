@@ -67,6 +67,7 @@ bool parseSceneText(const std::string& text, NativeScene& out, std::string& erro
         error = "line " + std::to_string(lineNumber) + ": malformed instance record";
         return false;
       }
+      inst.foliage = (inst.batch == kFoliageBatch);
       out.instances.push_back(std::move(inst));
     } else if (kind == "light") {
       LightRecord light;

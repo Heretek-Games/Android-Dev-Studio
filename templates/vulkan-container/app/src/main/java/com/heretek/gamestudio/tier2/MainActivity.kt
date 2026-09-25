@@ -50,6 +50,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         copyAsset("shaders/scene.frag.spv", File(shaderDir, "scene.frag.spv"))
         copyAsset("shaders/terrain.vert.spv", File(shaderDir, "terrain.vert.spv"))
         copyAsset("shaders/terrain.frag.spv", File(shaderDir, "terrain.frag.spv"))
+        copyAsset("shaders/foliage.vert.spv", File(shaderDir, "foliage.vert.spv"))
 
         initialized = nativeInit(sceneFile.absolutePath, shaderDir.absolutePath)
         if (initialized) {
@@ -102,6 +103,13 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
                     "frame capture requested=$requested -> ${frameFile.absolutePath}"
                 )
             }, 2000)
+            // Second capture later in the run: comparing the two readbacks proves
+            // time-driven GPU effects (foliage wind) are actually animating.
+            surfaceView.postDelayed({
+                val lateFrame = File(filesDir, "native_frame_late.ppm")
+                nativeCaptureFrame(lateFrame.absolutePath)
+                android.util.Log.i("HeretekTier2", "late frame capture -> ${lateFrame.absolutePath}")
+            }, 6000)
         }
     }
 

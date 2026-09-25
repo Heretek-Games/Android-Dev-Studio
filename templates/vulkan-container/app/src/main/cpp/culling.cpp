@@ -147,6 +147,7 @@ std::vector<InstanceBatch> packInstanceBatches(const NativeScene& scene) {
   std::vector<InstanceBatch> batches;
   batches.reserve(byKey.size());
   for (auto& [key, batch] : byKey) {
+    batch.category = (key == kFoliageBatch) ? 1u : 0u;
     batches.push_back(std::move(batch));
   }
   return batches;
