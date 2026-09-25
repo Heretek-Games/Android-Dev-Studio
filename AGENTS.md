@@ -145,6 +145,18 @@ real engine runtime. The Studio UI writes through the same gate via `POST /api/s
 - Tests: `python3 -m unittest harness.validation.test_scene_invariants` (24 cases: positive scene,
   one negative per invariant, schema normalization, input immutability).
 
+### Dev-Server Bridges (`app/vite.config.ts`)
+All studio↔harness bridges run through the Vite dev server (dev-only, like `/api/llm`):
+- `GET /api/scene` / `POST /api/scene` — canonical scene read/write (invariant-gated, memory-synced).
+- `POST /api/qa/run` — real headless Artemis QA pipeline.
+- `POST /api/swarm/run` — real multi-agent swarm orchestrator.
+- `GET /api/devices` — real ADB device detection (`harness/agents/device_cli.py`); returns the actual
+  `adb devices -l` result — the DeviceBar shows "No device detected" when nothing is attached
+  (no mocked devices).
+- `POST /api/deploy` — real packaging through `harness/build/apk_builder.py` (dry-run by default,
+  `{real:true}` attempts the Gradle build); the DeviceBar logs bundle-built/assets-synced/APK-path
+  results and explicitly notes when on-device deployment is skipped (no device attached).
+
 ### Studio ↔ Harness Scene Bridge (`/api/scene`)
 - The canonical scene is `harness/scenes/active_scene.json` (source of truth for the studio and agents).
 - `GET /api/scene` reads it; `POST /api/scene` writes through the same transactional invariant gate

@@ -434,35 +434,59 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const refreshDevices = async () => {
     try {
-      // Mock / IPC detection of devices
-      const detected: DeviceInfo[] = [
-        {
-          id: 'emulator-5554',
-          model: 'Pixel 8 Pro (xune-test)',
-          status: 'device',
-          isEmulator: true,
-          battery: 100,
-          apiLevel: 'API 34 (Android 14)'
-        }
-      ];
+      const res = await fetch('/api/devices');
+      if (!res.ok) throw new Error(`device bridge HTTP ${res.status}`);
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || 'device detection failed');
+
+      const detected: DeviceInfo[] = (data.devices || []).map((d: any) => ({
+        id: d.id,
+        model: d.model,
+        status: d.status,
+        isEmulator: Boolean(d.isEmulator)
+      }));
       setDevices(detected);
-      if (!selectedDevice && detected.length > 0) {
+      if (detected.length > 0 && !detected.some(d => d.id === selectedDevice)) {
         setSelectedDevice(detected[0].id);
       }
-      addLog('info', 'ADB', `Detected ${detected.length} Android test device(s).`);
+      if (detected.length === 0) {
+        setSelectedDevice(null);
+        addLog('info', 'ADB', 'No Android devices/emulators attached (adb devices -l returned 0).');
+      } else {
+        addLog('info', 'ADB', `Detected ${detected.length} device(s): ${detected.map(d => d.model).join(', ')}`);
+      }
     } catch (e: any) {
-      addLog('error', 'ADB', `Failed to query ADB: ${e.message}`);
+      setDevices([]);
+      addLog('warn', 'ADB', `Device bridge unavailable: ${e.message}`);
     }
   };
 
   const deployToDevice = async () => {
-    addLog('info', 'Deploy', '📦 Packaging 3D Android Game bundle...');
-    await new Promise(r => setTimeout(r, 600));
-    addLog('info', 'Deploy', '⚡ Building optimized APK with Hardware-Accelerated WebView...');
-    await new Promise(r => setTimeout(r, 800));
-    addLog('info', 'Deploy', `📲 Pushing APK to ${selectedDevice || 'emulator-5554'} via ADB...`);
-    await new Promise(r => setTimeout(r, 700));
-    addLog('info', 'Deploy', '🚀 Game launched successfully on device in Fullscreen Immersive Mode!');
+    addLog('info', 'Deploy', `📦 Packaging bundle via apk_builder (dry-run)${selectedDevice ? ` · device ${selectedDevice}` : ''}…`);
+    try {
+      const res = await fetch('/api/deploy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ device: selectedDevice, real: false })
+      });
+      const data = await res.json();
+      const resultMatch = (data.stdout || '').match(/Result: (\{.*\})/);
+      if (resultMatch) {
+        const result = JSON.parse(resultMatch[1]);
+        addLog(result.success ? 'info' : 'error', 'Deploy', `Bundle built: ${result.bundle_built} | assets synced: ${result.assets_synced}`);
+        if (result.apk_path) addLog('info', 'Deploy', `APK target: ${result.apk_path}`);
+        addLog(result.success ? 'info' : 'error', 'Deploy', result.message);
+        if (!selectedDevice) {
+          addLog('warn', 'Deploy', 'No device attached — packaging verified, on-device deployment skipped.');
+        }
+      } else if (data.ok) {
+        addLog('info', 'Deploy', (data.stdout || 'packaging finished').slice(-300));
+      } else {
+        addLog('error', 'Deploy', `Packaging failed: ${(data.stderr || data.stdout || 'unknown error').slice(0, 300)}`);
+      }
+    } catch (e: any) {
+      addLog('error', 'Deploy', `Deploy bridge unavailable: ${e.message}`);
+    }
   };
 
   const runArtemisTask = async (prompt: string) => {

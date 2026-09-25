@@ -116,6 +116,75 @@ function swarmBridgePlugin(): Plugin {
   };
 }
 
+// Dev-server bridge to real ADB device detection and the packaging pipeline:
+// GET  /api/devices -> harness/agents/device_cli.py list (real adb devices -l)
+// POST /api/deploy  -> harness/build/apk_builder.py (dry-run by default; {real:true} attempts Gradle)
+function deviceBridgePlugin(): Plugin {
+  return {
+    name: 'heretek-device-bridge',
+    configureServer(server) {
+      server.middlewares.use('/api/devices', (req, res) => {
+        res.setHeader('Content-Type', 'application/json');
+        if (req.method !== 'GET') {
+          res.statusCode = 405;
+          res.end(JSON.stringify({ ok: false, error: 'GET required', devices: [] }));
+          return;
+        }
+        const repoRoot = path.resolve(__dirname, '..');
+        const proc = spawn('python3', ['harness/agents/device_cli.py', 'list'], { cwd: repoRoot });
+        let out = '';
+        let err = '';
+        proc.stdout.on('data', d => { out += d; });
+        proc.stderr.on('data', d => { err += d; });
+        proc.on('close', () => {
+          res.statusCode = out ? 200 : 502;
+          res.end(out || JSON.stringify({ ok: false, error: err || 'device cli unavailable', devices: [] }));
+        });
+      });
+
+      server.middlewares.use('/api/deploy', (req, res) => {
+        res.setHeader('Content-Type', 'application/json');
+        if (req.method !== 'POST') {
+          res.statusCode = 405;
+          res.end(JSON.stringify({ ok: false, error: 'POST required' }));
+          return;
+        }
+        let body = '';
+        req.on('data', chunk => { body += chunk; });
+        req.on('end', () => {
+          let device: string | null = null;
+          let real = false;
+          try {
+            const parsed = JSON.parse(body || '{}');
+            device = parsed.device ? String(parsed.device) : null;
+            real = Boolean(parsed.real);
+          } catch {
+            // defaults
+          }
+          const repoRoot = path.resolve(__dirname, '..');
+          const args = ['harness/build/apk_builder.py'];
+          if (!real) args.push('--dry-run');
+          if (device) args.push('--device', device);
+          const proc = spawn('python3', args, { cwd: repoRoot });
+          let out = '';
+          let err = '';
+          proc.stdout.on('data', d => { out += d; });
+          proc.stderr.on('data', d => { err += d; });
+          proc.on('close', code => {
+            res.statusCode = 200; // the payload carries success/failure details
+            res.end(JSON.stringify({
+              ok: code === 0,
+              mode: real ? 'build' : 'dry-run',
+              stdout: out.trim(),
+              stderr: err.trim()
+            }));
+          });
+        });
+      });
+    }
+  };
+}
+
 // Dev-server bridge to the real headless Artemis QA pipeline:
 // POST /api/qa/run { goal, scenario?, frames? } -> spawns artemis_qa_runner.py
 // and returns its JSON report (real engine metrics + rule evaluation).
@@ -173,7 +242,7 @@ function qaBridgePlugin(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [react(), sceneBridgePlugin(), qaBridgePlugin(), swarmBridgePlugin()],
+  plugins: [react(), sceneBridgePlugin(), qaBridgePlugin(), swarmBridgePlugin(), deviceBridgePlugin()],
   define: {
     __LLM_MODEL__: JSON.stringify(llmModel)
   },
