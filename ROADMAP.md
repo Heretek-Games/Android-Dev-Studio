@@ -138,3 +138,9 @@ A phased roadmap tracking progress from foundational 3D engine systems to AAA-ti
 - [x] **Scale tooling** — `stress_scene_gen.py` (deterministic N-instance grids, 5 tests) + `apk_builder --scene <path>`; exporter verified with 10,000 instances → **1 indirect draw, 66 total draws** (budget 100).
 - [x] **Asset freshness fix** — the Tier 2 container now always refreshes extracted assets (a stale `scene.native` silently rendered the previous build).
 - [~] **On-emulator scale validation (issue #3)** — 3 instances run stably for hours; 2,000+ instances kill the emulator host (gfxstream/lavapipe) within seconds. Physical-device validation (issue #1) is the remaining path; host-side 50k-scale planning/packing checks stay green.
+
+### Milestone 13: Vertical Slice #2 — Driving Sandbox ✅
+- [x] **Distance-mode game runtime** — `GameRuntime` mode `'distance'`: travelled planar metres score into the session (win at target, lose on the timer), teleport/NaN deltas ignored, restart resets (5 tests).
+- [x] **Genre QA scenario** — `driving_slice.json` (10 rules): vehicle component stack, distance, average speed, finish score, won phase, transforms, draw budget, FPS. **10/10 rules**, Artemis baseline recorded (won at 120.06 m, avg 37.6 m/s).
+- [x] **Playable mode** — `?play=driving` / studio **Drive** button: auto-cruise VehicleController with keyboard/touch steering and braking, chase camera, distance HUD; **verified on-device** (Victory — 120.7 m in 7.8 s, all four wheels grounded).
+- [x] **Production-only bug fixed** — the APK skipped physics init because `GameView` dispatched on `constructor.name` (mangled by the production minifier); `instanceof` now, plus `toJSON().type` in the debug surface and AI harness summaries. On-device `AndroidBridge.log` telemetry (phase/distance/throttle/wheels/grounded/body) added and kept for device debugging.

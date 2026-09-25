@@ -24,9 +24,10 @@ implemented and verified:
   confirmed on-display and via in-renderer frame readback — see
   [`harness/runs/RUNS.md`](file:///home/john/Projects/Android-Dev-Studio/harness/runs/RUNS.md) (Run Block 2).
 - **Native host checks** — 61 checks (scene loader, culling, terrain meshing/packing, Vulkan projection).
-- **Playable slice** — `?play=1` (or the studio header **Game** button) boots a full arena run:
-  menu → waves → HUD → win/lose → restart, with audio, save/load, and real weapon damage.
-  Validated on-device in the Tier 1 APK (Victory 200 points, 2 kills, wave 2).
+- **Playable slices** — `?play=1` (header **Game**) boots the arena run (menu → waves → HUD →
+  win/lose → restart, audio, save/load, real weapon damage; on-device: Victory 200 points);
+  `?play=driving` (header **Drive**) boots the driving sprint (auto-cruise vehicle, chase
+  camera, distance HUD; on-device: Victory 120.7 m, all wheels grounded).
 
 Known gaps and follow-up work are tracked as GitHub issues on
 [`Heretek-Games/Android-Dev-Studio`](https://github.com/Heretek-Games/Android-Dev-Studio/issues):

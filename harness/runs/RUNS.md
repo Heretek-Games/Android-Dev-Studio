@@ -376,3 +376,39 @@ scale. Multi-thousand-instance on-device validation therefore moves to physical 
    added to the struct but not assigned, so the foliage read the scene's visible range with
    `time=0` (static, wrong geometry). Both are set now, and the status log prints
    `sceneVisible`/`foliageVisible`/`time`, which is what exposed the issue.
+
+---
+
+## Run Block 8 — 2026-09-25, Vertical Slice #2: Driving Sandbox (Phase 5)
+
+### What shipped
+
+- **`GameRuntime` distance mode** (`mode: 'waves' | 'distance'`): no wave spawning; travelled
+  planar metres accumulate into the session score (win at `targetScore`, lose at
+  `timeLimitSeconds`); teleport-sized jumps and non-finite deltas ignored; restart resets.
+  5 new tests (273 engine tests total).
+- **QA runner distance mode** + **`driving_slice.json`**: the vehicle sprints 120 m down the
+  avenue within 30 s. Rules: vehicle component stack, distance travelled, average speed,
+  finish score, won phase, finite transforms, draw budget, FPS.
+- **Playable mode** (`?play=driving`, studio header **Drive** button): VehicleController
+  auto-cruise with keyboard/touch steering and braking, chase camera, distance HUD
+  ("Distance 120.0m · 7.7s"), victory/restart.
+
+### Verification
+
+| Check | Evidence |
+|-------|----------|
+| Genre QA | **10/10 rules**, `phase=won`, score 120.06 m, avg speed 37.6 m/s, 2 draw calls; Artemis baseline recorded |
+| Browser | menu → Start → auto-cruise → **Victory — 120.0m** in 7.7 s; restart resets to 0 |
+| On-device (Tier 1 APK) | header **Drive** → Start → **Victory — 120.7m (7.8 s)**; telemetry `grounded=4/4`, `body z=-120.71` |
+
+### Production-only bug found and fixed
+
+The packaged APK silently skipped physics initialisation: `GameView` dispatched on
+`component.constructor.name`, which the **production minifier mangles** — so `RigidBody3D`
+became e.g. `t`, `initPhysics` never ran, the vehicle body stayed null, wheels never touched
+the ground and the distance stayed 0 while the dev server worked perfectly. Fixed with
+`instanceof` checks; the debug surface and AI harness scene summaries now prefer
+`toJSON().type` over `constructor.name` for the same reason. The on-device telemetry hook
+(`AndroidBridge.log` every 2 s: phase/distance/throttle/wheels/grounded/body) is what
+pinpointed it and stays in place for future device debugging.
