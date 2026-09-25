@@ -15,7 +15,9 @@ implemented and verified:
   headless `.test.ts` (Zero Untested Code).
 - **Harness** — 24 MCP tools behind the transactional 7-point invariant gate; Artemis QA with
   scenario-keyed regression baselines; 50 Python tests (invariants, exporter, apk_builder,
-  cross-tier quadtree parity).
+  cross-tier quadtree parity); an **autonomous iterate-until-green loop** (`harness/loop/`)
+  that drives generated scenes to QA-verified green with vision critique, regression bisect,
+  and a cost/latency dashboard (63 loop tests).
 - **Containers** — both tiers assemble real debug APKs and deploy/launch on an attached device.
   Tier 2 is validated on an Android target (emulator): real swapchain, 3 instanced cubes +
   64 terrain LOD leaf draws, `VK_SUCCESS` acquire/submit/present at ~61.5 FPS, rendered output
@@ -79,6 +81,7 @@ Android-Dev-Studio/
 │
 └── harness/                          # AI Harness, Artemis QA & Studio MCP Server
     ├── agents/artemis_qa_runner.py   # Google Artemis autonomous mobile playtesting runner
+    ├── loop/                         # Autonomous iterate-until-green loop (generate -> QA -> repair)
     ├── mcp_server.py                 # Studio Model Context Protocol server (JSON-RPC stdio)
     └── config/artemis_game_rules.md  # Autonomous QA behavioral guidelines
 ```
@@ -192,6 +195,54 @@ real engine runtime. The Studio UI writes through the same gate via `POST /api/s
 - Cross-tier quadtree parity: `python3 -m unittest harness.validation.test_quadtree_parity` compares the
   TS `QuadtreeTerrain` leaves (via `harness/agents/quadtree_cli.mjs`) against the Python exporter's
   subdivision across 5 focus/depth cases (ids, bounds, depth, lod, blend).
+
+### Autonomous Iterate-Until-Green Loop (`harness/loop/`)
+
+The harness no longer stops at one-shot generation: the loop drives a scene to
+**QA-verified green** autonomously.
+
+```
+LLM (generate | repair) -> parse actions -> apply -> 7-point invariant gate
+    -> headless engine QA -> on failure: failing rules + telemetry + scene -> repair
+    -> repeat until all acceptance rules pass or the budget is exhausted
+```
+
+```bash
+# Drive the mini arena to green (live LLM + real engine QA)
+python3 -m harness.loop.iterate_loop \
+  --goal "Build a mini arena game: ground, player capsule with mobile controls, 6 pillars, 15 spinning coins, sunset light" \
+  --scenario harness/config/scenarios/mini_arena.json --max-iterations 4
+
+# Add the vision critique (top-down layout preview -> multimodal model -> repair notes)
+python3 -m harness.loop.iterate_loop --goal "..." --scenario ... --vision
+
+# Cost/latency dashboard over all runs
+python3 -m harness.loop.report
+
+# Regression bisect: first commit that breaks a scenario (git worktree + QA per step)
+python3 -m harness.loop.regression_bisect --good <rev> --bad <rev> \
+  --scenario harness/config/scenarios/mini_arena.json
+```
+
+- `llm_client.py` — OpenAI-compatible client (.env.prod), token/latency/retry telemetry,
+  vision messages (`chat_with_image`).
+- `action_applier.py` — pure spawn/light/modify/delete/event applier over the flat scene
+  schema; malformed actions become explicit outcomes (repair input), never exceptions.
+- `prompts.py` — generation + repair prompts; maps QA rule types onto schema fields
+  (`physics` → RigidBody3D, `controller` → MobileController, events → EventSheet).
+- `iterate_loop.py` — orchestrator: parse (codeblock/raw/salvaged), gate-before-QA
+  (violations skip QA and feed back as failures), budgets (iterations / tokens / wall clock),
+  run-log JSON + markdown per run under `harness/runs/loop_runs/`.
+- `scene_preview.py` + `vision.py` — deterministic top-down layout PNG; critique via the
+  multimodal route (`auto/best-vision`); `critique_frame()` also accepts real rendered frames.
+- `regression_bisect.py` — binary search over `(good, bad]` with per-step worktrees.
+- `report.py` — dashboard (verdicts, tokens, latency, iterations-to-green).
+- Tests: `python3 -m unittest discover -s harness/loop -p "test_*.py"` (63 tests, hermetic:
+  injected LLM transport / fake QA).
+
+First live run (2026-09-25): generate (41 actions) → gate rejected a spawn penetration →
+repair (1 action: raise the player above the collider) → **QA SUCCEEDED 10/10** in 2
+iterations, 6,725 tokens / 27.1s.
 
 ### Dev-Server Bridges (`app/vite.config.ts`)
 All studio↔harness bridges run through the Vite dev server (dev-only, like `/api/llm`):
