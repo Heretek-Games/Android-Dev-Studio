@@ -346,6 +346,49 @@ function addElementalComponent(go, spec, engine) {
   }
 }
 
+/**
+ * Dialogue auto-play: register every spec.dialogues tree and walk each one
+ * deterministically (first available choice, bounded steps), recording stable
+ * node visits plus emitted events. Action/condition nodes self-resolve inside
+ * the engine and never surface as visits — their effects are observable via
+ * variables (getVariable) and the captured event stream instead.
+ */
+const DIALOGUE_MAX_STEPS = 64;
+
+function setupDialogue(spec, engine) {
+  const trees = spec.dialogues || {};
+  const manager = new engine.DialogueManager();
+  const transcripts = {};
+  for (const [treeId, tree] of Object.entries(trees)) {
+    const visited = [];
+    const events = [];
+    const listener = (eventName, payload) => events.push({ eventName, payload });
+    manager.addEventListener(listener);
+    try {
+      manager.registerTree(tree);
+      let node = manager.startConversation(treeId);
+      for (let step = 0; step < DIALOGUE_MAX_STEPS && node; step++) {
+        visited.push(node.id);
+        if (node.type === 'choice') {
+          const available = manager.getAvailableChoices();
+          if (!available.length) break;
+          node = manager.chooseOption(available[0].index);
+        } else {
+          node = manager.advance();
+        }
+      }
+    } catch (error) {
+      transcripts[treeId] = { visited, events, error: String(error) };
+      continue;
+    } finally {
+      manager.removeEventListener(listener);
+      manager.endConversation();
+    }
+    transcripts[treeId] = { visited, events, error: null };
+  }
+  return { manager, transcripts };
+}
+
 function setupGame(spec, scene, engine) {
   const config = spec.game;
   if (!config) return null;
@@ -510,7 +553,7 @@ function placementNote(game) {
 }
 
 function evaluateRules(spec, ctxData) {
-  const { scene, samples, firstSamples, metrics, dt, game } = ctxData;
+  const { scene, samples, firstSamples, metrics, dt, game, dialogue } = ctxData;
   const results = [];
 
   for (const rule of spec.rules || []) {
@@ -742,6 +785,41 @@ function evaluateRules(spec, ctxData) {
         detail = `gold=${gold} (min ${rule.min ?? 1})${placementNote(game)}`;
         break;
       }
+      case 'dialogue_reaches': {
+        const transcript = dialogue?.transcripts?.[rule.tree];
+        if (!transcript) { pass = false; detail = `no dialogue transcript for tree "${rule.tree}"`; break; }
+        if (transcript.error) { pass = false; detail = `dialogue "${rule.tree}" failed: ${transcript.error}`; break; }
+        pass = transcript.visited.includes(rule.node);
+        detail = pass
+          ? `dialogue "${rule.tree}" visited "${rule.node}" (path: ${transcript.visited.join(' -> ')})`
+          : `dialogue "${rule.tree}" never visited "${rule.node}" (path: ${transcript.visited.join(' -> ') || '(empty)'})`;
+        break;
+      }
+      case 'dialogue_sets_variable': {
+        const transcript = dialogue?.transcripts?.[rule.tree];
+        if (!transcript) { pass = false; detail = `no dialogue transcript for tree "${rule.tree}"`; break; }
+        if (transcript.error) { pass = false; detail = `dialogue "${rule.tree}" failed: ${transcript.error}`; break; }
+        const value = dialogue.manager.getVariable(rule.variable);
+        if (rule.value === undefined) {
+          pass = value !== undefined;
+          detail = pass ? `dialogue variable "${rule.variable}" is set` : `dialogue variable "${rule.variable}" is unset`;
+        } else {
+          pass = value === rule.value || String(value) === String(rule.value);
+          detail = `dialogue variable "${rule.variable}"=${JSON.stringify(value)} (expected ${JSON.stringify(rule.value)})`;
+        }
+        break;
+      }
+      case 'dialogue_event_fired': {
+        const transcript = dialogue?.transcripts?.[rule.tree];
+        if (!transcript) { pass = false; detail = `no dialogue transcript for tree "${rule.tree}"`; break; }
+        if (transcript.error) { pass = false; detail = `dialogue "${rule.tree}" failed: ${transcript.error}`; break; }
+        const fired = transcript.events.map(e => e.eventName);
+        pass = fired.includes(rule.event);
+        detail = pass
+          ? `dialogue "${rule.tree}" fired "${rule.event}"`
+          : `dialogue "${rule.tree}" never fired "${rule.event}" (fired: [${fired.join(', ') || 'none'}])`;
+        break;
+      }
       default: {
         pass = false;
         detail = `unknown rule type "${rule.type}"`;
@@ -781,6 +859,7 @@ async function main() {
   ctx.setScene(scene);
 
   const game = setupGame(spec, scene, engine);
+  const dialogue = setupDialogue(spec, engine);
 
   const eventCount = scene.gameObjects.reduce(
     (n, go) => n + go.components.filter(c => c.constructor.name === 'EventSheet').reduce((m, es) => m + es.events.length, 0), 0
@@ -873,7 +952,7 @@ async function main() {
     }
   }
 
-  const ruleResults = evaluateRules(spec, { scene, samples, firstSamples, metrics, dt: args.dt, game });
+  const ruleResults = evaluateRules(spec, { scene, samples, firstSamples, metrics, dt: args.dt, game, dialogue });
   const passed = ruleResults.filter(r => r.pass).length;
   const total = ruleResults.length;
   const allPass = total > 0 && passed === total;
@@ -901,6 +980,20 @@ async function main() {
             shots: game.fireCount,
             maxEnemyDisplacement: Number(game.maxEnemyDisplacement().toFixed(3))
           }
+        }
+      : {}),
+    ...(dialogue && Object.keys(dialogue.transcripts).length
+      ? {
+          dialogue: Object.fromEntries(
+            Object.entries(dialogue.transcripts).map(([treeId, t]) => [
+              treeId,
+              {
+                visited: t.visited,
+                events: t.events.map(e => e.eventName),
+                error: t.error,
+              },
+            ])
+          ),
         }
       : {}),
     rules: ruleResults,
