@@ -138,6 +138,7 @@ export class MeshRenderer extends Component {
     });
 
     this.threeMesh = new THREE.Mesh(geometry, material);
+    this.threeMesh.name = this.gameObject.name;
     this.threeMesh.castShadow = this.castShadow;
     this.threeMesh.receiveShadow = this.receiveShadow;
     this.threeMesh.userData.gameObject = this.gameObject;

@@ -78,6 +78,7 @@ describe('DecalDispatcher — impact decal registry', () => {
 
     const result = weapon.fire();
     assert.strictEqual(result.hit, true, 'shot should hit the target wall');
+    assert.strictEqual(result.hitObjectName, 'TargetWall', 'hit name must be the engine entity name');
     assert.ok(result.point && result.point[2] < -4, `impact should be near the wall, z=${result.point?.[2]}`);
     assert.strictEqual(received.length, 1, 'hit listener should fire once');
     assert.strictEqual(dispatcher.count, 1, 'dispatcher should register the impact decal');

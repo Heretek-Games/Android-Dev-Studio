@@ -143,12 +143,16 @@ export class WeaponController extends Component {
           const worldNormal = validHit.face.normal.clone().applyMatrix3(this.normalMatrix).normalize();
           normal = [worldNormal.x, worldNormal.y, worldNormal.z];
         }
+        // Name the hit from the engine GameObject (userData.gameObject) first: the
+        // three.js object name is not authoritative (mesh.name is often unset), and
+        // the damage router looks entities up by this name.
+        const hitGameObject = (validHit.object.userData?.gameObject as { name?: string } | undefined) ?? undefined;
         const result: HitResult = {
           hit: true,
           distance: validHit.distance,
           point: [validHit.point.x, validHit.point.y, validHit.point.z],
           normal: normal ?? undefined,
-          hitObjectName: validHit.object.name || 'Environment'
+          hitObjectName: hitGameObject?.name || validHit.object.name || 'Environment'
         };
         const event: WeaponHitEvent = {
           point: result.point!,

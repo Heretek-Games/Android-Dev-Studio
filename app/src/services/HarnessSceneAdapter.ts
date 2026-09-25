@@ -16,6 +16,9 @@ import {
   Collider3D,
   MobileController,
   EventSheet,
+  WeaponController,
+  HealthComponent,
+  EnemyAI,
   type PrimitiveShape
 } from '@heretek/engine';
 import type { HarnessScene, HarnessSceneObject } from './SceneStore';
@@ -65,6 +68,15 @@ export function buildEngineScene(spec: HarnessScene): Scene {
       }
       if (obj.controller) {
         go.addComponent(new MobileController());
+      }
+      if (obj.weapon) {
+        go.addComponent(new WeaponController(obj.weapon as never));
+      }
+      if (obj.health) {
+        go.addComponent(new HealthComponent(obj.health as never));
+      }
+      if (obj.ai) {
+        go.addComponent(new EnemyAI(obj.ai as never));
       }
       if (Array.isArray(obj.events) && obj.events.length) {
         go.addComponent(new EventSheet(obj.events as any));

@@ -2,6 +2,8 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert';
 import { attachDamageRouter, type HitEventLike } from './DamageRouter.js';
 import { HealthComponent } from '../components/HealthComponent.js';
+import { MeshRenderer } from '../components/MeshRenderer.js';
+import { WeaponController } from '../weapons/WeaponController.js';
 import { GameObject } from '../core/GameObject.js';
 import { Scene } from '../core/Scene.js';
 
@@ -92,5 +94,43 @@ describe('DamageRouter — hit events to health', () => {
     source.emit({ hitObjectName: 'Enemy', damage: 10 });
     assert.strictEqual(health.health, 40);
     assert.strictEqual(damage.length, 1, 'blocked hit is not reported');
+  });
+});
+
+describe('DamageRouter — end-to-end with a real weapon raycast', () => {
+  test('a weapon shot damages the hit entity and reports the kill', () => {
+    const scene = new Scene('CombatScene');
+
+    const shooter = new GameObject('Shooter');
+    shooter.transform.setPosition(0, 0, 0);
+    const weapon = shooter.addComponent(new WeaponController({ maxAmmo: 10, fireRate: 100 }));
+    scene.addGameObject(shooter);
+
+    const enemy = new GameObject('Enemy');
+    enemy.transform.setPosition(0, 0, -5);
+    enemy.addComponent(new MeshRenderer({ shape: 'box', size: [2, 2, 1] }));
+    const health = enemy.addComponent(new HealthComponent({ maxHealth: 50, destroyOnDeath: false }));
+    scene.addGameObject(enemy);
+
+    // Sync three.js mesh transforms before raycasting (weapon hits are raycasts).
+    scene.update(0.016);
+
+    const kills: string[] = [];
+    const damage: Array<[string, number]> = [];
+    attachDamageRouter(scene, weapon, {
+      onKill: (name) => kills.push(name),
+      onDamage: (name, applied) => damage.push([name, applied])
+    });
+
+    const shot = weapon.fire();
+    assert.strictEqual(shot.hit, true, 'shot should hit the enemy');
+    assert.strictEqual(shot.hitObjectName, 'Enemy', 'hit must resolve to the engine entity name');
+    assert.strictEqual(health.health, 50 - weapon.damage);
+    assert.deepStrictEqual(damage, [['Enemy', weapon.damage]]);
+
+    weapon.update(1);
+    weapon.fire();
+    assert.strictEqual(health.health, 0);
+    assert.deepStrictEqual(kills, ['Enemy'], 'lethal hit reports the kill through the router');
   });
 });

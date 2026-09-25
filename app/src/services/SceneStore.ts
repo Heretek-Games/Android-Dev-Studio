@@ -26,6 +26,9 @@ export interface HarnessSceneObject {
   physics?: 'dynamic' | 'fixed' | 'none';
   mass?: number;
   controller?: boolean;
+  weapon?: Record<string, unknown>;
+  health?: Record<string, unknown>;
+  ai?: Record<string, unknown>;
   events?: HarnessSceneEvent[];
   lightType?: string;
   intensity?: number;
