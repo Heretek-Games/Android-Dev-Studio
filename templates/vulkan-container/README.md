@@ -85,6 +85,13 @@ cmake --build /tmp/tier2-build
 
 ### Runtime telemetry & frame readback
 
+A one-command smoke test boots the emulator, builds/installs/launches both containers, and
+asserts this telemetry (exit non-zero on failure):
+
+```bash
+python3 harness/agents/emulator_smoke.py --reuse --skip-build
+```
+
 The native renderer logs to logcat under the `HeretekTier2` tag:
 
 ```

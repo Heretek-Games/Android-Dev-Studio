@@ -347,6 +347,18 @@ adb logcat -s HeretekTier2                        # scene/draw telemetry + frame
   present `VK_SUCCESS`, steady ~61.5 FPS; full `POST /api/deploy {real:true}` installs
   and launches on the emulator. Run log: `harness/runs/RUNS.md` (Run Block 2).
 
+**One-command smoke test (both containers, GitHub issue #5):**
+
+```bash
+python3 harness/agents/emulator_smoke.py                       # boot AVD -> build -> install -> assert
+python3 harness/agents/emulator_smoke.py --reuse --skip-build  # against an attached device + existing APKs
+```
+
+Asserts Tier 2 (scene + terrain plan, real swapchain, clean acquire/submit/present, an
+advancing frame counter, and a non-uniform PPM frame readback) and Tier 1 (bundle load
+line, no fatal exceptions); exits non-zero with the failing assertions. 18 unit tests
+cover the pure checks (`harness/agents/test_emulator_smoke.py`).
+
 ### 4. Autonomous Game QA (real headless engine runs)
 Boot a scenario on the real engine runtime (Rapier3D + EventSheet + fixed-dt frame
 stepping) and get real telemetry plus rule evaluation:
