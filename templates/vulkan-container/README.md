@@ -67,8 +67,23 @@ cmake --build /tmp/tier2-build
 |---|---|
 | Scene exporter (`project.scene.json` → `scene.native`) | ✅ done, unit-tested |
 | Native scene loader + draw-call/instance telemetry | ✅ done, host-tested |
-| CPU frustum culling + instanced batch packing | ✅ done, host-tested |
-| Vulkan instance/device bootstrap | ✅ compiles (NDK), device-dependent at runtime |
-| JNI bridge + SurfaceView frame loop | ✅ scaffolded |
-| GPU compute culling dispatch + instanced draw calls (50k+) | 🚧 next |
+| CPU frustum culling + dispatch planning + indirect draw packing | ✅ done, host-tested (50k-scale checks) |
+| GLSL compute/render shaders compiled to SPIR-V (`glslc`) | ✅ 3 shaders, committed .spv |
+| Vulkan swapchain + render pass + framebuffers | ✅ compiles (NDK) |
+| Compute culling dispatch + instanced indirect draws | ✅ implemented, compiles; on-device runtime validation pending |
+| JNI bridge + SurfaceView frame loop + surface lifecycle | ✅ implemented, compiles |
 | Quadtree terrain + mesh LOD streaming | 🚧 next (TS engine has `TerrainChunk`/`StreamingCells` today) |
+
+Shaders are compiled with the NDK's bundled glslc:
+
+```bash
+templates/vulkan-container/compile-shaders.sh
+# -> app/src/main/assets/shaders/{cull.comp,scene.vert,scene.frag}.spv
+```
+
+The frame path: compute pass (`cull.comp`) tests every instance against the
+six Gribb–Hartmann frustum planes and writes the visible set + indirect draw
+instance count atomically → memory barrier → graphics pass issues one
+`vkCmdDrawIndexedIndirect` covering the visible instances (vertex shader reads
+the visible-index SSBO). CPU-side planning math is shared with the host tests
+via `culling.cpp`.

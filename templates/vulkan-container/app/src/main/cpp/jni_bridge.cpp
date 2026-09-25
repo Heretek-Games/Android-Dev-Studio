@@ -3,6 +3,7 @@
 
 #ifdef __ANDROID__
 
+#include <android/native_window_jni.h>
 #include <jni.h>
 
 #include <string>
@@ -13,47 +14,64 @@
 namespace {
 heretek::NativeScene gScene;
 heretek::VulkanRenderer gRenderer;
-bool gReady = false;
+bool gSceneReady = false;
 }  // namespace
 
 extern "C" JNIEXPORT jboolean JNICALL
 Java_com_heretek_gamestudio_native_MainActivity_nativeInit(JNIEnv* env, jobject /*this*/,
-                                                           jstring scenePath) {
+                                                           jstring scenePath, jstring shaderDir) {
   const char* path = env->GetStringUTFChars(scenePath, nullptr);
   std::string error;
-  const bool loaded = heretek::loadSceneFile(path, gScene, error);
+  gSceneReady = heretek::loadSceneFile(path, gScene, error);
   env->ReleaseStringUTFChars(scenePath, path);
-  if (!loaded) {
-    return JNI_FALSE;
+
+  const char* dir = env->GetStringUTFChars(shaderDir, nullptr);
+  const bool rendererReady = gRenderer.initialize(dir);
+  env->ReleaseStringUTFChars(shaderDir, dir);
+
+  if (gSceneReady) {
+    gRenderer.uploadScene(gScene);
   }
-  // Renderer init is best-effort: scene telemetry works even without a device.
-  gRenderer.initialize();
-  gRenderer.uploadScene(gScene);
-  gReady = true;
-  return JNI_TRUE;
+  return (gSceneReady && rendererReady) ? JNI_TRUE : JNI_FALSE;
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_heretek_gamestudio_native_MainActivity_nativeSurfaceCreated(JNIEnv* env, jobject /*this*/,
+                                                                     jobject surface, jint width,
+                                                                     jint height) {
+  ANativeWindow* window = ANativeWindow_fromSurface(env, surface);
+  if (window == nullptr) return JNI_FALSE;
+  const bool ok = gRenderer.createSurface(window, width, height);
+  ANativeWindow_release(window);
+  return ok ? JNI_TRUE : JNI_FALSE;
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_heretek_gamestudio_native_MainActivity_nativeSurfaceDestroyed(JNIEnv* /*env*/,
+                                                                       jobject /*this*/) {
+  gRenderer.destroySurface();
 }
 
 extern "C" JNIEXPORT jint JNICALL
 Java_com_heretek_gamestudio_native_MainActivity_nativeDrawCalls(JNIEnv* /*env*/, jobject /*this*/) {
-  return gReady ? gRenderer.drawCallEstimate() : -1;
+  return gSceneReady ? gRenderer.drawCallEstimate() : -1;
 }
 
 extern "C" JNIEXPORT jint JNICALL
 Java_com_heretek_gamestudio_native_MainActivity_nativeInstanceCount(JNIEnv* /*env*/,
                                                                     jobject /*this*/) {
-  return gReady ? gRenderer.instanceCount() : -1;
+  return gSceneReady ? gRenderer.instanceCount() : -1;
 }
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_heretek_gamestudio_native_MainActivity_nativeFrame(JNIEnv* /*env*/, jobject /*this*/) {
-  // Render loop entry point (swapchain + instanced draws land with the Tier 2
-  // pipeline; the scene graph is parsed and counted today).
+  gRenderer.renderFrame();
 }
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_heretek_gamestudio_native_MainActivity_nativeShutdown(JNIEnv* /*env*/, jobject /*this*/) {
   gRenderer.shutdown();
-  gReady = false;
+  gSceneReady = false;
 }
 
 #endif  // __ANDROID__

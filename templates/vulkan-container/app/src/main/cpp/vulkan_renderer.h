@@ -1,9 +1,9 @@
-// Heretek Tier 2 — minimal Vulkan renderer bootstrap (NDK only).
+// Heretek Tier 2 — Vulkan renderer: surface/swapchain, compute culling
+// dispatch, and instanced indirect draws.
 //
-// Compiled only when HERETEK_ENABLE_VULKAN is defined (the Android CMake build
-// does this). Creates the instance, selects a physical device, and creates a
-// logical device with a graphics queue — the foundation the Tier 2 render loop
-// (swapchain, pipelines, instanced draws, compute culling) builds on.
+// Two variants: the NDK build (HERETEK_ENABLE_VULKAN) owns real Vulkan
+// objects; host builds get a stub with the same public surface so
+// jni_bridge/scene code paths compile everywhere.
 
 #pragma once
 
@@ -13,35 +13,120 @@
 
 #include "scene_loader.h"
 
+#ifdef HERETEK_ENABLE_VULKAN
+
+#include <android/native_window.h>
+#include <vulkan/vulkan.h>
+
+#include "vulkan_swapchain.h"
+
 namespace heretek {
 
 class VulkanRenderer {
  public:
-  bool initialize();
-  void shutdown();
-
-  /** Uploads the parsed scene into GPU-side instance data (stub until the
-   *  pipeline lands; records counts for telemetry today). */
+  bool initialize(const std::string& shaderDir);
+  bool createSurface(ANativeWindow* window, int width, int height);
+  void destroySurface();
+  void renderFrame();
   void uploadScene(const NativeScene& scene);
+  void shutdown();
 
   int drawCallEstimate() const { return drawCallEstimate_; }
   int instanceCount() const { return instanceCount_; }
-  bool isReady() const { return device_ != nullptr; }
+  bool isReady() const { return device_ != VK_NULL_HANDLE; }
   const std::string& lastError() const { return lastError_; }
 
  private:
   bool createInstance();
   bool pickPhysicalDevice();
   bool createDevice();
+  bool createCommandPool();
+  bool createBuffers();
+  bool createDescriptors();
+  bool createPipelines();
+  VkShaderModule loadShader(const std::string& path);
+  void recordFrame(VkCommandBuffer cmd, uint32_t imageIndex);
+  bool createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkBuffer* buffer, VkDeviceMemory* memory, void** mapped);
 
-  void* instance_ = nullptr;
-  void* physicalDevice_ = nullptr;
-  void* device_ = nullptr;
-  void* queue_ = nullptr;
+  VkInstance instance_ = VK_NULL_HANDLE;
+  VkPhysicalDevice physicalDevice_ = VK_NULL_HANDLE;
+  VkDevice device_ = VK_NULL_HANDLE;
+  VkQueue queue_ = VK_NULL_HANDLE;
   uint32_t queueFamily_ = 0;
+  VulkanSwapchain swapchain_;
+  VkCommandPool commandPool_ = VK_NULL_HANDLE;
+  std::vector<VkCommandBuffer> commandBuffers_;
+  std::vector<VkFence> inFlightFences_;
+  VkSemaphore imageAvailable_ = VK_NULL_HANDLE;
+  VkSemaphore renderFinished_ = VK_NULL_HANDLE;
+
+  VkDescriptorSetLayout computeSetLayout_ = VK_NULL_HANDLE;
+  VkDescriptorSetLayout graphicsSetLayout_ = VK_NULL_HANDLE;
+  VkPipelineLayout computePipelineLayout_ = VK_NULL_HANDLE;
+  VkPipelineLayout graphicsPipelineLayout_ = VK_NULL_HANDLE;
+  VkPipeline cullPipeline_ = VK_NULL_HANDLE;
+  VkPipeline scenePipeline_ = VK_NULL_HANDLE;
+  VkDescriptorPool descriptorPool_ = VK_NULL_HANDLE;
+  VkDescriptorSet computeSet_ = VK_NULL_HANDLE;
+  VkDescriptorSet graphicsSet_ = VK_NULL_HANDLE;
+
+  // Host-visible buffers (scaffold keeps everything mappable; device-local
+  // staging is the documented next optimization).
+  VkBuffer instanceBuffer_ = VK_NULL_HANDLE;
+  VkDeviceMemory instanceMemory_ = VK_NULL_HANDLE;
+  void* instanceMapped_ = nullptr;
+  VkBuffer visibleBuffer_ = VK_NULL_HANDLE;
+  VkDeviceMemory visibleMemory_ = VK_NULL_HANDLE;
+  VkBuffer indirectBuffer_ = VK_NULL_HANDLE;
+  VkDeviceMemory indirectMemory_ = VK_NULL_HANDLE;
+  void* indirectMapped_ = nullptr;
+  VkBuffer vertexBuffer_ = VK_NULL_HANDLE;
+  VkDeviceMemory vertexMemory_ = VK_NULL_HANDLE;
+  VkBuffer indexBuffer_ = VK_NULL_HANDLE;
+  VkDeviceMemory indexMemory_ = VK_NULL_HANDLE;
+
+  uint32_t instanceCount_ = 0;
+  uint32_t indirectCommandCount_ = 0;
   int drawCallEstimate_ = 0;
-  int instanceCount_ = 0;
+  uint32_t currentFrame_ = 0;
+  std::string shaderDir_;
   std::string lastError_;
 };
 
 }  // namespace heretek
+
+#else  // !HERETEK_ENABLE_VULKAN — host stub
+
+namespace heretek {
+
+class VulkanRenderer {
+ public:
+  bool initialize(const std::string& shaderDir = "") {
+    shaderDir_ = shaderDir;
+    lastError_ = "built without HERETEK_ENABLE_VULKAN";
+    return false;
+  }
+  bool createSurface(void* /*window*/, int /*width*/, int /*height*/) { return false; }
+  void destroySurface() {}
+  void renderFrame() {}
+  void uploadScene(const NativeScene& scene) {
+    drawCallEstimate_ = scene.drawCallEstimate();
+    instanceCount_ = static_cast<int>(scene.instances.size());
+  }
+  void shutdown() {}
+
+  int drawCallEstimate() const { return drawCallEstimate_; }
+  int instanceCount() const { return instanceCount_; }
+  bool isReady() const { return false; }
+  const std::string& lastError() const { return lastError_; }
+
+ private:
+  int drawCallEstimate_ = 0;
+  int instanceCount_ = 0;
+  std::string shaderDir_;
+  std::string lastError_;
+};
+
+}  // namespace heretek
+
+#endif  // HERETEK_ENABLE_VULKAN

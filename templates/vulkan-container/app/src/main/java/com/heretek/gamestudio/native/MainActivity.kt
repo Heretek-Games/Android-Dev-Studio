@@ -12,13 +12,15 @@ import java.io.FileOutputStream
 /**
  * Heretek Tier 2 — native Vulkan container activity.
  *
- * Copies the exported scene (scene.native) out of the APK assets into internal
- * storage, hands the path to the native scene loader, and drives the native
- * frame entry point from a SurfaceView callback loop.
+ * Copies the exported scene (scene.native) and the compiled SPIR-V shaders out
+ * of the APK assets into internal storage, hands the paths to the native
+ * renderer, and drives the frame loop from a SurfaceView callback.
  */
 class MainActivity : Activity(), SurfaceHolder.Callback {
 
-    private external fun nativeInit(scenePath: String): Boolean
+    private external fun nativeInit(scenePath: String, shaderDir: String): Boolean
+    private external fun nativeSurfaceCreated(surface: android.view.Surface, width: Int, height: Int): Boolean
+    private external fun nativeSurfaceDestroyed()
     private external fun nativeDrawCalls(): Int
     private external fun nativeInstanceCount(): Int
     private external fun nativeFrame()
@@ -26,6 +28,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
 
     private lateinit var surfaceView: SurfaceView
     private var initialized = false
+    private var surfaceReady = false
 
     companion object {
         init {
@@ -37,30 +40,41 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
-        val sceneFile = File(filesDir, "scene.native")
-        if (!sceneFile.exists()) {
-            assets.open("scene.native").use { input ->
-                FileOutputStream(sceneFile).use { output -> input.copyTo(output) }
-            }
-        }
-        initialized = nativeInit(sceneFile.absolutePath)
+        val sceneFile = copyAsset("scene.native", File(filesDir, "scene.native"))
+        val shaderDir = File(filesDir, "shaders").apply { mkdirs() }
+        copyAsset("shaders/cull.comp.spv", File(shaderDir, "cull.comp.spv"))
+        copyAsset("shaders/scene.vert.spv", File(shaderDir, "scene.vert.spv"))
+        copyAsset("shaders/scene.frag.spv", File(shaderDir, "scene.frag.spv"))
+
+        initialized = nativeInit(sceneFile.absolutePath, shaderDir.absolutePath)
 
         surfaceView = SurfaceView(this)
         surfaceView.holder.addCallback(this)
         setContentView(surfaceView, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
     }
 
+    private fun copyAsset(assetPath: String, target: File): File {
+        if (!target.exists()) {
+            assets.open(assetPath).use { input ->
+                FileOutputStream(target).use { output -> input.copyTo(output) }
+            }
+        }
+        return target
+    }
+
     override fun surfaceCreated(holder: SurfaceHolder) {
-        // Native frame loop entry (swapchain presentation lands with the
-        // Tier 2 pipeline; today the scene graph is live in native memory).
-        if (initialized) {
+        surfaceReady = initialized &&
+            nativeSurfaceCreated(holder.surface, surfaceView.width, surfaceView.height)
+        if (surfaceReady) {
             surfaceView.post(frameLoop)
         }
     }
 
     private val frameLoop = object : Runnable {
         override fun run() {
-            nativeFrame()
+            if (surfaceReady) {
+                nativeFrame()
+            }
             surfaceView.postDelayed(this, 16) // ~60 FPS target
         }
     }
@@ -69,6 +83,10 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
 
     override fun surfaceDestroyed(holder: SurfaceHolder) {
         surfaceView.removeCallbacks(frameLoop)
+        if (surfaceReady) {
+            nativeSurfaceDestroyed()
+            surfaceReady = false
+        }
     }
 
     override fun onDestroy() {

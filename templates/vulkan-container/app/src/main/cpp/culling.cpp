@@ -77,8 +77,9 @@ AABB meshAABB(const MeshRecord& mesh) {
 
 namespace {
 
-/** Gribb–Hartmann frustum plane extraction from a view-projection matrix. */
-void extractPlanes(const Mat4& vp, float planes[6][4]) {
+}  // namespace
+
+void extractFrustumPlanes(const Mat4& vp, float planes[6][4]) {
   const float* m = vp.m;
   // Column-major storage: row r component i lives at m[i * 4 + r].
   for (int i = 0; i < 4; i++) {
@@ -95,11 +96,9 @@ void extractPlanes(const Mat4& vp, float planes[6][4]) {
   }
 }
 
-}  // namespace
-
 bool isVisible(const Mat4& viewProj, const AABB& box) {
   float planes[6][4];
-  extractPlanes(viewProj, planes);
+  extractFrustumPlanes(viewProj, planes);
 
   const Vec3 center{(box.min.x + box.max.x) * 0.5f, (box.min.y + box.max.y) * 0.5f, (box.min.z + box.max.z) * 0.5f};
   const Vec3 extent{(box.max.x - box.min.x) * 0.5f, (box.max.y - box.min.y) * 0.5f, (box.max.z - box.min.z) * 0.5f};
@@ -139,6 +138,32 @@ std::vector<InstanceBatch> packInstanceBatches(const NativeScene& scene) {
     batches.push_back(std::move(batch));
   }
   return batches;
+}
+
+ComputeDispatchPlan planComputeDispatch(int itemCount, uint32_t workgroupSize) {
+  ComputeDispatchPlan plan;
+  plan.workgroupSize = workgroupSize > 0 ? workgroupSize : 64;
+  plan.groupCountX =
+      itemCount <= 0 ? 0u : static_cast<uint32_t>((itemCount + plan.workgroupSize - 1) / plan.workgroupSize);
+  return plan;
+}
+
+IndirectDrawPlan buildIndirectDrawPlan(const std::vector<InstanceBatch>& batches, uint32_t indicesPerInstance) {
+  IndirectDrawPlan plan;
+  uint32_t instanceOffset = 0;
+  for (const auto& batch : batches) {
+    IndirectDrawCommand command;
+    command.indexCount = indicesPerInstance;
+    command.instanceCount = static_cast<uint32_t>(batch.instances.size());
+    command.firstIndex = 0;
+    command.vertexOffset = 0;
+    command.firstInstance = instanceOffset;
+    instanceOffset += command.instanceCount;
+    plan.totalInstances += command.instanceCount;
+    plan.commands.push_back(command);
+  }
+  plan.totalDrawCalls = static_cast<uint32_t>(plan.commands.size());
+  return plan;
 }
 
 }  // namespace heretek

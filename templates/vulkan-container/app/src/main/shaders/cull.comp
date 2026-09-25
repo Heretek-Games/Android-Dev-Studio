@@ -1,0 +1,65 @@
+#version 450
+// Heretek Tier 2 — GPU compute frustum culling.
+//
+// Reads per-instance data (world position + radius), tests each instance
+// against the six frustum planes, and writes visible instance indices plus a
+// single indirect draw command whose instanceCount is the surviving count.
+// One workgroup per 64 instances; the CPU dispatches ceil(count/64) groups.
+
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+struct InstanceData {
+    vec4 positionRadius;  // xyz = world position, w = bounding radius
+    vec4 color;
+};
+
+layout(std430, binding = 0) readonly buffer InstanceBuffer {
+    InstanceData instances[];
+} instanceBuffer;
+
+layout(std430, binding = 1) writeonly buffer VisibleIndexBuffer {
+    uint visibleIndices[];
+} visibleBuffer;
+
+// Six planes as vec4 (xyz = normal, w = distance) + dispatch parameters in
+// push constants (112 bytes, within the guaranteed 128-byte minimum).
+layout(push_constant) uniform CullParams {
+    vec4 planes[6];
+    uint instanceCount;
+    uint indicesPerInstance;
+    uint firstIndex;
+    uint firstVertex;
+} params;
+
+layout(std430, binding = 2) buffer IndirectDrawBlock {
+    uint indexCount;
+    uint instanceCount;
+    uint firstIndex;
+    int  vertexOffset;
+    uint firstInstance;
+} indirectDraw;
+
+void main() {
+    const uint id = gl_GlobalInvocationID.x;
+    if (id >= params.instanceCount) return;
+
+    const vec3 center = instanceBuffer.instances[id].positionRadius.xyz;
+    const float radius = instanceBuffer.instances[id].positionRadius.w;
+
+    for (int p = 0; p < 6; ++p) {
+        const vec4 plane = params.planes[p];
+        const float distance = dot(plane.xyz, center) + plane.w;
+        if (distance + radius < 0.0) {
+            return;  // fully outside this plane: culled
+        }
+    }
+
+    // Visible: append the instance index and grow the indirect instance count.
+    const uint slot = atomicAdd(indirectDraw.instanceCount, 1u);
+    visibleBuffer.visibleIndices[slot] = id;
+    // The CPU pre-fills indexCount/firstIndex/vertexOffset/firstInstance; only
+    // instanceCount is written here, so the first dispatch writes indexCount too.
+    indirectDraw.indexCount = params.indicesPerInstance;
+    indirectDraw.firstIndex = params.firstIndex;
+    indirectDraw.vertexOffset = int(params.firstVertex);
+}

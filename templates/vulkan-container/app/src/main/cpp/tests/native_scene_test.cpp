@@ -71,6 +71,34 @@ int main(int argc, char** argv) {
   CHECK(batches.size() == 2, "two unique batch keys -> two draw calls");
   CHECK(instanced.drawCallEstimate() == 2, "instanced draw estimate ignores instance count");
 
+  // ---- Compute dispatch planning + indirect draw packing (GPU cull path) ----
+  const ComputeDispatchPlan empty = planComputeDispatch(0);
+  CHECK(empty.groupCountX == 0, "empty scene dispatches zero workgroups");
+
+  const ComputeDispatchPlan exact = planComputeDispatch(64);
+  CHECK(exact.groupCountX == 1, "64 items -> 1 workgroup");
+
+  const ComputeDispatchPlan over = planComputeDispatch(65);
+  CHECK(over.groupCountX == 2, "65 items -> 2 workgroups");
+
+  const ComputeDispatchPlan large = planComputeDispatch(50000);
+  CHECK(large.groupCountX == 782, "50k items -> 782 workgroups (ceil(50000/64))");
+
+  NativeScene mega;
+  mega.name = "Mega";
+  for (int i = 0; i < 25000; i++) mega.instances.push_back({"foliage_blade", (float)i, 0, 0, 0});
+  for (int i = 0; i < 25000; i++) mega.instances.push_back({"rock_chunk", (float)i, 0, 0, 0});
+  const auto megaBatches = packInstanceBatches(mega);
+  CHECK(megaBatches.size() == 2, "50k instances collapse to 2 batches");
+
+  const IndirectDrawPlan megaPlan = buildIndirectDrawPlan(megaBatches, 36);
+  CHECK(megaPlan.totalDrawCalls == 2, "50k instances -> 2 indirect draw calls");
+  CHECK(megaPlan.totalInstances == 50000, "indirect plan accounts for every instance");
+  CHECK(megaPlan.commands[0].indexCount == 36, "indexCount from the mesh index buffer");
+  CHECK(megaPlan.commands[0].instanceCount == 25000, "first batch instance count");
+  CHECK(megaPlan.commands[0].firstInstance == 0, "first batch starts at instance 0");
+  CHECK(megaPlan.commands[1].firstInstance == 25000, "second batch offsets past the first");
+
   // ---- Malformed input is rejected with a line number ----
   NativeScene broken;
   std::string brokenError;

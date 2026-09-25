@@ -16,6 +16,7 @@ if(ANDROID)
   add_library(heretek_native SHARED
     scene_loader.cpp
     culling.cpp
+    vulkan_swapchain.cpp
     vulkan_renderer.cpp
     jni_bridge.cpp
   )

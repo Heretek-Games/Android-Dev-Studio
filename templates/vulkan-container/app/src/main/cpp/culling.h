@@ -42,6 +42,13 @@ AABB meshAABB(const MeshRecord& mesh);
 /** Conservative frustum test against the six planes extracted from viewProj. */
 bool isVisible(const Mat4& viewProj, const AABB& box);
 
+/**
+ * Gribb–Hartmann frustum plane extraction (public so the Vulkan renderer can
+ * fill the compute push constants with the same planes the CPU tests use).
+ * Each plane is (nx, ny, nz, distance).
+ */
+void extractFrustumPlanes(const Mat4& viewProj, float planes[6][4]);
+
 struct CullResult {
   std::vector<int> visibleMeshIndices;
   int culledCount = 0;
@@ -57,5 +64,40 @@ struct InstanceBatch {
 
 /** Groups instances by batch key: one draw call per returned batch. */
 std::vector<InstanceBatch> packInstanceBatches(const NativeScene& scene);
+
+// ---------------------------------------------------------------------------
+// GPU compute culling plan (CPU side of the cull.comp dispatch)
+// ---------------------------------------------------------------------------
+
+struct ComputeDispatchPlan {
+  uint32_t groupCountX = 0;
+  uint32_t workgroupSize = 64;
+};
+
+/** ceil(itemCount / workgroupSize) workgroups, 0 when there is nothing to cull. */
+ComputeDispatchPlan planComputeDispatch(int itemCount, uint32_t workgroupSize = 64);
+
+/** Matches VkDrawIndexedIndirectCommand memory layout (5 × 32-bit words). */
+struct IndirectDrawCommand {
+  uint32_t indexCount = 0;
+  uint32_t instanceCount = 0;
+  uint32_t firstIndex = 0;
+  int32_t vertexOffset = 0;
+  uint32_t firstInstance = 0;
+};
+
+struct IndirectDrawPlan {
+  std::vector<IndirectDrawCommand> commands;
+  uint32_t totalInstances = 0;
+  uint32_t totalDrawCalls = 0;
+};
+
+/**
+ * Builds one indirect draw command per instance batch (the compute shader only
+ * rewrites instanceCount at runtime). firstInstance offsets accumulate across
+ * batches so a single drawIndirect range covers the whole visible set.
+ */
+IndirectDrawPlan buildIndirectDrawPlan(const std::vector<InstanceBatch>& batches,
+                                       uint32_t indicesPerInstance = 36);
 
 }  // namespace heretek
