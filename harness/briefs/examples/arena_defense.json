@@ -1,0 +1,125 @@
+{
+  "title": "Arena Defense",
+  "fantasy": {
+    "genre": "arena combat",
+    "inspirations": ["wave defense trials", "mobile arena shooters"],
+    "tone": "hold the arena: two waves, no retreat",
+    "loop": "Aim, survive, and clear both waves to win the run."
+  },
+  "experience": {
+    "beats": ["first contact at wave 1", "victory screen after wave 2"],
+    "feedback": ["hit flashes and kill score", "wave banner and win phase"],
+    "inputs": ["touch move stick", "auto-fire weapon"]
+  },
+  "world": {
+    "areaKm2": 0.002,
+    "biomes": ["arena"],
+    "poiDensityPerKm2": 500,
+    "traversalSpeedsMps": {"walk": 5},
+    "streamingRadiusM": 60
+  },
+  "systems": {
+    "components": ["RigidBody3D", "Collider3D", "MobileController", "WeaponController", "HealthComponent", "EnemyAI"],
+    "physics": ["dynamic player capsule", "static arena floor"],
+    "ai": ["enemy chase and melee"],
+    "dialogue": [],
+    "inventory": [],
+    "questStates": ["waves-active", "won"],
+    "saveSchema": {}
+  },
+  "lookdev": {
+    "palette": ["#27272a", "#3b82f6", "#ef4444"],
+    "lighting": "stylized",
+    "silhouette": "flat arena floor, capsule hero, box enemies",
+    "post": ["none (mobile budget)"]
+  },
+  "performance": {
+    "deviceProfile": "android16-snapdragon8elite",
+    "targetFps": 60,
+    "maxDrawCalls": 100,
+    "maxTrisPerChunk": 150000,
+    "maxTrisPerScene": 1200000,
+    "maxTextureMb": 256,
+    "maxPhysicsBodies": 256,
+    "maxApkMb": 200,
+    "maxLoadSeconds": 8.0
+  },
+  "acceptance": [
+    {
+      "id": "arena-ground",
+      "axis": "Functional",
+      "description": "a fixed arena floor exists",
+      "qaRule": {"type": "entity_exists", "target": "Ground Arena"}
+    },
+    {
+      "id": "player-hero",
+      "axis": "Functional",
+      "description": "a player hero with mobile controls exists",
+      "qaRule": {"type": "entity_component", "target": "Player Hero", "component": "MobileController"}
+    },
+    {
+      "id": "hero-armed",
+      "axis": "Functional",
+      "description": "the hero carries a weapon controller",
+      "qaRule": {"type": "entity_component", "target": "Player Hero", "component": "WeaponController"}
+    },
+    {
+      "id": "hero-tough",
+      "axis": "Functional",
+      "description": "the hero has a health component",
+      "qaRule": {"type": "entity_component", "target": "Player Hero", "component": "HealthComponent"}
+    },
+    {
+      "id": "enemies-chase",
+      "axis": "Playable",
+      "description": "spawned enemies actively chase the hero",
+      "qaRule": {"type": "game_enemy_chase_min", "min": 0.5}
+    },
+    {
+      "id": "kills-scored",
+      "axis": "Playable",
+      "description": "the run scores at least 2 kills",
+      "qaRule": {"type": "game_kills_min", "min": 2}
+    },
+    {
+      "id": "score-awarded",
+      "axis": "Playable",
+      "description": "the run reaches at least 200 score",
+      "qaRule": {"type": "game_score_min", "min": 200}
+    },
+    {
+      "id": "wave-advanced",
+      "axis": "Playable",
+      "description": "the run advances to wave 2",
+      "qaRule": {"type": "game_wave_reached", "wave": 2}
+    },
+    {
+      "id": "run-won",
+      "axis": "Playable",
+      "description": "the run ends in the won phase",
+      "qaRule": {"type": "game_phase", "phase": "won"}
+    },
+    {
+      "id": "draw-budget",
+      "axis": "Performant",
+      "description": "scene stays within the mobile draw-call budget",
+      "qaRule": {"type": "draw_call_budget", "max": 100}
+    },
+    {
+      "id": "sim-fps",
+      "axis": "Performant",
+      "description": "headless simulation holds interactive frame rates",
+      "qaRule": {"type": "fps_min", "min": 30}
+    },
+    {
+      "id": "arena-read",
+      "axis": "Visually Coherent",
+      "description": "the arena reads as a combat trial ground at sunset"
+    },
+    {
+      "id": "brief-faithful",
+      "axis": "Spec-Accurate",
+      "description": "the scene matches this brief: arena defense, armed hero, two waves, win phase"
+    }
+  ]
+}
