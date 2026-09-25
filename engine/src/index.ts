@@ -23,6 +23,7 @@ export * from './ui/GameShell.js';
 export * from './game/DamageRouter.js';
 export * from './game/GameSession.js';
 export * from './game/GameRuntime.js';
+export * from './simulation/Settlement.js';
 export * from './game/SaveSystem.js';
 export * from './audio/AudioBackend.js';
 export * from './audio/WebAudioBackend.js';
