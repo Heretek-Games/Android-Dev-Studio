@@ -1,0 +1,107 @@
+{
+  "title": "Checkpoint Keep",
+  "fantasy": {
+    "genre": "arena defense with field saves",
+    "inspirations": ["checkpoint trials", "ironman-lite skirmishes"],
+    "tone": "hold the keep, prove the save system holds with you",
+    "loop": "Defeat two waves while the headless save system snapshots, restores, and verifies quest state mid-run."
+  },
+  "experience": {
+    "beats": ["mid-run checkpoint chime", "victory with state intact"],
+    "feedback": ["kill score", "save envelope verification", "win phase"],
+    "inputs": ["touch move stick", "auto-fire weapon"]
+  },
+  "world": {
+    "areaKm2": 0.002,
+    "biomes": ["keep"],
+    "poiDensityPerKm2": 500,
+    "traversalSpeedsMps": {"walk": 5},
+    "streamingRadiusM": 60
+  },
+  "systems": {
+    "components": ["RigidBody3D", "Collider3D", "MobileController", "WeaponController", "HealthComponent", "EnemyAI"],
+    "physics": ["dynamic defender capsule", "static keep floor"],
+    "ai": ["enemy chase and melee"],
+    "dialogue": [],
+    "inventory": [],
+    "questStates": ["waves-active", "checkpoint-verified", "won"],
+    "saveSchema": {"score": "number", "wave": "number", "kills": "number", "elapsedSeconds": "number", "phase": "GamePhase"}
+  },
+  "lookdev": {
+    "palette": ["#27272a", "#3b82f6", "#ef4444"],
+    "lighting": "stylized",
+    "silhouette": "flat keep floor, capsule defender, box enemies",
+    "post": ["none (mobile budget)"]
+  },
+  "performance": {
+    "deviceProfile": "android16-snapdragon8elite",
+    "targetFps": 60,
+    "maxDrawCalls": 100,
+    "maxTrisPerChunk": 150000,
+    "maxTrisPerScene": 1200000,
+    "maxTextureMb": 256,
+    "maxPhysicsBodies": 256,
+    "maxApkMb": 200,
+    "maxLoadSeconds": 8.0
+  },
+  "acceptance": [
+    {
+      "id": "keep-floor",
+      "axis": "Functional",
+      "description": "a fixed keep floor exists",
+      "qaRule": {"type": "entity_exists", "target": "Keep Floor"}
+    },
+    {
+      "id": "defender-ready",
+      "axis": "Functional",
+      "description": "the defender has controls, weapon, and health",
+      "qaRule": {"type": "entity_component", "target": "Defender", "component": "WeaponController"}
+    },
+    {
+      "id": "kills-scored",
+      "axis": "Playable",
+      "description": "the run scores at least 2 kills",
+      "qaRule": {"type": "game_kills_min", "min": 2}
+    },
+    {
+      "id": "wave-advanced",
+      "axis": "Playable",
+      "description": "the run advances to wave 2",
+      "qaRule": {"type": "game_wave_reached", "wave": 2}
+    },
+    {
+      "id": "save-compatible",
+      "axis": "Playable",
+      "description": "mid-run save, envelope round-trip, restore, and post-restore monotonicity all hold",
+      "qaRule": {"type": "game_save_restore"}
+    },
+    {
+      "id": "run-won",
+      "axis": "Playable",
+      "description": "the run ends in the won phase",
+      "qaRule": {"type": "game_phase", "phase": "won"}
+    },
+    {
+      "id": "draw-budget",
+      "axis": "Performant",
+      "description": "scene stays within the mobile draw-call budget",
+      "qaRule": {"type": "draw_call_budget", "max": 100}
+    },
+    {
+      "id": "sim-fps",
+      "axis": "Performant",
+      "description": "headless simulation holds interactive frame rates",
+      "qaRule": {"type": "fps_min", "min": 30}
+    },
+    {
+      "id": "keep-read",
+      "axis": "Visually Coherent",
+      "description": "the keep reads as a checkpoint trial ground"
+    },
+    {
+      "id": "brief-faithful",
+      "axis": "Spec-Accurate",
+      "description": "the scene matches this brief: keep defense, field saves, two waves, win phase"
+    }
+  ]
+}
