@@ -57,4 +57,36 @@ describe('MobileController — dual-stick player movement', () => {
     other.fromJSON(json);
     assert.strictEqual(other.moveSpeed, 7);
   });
+
+  test('default deadzone ignores stick drift but passes deliberate input', () => {
+    resetInput();
+    const go = new GameObject('Hero');
+    const controller = go.addComponent(new MobileController({ moveSpeed: 4 }));
+    assert.strictEqual(controller.deadzone, 0.05);
+
+    MobileInput.instance.setJoystick('left', 0.04, 0); // below deadzone
+    controller.update(0.5);
+    assert.strictEqual(controller.isMoving, false);
+    assert.strictEqual(go.transform.position.x, 0);
+
+    MobileInput.instance.setJoystick('left', 0.06, 0); // above deadzone
+    controller.update(0.5);
+    assert.strictEqual(controller.isMoving, true);
+    assert.ok(go.transform.position.x > 0);
+    resetInput();
+  });
+
+  test('configurable deadzone clamps negatives and round-trips serialization', () => {
+    const controller = new MobileController({ deadzone: 0.2 });
+    assert.strictEqual(controller.deadzone, 0.2);
+
+    const clamped = new MobileController({ deadzone: -1 });
+    assert.strictEqual(clamped.deadzone, 0);
+
+    const json = controller.toJSON();
+    assert.strictEqual(json.deadzone, 0.2);
+    const other = new MobileController();
+    other.fromJSON(json);
+    assert.strictEqual(other.deadzone, 0.2);
+  });
 });

@@ -7,12 +7,15 @@ export interface MobileControllerOptions {
   moveSpeed?: number;
   rotationSpeed?: number;
   jumpForce?: number;
+  /** Joystick magnitude below this does not move (default 0.05). Must be >= 0. */
+  deadzone?: number;
 }
 
 export class MobileController extends Component {
   public moveSpeed: number = 5.0;
   public rotationSpeed: number = 10.0;
   public jumpForce: number = 5.0;
+  public deadzone: number = 0.05;
 
   public isMoving: boolean = false;
 
@@ -25,6 +28,7 @@ export class MobileController extends Component {
       if (options.moveSpeed !== undefined) this.moveSpeed = options.moveSpeed;
       if (options.rotationSpeed !== undefined) this.rotationSpeed = options.rotationSpeed;
       if (options.jumpForce !== undefined) this.jumpForce = options.jumpForce;
+      if (options.deadzone !== undefined) this.deadzone = Math.max(0, options.deadzone);
     }
   }
 
@@ -41,7 +45,7 @@ export class MobileController extends Component {
     const jx = input.leftJoystick.x;
     const jy = input.leftJoystick.y;
 
-    if (Math.abs(jx) > 0.05 || Math.abs(jy) > 0.05) {
+    if (Math.abs(jx) > this.deadzone || Math.abs(jy) > this.deadzone) {
       this.isMoving = true;
       // Forward is along -Z in Three.js convention
       this.moveDirection.set(jx, 0, -jy).normalize();
@@ -101,7 +105,8 @@ export class MobileController extends Component {
       enabled: this.enabled,
       moveSpeed: this.moveSpeed,
       rotationSpeed: this.rotationSpeed,
-      jumpForce: this.jumpForce
+      jumpForce: this.jumpForce,
+      deadzone: this.deadzone
     };
   }
 
@@ -109,5 +114,6 @@ export class MobileController extends Component {
     if (data.moveSpeed !== undefined) this.moveSpeed = data.moveSpeed;
     if (data.rotationSpeed !== undefined) this.rotationSpeed = data.rotationSpeed;
     if (data.jumpForce !== undefined) this.jumpForce = data.jumpForce;
+    if (data.deadzone !== undefined) this.deadzone = Math.max(0, data.deadzone);
   }
 }
