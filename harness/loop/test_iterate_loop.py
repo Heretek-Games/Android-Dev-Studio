@@ -153,6 +153,46 @@ class LoopTests(unittest.TestCase):
         self.assertIn("player_exists", repair_user)
         self.assertIn("not found", repair_user)
 
+    def test_rejected_action_detail_reaches_repair_prompt(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            client = FakeClient(
+                [
+                    llm_response(
+                        {
+                            "summary": "ground plus bad game config",
+                            "actions": [
+                                {
+                                    "type": "spawn",
+                                    "name": "Ground",
+                                    "shape": "plane",
+                                    "size": [20, 1, 20],
+                                    "position": [0, -0.5, 0],
+                                    "physics": "fixed",
+                                },
+                                {
+                                    "type": "game",
+                                    "config": {
+                                        "mode": "build",
+                                        "settlement": {"name": "Hollow"},
+                                    },
+                                },
+                            ],
+                        },
+                        tokens=100,
+                    ),
+                    llm_response(
+                        {"summary": "fixed game config", "actions": []}, tokens=100
+                    ),
+                ]
+            )
+            qa = FakeQaRunner([qa_report(False), qa_report(False)])
+            loop = self._loop(tmp, client, qa, max_iterations=2)
+            loop.run()
+
+        repair_user = client.calls[1][1]["content"]
+        self.assertIn("REJECTED actions", repair_user)
+        self.assertIn("unknown game settlement key 'name'", repair_user)
+
     def test_budget_exhaustion_is_unresolved(self):
         with tempfile.TemporaryDirectory() as tmp:
             client = FakeClient(

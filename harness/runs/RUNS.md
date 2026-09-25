@@ -635,3 +635,20 @@ precise, root-caused defect (no false success claimed).
 | Fix | validators now take an `errors` out-param: `_validate_game`/`_validate_game_enemy`/`_validate_game_settlement` report the **specific offense** (e.g. `unknown game key 'description' (allowed: …)`, `game 'totalWaves' must be a positive finite number (got 0)`), and `_apply_game` quotes it in the outcome detail that feeds the next repair prompt. 1 new test asserts rejections name the key (102 loop tests green) |
 
 Evidence: `harness/runs/loop_runs/20260925-143359-*.json`. Re-run queued after the fix.
+
+### Re-run (2026-09-25 14:36): FAILED 3/6 again — precise second defect
+
+The specific errors fired exactly as designed — all 4 iterations reported
+`game config rejected — unknown game settlement key 'name'` (the model nests a
+descriptive `name` inside the settlement block every time). But repair still did
+not converge, exposing the **last-mile defect**: `repair_messages` never received
+the applier outcomes. The rejection detail existed only in the run log while the
+model saw just the downstream symptom (`no game config in scenario`).
+
+Fix: the loop now carries the previous iteration's rejected-action details into
+the repair prompt (`REJECTED actions … fix these first — the scene does NOT
+contain them`), alongside the QA failures. Covered by `test_prompts.py` (prompt
+quotes rejections; absent by default) and a hermetic loop test proving an
+invalid `game` action's reason reaches the next repair prompt. 105 loop tests green.
+
+Evidence: `harness/runs/loop_runs/20260925-143603-*.json`. Third run queued.

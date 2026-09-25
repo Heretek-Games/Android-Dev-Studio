@@ -342,6 +342,7 @@ class IterateLoop:
         failed_rules: List[Dict[str, Any]] = []
         metrics: Dict[str, Any] = {}
         final_report: Optional[Dict[str, Any]] = None
+        rejected: List[str] = []
 
         for iteration in range(1, self.max_iterations + 1):
             phase = "generate" if iteration == 1 else "repair"
@@ -373,6 +374,7 @@ class IterateLoop:
                     metrics,
                     iteration,
                     vision_notes,
+                    rejected,
                 )
 
             record: Dict[str, Any] = {
@@ -407,6 +409,14 @@ class IterateLoop:
 
             scene, apply_result = apply_actions(scene, actions)
             record["apply"] = apply_result.as_dict()
+            # Rejected actions never reach the scene or QA: carry their details
+            # into the next repair prompt so the model sees the actual offense,
+            # not just downstream symptoms.
+            rejected = [
+                f"{o.get('type')}: {o.get('detail')}"
+                for o in apply_result.as_dict().get("outcomes", [])
+                if o.get("status") in ("invalid", "target-missing")
+            ][:8]
 
             valid, violations = validate_scene_invariants(scene)
             record["gate"] = {"valid": valid, "violations": violations}

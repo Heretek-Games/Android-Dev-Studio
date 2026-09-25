@@ -158,8 +158,15 @@ def repair_messages(
     metrics: Dict[str, Any],
     iteration: int,
     vision_notes: List[str] | None = None,
+    rejected: List[str] | None = None,
 ) -> List[Dict[str, str]]:
-    """Repair prompt: minimal corrective actions for the observed failures."""
+    """Repair prompt: minimal corrective actions for the observed failures.
+
+    `rejected` carries the previous iteration's rejected-action details
+    (invalid applier outcomes, e.g. schema violations). These never reach the
+    scene or QA, so without this channel the model only sees downstream
+    symptoms ("no game config in scenario") and cannot fix the actual offense.
+    """
     import json
 
     system = (
@@ -186,11 +193,21 @@ def repair_messages(
             f"- {note}" for note in vision_notes
         )
 
+    rejected_note = ""
+    if rejected:
+        rejected_note = (
+            "\nYour last patch had REJECTED actions that were never applied "
+            "(fix these first — the scene below does NOT contain them):\n"
+            + "\n".join(f"- {line}" for line in rejected)
+            + "\n"
+        )
+
     user = (
         f"Goal:\n{goal}\n\n"
         f"Iteration {iteration} QA failures:\n{failures}\n\n"
         f"Telemetry: {json.dumps(metrics)}\n"
         f"{vision_note}\n"
+        f"{rejected_note}"
         "Current scene (JSON):\n"
         f"{json.dumps(scene, separators=(',', ':'))}\n\n"
         "Acceptance rules (all must eventually pass):\n"
