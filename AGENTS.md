@@ -97,7 +97,7 @@ Live LLM settings are loaded from `.env.prod`:
 The Vite dev server proxies `/api/llm` to `https://llm.heretek.one/v1`, keeping credentials securely managed.
 
 ### Studio MCP Tools (`harness/mcp_server.py`)
-External coding agents can interact with the live studio session via 23 JSON-RPC tools, with every
+External coding agents can interact with the live studio session via 24 JSON-RPC tools, with every
 scene-mutating tool running the **unit-tested 7-point Scene Invariant Gate**
 (`harness/validation/scene_invariants.py`) transactionally. Mutations persist to
 `harness/scenes/active_scene.json` (canonical scene) and synchronize a snapshot into
@@ -126,6 +126,7 @@ real engine runtime. The Studio UI writes through the same gate via `POST /api/s
 21. `studio_query_memory`: Query ADRs, task DAGs, and QA benchmarks from cross-session memory.
 22. `studio_record_adr`: Record an Architectural Decision Record into persistent memory.
 23. `studio_dispatch_subagent_task`: Decompose game design prompt and dispatch multi-agent swarm pipeline.
+24. `studio_configure_terrain_lod`: Get/set the focus-driven quadtree terrain LOD config (`scene.quadtree`), shared by the web engine and the Tier 2 native export.
 
 ### Deterministic Zero-Mistake Guardrails (`harness/validation/`)
 - `scene_invariants.py`: Enforces 7 hard invariants before any mutation is saved:
@@ -144,6 +145,9 @@ real engine runtime. The Studio UI writes through the same gate via `POST /api/s
   (md5-verified), while valid mutations + delete round-trips restore the same checksum.
 - Tests: `python3 -m unittest harness.validation.test_scene_invariants` (24 cases: positive scene,
   one negative per invariant, schema normalization, input immutability).
+- Cross-tier quadtree parity: `python3 -m unittest harness.validation.test_quadtree_parity` compares the
+  TS `QuadtreeTerrain` leaves (via `harness/agents/quadtree_cli.mjs`) against the Python exporter's
+  subdivision across 5 focus/depth cases (ids, bounds, depth, lod, blend).
 
 ### Dev-Server Bridges (`app/vite.config.ts`)
 All studio↔harness bridges run through the Vite dev server (dev-only, like `/api/llm`):

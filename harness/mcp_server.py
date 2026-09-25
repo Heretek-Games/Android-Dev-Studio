@@ -480,6 +480,28 @@ TOOLS = [
         },
     },
     {
+        "name": "studio_configure_terrain_lod",
+        "description": "Configures the focus-driven quadtree terrain LOD (max depth + focus point) persisted to the canonical scene; the Tier 2 exporter renders the same subdivision as terrain_lod records.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["get", "set"],
+                    "default": "get",
+                },
+                "max_depth": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 6,
+                    "default": 3,
+                },
+                "focus_x": {"type": "number", "default": 0.0},
+                "focus_z": {"type": "number", "default": 0.0},
+            },
+        },
+    },
+    {
         "name": "studio_configure_dialogue",
         "description": "Registers and manages narrative branching dialogue trees and choices (Dialogic & Godot Dialogue Manager pattern).",
         "inputSchema": {
@@ -1527,6 +1549,59 @@ def handle_request(req: Dict[str, Any]) -> Dict[str, Any]:
                         ]
                     },
                 }
+
+        elif tool_name == "studio_configure_terrain_lod":
+            action = args.get("action", "get")
+            scene = load_active_scene()
+            if action == "set":
+                config = {
+                    "maxDepth": max(1, min(6, int(args.get("max_depth", 3)))),
+                    "focus": [
+                        float(args.get("focus_x", 0.0)),
+                        float(args.get("focus_z", 0.0)),
+                    ],
+                }
+                scene["quadtree"] = config
+                saved, err = save_active_scene_transactional(scene)
+                if not saved:
+                    return {
+                        "jsonrpc": "2.0",
+                        "id": req_id,
+                        "error": {
+                            "code": -32000,
+                            "message": f"Invariant Violation during terrain LOD config: {err}",
+                        },
+                    }
+                return {
+                    "jsonrpc": "2.0",
+                    "id": req_id,
+                    "result": {
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": f"Terrain LOD configured: max depth {config['maxDepth']}, focus ({config['focus'][0]}, {config['focus'][1]}). Scene persisted.",
+                            }
+                        ]
+                    },
+                }
+            config = scene.get("quadtree")
+            return {
+                "jsonrpc": "2.0",
+                "id": req_id,
+                "result": {
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": "Terrain LOD config: "
+                            + (
+                                json.dumps(config)
+                                if config
+                                else "not set (defaults: depth 3, focus origin)"
+                            ),
+                        }
+                    ]
+                },
+            }
 
         elif tool_name == "studio_configure_dialogue":
             action = args.get("action", "get_tree")
