@@ -4,7 +4,7 @@
   "goal": "Build a mini arena game: a ground arena, a player capsule with mobile controls, 6 tall pillar obstacles in an obstacle course, at least 15 spinning gold coins, and a warm sunset directional light",
   "gameObjects": [
     {
-      "name": "Ground",
+      "name": "Ground Plane",
       "shape": "plane",
       "size": [
         40.0,
@@ -13,10 +13,10 @@
       ],
       "position": [
         0.0,
-        0.0,
+        -0.5,
         0.0
       ],
-      "color": "#8a6f4d",
+      "color": "#8a6b4a",
       "physics": "fixed"
     },
     {
@@ -29,29 +29,31 @@
       ],
       "position": [
         0.0,
-        2.0,
+        1.5,
         0.0
       ],
-      "color": "#4fa3ff",
+      "color": "#4db8ff",
       "physics": "dynamic",
       "mass": 1.0,
       "controller": true,
       "events": [
         {
-          "name": "Idle Bob",
+          "name": "StayAfloat",
           "conditions": [
             {
               "type": "EveryFrame",
               "params": {
-                "interval": 0.016
+                "interval": 0.05
               }
             }
           ],
           "actions": [
             {
-              "type": "RotateY",
+              "type": "Translate",
               "params": {
-                "degrees": 0
+                "x": 0,
+                "y": 0,
+                "z": 0
               }
             }
           ]
@@ -62,116 +64,116 @@
       "name": "Pillar 1",
       "shape": "cylinder",
       "size": [
-        1.5,
+        1.4,
         6.0,
-        1.5
+        1.4
       ],
       "position": [
         -6.0,
         3.0,
         -6.0
       ],
-      "color": "#b08968",
+      "color": "#b0a090",
       "physics": "fixed"
     },
     {
       "name": "Pillar 2",
       "shape": "cylinder",
       "size": [
-        1.5,
+        1.4,
         6.0,
-        1.5
+        1.4
       ],
       "position": [
         0.0,
         3.0,
         -8.0
       ],
-      "color": "#b08968",
+      "color": "#b0a090",
       "physics": "fixed"
     },
     {
       "name": "Pillar 3",
       "shape": "cylinder",
       "size": [
-        1.5,
+        1.4,
         6.0,
-        1.5
+        1.4
       ],
       "position": [
         6.0,
         3.0,
         -6.0
       ],
-      "color": "#b08968",
+      "color": "#b0a090",
       "physics": "fixed"
     },
     {
       "name": "Pillar 4",
       "shape": "cylinder",
       "size": [
-        1.5,
+        1.4,
         6.0,
-        1.5
+        1.4
       ],
       "position": [
         -6.0,
         3.0,
-        4.0
+        6.0
       ],
-      "color": "#b08968",
+      "color": "#b0a090",
       "physics": "fixed"
     },
     {
       "name": "Pillar 5",
       "shape": "cylinder",
       "size": [
-        1.5,
+        1.4,
         6.0,
-        1.5
+        1.4
       ],
       "position": [
         0.0,
         3.0,
         8.0
       ],
-      "color": "#b08968",
+      "color": "#b0a090",
       "physics": "fixed"
     },
     {
       "name": "Pillar 6",
       "shape": "cylinder",
       "size": [
-        1.5,
+        1.4,
         6.0,
-        1.5
+        1.4
       ],
       "position": [
         6.0,
         3.0,
-        4.0
+        6.0
       ],
-      "color": "#b08968",
+      "color": "#b0a090",
       "physics": "fixed"
     },
     {
       "name": "Gold Coin 1",
       "shape": "cylinder",
       "size": [
-        1.0,
-        0.2,
-        1.0
+        0.8,
+        0.15,
+        0.8
       ],
       "position": [
-        -4.0,
-        1.5,
-        -4.0
+        -9.0,
+        1.0,
+        -3.0
       ],
       "color": "#ffd700",
       "physics": "none",
       "events": [
         {
-          "name": "Coin Spin",
+          "name": "SpinCoin",
           "conditions": [
             {
               "type": "EveryFrame",
@@ -184,7 +186,7 @@
             {
               "type": "RotateY",
               "params": {
-                "degrees": 6
+                "degrees": 4
               }
             }
           ]
@@ -195,20 +197,20 @@
       "name": "Gold Coin 2",
       "shape": "cylinder",
       "size": [
-        1.0,
-        0.2,
-        1.0
+        0.8,
+        0.15,
+        0.8
       ],
       "position": [
-        0.0,
-        1.5,
-        -6.0
+        -5.0,
+        1.0,
+        -3.0
       ],
       "color": "#ffd700",
       "physics": "none",
       "events": [
         {
-          "name": "Coin Spin",
+          "name": "SpinCoin",
           "conditions": [
             {
               "type": "EveryFrame",
@@ -221,7 +223,7 @@
             {
               "type": "RotateY",
               "params": {
-                "degrees": 6
+                "degrees": 4
               }
             }
           ]
@@ -232,20 +234,20 @@
       "name": "Gold Coin 3",
       "shape": "cylinder",
       "size": [
-        1.0,
-        0.2,
-        1.0
+        0.8,
+        0.15,
+        0.8
       ],
       "position": [
-        4.0,
-        1.5,
-        -4.0
+        5.0,
+        1.0,
+        -3.0
       ],
       "color": "#ffd700",
       "physics": "none",
       "events": [
         {
-          "name": "Coin Spin",
+          "name": "SpinCoin",
           "conditions": [
             {
               "type": "EveryFrame",
@@ -258,7 +260,7 @@
             {
               "type": "RotateY",
               "params": {
-                "degrees": 6
+                "degrees": 4
               }
             }
           ]
@@ -269,20 +271,20 @@
       "name": "Gold Coin 4",
       "shape": "cylinder",
       "size": [
-        1.0,
-        0.2,
-        1.0
+        0.8,
+        0.15,
+        0.8
       ],
       "position": [
-        -4.0,
-        1.5,
-        0.0
+        9.0,
+        1.0,
+        -3.0
       ],
       "color": "#ffd700",
       "physics": "none",
       "events": [
         {
-          "name": "Coin Spin",
+          "name": "SpinCoin",
           "conditions": [
             {
               "type": "EveryFrame",
@@ -295,7 +297,7 @@
             {
               "type": "RotateY",
               "params": {
-                "degrees": 6
+                "degrees": 4
               }
             }
           ]
@@ -306,20 +308,20 @@
       "name": "Gold Coin 5",
       "shape": "cylinder",
       "size": [
-        1.0,
-        0.2,
-        1.0
+        0.8,
+        0.15,
+        0.8
       ],
       "position": [
-        4.0,
-        1.5,
-        0.0
+        -9.0,
+        1.0,
+        3.0
       ],
       "color": "#ffd700",
       "physics": "none",
       "events": [
         {
-          "name": "Coin Spin",
+          "name": "SpinCoin",
           "conditions": [
             {
               "type": "EveryFrame",
@@ -332,7 +334,7 @@
             {
               "type": "RotateY",
               "params": {
-                "degrees": 6
+                "degrees": 4
               }
             }
           ]
@@ -343,20 +345,20 @@
       "name": "Gold Coin 6",
       "shape": "cylinder",
       "size": [
-        1.0,
-        0.2,
-        1.0
+        0.8,
+        0.15,
+        0.8
       ],
       "position": [
-        0.0,
-        1.5,
-        2.0
+        -5.0,
+        1.0,
+        3.0
       ],
       "color": "#ffd700",
       "physics": "none",
       "events": [
         {
-          "name": "Coin Spin",
+          "name": "SpinCoin",
           "conditions": [
             {
               "type": "EveryFrame",
@@ -369,7 +371,7 @@
             {
               "type": "RotateY",
               "params": {
-                "degrees": 6
+                "degrees": 4
               }
             }
           ]
@@ -380,20 +382,20 @@
       "name": "Gold Coin 7",
       "shape": "cylinder",
       "size": [
-        1.0,
-        0.2,
-        1.0
+        0.8,
+        0.15,
+        0.8
       ],
       "position": [
-        -4.0,
-        1.5,
-        6.0
+        5.0,
+        1.0,
+        3.0
       ],
       "color": "#ffd700",
       "physics": "none",
       "events": [
         {
-          "name": "Coin Spin",
+          "name": "SpinCoin",
           "conditions": [
             {
               "type": "EveryFrame",
@@ -406,7 +408,7 @@
             {
               "type": "RotateY",
               "params": {
-                "degrees": 6
+                "degrees": 4
               }
             }
           ]
@@ -417,20 +419,20 @@
       "name": "Gold Coin 8",
       "shape": "cylinder",
       "size": [
-        1.0,
-        0.2,
-        1.0
+        0.8,
+        0.15,
+        0.8
       ],
       "position": [
-        4.0,
-        1.5,
-        6.0
+        9.0,
+        1.0,
+        3.0
       ],
       "color": "#ffd700",
       "physics": "none",
       "events": [
         {
-          "name": "Coin Spin",
+          "name": "SpinCoin",
           "conditions": [
             {
               "type": "EveryFrame",
@@ -443,7 +445,7 @@
             {
               "type": "RotateY",
               "params": {
-                "degrees": 6
+                "degrees": 4
               }
             }
           ]
@@ -454,20 +456,20 @@
       "name": "Gold Coin 9",
       "shape": "cylinder",
       "size": [
-        1.0,
-        0.2,
-        1.0
+        0.8,
+        0.15,
+        0.8
       ],
       "position": [
-        -8.0,
-        1.5,
-        -2.0
+        -9.0,
+        1.0,
+        -8.0
       ],
       "color": "#ffd700",
       "physics": "none",
       "events": [
         {
-          "name": "Coin Spin",
+          "name": "SpinCoin",
           "conditions": [
             {
               "type": "EveryFrame",
@@ -480,7 +482,7 @@
             {
               "type": "RotateY",
               "params": {
-                "degrees": 6
+                "degrees": 4
               }
             }
           ]
@@ -491,20 +493,20 @@
       "name": "Gold Coin 10",
       "shape": "cylinder",
       "size": [
-        1.0,
-        0.2,
-        1.0
+        0.8,
+        0.15,
+        0.8
       ],
       "position": [
-        8.0,
-        1.5,
-        -2.0
+        -4.0,
+        1.0,
+        -11.0
       ],
       "color": "#ffd700",
       "physics": "none",
       "events": [
         {
-          "name": "Coin Spin",
+          "name": "SpinCoin",
           "conditions": [
             {
               "type": "EveryFrame",
@@ -517,7 +519,7 @@
             {
               "type": "RotateY",
               "params": {
-                "degrees": 6
+                "degrees": 4
               }
             }
           ]
@@ -528,20 +530,20 @@
       "name": "Gold Coin 11",
       "shape": "cylinder",
       "size": [
-        1.0,
-        0.2,
-        1.0
+        0.8,
+        0.15,
+        0.8
       ],
       "position": [
-        -8.0,
-        1.5,
-        4.0
+        4.0,
+        1.0,
+        -11.0
       ],
       "color": "#ffd700",
       "physics": "none",
       "events": [
         {
-          "name": "Coin Spin",
+          "name": "SpinCoin",
           "conditions": [
             {
               "type": "EveryFrame",
@@ -554,7 +556,7 @@
             {
               "type": "RotateY",
               "params": {
-                "degrees": 6
+                "degrees": 4
               }
             }
           ]
@@ -565,20 +567,20 @@
       "name": "Gold Coin 12",
       "shape": "cylinder",
       "size": [
-        1.0,
-        0.2,
-        1.0
+        0.8,
+        0.15,
+        0.8
       ],
       "position": [
-        8.0,
-        1.5,
-        4.0
+        9.0,
+        1.0,
+        -8.0
       ],
       "color": "#ffd700",
       "physics": "none",
       "events": [
         {
-          "name": "Coin Spin",
+          "name": "SpinCoin",
           "conditions": [
             {
               "type": "EveryFrame",
@@ -591,7 +593,7 @@
             {
               "type": "RotateY",
               "params": {
-                "degrees": 6
+                "degrees": 4
               }
             }
           ]
@@ -602,20 +604,20 @@
       "name": "Gold Coin 13",
       "shape": "cylinder",
       "size": [
-        1.0,
-        0.2,
-        1.0
+        0.8,
+        0.15,
+        0.8
       ],
       "position": [
-        -2.0,
-        1.5,
-        -2.0
+        -9.0,
+        1.0,
+        9.0
       ],
       "color": "#ffd700",
       "physics": "none",
       "events": [
         {
-          "name": "Coin Spin",
+          "name": "SpinCoin",
           "conditions": [
             {
               "type": "EveryFrame",
@@ -628,7 +630,7 @@
             {
               "type": "RotateY",
               "params": {
-                "degrees": 6
+                "degrees": 4
               }
             }
           ]
@@ -639,20 +641,20 @@
       "name": "Gold Coin 14",
       "shape": "cylinder",
       "size": [
-        1.0,
-        0.2,
-        1.0
+        0.8,
+        0.15,
+        0.8
       ],
       "position": [
-        2.0,
-        1.5,
-        -2.0
+        0.0,
+        1.0,
+        11.0
       ],
       "color": "#ffd700",
       "physics": "none",
       "events": [
         {
-          "name": "Coin Spin",
+          "name": "SpinCoin",
           "conditions": [
             {
               "type": "EveryFrame",
@@ -665,7 +667,7 @@
             {
               "type": "RotateY",
               "params": {
-                "degrees": 6
+                "degrees": 4
               }
             }
           ]
@@ -676,20 +678,20 @@
       "name": "Gold Coin 15",
       "shape": "cylinder",
       "size": [
-        1.0,
-        0.2,
-        1.0
+        0.8,
+        0.15,
+        0.8
       ],
       "position": [
-        0.0,
-        1.5,
-        5.0
+        9.0,
+        1.0,
+        9.0
       ],
       "color": "#ffd700",
       "physics": "none",
       "events": [
         {
-          "name": "Coin Spin",
+          "name": "SpinCoin",
           "conditions": [
             {
               "type": "EveryFrame",
@@ -702,7 +704,7 @@
             {
               "type": "RotateY",
               "params": {
-                "degrees": 6
+                "degrees": 4
               }
             }
           ]
@@ -718,14 +720,14 @@
       "position": [
         10.0,
         15.0,
-        10.0
+        -10.0
       ]
     },
     {
       "kind": "light",
-      "name": "Fill Light",
+      "name": "Ambient Warm",
       "lightType": "ambient",
-      "color": "#ffd9c0",
+      "color": "#ffd9b3",
       "intensity": 0.6,
       "position": [
         0.0,

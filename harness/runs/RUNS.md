@@ -169,3 +169,56 @@ logcat + `screencap` + in-renderer frame readback (`nativeCaptureFrame` → PPM)
   after it, both `screencap` and the in-renderer readback agree.
 - Gradle 8.11.1 requires JDK 17–23; the builder auto-detects one and reports
   honestly when only an incompatible runtime is present.
+
+---
+
+## Run Block 3 — 2026-09-25, Iterate-Until-Green Loop (live LLM + engine QA)
+
+First autonomous runs of `harness/loop/iterate_loop.py` against the live endpoint
+(`mimotp/mimo-v2.6-flash` for generation/repair, `auto/best-vision` for the layout
+critique) with the real headless engine QA (`qa_scenario_runner.mjs`).
+
+### Results
+
+| Run | Mode | Verdict | Iterations | Tokens | LLM latency | Notes |
+|-----|------|---------|-----------|--------|-------------|-------|
+| `20260925-060026` | plain | ✅ green | 2 | 6,725 | 27.1s | 41 actions → gate rejected a spawn penetration → 1-action repair → QA 10/10 |
+| `20260925-060822` | vision | ✅ green | 2 | 6,461 | 75.1s | vision call ran but returned no notes (pre-telemetry build) |
+| `20260925-061359` | vision | ✅ green | 2 | 9,390 | 100.7s | vision tokens now counted (2,881) |
+| `20260925-062444` | vision + retry | ✅ green | 2 | 12,211 | 145.1s | **6 vision notes** fed into the repair; 17-action repair → QA 10/10 |
+
+All runs: gate-before-QA enforced, 10/10 rules passed at green (23/100 draw calls,
+25 objects, player + 15 coins + 6 pillars + sunset light).
+
+### Vision critique findings (run `20260925-062444`)
+
+```
+Issue: No visible ground plane object in the layout, supporting the QA report of collider penetration at spawn.
+Issue: Player spawn is immediately adjacent to multiple gold coins (e.g., Gold Coin 7), risking unintended collisions at collection.
+Issue: Dense arrangement of gold coins in the central area, causing excessive clutter that may hinder navigation.
+Suggestion: Add or verify a ground plane collider beneath the player spawn point to prevent penetration issues.
+Suggestion: Increase clearance around the player spawn by repositioning nearby gold coins to allow safe initial movement.
+Suggestion: Reduce coin density in the central region or spread coins out to improve playability.
+```
+
+### Breakdowns found and fixed
+
+1. **Vision route is a reasoning model** — `auto/best-vision` (mimo-v2.5) spent small
+   budgets on thinking and returned empty content with `finish_reason=length`
+   (confirmed live: 1,500/2,000 tokens → empty; 6,000 → 3 suggestions). Fix: vision calls
+   default to 6,000 tokens and self-heal with one 12,000-token retry; empty responses are
+   recorded as an explicit error, never silently ignored.
+2. **Vision telemetry was dropped** — critique tokens/latency now count toward run totals
+   and are stored per iteration (`vision` record).
+3. **Failure-blind critique** — the layout prompt now receives the failing QA rules so the
+   model looks for their visual evidence (a top-down layout cannot show 3D spawn
+   penetration on its own).
+4. **`harness/loop/bisect.py` shadowed the stdlib `bisect` module** (via `tempfile`→`random`)
+   when the package directory was on `sys.path`; renamed to `regression_bisect.py`.
+
+### Emulator smoke test (issue #5)
+
+`python3 harness/agents/emulator_smoke.py --reuse --skip-build` → `tier1: PASS`, `tier2: PASS`
+on the attached lavapipe emulator. Two real bugs were caught while validating it: the logcat
+collector broke on the first frame line (before the 300-frame status line), and `adb install`
+failures were silently ignored. 18 unit tests cover the pure assertion checks.
