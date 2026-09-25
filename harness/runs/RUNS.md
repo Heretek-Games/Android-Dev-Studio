@@ -438,7 +438,7 @@ pinpointed it and stays in place for future device debugging.
 |-------|----------|
 | Engine | **278/278 tests green** (`npm test`), app production build green |
 | Genre QA | **11/11 rules SUCCEEDED** — `phase=won`, `kills=2`, `reactions=2`, enemy displacement 1.93 m, 2 draw calls |
-| Playable | Code-complete and building; in-browser playthrough re-verification pending (dev-server/chrome tooling unavailable in this session) |
+| Playable | **Verified on-device** (Tier 1 APK): studio → **Dungeon** button → keeper menu → Start → live keeper dialogue with both blessing choices → auto-aim clears both slime waves → **Victory — 200 points (Score 200 · Wave 2 · Kills 2 · 2.0s)**; blessing tap advances/dismisses the dialogue |
 
 ---
 
@@ -468,4 +468,14 @@ pinpointed it and stays in place for future device debugging.
 |-------|----------|
 | Engine | **290/290 tests green** (`npm test`), app production build green |
 | Genre QA | **7/7 rules SUCCEEDED** — `phase=won`, `population=6`, treasury healthy, 1 draw call; Artemis baseline recorded |
-| Playable | Code-complete and building; in-browser playthrough pending (no browser tooling in this session) |
+| Playable | **Verified on-device** (Tier 1 APK): menu → Start → toolbar + 3 ground taps placed house + 2 farms (`CityPlace ok:true`) → live treasury → **Victory Pop 6/6**; restart resets to a fresh town |
+
+### On-device findings fixed during validation
+
+1. **Taps missed the build grid silently** — the playable town initially inherited the QA
+   scenario's 8×8 grid while the visible ground spans ±18 world units, so ground taps
+   raycast-hit but mapped to out-of-grid plots with no visible feedback. The playable town
+   now uses a 24×24 founding grid (the QA scenario keeps its small deterministic grid).
+2. **Silent tap path** — every tap/placement now logs to logcat (`CityTap` with NDC + hit
+   count, `CityPlace` with plot + ok/reason), and placement rejections show in the message
+   panel. This instrumentation is what exposed finding 1 and stays for device debugging.

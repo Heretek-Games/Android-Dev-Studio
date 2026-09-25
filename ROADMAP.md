@@ -145,14 +145,14 @@ A phased roadmap tracking progress from foundational 3D engine systems to AAA-ti
 - [x] **Playable mode** — `?play=driving` / studio **Drive** button: auto-cruise VehicleController with keyboard/touch steering and braking, chase camera, distance HUD; **verified on-device** (Victory — 120.7 m in 7.8 s, all four wheels grounded).
 - [x] **Production-only bug fixed** — the APK skipped physics init because `GameView` dispatched on `constructor.name` (mangled by the production minifier); `instanceof` now, plus `toJSON().type` in the debug surface and AI harness summaries. On-device `AndroidBridge.log` telemetry (phase/distance/throttle/wheels/grounded/body) added and kept for device debugging.
 
-### Milestone 14: Vertical Slice #3 — Dungeon Action RPG ✅ (browser playthrough pending)
+### Milestone 14: Vertical Slice #3 — Dungeon Action RPG ✅
 - [x] **Elemental damage routing** — `DamageRouter` elemental path with single kill reporting and entity removal; physical fallback for elemental health pools.
 - [x] **Runtime element swaps** — `GameRuntime.setHitElement` re-attaches only the weapon router; driven by the DungeonKeeper `hydro_blessing` dialogue event.
 - [x] **Genre QA scenario** — `dungeon_slice.json` (11 rules) + `DungeonKeeper` dialogue tree; **11/11 rules SUCCEEDED** (`phase=won`, `kills=2`, `reactions=2`).
-- [x] **Playable mode** — `?play=dungeon` / studio **Dungeon** button: keeper dialogue overlay on Start, elemental enemy factory, reactions/dialogue debug surface. App production build green; in-browser playthrough re-verification pending.
+- [x] **Playable mode** — `?play=dungeon` / studio **Dungeon** button: keeper dialogue overlay on Start, elemental enemy factory, reactions/dialogue debug surface. **Verified on-device** (Tier 1 APK): menu → Start → keeper dialogue with both blessing choices → auto-aim clears both slime waves → **Victory — 200 points (Score 200 · Wave 2 · Kills 2 · 2.0s)**; blessing tap dismisses the dialogue cleanly.
 
-### Milestone 15: Vertical Slice #4 — City Builder ✅ (browser playthrough pending)
+### Milestone 15: Vertical Slice #4 — City Builder ✅
 - [x] **Settlement core** — plot-grid placement with validation, fixed-step economy (housing caps, upkeep, surplus growth / starvation), deterministic advance, demolish, snapshot, reset, target-population win (7 tests).
 - [x] **Runtime build mode + score mirror** — `GameRuntime` mode `'build'` with `getSettlement()`; `GameSession.syncScore` mirrors population into the HUD without triggering wins.
 - [x] **Genre QA scenario** — `city_slice.json` (7 rules) with `game_settlement_pop_min` / `game_settlement_gold_min` rules and settlement telemetry; **7/7 rules SUCCEEDED**, Artemis baseline recorded.
-- [x] **Playable mode** — `?play=city` / studio **City** button: found an empty town, click-to-place with grid snapping, build toolbar, treasury overlay, fixed overview camera. App production build green; in-browser playthrough pending.
+- [x] **Playable mode** — `?play=city` / studio **City** button: found an empty town on a 24×24 grid, click-to-place with grid snapping, build toolbar, treasury overlay, fixed overview camera. **Verified on-device** (Tier 1 APK): menu → Start → toolbar selection + 3 ground taps all placed (`CityPlace ok:true` ×3: house + 2 farms) → live treasury → **Victory — Pop 6/6 (Pop 6 · 9.0s)**; restart resets to a fresh town.
