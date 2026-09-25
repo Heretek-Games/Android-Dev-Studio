@@ -1,0 +1,306 @@
+{
+  "goal": "Sunset Duel",
+  "rules": [
+    {
+      "type": "entity_exists",
+      "target": "Duel Ring",
+      "id": "ring-floor"
+    },
+    {
+      "type": "entity_component",
+      "target": "Duelist Hero",
+      "component": "AnimeCelShader",
+      "id": "hero-shaded"
+    },
+    {
+      "type": "entity_component",
+      "target": "Duelist Rival",
+      "component": "AnimeCelShader",
+      "id": "rival-shaded"
+    },
+    {
+      "type": "distance_traveled",
+      "target": "Duelist Rival",
+      "min": 0.5,
+      "id": "rival-chases"
+    },
+    {
+      "type": "game_phase",
+      "phase": "won",
+      "id": "round-won"
+    },
+    {
+      "type": "draw_call_budget",
+      "max": 100,
+      "id": "draw-budget"
+    },
+    {
+      "type": "fps_min",
+      "min": 30,
+      "id": "sim-fps"
+    }
+  ],
+  "verdict": "green",
+  "iterations": [
+    {
+      "iteration": 1,
+      "phase": "generate",
+      "visionNotes": [],
+      "llm": {
+        "model": "mimo-v2.6-flash",
+        "promptTokens": 2849,
+        "completionTokens": 1577,
+        "totalTokens": 4426,
+        "latencySeconds": 17.854,
+        "finishReason": "stop",
+        "attempts": 1
+      },
+      "parse": {
+        "strategy": "failed",
+        "actionCount": 0,
+        "summary": null,
+        "error": "raw: Expecting ':' delimiter: line 1 column 243 (char 242)"
+      },
+      "apply": {
+        "applied": 0,
+        "targetMissing": 0,
+        "invalid": 0,
+        "failed": 0,
+        "outcomes": [],
+        "appliedDescriptions": []
+      },
+      "gate": {
+        "valid": true,
+        "violations": []
+      },
+      "qa": {
+        "verdict": "FAILED",
+        "passed": 2,
+        "total": 7,
+        "failedRules": [
+          {
+            "id": "ring-floor",
+            "type": "entity_exists",
+            "detail": "missing \"Duel Ring\""
+          },
+          {
+            "id": "hero-shaded",
+            "type": "entity_component",
+            "detail": "missing \"Duelist Hero\""
+          },
+          {
+            "id": "rival-shaded",
+            "type": "entity_component",
+            "detail": "missing \"Duelist Rival\""
+          },
+          {
+            "id": "rival-chases",
+            "type": "distance_traveled",
+            "detail": "missing \"Duelist Rival\""
+          },
+          {
+            "id": "round-won",
+            "type": "game_phase",
+            "detail": "no game config in scenario"
+          }
+        ],
+        "metrics": {
+          "avgFrameTimeMs": 0.0492,
+          "p95FrameTimeMs": 0.0292,
+          "maxFrameTimeMs": 20.0448,
+          "simFpsEstimate": 20317.59,
+          "drawCallEstimate": 0,
+          "instancedBatches": 0,
+          "memoryHeapMb": 14.87,
+          "objectCount": 0,
+          "physicsBodyCount": 0,
+          "eventCount": 0
+        }
+      }
+    },
+    {
+      "iteration": 2,
+      "phase": "repair",
+      "visionNotes": [],
+      "llm": {
+        "model": "mimo-v2.6-flash",
+        "promptTokens": 3308,
+        "completionTokens": 781,
+        "totalTokens": 4089,
+        "latencySeconds": 9.824,
+        "finishReason": "stop",
+        "attempts": 1
+      },
+      "parse": {
+        "strategy": "raw",
+        "actionCount": 6,
+        "summary": "Spawn the Duel Ring floor, cel-shaded Hero and Rival NPCs (rival with AI chase and physics none), and a waves game config so the round can be won.",
+        "error": null
+      },
+      "apply": {
+        "applied": 6,
+        "targetMissing": 0,
+        "invalid": 0,
+        "failed": 0,
+        "outcomes": [
+          {
+            "index": 0,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Duel Ring (cylinder) at [0.0, -0.25, 0.0]",
+            "target": "Duel Ring"
+          },
+          {
+            "index": 1,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Duelist Hero (capsule) at [-3.0, 1.2, 0.0]",
+            "target": "Duelist Hero"
+          },
+          {
+            "index": 2,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Duelist Rival (capsule) at [4.0, 1.2, 0.0]",
+            "target": "Duelist Rival"
+          },
+          {
+            "index": 3,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added directional light 'Sunset Key' (intensity 2.0)",
+            "target": "Sunset Key"
+          },
+          {
+            "index": 4,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added ambient light 'Arena Fill' (intensity 0.6)",
+            "target": "Arena Fill"
+          },
+          {
+            "index": 5,
+            "type": "game",
+            "status": "applied",
+            "detail": "Set waves-mode quest config for player 'Duelist Hero'"
+          }
+        ],
+        "appliedDescriptions": [
+          "Spawned Duel Ring (cylinder) at [0.0, -0.25, 0.0]",
+          "Spawned Duelist Hero (capsule) at [-3.0, 1.2, 0.0]",
+          "Spawned Duelist Rival (capsule) at [4.0, 1.2, 0.0]",
+          "Added directional light 'Sunset Key' (intensity 2.0)",
+          "Added ambient light 'Arena Fill' (intensity 0.6)",
+          "Set waves-mode quest config for player 'Duelist Hero'"
+        ]
+      },
+      "gate": {
+        "valid": true,
+        "violations": []
+      },
+      "qa": {
+        "verdict": "SUCCEEDED",
+        "passed": 7,
+        "total": 7,
+        "failedRules": [],
+        "metrics": {
+          "avgFrameTimeMs": 0.1027,
+          "p95FrameTimeMs": 0.1169,
+          "maxFrameTimeMs": 27.7586,
+          "simFpsEstimate": 9734.28,
+          "drawCallEstimate": 3,
+          "instancedBatches": 0,
+          "memoryHeapMb": 13.69,
+          "objectCount": 5,
+          "physicsBodyCount": 2,
+          "eventCount": 0
+        }
+      }
+    }
+  ],
+  "totalTokens": 8515,
+  "totalLatencySeconds": 27.677,
+  "finalReport": {
+    "schemaVersion": 1,
+    "runner": "qa_scenario_runner.mjs",
+    "scenario": "loop_work_scene.json",
+    "goal": "Sunset Duel",
+    "timestamp": 1790364090.163,
+    "frames": 600,
+    "fixedDeltaSeconds": 0.016666666666666666,
+    "metrics": {
+      "avgFrameTimeMs": 0.1027,
+      "p95FrameTimeMs": 0.1169,
+      "maxFrameTimeMs": 27.7586,
+      "simFpsEstimate": 9734.28,
+      "drawCallEstimate": 3,
+      "instancedBatches": 0,
+      "memoryHeapMb": 13.69,
+      "objectCount": 5,
+      "physicsBodyCount": 2,
+      "eventCount": 0
+    },
+    "game": {
+      "mode": "waves",
+      "phase": "won",
+      "score": 100,
+      "kills": 1,
+      "wave": 1,
+      "traveledDistance": 0,
+      "settlement": null,
+      "reactions": 1,
+      "shots": 1,
+      "maxEnemyDisplacement": 0
+    },
+    "rules": [
+      {
+        "id": "ring-floor",
+        "type": "entity_exists",
+        "pass": true,
+        "detail": "found \"Duel Ring\""
+      },
+      {
+        "id": "hero-shaded",
+        "type": "entity_component",
+        "pass": true,
+        "detail": "Duelist Hero components: [MeshRenderer, RigidBody3D, Collider3D, MobileController, WeaponController, AnimeCelShader, HealthComponent]"
+      },
+      {
+        "id": "rival-shaded",
+        "type": "entity_component",
+        "pass": true,
+        "detail": "Duelist Rival components: [MeshRenderer, WeaponController, AnimeCelShader, HealthComponent, EnemyAI, ElementalReactionComponent]"
+      },
+      {
+        "id": "rival-chases",
+        "type": "distance_traveled",
+        "pass": true,
+        "detail": "Duelist Rival traveled 5.05m (min=0.5)"
+      },
+      {
+        "id": "round-won",
+        "type": "game_phase",
+        "pass": true,
+        "detail": "phase=won (expected won)"
+      },
+      {
+        "id": "draw-budget",
+        "type": "draw_call_budget",
+        "pass": true,
+        "detail": "drawCallEstimate=3 (budget 100)"
+      },
+      {
+        "id": "sim-fps",
+        "type": "fps_min",
+        "pass": true,
+        "detail": "simFpsEstimate=9734.3 (min 30)"
+      }
+    ],
+    "passed": 7,
+    "total": 7,
+    "verdict": "SUCCEEDED",
+    "confidence": 1
+  },
+  "error": null,
+  "workScene": "/home/john/Projects/Android-Dev-Studio/harness/scenes/loop_work_scene.json"
+}

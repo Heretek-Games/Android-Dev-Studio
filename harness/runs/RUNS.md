@@ -757,3 +757,22 @@ repair round. **Phase 3 complete: all four rungs green.**
 | DAG + memory | brief persisted and retrievable; tasks reflect the outcome |
 
 Evidence: `harness/runs/loop_runs/20260925-151800-*.json`.
+
+---
+
+## Run Block 20 — 2026-09-25, Phase 4: Sunset Duel (Look-Dev Calibration) ✅
+
+**Look-dev brief** (`harness/briefs/examples/sunset_duel.json`: 9 criteria, 7 automatable:
+dual cel-shader calibration, rival chase, win phase, budget + FPS) through the
+production loop — **GREEN**. First milestone driven by the Tech-Artist vocabulary.
+
+### Verification
+
+| Check | Evidence |
+|-------|----------|
+| Milestone run | **GREEN** — 7/7 automatable (`ring-floor`, `hero-shaded`, `rival-shaded`, `rival-chases`, `round-won`, `draw-budget`, `sim-fps`); 2 critic-owned (`sunset-read`, `brief-faithful`) listed, not passed |
+| Loop trace | generate returned malformed JSON (0 actions, parse `failed`) → QA FAILED 2/7 → repair (6 actions: ring, cel-shaded hero + physics-none AI rival, lights, waves config) → QA **SUCCEEDED 7/7** in 2 iterations, 8,515 tokens |
+| Look-dev proof | both duelists carry `AnimeCelShader` alongside combat kits; rival chased 5.05 m; repair summary explicitly cites the prompt rules (AI + physics-none) |
+| DAG + memory | brief persisted and retrievable; tasks reflect the outcome |
+
+Evidence: `harness/runs/loop_runs/20260925-152130-*.json`.

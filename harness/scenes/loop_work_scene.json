@@ -1,332 +1,149 @@
 {
   "id": "loop_work_scene",
   "name": "Loop Work Scene",
-  "goal": "Checkpoint Keep",
+  "goal": "Sunset Duel",
   "gameObjects": [
     {
-      "name": "Keep Floor",
-      "shape": "plane",
+      "name": "Duel Ring",
+      "shape": "cylinder",
       "size": [
-        40.0,
-        1.0,
-        40.0
+        12.0,
+        0.5,
+        12.0
       ],
       "position": [
         0.0,
-        -0.5,
+        -0.25,
         0.0
       ],
-      "color": "#8a8f96",
+      "color": "#8b3a2f",
       "physics": "fixed",
-      "biome": "stone keep"
+      "biome": "sunset duel arena"
     },
     {
-      "name": "Defender",
+      "name": "Duelist Hero",
       "shape": "capsule",
       "size": [
-        0.8,
-        1.8,
-        0.8
-      ],
-      "position": [
-        0.0,
-        1.1,
-        0.0
-      ],
-      "color": "#3f7fd6",
-      "physics": "dynamic",
-      "mass": 80.0,
-      "controller": true,
-      "weapon": {
-        "damage": 50.0,
-        "fireRate": 6.0,
-        "range": 60.0,
-        "maxAmmo": 120.0
-      },
-      "health": {
-        "maxHealth": 600.0
-      }
-    },
-    {
-      "name": "Raider One",
-      "shape": "capsule",
-      "size": [
-        0.8,
-        1.7,
-        0.8
-      ],
-      "position": [
-        -6.0,
-        1.0,
-        -8.0
-      ],
-      "color": "#d64a3f",
-      "physics": "none",
-      "health": {
-        "maxHealth": 80.0
-      },
-      "ai": {
-        "targetName": "Defender",
-        "moveSpeed": 2.2,
-        "attackRange": 2.4
-      },
-      "elemental": {
-        "aura": "Pyro",
-        "maxHealth": 80.0
-      }
-    },
-    {
-      "name": "Raider Two",
-      "shape": "capsule",
-      "size": [
-        0.8,
-        1.7,
-        0.8
-      ],
-      "position": [
-        6.0,
-        1.0,
-        -8.0
-      ],
-      "color": "#d64a3f",
-      "physics": "none",
-      "health": {
-        "maxHealth": 80.0
-      },
-      "ai": {
-        "targetName": "Defender",
-        "moveSpeed": 2.2,
-        "attackRange": 2.4
-      },
-      "elemental": {
-        "aura": "Pyro",
-        "maxHealth": 80.0
-      }
-    },
-    {
-      "name": "Raider Three",
-      "shape": "capsule",
-      "size": [
-        0.8,
-        1.7,
-        0.8
-      ],
-      "position": [
-        -7.0,
-        1.0,
-        7.0
-      ],
-      "color": "#c9452f",
-      "physics": "none",
-      "health": {
-        "maxHealth": 80.0
-      },
-      "ai": {
-        "targetName": "Defender",
-        "moveSpeed": 2.4,
-        "attackRange": 2.4
-      },
-      "elemental": {
-        "aura": "Pyro",
-        "maxHealth": 80.0
-      }
-    },
-    {
-      "name": "Raider Four",
-      "shape": "capsule",
-      "size": [
-        0.8,
-        1.7,
-        0.8
-      ],
-      "position": [
-        7.0,
-        1.0,
-        7.0
-      ],
-      "color": "#c9452f",
-      "physics": "none",
-      "health": {
-        "maxHealth": 80.0
-      },
-      "ai": {
-        "targetName": "Defender",
-        "moveSpeed": 2.4,
-        "attackRange": 2.4
-      },
-      "elemental": {
-        "aura": "Pyro",
-        "maxHealth": 80.0
-      }
-    },
-    {
-      "name": "North Wall",
-      "shape": "box",
-      "size": [
-        16.0,
-        3.0,
-        1.0
-      ],
-      "position": [
-        0.0,
-        1.5,
-        -10.0
-      ],
-      "color": "#6f6a63",
-      "physics": "fixed",
-      "biome": "stone keep"
-    },
-    {
-      "name": "South Wall",
-      "shape": "box",
-      "size": [
-        16.0,
-        3.0,
-        1.0
-      ],
-      "position": [
-        0.0,
-        1.5,
-        10.0
-      ],
-      "color": "#6f6a63",
-      "physics": "fixed",
-      "biome": "stone keep"
-    },
-    {
-      "name": "West Wall",
-      "shape": "box",
-      "size": [
-        1.0,
-        3.0,
-        20.0
-      ],
-      "position": [
-        -10.0,
-        1.5,
-        0.0
-      ],
-      "color": "#6f6a63",
-      "physics": "fixed",
-      "biome": "stone keep"
-    },
-    {
-      "name": "East Wall",
-      "shape": "box",
-      "size": [
-        1.0,
-        3.0,
-        20.0
-      ],
-      "position": [
-        10.0,
-        1.5,
-        0.0
-      ],
-      "color": "#6f6a63",
-      "physics": "fixed",
-      "biome": "stone keep"
-    },
-    {
-      "name": "Keep Banner",
-      "shape": "box",
-      "size": [
-        0.4,
-        4.0,
-        0.4
-      ],
-      "position": [
-        0.0,
-        2.0,
-        3.0
-      ],
-      "color": "#e0b23c",
-      "physics": "fixed"
-    },
-    {
-      "name": "Supply Crate",
-      "shape": "box",
-      "size": [
-        1.2,
-        1.2,
-        1.2
+        0.7,
+        1.6,
+        0.7
       ],
       "position": [
         -3.0,
-        0.6,
-        4.0
+        1.2,
+        0.0
       ],
-      "color": "#8b5a2b",
+      "color": "#f4a259",
       "physics": "dynamic",
-      "mass": 15.0
+      "mass": 1.5,
+      "controller": true,
+      "weapon": {
+        "damage": 40.0,
+        "fireRate": 4.0,
+        "range": 30.0,
+        "maxAmmo": 30.0
+      },
+      "health": {
+        "maxHealth": 500.0
+      },
+      "cel": {
+        "baseColor": "#fbbf24",
+        "shadowColor": "#7c2d12",
+        "rimPower": 3.5
+      }
+    },
+    {
+      "name": "Duelist Rival",
+      "shape": "capsule",
+      "size": [
+        0.7,
+        1.6,
+        0.7
+      ],
+      "position": [
+        4.0,
+        1.2,
+        0.0
+      ],
+      "color": "#6d597a",
+      "physics": "none",
+      "weapon": {
+        "damage": 20.0,
+        "fireRate": 3.0,
+        "range": 25.0,
+        "maxAmmo": 30.0
+      },
+      "health": {
+        "maxHealth": 80.0
+      },
+      "ai": {
+        "targetName": "Duelist Hero",
+        "moveSpeed": 3.0,
+        "attackRange": 2.0
+      },
+      "elemental": {
+        "aura": "Pyro",
+        "maxHealth": 80.0
+      },
+      "cel": {
+        "baseColor": "#a78bfa",
+        "shadowColor": "#3b0764",
+        "rimPower": 3.5
+      }
     },
     {
       "kind": "light",
-      "name": "Sun Light",
+      "name": "Sunset Key",
       "lightType": "directional",
-      "color": "#fff2d6",
+      "color": "#ffb066",
       "intensity": 2.0,
       "position": [
-        10.0,
-        20.0,
-        8.0
+        6.0,
+        8.0,
+        -6.0
       ]
     },
     {
       "kind": "light",
-      "name": "Ambient Glow",
+      "name": "Arena Fill",
       "lightType": "ambient",
-      "color": "#5a6a8a",
+      "color": "#5a4a6a",
       "intensity": 0.6,
       "position": [
         0.0,
         5.0,
         0.0
       ]
-    },
-    {
-      "kind": "light",
-      "name": "Torch Light",
-      "lightType": "point",
-      "color": "#ff9a3c",
-      "intensity": 2.5,
-      "position": [
-        0.0,
-        4.0,
-        -6.0
-      ]
     }
   ],
   "rules": [
     {
       "type": "entity_exists",
-      "target": "Keep Floor",
-      "id": "keep-floor"
+      "target": "Duel Ring",
+      "id": "ring-floor"
     },
     {
       "type": "entity_component",
-      "target": "Defender",
-      "component": "WeaponController",
-      "id": "defender-ready"
+      "target": "Duelist Hero",
+      "component": "AnimeCelShader",
+      "id": "hero-shaded"
     },
     {
-      "type": "game_kills_min",
-      "min": 2,
-      "id": "kills-scored"
+      "type": "entity_component",
+      "target": "Duelist Rival",
+      "component": "AnimeCelShader",
+      "id": "rival-shaded"
     },
     {
-      "type": "game_wave_reached",
-      "wave": 2,
-      "id": "wave-advanced"
-    },
-    {
-      "type": "game_save_restore",
-      "id": "save-compatible"
+      "type": "distance_traveled",
+      "target": "Duelist Rival",
+      "min": 0.5,
+      "id": "rival-chases"
     },
     {
       "type": "game_phase",
       "phase": "won",
-      "id": "run-won"
+      "id": "round-won"
     },
     {
       "type": "draw_call_budget",
@@ -339,67 +156,14 @@
       "id": "sim-fps"
     }
   ],
-  "dialogues": {
-    "Gatekeeper": {
-      "id": "Gatekeeper",
-      "startNodeId": "greet",
-      "nodes": {
-        "greet": {
-          "id": "greet",
-          "type": "choice",
-          "speaker": "Gatekeeper",
-          "text": "The keep holds, Defender. Ready to seal this checkpoint?",
-          "choices": [
-            {
-              "id": "seal",
-              "text": "Seal the checkpoint.",
-              "nextNodeId": "sealed"
-            },
-            {
-              "id": "wait",
-              "text": "Hold a moment.",
-              "nextNodeId": "waitline"
-            }
-          ]
-        },
-        "sealed": {
-          "id": "sealed",
-          "type": "action",
-          "action": {
-            "setVariables": {
-              "checkpointSealed": true
-            },
-            "emitEvent": {
-              "eventName": "checkpoint_sealed"
-            }
-          },
-          "nextNodeId": "farewell"
-        },
-        "waitline": {
-          "id": "waitline",
-          "type": "text",
-          "speaker": "Gatekeeper",
-          "text": "Then stand fast on the Keep Floor.",
-          "nextNodeId": "greet"
-        },
-        "farewell": {
-          "id": "farewell",
-          "type": "end"
-        }
-      }
-    }
-  },
   "game": {
     "mode": "waves",
-    "playerName": "Defender",
-    "totalWaves": 3.0,
-    "enemiesPerWave": 4.0,
-    "hitDamage": 50.0,
-    "scorePerKill": 10.0,
+    "playerName": "Duelist Hero",
+    "totalWaves": 1.0,
+    "enemiesPerWave": 1.0,
+    "hitDamage": 40.0,
     "hitElement": "Hydro",
     "hitGauge": 1.0,
-    "interWaveDelaySeconds": 3.0,
-    "spawnRadius": 8.0,
     "enemy": {
       "elemental": {
         "aura": "Pyro",
