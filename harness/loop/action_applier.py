@@ -49,6 +49,7 @@ MODIFY_FIELDS = (
     "biome",
     "weapon",
     "health",
+    "ai",
 )
 
 
@@ -198,6 +199,41 @@ def _validate_health(value: Any) -> Optional[Dict[str, Any]]:
             if not isinstance(item, bool):
                 return None
             normalized[key] = item
+        else:
+            return None
+    return normalized
+
+
+AI_NUMERICS = {
+    "moveSpeed",
+    "stopDistance",
+    "aggroRange",
+    "attackRange",
+    "attackDamage",
+    "attackIntervalSeconds",
+}
+
+
+def _validate_ai(value: Any) -> Optional[Dict[str, Any]]:
+    """EnemyAI NPC-routine options pass straight to the QA runner (objSpec.ai).
+
+    Returns the normalized options, or None when malformed. `targetName` must
+    be a non-empty string naming the object to chase; numeric behavior-tree
+    tunables must be finite and non-negative; unknown keys are rejected so
+    typos surface as repair input instead of silent no-ops.
+    """
+    if not isinstance(value, dict):
+        return None
+    normalized: Dict[str, Any] = {}
+    for key, item in value.items():
+        if key == "targetName":
+            if not isinstance(item, str) or not item.strip():
+                return None
+            normalized[key] = item.strip()
+        elif key in AI_NUMERICS:
+            if not _is_finite_number(item) or item < 0:
+                return None
+            normalized[key] = float(item)
         else:
             return None
     return normalized
@@ -540,6 +576,21 @@ def _apply_spawn(
                 "and optional destroyOnDeath bool",
             )
         obj["health"] = health
+    if action.get("ai") is not None:
+        # Maps to an EnemyAI NPC routine in the QA runner (objSpec.ai).
+        ai = _validate_ai(action.get("ai"))
+        if ai is None:
+            return _outcome(
+                result,
+                index,
+                "spawn",
+                "invalid",
+                "spawn 'ai' must be an object with a non-empty targetName "
+                "and optional non-negative behavior tunables "
+                "(moveSpeed, stopDistance, aggroRange, attackRange, "
+                "attackDamage, attackIntervalSeconds)",
+            )
+        obj["ai"] = ai
 
     scene.setdefault("gameObjects", []).append(obj)
     _outcome(
@@ -775,6 +826,18 @@ def _apply_modify(
                     "and optional destroyOnDeath bool",
                 )
             obj["health"] = health
+        elif field_name == "ai":
+            ai = _validate_ai(value)
+            if ai is None:
+                return _outcome(
+                    result,
+                    index,
+                    "modify",
+                    "invalid",
+                    "modify 'ai' must be an object with a non-empty targetName "
+                    "and optional non-negative behavior tunables",
+                )
+            obj["ai"] = ai
         changed.append(field_name)
 
     if not changed:

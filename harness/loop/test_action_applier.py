@@ -489,6 +489,81 @@ class CombatQuestTests(unittest.TestCase):
         self.assertTrue(valid, f"gate rejected quest scene: {violations}")
 
 
+class NpcRoutineTests(unittest.TestCase):
+    def test_spawn_ai_applies(self):
+        scene, result = apply_actions(
+            base_scene(),
+            [
+                {
+                    "type": "spawn",
+                    "name": "Goblin",
+                    "shape": "capsule",
+                    "physics": "dynamic",
+                    "ai": {"targetName": "Player Hero", "moveSpeed": 3.0},
+                }
+            ],
+        )
+        self.assertEqual(result.applied, 1)
+        self.assertEqual(
+            scene["gameObjects"][1]["ai"],
+            {"targetName": "Player Hero", "moveSpeed": 3.0},
+        )
+
+    def test_spawn_ai_rejects_malformed(self):
+        for bad in (
+            True,
+            "Player Hero",
+            {"targetName": "  "},
+            {"targetName": "Player Hero", "moveSpeed": -1},
+            {"targetName": "Player Hero", "aggroRange": float("inf")},
+            {"targetName": "Player Hero", "brain": "smart"},
+        ):
+            _, result = apply_actions(
+                base_scene(), [{"type": "spawn", "name": "Goblin", "ai": bad}]
+            )
+            self.assertEqual(result.invalid, 1, f"should reject {bad!r}")
+
+    def test_modify_ai_replaces_config(self):
+        scene, result = apply_actions(
+            base_scene(),
+            [
+                {
+                    "type": "spawn",
+                    "name": "Goblin",
+                    "ai": {"targetName": "Player Hero"},
+                },
+                {
+                    "type": "modify",
+                    "target": "Goblin",
+                    "ai": {"targetName": "Player Hero", "attackDamage": 15},
+                },
+            ],
+        )
+        self.assertEqual(result.applied, 2)
+        self.assertEqual(
+            scene["gameObjects"][1]["ai"],
+            {"targetName": "Player Hero", "attackDamage": 15.0},
+        )
+
+    def test_npc_scene_passes_the_invariant_gate(self):
+        scene, result = apply_actions(
+            base_scene(),
+            [
+                {
+                    "type": "spawn",
+                    "name": "Goblin",
+                    "shape": "capsule",
+                    "position": [5, 1.5, 0],
+                    "physics": "dynamic",
+                    "ai": {"targetName": "Player Hero"},
+                }
+            ],
+        )
+        self.assertEqual(result.failures, 0)
+        valid, violations = validate_scene_invariants(scene)
+        self.assertTrue(valid, f"gate rejected NPC scene: {violations}")
+
+
 class ModifyTests(unittest.TestCase):
     def test_modify_position_and_color(self):
         scene, result = apply_actions(

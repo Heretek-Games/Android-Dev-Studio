@@ -58,7 +58,8 @@ ACTION_SCHEMA = """Action vocabulary (a JSON array named "actions"):
      "streamer": {"chunkSize": 16, "renderDistance": 1, "resolution": 8} (optional: adds a WorldStreamer that generates terrain chunks around the object),
      "biome": "sand rim" (optional: tags the object for the biome_coverage_min composition audit),
      "weapon": {"damage": 50, "fireRate": 8, "range": 100, "maxAmmo": 30} (optional: adds a WeaponController for combat quests),
-     "health": {"maxHealth": 100} (optional: adds a HealthComponent; destroyOnDeath defaults true)}
+     "health": {"maxHealth": 100} (optional: adds a HealthComponent; destroyOnDeath defaults true),
+     "ai": {"targetName": "Player Hero", "moveSpeed": 2.5} (optional: adds an EnemyAI NPC routine that chases/attacks the named target)}
   - {"type": "light", "name": "...", "lightType": "directional"|"point"|"ambient",
      "color": "#rrggbb", "intensity": 2.0, "position": [x,y,z]}
   - {"type": "modify", "target": "...", "position": [x,y,z], "color": "#rrggbb",
@@ -90,6 +91,11 @@ How acceptance rules map onto the schema (the QA runner checks these exact compo
   - biome_coverage_min rules -> tag objects with "biome": "<brief biome name>" so each brief biome has enough live objects inside its region
   - "WeaponController" component -> the spawn (or a "modify") has "weapon", e.g. "weapon": {"damage": 50, "fireRate": 8, "range": 100, "maxAmmo": 30}
   - "HealthComponent" component -> the spawn (or a "modify") has "health", e.g. "health": {"maxHealth": 100}
+  - "EnemyAI" component -> the spawn (or a "modify") has "ai" naming its target, e.g. "ai": {"targetName": "Player Hero", "moveSpeed": 2.5, "attackRange": 2.2}.
+    IMPORTANT: AI movers must use "physics": "none" — the behavior tree drives the transform
+    directly, while dynamic bodies are physics-owned (Rapier overwrites the transform every
+    step, so an "ai" + "physics": "dynamic" NPC stands still). Give the NPC "health" too if
+    anything should damage it.
   - game_* rules (game_phase, game_score_min, game_kills_min, game_wave_reached, ...) ->
     ALL of these: (1) spawn the named player object (physics dynamic + controller, plus weapon/health
     for combat quests), AND (2) emit one "game" action whose config names that player, e.g.
