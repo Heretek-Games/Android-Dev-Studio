@@ -350,6 +350,145 @@ class BiomeTests(unittest.TestCase):
         self.assertTrue(valid, f"gate rejected tagged scene: {violations}")
 
 
+class CombatQuestTests(unittest.TestCase):
+    def test_spawn_weapon_and_health_apply(self):
+        scene, result = apply_actions(
+            base_scene(),
+            [
+                {
+                    "type": "spawn",
+                    "name": "Player Hero",
+                    "shape": "capsule",
+                    "physics": "dynamic",
+                    "controller": True,
+                    "weapon": {"damage": 50, "fireRate": 8},
+                    "health": {"maxHealth": 100},
+                }
+            ],
+        )
+        self.assertEqual(result.applied, 1)
+        hero = scene["gameObjects"][1]
+        self.assertEqual(hero["weapon"], {"damage": 50.0, "fireRate": 8.0})
+        self.assertEqual(hero["health"], {"maxHealth": 100.0})
+
+    def test_spawn_weapon_and_health_reject_malformed(self):
+        for bad_weapon in (
+            True,
+            "rifle",
+            {"damage": -5},
+            {"damage": "lots"},
+            {"range": 10, "nope": 1},
+        ):
+            _, result = apply_actions(
+                base_scene(),
+                [{"type": "spawn", "name": "Hero", "weapon": bad_weapon}],
+            )
+            self.assertEqual(result.invalid, 1, f"should reject {bad_weapon!r}")
+        for bad_health in (
+            True,
+            [],
+            {"maxHealth": 0},
+            {"maxHealth": -10},
+            {"destroyOnDeath": "yes"},
+            {"regen": 5},
+        ):
+            _, result = apply_actions(
+                base_scene(),
+                [{"type": "spawn", "name": "Hero", "health": bad_health}],
+            )
+            self.assertEqual(result.invalid, 1, f"should reject {bad_health!r}")
+
+    def test_modify_weapon_and_health(self):
+        scene, result = apply_actions(
+            base_scene(),
+            [
+                {"type": "spawn", "name": "Hero"},
+                {
+                    "type": "modify",
+                    "target": "Hero",
+                    "weapon": {"damage": 25},
+                    "health": {"maxHealth": 50, "destroyOnDeath": False},
+                },
+            ],
+        )
+        self.assertEqual(result.applied, 2)
+        hero = scene["gameObjects"][1]
+        self.assertEqual(hero["weapon"], {"damage": 25.0})
+        self.assertEqual(hero["health"], {"maxHealth": 50.0, "destroyOnDeath": False})
+
+    def test_game_action_sets_scene_config(self):
+        scene, result = apply_actions(
+            base_scene(),
+            [
+                {
+                    "type": "game",
+                    "config": {
+                        "mode": "waves",
+                        "playerName": "Player Hero",
+                        "totalWaves": 2,
+                        "enemiesPerWave": 2,
+                        "hitDamage": 50,
+                    },
+                }
+            ],
+        )
+        self.assertEqual(result.applied, 1)
+        self.assertEqual(
+            scene["game"],
+            {
+                "mode": "waves",
+                "playerName": "Player Hero",
+                "totalWaves": 2.0,
+                "enemiesPerWave": 2.0,
+                "hitDamage": 50.0,
+            },
+        )
+
+    def test_game_action_rejects_malformed(self):
+        for bad in (
+            None,
+            "waves",
+            {},
+            {"mode": "boss-rush"},
+            {"mode": "waves", "playerName": "  "},
+            {"mode": "waves", "totalWaves": 0},
+            {"mode": "waves", "hitDamage": float("inf")},
+            {"mode": "waves", "enemy": {"shape": "dragon"}},
+            {"mode": "waves", "settlement": {"targetPopulation": -1}},
+            {"mode": "waves", "cheat": True},
+        ):
+            _, result = apply_actions(base_scene(), [{"type": "game", "config": bad}])
+            self.assertEqual(result.invalid, 1, f"should reject {bad!r}")
+
+    def test_quest_scene_passes_the_invariant_gate(self):
+        scene, result = apply_actions(
+            base_scene(),
+            [
+                {
+                    "type": "spawn",
+                    "name": "Player Hero",
+                    "shape": "capsule",
+                    "position": [0, 1.5, 0],
+                    "physics": "dynamic",
+                    "controller": True,
+                    "weapon": {"damage": 50},
+                    "health": {"maxHealth": 100},
+                },
+                {
+                    "type": "game",
+                    "config": {
+                        "mode": "waves",
+                        "playerName": "Player Hero",
+                        "totalWaves": 2,
+                    },
+                },
+            ],
+        )
+        self.assertEqual(result.failures, 0)
+        valid, violations = validate_scene_invariants(scene)
+        self.assertTrue(valid, f"gate rejected quest scene: {violations}")
+
+
 class ModifyTests(unittest.TestCase):
     def test_modify_position_and_color(self):
         scene, result = apply_actions(

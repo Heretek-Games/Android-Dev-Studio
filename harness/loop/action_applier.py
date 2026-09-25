@@ -8,6 +8,7 @@ Action vocabulary mirrors the studio's `applyActionsToScene`
     - modify  {target, position?, color?, size?, physics?, mass?, lightType?, intensity?}
     - delete  {target}
     - event   {target, event_name, condition, condition_params, action, params}
+    - game    {config} — scene-level GameRuntime quest/combat config (waves/build)
 
 `apply_actions` is pure: it deep-copies the scene and returns
 `(new_scene, ApplyResult)`. Malformed actions become explicit outcomes
@@ -46,6 +47,8 @@ MODIFY_FIELDS = (
     "vehicle",
     "streamer",
     "biome",
+    "weapon",
+    "health",
 )
 
 
@@ -138,6 +141,192 @@ def _validate_biome(value: Any) -> Optional[str]:
     if not all(ch.isalnum() or ch in " _-" for ch in tag):
         return None
     return tag
+
+
+WEAPON_NUMERICS = {
+    "damage",
+    "fireRate",
+    "range",
+    "maxAmmo",
+    "reloadTime",
+    "spreadBloom",
+    "recoilKick",
+}
+
+
+def _validate_weapon(value: Any) -> Optional[Dict[str, Any]]:
+    """WeaponController options pass straight to the QA runner (objSpec.weapon).
+
+    Returns the normalized options, or None when malformed. All fields are
+    optional (the engine supplies FPS-arena defaults); present numeric fields
+    must be finite and non-negative, `weaponName` a non-empty string, and
+    unknown keys are rejected so typos surface as repair input.
+    """
+    if not isinstance(value, dict):
+        return None
+    normalized: Dict[str, Any] = {}
+    for key, item in value.items():
+        if key == "weaponName":
+            if not isinstance(item, str) or not item.strip():
+                return None
+            normalized[key] = item.strip()
+        elif key in WEAPON_NUMERICS:
+            if not _is_finite_number(item) or item < 0:
+                return None
+            normalized[key] = float(item)
+        else:
+            return None
+    return normalized
+
+
+def _validate_health(value: Any) -> Optional[Dict[str, Any]]:
+    """HealthComponent options pass straight to the QA runner (objSpec.health).
+
+    Returns the normalized options, or None when malformed. `maxHealth` must
+    be a positive finite number when present, `destroyOnDeath` a bool, and
+    unknown keys are rejected so typos surface as repair input.
+    """
+    if not isinstance(value, dict):
+        return None
+    normalized: Dict[str, Any] = {}
+    for key, item in value.items():
+        if key == "maxHealth":
+            if not _is_finite_number(item) or item <= 0:
+                return None
+            normalized[key] = float(item)
+        elif key == "destroyOnDeath":
+            if not isinstance(item, bool):
+                return None
+            normalized[key] = item
+        else:
+            return None
+    return normalized
+
+
+GAME_MODES = {"waves", "build"}
+GAME_NUMERICS = {
+    "targetScore",
+    "timeLimitSeconds",
+    "totalWaves",
+    "enemiesPerWave",
+    "spawnRadius",
+    "scorePerKill",
+    "interWaveDelaySeconds",
+    "hitEveryFrames",
+    "hitDamage",
+}
+
+
+def _validate_game(value: Any) -> Optional[Dict[str, Any]]:
+    """GameRuntime quest/combat configs pass straight to the QA runner (spec.game).
+
+    Returns the normalized config, or None when malformed. `mode` must be
+    "waves" (arena defense) or "build" (settlement); `playerName` a non-empty
+    string naming the spawned player object; numeric pacing fields must be
+    finite and positive; the optional `enemy`/`settlement` blocks are validated
+    lightly (shape allow-list, positive health/population numbers) with the
+    engine supplying defaults for everything omitted. Unknown keys are rejected
+    so typos surface as repair input instead of silent no-ops.
+    """
+    if not isinstance(value, dict) or not value:
+        return None
+    normalized: Dict[str, Any] = {}
+    for key, item in value.items():
+        if key == "mode":
+            if item not in GAME_MODES:
+                return None
+            normalized[key] = item
+        elif key == "playerName":
+            if not isinstance(item, str) or not item.strip():
+                return None
+            normalized[key] = item.strip()
+        elif key in GAME_NUMERICS:
+            if not _is_finite_number(item) or item <= 0:
+                return None
+            normalized[key] = float(item)
+        elif key == "enemy":
+            enemy = _validate_game_enemy(item)
+            if enemy is None:
+                return None
+            normalized[key] = enemy
+        elif key == "settlement":
+            settlement = _validate_game_settlement(item)
+            if settlement is None:
+                return None
+            normalized[key] = settlement
+        else:
+            return None
+    return normalized
+
+
+def _validate_game_enemy(value: Any) -> Optional[Dict[str, Any]]:
+    if not isinstance(value, dict):
+        return None
+    normalized: Dict[str, Any] = {}
+    for key, item in value.items():
+        if key == "shape":
+            if item not in SUPPORTED_SHAPES:
+                return None
+            normalized[key] = item
+        elif key == "color":
+            if not _is_color(item):
+                return None
+            normalized[key] = item
+        elif key == "size":
+            vec = _vec3(item)
+            if vec is None:
+                return None
+            normalized[key] = vec
+        elif key == "y":
+            if not _is_finite_number(item):
+                return None
+            normalized[key] = float(item)
+        elif key == "health":
+            if not isinstance(item, dict):
+                return None
+            health: Dict[str, Any] = {}
+            for hkey, hitem in item.items():
+                if hkey == "maxHealth":
+                    if not _is_finite_number(hitem) or hitem <= 0:
+                        return None
+                    health[hkey] = float(hitem)
+                elif hkey == "destroyOnDeath":
+                    if not isinstance(hitem, bool):
+                        return None
+                    health[hkey] = hitem
+                else:
+                    return None
+            normalized[key] = health
+        elif key == "ai":
+            if not isinstance(item, dict):
+                return None
+            normalized[key] = dict(item)
+        else:
+            return None
+    return normalized
+
+
+def _validate_game_settlement(value: Any) -> Optional[Dict[str, Any]]:
+    if not isinstance(value, dict):
+        return None
+    normalized: Dict[str, Any] = {}
+    for key, item in value.items():
+        if key in {
+            "gridSize",
+            "targetPopulation",
+            "startingGold",
+            "startingFood",
+        }:
+            if not _is_finite_number(item) or item < 0:
+                return None
+            normalized[key] = float(item)
+        elif key == "placements":
+            if not isinstance(item, list):
+                return None
+            normalized[key] = list(item)
+        else:
+            return None
+    return normalized
 
 
 @dataclass
@@ -324,6 +513,33 @@ def _apply_spawn(
                 "(letters, digits, spaces, _ and - only)",
             )
         obj["biome"] = biome
+    if action.get("weapon") is not None:
+        # Maps to a WeaponController in the QA runner (objSpec.weapon).
+        weapon = _validate_weapon(action.get("weapon"))
+        if weapon is None:
+            return _outcome(
+                result,
+                index,
+                "spawn",
+                "invalid",
+                "spawn 'weapon' must be an object of engine WeaponController options "
+                "(numerics: damage, fireRate, range, maxAmmo, reloadTime, spreadBloom, "
+                "recoilKick; string: weaponName)",
+            )
+        obj["weapon"] = weapon
+    if action.get("health") is not None:
+        # Maps to a HealthComponent in the QA runner (objSpec.health).
+        health = _validate_health(action.get("health"))
+        if health is None:
+            return _outcome(
+                result,
+                index,
+                "spawn",
+                "invalid",
+                "spawn 'health' must be an object with positive maxHealth "
+                "and optional destroyOnDeath bool",
+            )
+        obj["health"] = health
 
     scene.setdefault("gameObjects", []).append(obj)
     _outcome(
@@ -534,6 +750,31 @@ def _apply_modify(
                     "(letters, digits, spaces, _ and - only)",
                 )
             obj["biome"] = biome
+        elif field_name == "weapon":
+            weapon = _validate_weapon(value)
+            if weapon is None:
+                return _outcome(
+                    result,
+                    index,
+                    "modify",
+                    "invalid",
+                    "modify 'weapon' must be an object of engine WeaponController options "
+                    "(numerics: damage, fireRate, range, maxAmmo, reloadTime, spreadBloom, "
+                    "recoilKick; string: weaponName)",
+                )
+            obj["weapon"] = weapon
+        elif field_name == "health":
+            health = _validate_health(value)
+            if health is None:
+                return _outcome(
+                    result,
+                    index,
+                    "modify",
+                    "invalid",
+                    "modify 'health' must be an object with positive maxHealth "
+                    "and optional destroyOnDeath bool",
+                )
+            obj["health"] = health
         changed.append(field_name)
 
     if not changed:
@@ -574,6 +815,33 @@ def _apply_delete(
         )
     scene["gameObjects"] = [go for go in scene.get("gameObjects", []) if go is not obj]
     _outcome(result, index, "delete", "applied", f"Removed {target}", target)
+
+
+def _apply_game(
+    scene: Dict[str, Any], action: Dict[str, Any], result: ApplyResult, index: int
+) -> None:
+    config = _validate_game(action.get("config"))
+    if config is None:
+        return _outcome(
+            result,
+            index,
+            "game",
+            "invalid",
+            "game 'config' must be an object with mode 'waves'|'build', "
+            "a non-empty playerName, positive pacing numerics "
+            "(totalWaves, enemiesPerWave, hitDamage, ...), "
+            "and optional enemy/settlement blocks",
+        )
+    scene["game"] = config
+    mode = config.get("mode", "waves")
+    _outcome(
+        result,
+        index,
+        "game",
+        "applied",
+        f"Set {mode}-mode quest config for player "
+        f"'{config.get('playerName', 'Player Hero')}'",
+    )
 
 
 def _apply_event(
@@ -671,6 +939,7 @@ _HANDLERS = {
     "modify": _apply_modify,
     "delete": _apply_delete,
     "event": _apply_event,
+    "game": _apply_game,
 }
 
 

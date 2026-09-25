@@ -56,7 +56,19 @@ ACTION_SCHEMA = """Action vocabulary (a JSON array named "actions"):
      "size": [x,y,z], "position": [x,y,z], "color": "#rrggbb", "physics": "dynamic"|"fixed"|"none", "mass": 1.0,
      "vehicle": {"throttle": 1.0, "wheels": [{"offset": [-0.8,0,1.2]}, {"offset": [0.8,0,1.2]}, {"offset": [-0.8,0,-1.2]}, {"offset": [0.8,0,-1.2]}]} (optional: adds a VehicleController; wheels is REQUIRED when vehicle is present),
      "streamer": {"chunkSize": 16, "renderDistance": 1, "resolution": 8} (optional: adds a WorldStreamer that generates terrain chunks around the object),
-     "biome": "sand rim" (optional: tags the object for the biome_coverage_min composition audit)}
+     "biome": "sand rim" (optional: tags the object for the biome_coverage_min composition audit),
+     "weapon": {"damage": 50, "fireRate": 8, "range": 100, "maxAmmo": 30} (optional: adds a WeaponController for combat quests),
+     "health": {"maxHealth": 100} (optional: adds a HealthComponent; destroyOnDeath defaults true)}
+  - {"type": "light", "name": "...", "lightType": "directional"|"point"|"ambient",
+     "color": "#rrggbb", "intensity": 2.0, "position": [x,y,z]}
+  - {"type": "modify", "target": "...", "position": [x,y,z], "color": "#rrggbb",
+     "size": [x,y,z], "physics": "...", "mass": 1.0, "lightType": "...", "intensity": 1.0,
+     "vehicle": {"throttle": 1.0, "wheels": [{"offset": [x,y,z]}, ...]} (optional: adds/replaces the VehicleController; wheels REQUIRED)}
+  - {"type": "delete", "target": "..."}
+  - {"type": "game", "config": {"mode": "waves", "playerName": "Player Hero",
+     "totalWaves": 2, "enemiesPerWave": 2, "hitDamage": 50} (quest/combat setup: spawns a
+     GameRuntime that runs wave defense or settlement-build around the named player object;
+     "mode": "build" with a "settlement" block runs the settlement path instead)}
   - {"type": "light", "name": "...", "lightType": "directional"|"point"|"ambient",
      "color": "#rrggbb", "intensity": 2.0, "position": [x,y,z]}
   - {"type": "modify", "target": "...", "position": [x,y,z], "color": "#rrggbb",
@@ -76,6 +88,14 @@ How acceptance rules map onto the schema (the QA runner checks these exact compo
     REQUIRED non-empty "wheels" array, e.g. "vehicle": {"throttle": 1.0, "wheels": [{"offset": [-0.8,0,1.2]}, {"offset": [0.8,0,1.2]}]}
   - "WorldStreamer" component -> the spawn has "streamer", e.g. "streamer": {"chunkSize": 16, "renderDistance": 1, "resolution": 8} (all fields optional positive numbers)
   - biome_coverage_min rules -> tag objects with "biome": "<brief biome name>" so each brief biome has enough live objects inside its region
+  - "WeaponController" component -> the spawn (or a "modify") has "weapon", e.g. "weapon": {"damage": 50, "fireRate": 8, "range": 100, "maxAmmo": 30}
+  - "HealthComponent" component -> the spawn (or a "modify") has "health", e.g. "health": {"maxHealth": 100}
+  - game_* rules (game_phase, game_score_min, game_kills_min, game_wave_reached, ...) ->
+    ALL of these: (1) spawn the named player object (physics dynamic + controller, plus weapon/health
+    for combat quests), AND (2) emit one "game" action whose config names that player, e.g.
+    {"type": "game", "config": {"mode": "waves", "playerName": "Player Hero", "totalWaves": 2,
+    "enemiesPerWave": 2, "hitDamage": 50}}. Without the "game" action every game_* rule fails
+    with "no game config in scenario".
   - "EventSheet" / event_attached rules -> emit an "event" action targeting that object
   - "LightComponent" -> emit a "light" action
   - object_count rules count every entry in gameObjects (lights included)
