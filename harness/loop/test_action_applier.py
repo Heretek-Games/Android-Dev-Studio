@@ -865,6 +865,114 @@ class DialogueActionTests(unittest.TestCase):
         )
 
 
+class PrefabActionTests(unittest.TestCase):
+    def test_prefab_define_registers_template(self):
+        scene, result = apply_actions(
+            base_scene(),
+            [
+                {
+                    "type": "prefab",
+                    "prefab": {
+                        "id": "goblin",
+                        "template": {
+                            "shape": "capsule",
+                            "physics": "none",
+                            "health": {"maxHealth": 50},
+                            "ai": {"targetName": "Player Hero"},
+                        },
+                    },
+                }
+            ],
+        )
+        self.assertEqual(result.applied, 1)
+        self.assertIn("goblin", scene["prefabs"])
+
+    def test_prefab_define_rejects_malformed(self):
+        _, result = apply_actions(
+            base_scene(), [{"type": "prefab", "prefab": {"id": "g"}}]
+        )
+        # Missing template is fine (defaults to {}); unknown keys are not.
+        self.assertEqual(result.applied, 1)
+        _, result = apply_actions(
+            base_scene(),
+            [{"type": "prefab", "prefab": {"id": "g", "mystery": 1}}],
+        )
+        self.assertEqual(result.invalid, 1)
+        self.assertIn("mystery", result.outcomes[0]["detail"])
+
+    def test_spawn_from_prefab_fills_and_overrides(self):
+        scene, result = apply_actions(
+            base_scene(),
+            [
+                {
+                    "type": "prefab",
+                    "prefab": {
+                        "id": "goblin",
+                        "template": {
+                            "shape": "capsule",
+                            "physics": "none",
+                            "color": "#4d7c0f",
+                            "health": {"maxHealth": 50},
+                            "ai": {"targetName": "Player Hero"},
+                        },
+                    },
+                },
+                {
+                    "type": "spawn",
+                    "name": "Goblin A",
+                    "prefab": "goblin",
+                    "position": [5, 1.5, 0],
+                    "color": "#ff0000",
+                },
+            ],
+        )
+        self.assertEqual(result.applied, 2)
+        goblin = scene["gameObjects"][1]
+        self.assertEqual(goblin["shape"], "capsule")
+        self.assertEqual(goblin["position"], [5.0, 1.5, 0.0])
+        self.assertEqual(goblin["color"], "#ff0000")  # explicit wins
+        self.assertEqual(goblin["health"], {"maxHealth": 50})  # template fills
+        self.assertEqual(goblin["ai"], {"targetName": "Player Hero"})
+
+    def test_spawn_unknown_prefab_names_registry(self):
+        scene, result = apply_actions(
+            base_scene(),
+            [
+                {
+                    "type": "prefab",
+                    "prefab": {"id": "goblin", "template": {"shape": "box"}},
+                },
+                {"type": "spawn", "name": "Orc", "prefab": "orc"},
+            ],
+        )
+        self.assertEqual(result.applied, 1)
+        self.assertEqual(result.invalid, 1)
+        self.assertIn("goblin", result.outcomes[1]["detail"])
+
+    def test_prefab_scene_passes_the_invariant_gate(self):
+        scene, result = apply_actions(
+            base_scene(),
+            [
+                {
+                    "type": "prefab",
+                    "prefab": {
+                        "id": "goblin",
+                        "template": {"shape": "capsule", "physics": "none"},
+                    },
+                },
+                {
+                    "type": "spawn",
+                    "name": "Goblin A",
+                    "prefab": "goblin",
+                    "position": [5, 1.5, 0],
+                },
+            ],
+        )
+        self.assertEqual(result.failures, 0)
+        valid, violations = validate_scene_invariants(scene)
+        self.assertTrue(valid, f"gate rejected prefab scene: {violations}")
+
+
 class ModifyTests(unittest.TestCase):
     def test_modify_position_and_color(self):
         scene, result = apply_actions(

@@ -238,7 +238,7 @@ python3 -m harness.loop.regression_bisect --good <rev> --bad <rev> \
 
 - `llm_client.py` — OpenAI-compatible client (.env.prod), token/latency/retry telemetry,
   vision messages (`chat_with_image`).
-- `action_applier.py` — pure spawn/light/modify/delete/event applier over the flat scene
+- `action_applier.py` — pure spawn/light/modify/delete/event/game/dialogue/prefab applier over the flat scene
   schema (incl. `vehicle` with required wheels, `streamer`, and `biome` tags);
   malformed actions become explicit outcomes (repair input), never exceptions.
 - `prompts.py` — generation + repair prompts; maps QA rule types onto schema fields

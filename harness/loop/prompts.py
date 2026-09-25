@@ -88,6 +88,14 @@ ACTION_SCHEMA = """Action vocabulary (a JSON array named "actions"):
      "action": {"emitEvent": {"eventName": "hydro_blessing"}} and silently ignores
      bare "event"/"fireEvent" keys, so a blessing that sets its flag but never fires
      always means a malformed emitEvent)}
+  - {"type": "prefab", "prefab": {"id": "goblin", "name": "Goblin",
+     "template": {"shape": "capsule", "physics": "none", "health": {"maxHealth": 50},
+      "ai": {"targetName": "Player Hero"}}}}
+    (registers a reusable template; a variant adds "base": "<other-id>" plus "overrides").
+    Then spawn instances cheaply: {"type": "spawn", "name": "Goblin A",
+    "prefab": "goblin", "position": [5,1.5,0]} — the template fills every omitted
+    field and explicit spawn fields (position, color, health...) win. Prefer prefabs
+    over repeating full specs when spawning 2+ similar objects.
   - {"type": "light", "name": "...", "lightType": "directional"|"point"|"ambient",
      "color": "#rrggbb", "intensity": 2.0, "position": [x,y,z]}
   - {"type": "modify", "target": "...", "position": [x,y,z], "color": "#rrggbb",

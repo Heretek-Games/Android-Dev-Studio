@@ -10,6 +10,8 @@ Action vocabulary mirrors the studio's `applyActionsToScene`
     - event   {target, event_name, condition, condition_params, action, params}
     - game    {config} — scene-level GameRuntime quest/combat config (waves/build)
     - dialogue {tree} — scene-level DialogueTree graph (id/startNodeId/nodes)
+    - prefab  {prefab} — registers a reusable template (id/name/base/template/overrides);
+      spawn with "prefab": "<id>" instantiates it (explicit spawn fields win)
 
 `apply_actions` is pure: it deep-copies the scene and returns
 `(new_scene, ApplyResult)`. Malformed actions become explicit outcomes
@@ -29,6 +31,7 @@ from harness.validation.scene_invariants import (
     SUPPORTED_PHYSICS,
     SUPPORTED_SHAPES,
 )
+from harness.prefabs.prefabs import resolve_prefab, validate_prefab
 
 DEFAULT_SPAWN_SIZE = [1.5, 1.5, 1.5]
 DEFAULT_SPAWN_POSITION = [0.0, 2.0, 0.0]
@@ -807,6 +810,44 @@ def _names(scene: Dict[str, Any]) -> set:
 def _apply_spawn(
     scene: Dict[str, Any], action: Dict[str, Any], result: ApplyResult, index: int
 ) -> None:
+    action = dict(action)
+    prefab_ref = action.pop("prefab", None)
+    if prefab_ref is not None:
+        # Instantiate from the scene prefab registry: resolved template fields
+        # become defaults; explicit action fields win (instance overrides).
+        if not isinstance(prefab_ref, str) or not prefab_ref.strip():
+            return _outcome(
+                result,
+                index,
+                "spawn",
+                "invalid",
+                "spawn 'prefab' must be a defined prefab id",
+            )
+        registry = scene.get("prefabs", {})
+        if not isinstance(registry, dict) or prefab_ref not in registry:
+            defined = sorted(registry.keys()) if isinstance(registry, dict) else []
+            return _outcome(
+                result,
+                index,
+                "spawn",
+                "invalid",
+                f"unknown prefab '{prefab_ref}' — define it first with a "
+                f"prefab action (defined: {defined})",
+            )
+        reasons: List[str] = []
+        base = resolve_prefab(registry, prefab_ref, None, reasons)
+        if base is None:
+            return _outcome(
+                result,
+                index,
+                "spawn",
+                "invalid",
+                f"prefab '{prefab_ref}' unresolvable — {reasons[0] if reasons else 'malformed'}",
+            )
+        for key, value in base.items():
+            if key in ("name", "uid"):
+                continue  # identity always comes from the spawn action
+            action.setdefault(key, value)
     name = action.get("name")
     if not isinstance(name, str) or not name.strip():
         return _outcome(
@@ -1341,6 +1382,36 @@ def _apply_game(
     )
 
 
+def _apply_prefab(
+    scene: Dict[str, Any], action: Dict[str, Any], result: ApplyResult, index: int
+) -> None:
+    reasons: List[str] = []
+    prefab = validate_prefab(action.get("prefab"), reasons)
+    if prefab is None:
+        detail = reasons[0] if reasons else "malformed prefab"
+        return _outcome(
+            result,
+            index,
+            "prefab",
+            "invalid",
+            f"prefab definition rejected — {detail}",
+        )
+    registry = scene.setdefault("prefabs", {})
+    if not isinstance(registry, dict):
+        return _outcome(
+            result, index, "prefab", "invalid", "scene 'prefabs' registry is corrupt"
+        )
+    registry[prefab["id"]] = prefab
+    _outcome(
+        result,
+        index,
+        "prefab",
+        "applied",
+        f"Registered prefab '{prefab['id']}'"
+        + (f" (variant of '{prefab['base']}')" if prefab["base"] else ""),
+    )
+
+
 def _apply_dialogue(
     scene: Dict[str, Any], action: Dict[str, Any], result: ApplyResult, index: int
 ) -> None:
@@ -1463,6 +1534,7 @@ _HANDLERS = {
     "event": _apply_event,
     "game": _apply_game,
     "dialogue": _apply_dialogue,
+    "prefab": _apply_prefab,
 }
 
 
