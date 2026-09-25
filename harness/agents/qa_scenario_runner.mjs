@@ -64,6 +64,94 @@ function estimateDrawCalls(scene, engine) {
 }
 
 /**
+ * Streaming audit (Phase 2 world-generation ladder): drives a WorldStreamer
+ * focus along a transect and verifies seamless chunk streaming — every chunk
+ * within render distance present after settling (no gaps), no chunk loaded,
+ * unloaded, then loaded again (no thrash), and bounded active-chunk counts.
+ * Uses the real WorldStreamer + TerrainChunk code paths stepped through the
+ * real EngineContext; only the focus teleport is simulated.
+ */
+function findStreamer(scene) {
+  for (const go of scene.gameObjects) {
+    for (const comp of go.components || []) {
+      if (comp.constructor.name === 'WorldStreamer') {
+        return { streamer: comp, host: go };
+      }
+    }
+  }
+  return null;
+}
+
+function expectedChunkKeys(cx, cz, renderDistance) {
+  const keys = [];
+  for (let dx = -renderDistance; dx <= renderDistance; dx++) {
+    for (let dz = -renderDistance; dz <= renderDistance; dz++) {
+      keys.push(`${cx + dx},${cz + dz}`);
+    }
+  }
+  return keys.sort();
+}
+
+function runStreamingAudit(scene, ctx, opts = {}) {
+  const found = findStreamer(scene);
+  if (!found) return null;
+  const { streamer } = found;
+  const target = streamer.target;
+  if (!target || !target.transform) return null;
+
+  const chunkSize = streamer.chunkSize || 48;
+  const renderDistance = streamer.renderDistance ?? 1;
+  const dt = opts.dt || 1 / 60;
+  const samples = Math.max(2, opts.samples || 5);
+  const settleFrames = opts.settleFrames ?? ((2 * renderDistance + 1) ** 2 + 2);
+  const bounds = sceneBounds(scene);
+  const path = opts.path || {
+    from: { x: bounds.minX, z: (bounds.minZ + bounds.maxZ) / 2 },
+    to: { x: bounds.maxX, z: (bounds.minZ + bounds.maxZ) / 2 },
+  };
+
+  const seenEver = new Set();
+  let reloads = 0;
+  let maxActive = 0;
+  const sampleLog = [];
+  for (let s = 0; s < samples; s++) {
+    const t = samples === 1 ? 1 : s / (samples - 1);
+    const x = path.from.x + t * (path.to.x - path.from.x);
+    const z = path.from.z + t * (path.to.z - path.from.z);
+    const y = target.transform.position.y;
+    target.transform.setPosition(x, y, z);
+    for (let f = 0; f < settleFrames; f++) ctx.step(dt);
+    const active = [...streamer.activeChunks.keys()].sort();
+    maxActive = Math.max(maxActive, active.length);
+    const gone = [...seenEver].filter((k) => !active.includes(k));
+    const unloaded = new Set(gone);
+    for (const key of active) {
+      if (unloaded.has(key)) reloads++;
+      seenEver.add(key);
+    }
+    sampleLog.push({ x: Number(x.toFixed(2)), z: Number(z.toFixed(2)), active: active.length });
+  }
+
+  const centerCX = Math.floor(path.to.x / chunkSize);
+  const centerCZ = Math.floor(path.to.z / chunkSize);
+  const expected = expectedChunkKeys(centerCX, centerCZ, renderDistance);
+  const finalActive = new Set([...streamer.activeChunks.keys()]);
+  const gaps = expected.filter((k) => !finalActive.has(k));
+  const coverage = expected.length ? Number(((expected.length - gaps.length) / expected.length).toFixed(4)) : 1;
+  return {
+    samples,
+    settleFrames,
+    coverage,
+    gaps,
+    thrashReloads: reloads,
+    maxActiveChunks: maxActive,
+    uniqueChunks: seenEver.size,
+    chunkSize,
+    renderDistance,
+  };
+}
+
+/**
  * Traversal audit (Phase 2 world-generation ladder): grid raycast sweep over
  * the scene's walkable bounds. Reports ground coverage plus geometric stuck
  * hazards — void cells (no ground), steep cells (slope unwalkable), and step
@@ -207,6 +295,11 @@ function buildScene(spec, engine) {
       }
       if (objSpec.ai) {
         go.addComponent(new engine.EnemyAI(objSpec.ai));
+      }
+      if (objSpec.streamer) {
+        go.addComponent(
+          new engine.WorldStreamer({ ...objSpec.streamer, target: go })
+        );
       }
       addElementalComponent(go, objSpec.elemental, engine);
       if (objSpec.vehicle) {
@@ -512,6 +605,18 @@ function evaluateRules(spec, ctxData) {
         detail = `coverage=${traversal.coverage} (min ${min}), holes=${traversal.holes.length}, steep=${traversal.steep.length}, stepHazards=${traversal.stepHazards.length}`;
         break;
       }
+      case 'streaming_coherence_min': {
+        const streaming = metrics.streaming;
+        if (!streaming) {
+          pass = false;
+          detail = 'streaming audit did not run (add spec.streaming with a streamer object)';
+          break;
+        }
+        const min = rule.min ?? 1.0;
+        pass = streaming.coverage >= min && streaming.gaps.length === 0;
+        detail = `coverage=${streaming.coverage} (min ${min}), gaps=${streaming.gaps.length}, thrashReloads=${streaming.thrashReloads}, maxActive=${streaming.maxActiveChunks}`;
+        break;
+      }
       case 'game_phase': {
         if (!game) { pass = false; detail = 'no game config in scenario'; break; }
         const phase = game.runtime.flow.getPhase();
@@ -684,6 +789,22 @@ async function main() {
       for (const hole of audit.holes.slice(0, 10)) {
         console.error(`[traverse] void at (${hole.x}, ${hole.z})`);
       }
+    }
+  }
+
+  if (spec.streaming) {
+    const audit = runStreamingAudit(scene, ctx, {
+      dt: args.dt,
+      samples: spec.streaming.samples,
+      settleFrames: spec.streaming.settleFrames,
+      path: spec.streaming.path,
+    });
+    if (audit) {
+      metrics.streaming = audit;
+      console.error(
+        `[streaming] coverage=${audit.coverage} gaps=${audit.gaps.length} ` +
+        `thrashReloads=${audit.thrashReloads} maxActive=${audit.maxActiveChunks}`
+      );
     }
   }
 
