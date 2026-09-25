@@ -34,7 +34,7 @@ Known gaps and follow-up work are tracked as GitHub issues on
 | [#2](https://github.com/Heretek-Games/Android-Dev-Studio/issues/2) | Tier 2 | Terrain visual polish: LOD seams, biome splatting, native foliage wind |
 | [#3](https://github.com/Heretek-Games/Android-Dev-Studio/issues/3) | Tier 2 | On-device validation of the 50k-instance compute-culling path |
 | [#4](https://github.com/Heretek-Games/Android-Dev-Studio/issues/4) | Tier 1 | In-APK device/QA bridge (packaged studio shows "No device detected") |
-| [#5](https://github.com/Heretek-Games/Android-Dev-Studio/issues/5) | Harness | CI emulator smoke test (build → install → launch → assert) |
+| [#5](https://github.com/Heretek-Games/Android-Dev-Studio/issues/5) | Harness | ~~CI emulator smoke test~~ — **done**: `python3 harness/agents/emulator_smoke.py` (verified both tiers PASS) |
 | [#6](https://github.com/Heretek-Games/Android-Dev-Studio/issues/6) | Tier 2 | Renderer hardening: per-frame semaphores, swapchain recreation, validation layers |
 
 ---
