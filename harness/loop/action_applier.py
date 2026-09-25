@@ -2362,6 +2362,91 @@ def _apply_prefab(
     )
 
 
+def _validate_locale(
+    value: Any, errors: Optional[List[str]] = None
+) -> Optional[Dict[str, Any]]:
+    """Localization blocks pass straight to the QA runner (spec.localization).
+
+    Returns the normalized {locale, tables}, or None when malformed. Tables
+    map locales to key->template string maps (capped at 500 keys per locale
+    to keep scenes reviewable); unknown keys are rejected.
+    """
+
+    def fail(reason: str) -> None:
+        if errors is not None:
+            errors.append(reason)
+        return None
+
+    if not isinstance(value, dict):
+        fail("locale 'config' must be an object with locale/tables")
+        return None
+    normalized: Dict[str, Any] = {}
+    locale = value.get("locale", "en")
+    if not isinstance(locale, str) or not locale.strip():
+        fail("locale config 'locale' must be a non-empty string")
+        return None
+    normalized["locale"] = locale.strip()
+    tables = value.get("tables")
+    if not isinstance(tables, dict) or not tables:
+        fail("locale config 'tables' must be a non-empty locale->keys map")
+        return None
+    normalized_tables: Dict[str, Dict[str, str]] = {}
+    for lang, entries in tables.items():
+        if (
+            not isinstance(lang, str)
+            or not lang.strip()
+            or not isinstance(entries, dict)
+        ):
+            fail(f"locale tables[{lang!r}] must map keys to template strings")
+            return None
+        if len(entries) > 500:
+            fail(f"locale tables[{lang!r}] exceeds 500 keys ({len(entries)})")
+            return None
+        clean: Dict[str, str] = {}
+        for key, template in entries.items():
+            if (
+                not isinstance(key, str)
+                or not key.strip()
+                or not isinstance(template, str)
+            ):
+                fail(f"locale tables[{lang!r}] keys and templates must be strings")
+                return None
+            clean[key.strip()] = template
+        normalized_tables[lang.strip()] = clean
+    normalized["tables"] = normalized_tables
+    for key in value:
+        if key not in ("locale", "tables"):
+            fail(f"unknown locale config key '{key}' (allowed: locale, tables)")
+            return None
+    return normalized
+
+
+def _apply_locale(
+    scene: Dict[str, Any], action: Dict[str, Any], result: ApplyResult, index: int
+) -> None:
+    reasons: List[str] = []
+    config = _validate_locale(action.get("config"), reasons)
+    if config is None:
+        detail = reasons[0] if reasons else "malformed config"
+        return _outcome(
+            result,
+            index,
+            "locale",
+            "invalid",
+            f"locale config rejected — {detail}",
+        )
+    scene["localization"] = config
+    total = sum(len(entries) for entries in config["tables"].values())
+    _outcome(
+        result,
+        index,
+        "locale",
+        "applied",
+        f"Registered localization '{config['locale']}' "
+        f"({total} keys across {len(config['tables'])} locale(s))",
+    )
+
+
 def _apply_dialogue(
     scene: Dict[str, Any], action: Dict[str, Any], result: ApplyResult, index: int
 ) -> None:
@@ -2485,6 +2570,7 @@ _HANDLERS = {
     "game": _apply_game,
     "dialogue": _apply_dialogue,
     "prefab": _apply_prefab,
+    "locale": _apply_locale,
 }
 
 

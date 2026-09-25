@@ -23,12 +23,12 @@ export * from './audio/AudioManager.js';
 export * from './game/GameFlow.js';
 export * from './game/WaveSpawner.js';
 export * from './ui/GameShell.js';
+export * from './ui/Localization.js';
 export * from './game/DamageRouter.js';
 export * from './game/GameSession.js';
 export * from './game/GameRuntime.js';
 export * from './simulation/Settlement.js';
-export * from './game/SaveSystem.js';
-export * from './audio/AudioBackend.js';
+export * from './game/SaveSystem.js';export * from './audio/AudioBackend.js';
 export * from './audio/WebAudioBackend.js';
 export * from './components/ModelRenderer.js';
 

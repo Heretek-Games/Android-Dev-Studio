@@ -29,6 +29,9 @@ RULE_DESCRIPTIONS = {
     "timeline_finished": lambda r: (
         f"the timeline on '{r.get('target')}' must play to completion"
     ),
+    "locale_missing_max": lambda r: (
+        f"at most {r.get('maxMissing', 0)} localization keys may go missing"
+    ),
     "object_count": lambda r: (
         f"the scene must contain exactly {r.get('count')} objects"
     ),
@@ -124,6 +127,9 @@ ACTION_SCHEMA = """Action vocabulary (a JSON array named "actions"):
      "condition_params": {"name": "...", "interval": 0.5},
      "action": "Translate"|"RotateY"|"ApplyImpulse"|"SetColor"|"Destroy"|"SetScale",
      "params": {"speed": 1.0} or {"degrees": 20} or {"x":0,"y":0,"z":0} or {"color": "#rrggbb"}}
+  - {"type": "locale", "config": {"locale": "es", "tables": {"es": {"dialogue.keeper.greet": "Hola, héroe."}, "en": {"dialogue.keeper.greet": "Hello, hero."}}}}
+    (registers scene string tables for the locale_missing_max audit; dialogue node
+    text resolves via dialogue.<tree>.<node> keys with literal fallback)
 
 How acceptance rules map onto the schema (the QA runner checks these exact components):
   - "RigidBody3D"/"Collider3D" component -> the spawn has "physics": "dynamic" (or "fixed")

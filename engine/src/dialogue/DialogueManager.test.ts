@@ -1,6 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import { DialogueManager } from './DialogueManager.js';
+import { LocalizationService } from '../ui/Localization.js';
 
 describe('DialogueManager (Dialogic & Godot Dialogue Architecture)', () => {
   it('registers tree and advances linear text nodes', () => {
@@ -202,5 +203,69 @@ describe('DialogueManager (Dialogic & Godot Dialogue Architecture)', () => {
     dm.startConversation('gated');
     available = dm.getAvailableChoices();
     assert.deepStrictEqual(available.map(a => a.index), [0, 1, 2]);
+  });
+});
+
+describe('DialogueManager — localization binding', () => {
+  const TREE = {
+    id: 'quest',
+    title: 'Quest',
+    startNodeId: 'greet',
+    nodes: {
+      greet: {
+        id: 'greet',
+        type: 'text' as const,
+        speaker: 'Keeper',
+        text: 'Bring me {count} coins, hero.',
+        nextNodeId: 'ask'
+      },
+      ask: {
+        id: 'ask',
+        type: 'choice' as const,
+        choices: [
+          { id: 'yes', text: 'I accept.', nextNodeId: 'end' },
+          { id: 'no', text: 'Not now.', nextNodeId: 'end' }
+        ]
+      },
+      end: { id: 'end', type: 'end' as const }
+    }
+  };
+
+  it('localized lines resolve with dialogue variables; literals fall back silently', () => {
+    const dm = new DialogueManager();
+    dm.registerTree(JSON.parse(JSON.stringify(TREE)));
+    dm.setVariable('count', 5);
+    dm.startConversation('quest');
+
+    // Unbound: raw literals, no misses possible.
+    assert.strictEqual(dm.getLocalizedNode()?.text, 'Bring me {count} coins, hero.');
+
+    dm.setLocalization(new LocalizationService({
+      en: {
+        'dialogue.quest.greet': 'Bring me {count} coins, hero.',
+        'dialogue.quest.ask.choice.yes': 'Accept the quest.',
+        'dialogue.quest.ask.choice.no': 'Walk away.'
+      },
+      es: { 'dialogue.quest.greet': 'Tráeme {count} monedas, héroe.' }
+    }, 'es'));
+    const svc = dm.getLocalization()!;
+    assert.strictEqual(dm.getLocalizedNode()?.text, 'Tráeme 5 monedas, héroe.');
+    dm.advance();
+    const localized = dm.getLocalizedNode()!;
+    assert.strictEqual(localized.choices?.[0].text, 'Accept the quest.');
+    // ES lacks the yes/no choice keys -> EN fallback, no miss recorded.
+    assert.deepStrictEqual(svc.missingKeys(), []);
+    // Raw node untouched (rendering never mutates the tree).
+    assert.strictEqual(dm.getCurrentNode()?.choices?.[0].text, 'I accept.');
+  });
+
+  it('absent keys keep literals and record misses for QA', () => {
+    const dm = new DialogueManager();
+    dm.registerTree(JSON.parse(JSON.stringify(TREE)));
+    dm.startConversation('quest');
+    const svc = new LocalizationService({ en: {} }, 'en');
+    dm.setLocalization(svc);
+    assert.strictEqual(dm.getLocalizedNode()?.text, 'Bring me {count} coins, hero.');
+    assert.deepStrictEqual(svc.missingKeys(), ['dialogue.quest.greet']);
   });
 });

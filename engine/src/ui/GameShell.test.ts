@@ -1,6 +1,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert';
 import { GameShell } from './GameShell.js';
+import { LocalizationService } from './Localization.js';
 import { GameFlow } from '../game/GameFlow.js';
 import { GameSession } from '../game/GameSession.js';
 
@@ -124,5 +125,52 @@ describe('GameShell — overlay state and HUD (headless)', () => {
     session.registerKill();
     assert.strictEqual(shell.getView().score, before + 100, 'getView still computes; no listeners required');
     assert.strictEqual(shell.handleButton('restart'), false, 'destroyed shell ignores buttons');
+  });
+});
+
+describe('GameShell — localization binding (headless)', () => {
+  const TABLES = {
+    en: {
+      'shell.button.start': 'Start',
+      'shell.hud.score': 'Score',
+      'shell.status.won': 'Victory — {score}'
+    },
+    es: {
+      'shell.button.start': 'Comenzar',
+      'shell.hud.score': 'Puntos',
+      'shell.status.won': 'Victoria — {score}'
+    }
+  };
+
+  test('labels resolve through the bound service with English defaults', () => {
+    const svc = new LocalizationService(TABLES, 'es');
+    const { shell, flow } = makeShell({ localization: svc });
+    assert.strictEqual(shell.localize('shell.button.start', 'Start'), 'Comenzar');
+    assert.strictEqual(shell.getView().scoreLabel, 'Puntos');
+    flow.transition('start');
+    assert.strictEqual(shell.getView().overlay, 'hud');
+    shell.setLocale('en');
+    assert.strictEqual(shell.getView().scoreLabel, 'Score');
+    assert.strictEqual(svc.getLocale(), 'en');
+  });
+
+  test('missing keys fall back to English defaults and record misses', () => {
+    const svc = new LocalizationService({ es: { 'shell.button.start': 'Comenzar' } }, 'es');
+    const { shell } = makeShell({ localization: svc });
+    // shell.hud.score has no ES entry and no EN table: English default wins.
+    assert.strictEqual(shell.getView().scoreLabel, 'Score');
+    // getView also resolves the menu status + score unit: all three miss.
+    assert.deepStrictEqual(svc.missingKeys(), [
+      'shell.hud.score',
+      'shell.score.unit',
+      'shell.status.menu'
+    ]);
+  });
+
+  test('unbound shells render identical English (no behavior change)', () => {
+    const { shell } = makeShell();
+    assert.strictEqual(shell.localize('shell.button.start', 'Start'), 'Start');
+    assert.strictEqual(shell.getView().scoreLabel, 'Score');
+    assert.match(shell.getView().statusText, /Press Start/);
   });
 });

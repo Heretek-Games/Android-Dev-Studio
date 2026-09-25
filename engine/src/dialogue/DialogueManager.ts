@@ -1,5 +1,6 @@
 export type DialogueNodeType = 'text' | 'choice' | 'condition' | 'action' | 'end';
 
+import type { LocalizationService } from '../ui/Localization.js';
 export interface DialogueChoice {
   id: string;
   text: string;
@@ -61,9 +62,46 @@ export class DialogueManager {
   private trees: Map<string, DialogueTree> = new Map();
   private variables: Map<string, unknown> = new Map();
   private listeners: Set<DialogueEventListener> = new Set();
+  private localizer: LocalizationService | null = null;
 
   private activeTreeId: string | null = null;
   private currentNodeId: string | null = null;
+
+  /** Binds key-based line resolution (null detaches; raw text is the default). */
+  public setLocalization(localizer: LocalizationService | null): void {
+    this.localizer = localizer;
+  }
+
+  public getLocalization(): LocalizationService | null {
+    return this.localizer;
+  }
+
+  /**
+   * Current node with display text resolved through the bound localizer:
+   * `dialogue.<tree>.<node>` for body text,
+   * `dialogue.<tree>.<node>.choice.<choiceId>` for options, with dialogue
+   * variables as interpolation vars. Raw literals are the fallback, so
+   * unbound trees render exactly as before (and record no misses).
+   */
+  public getLocalizedNode(): DialogueNode | null {
+    const current = this.getCurrentNode();
+    if (!current || !this.localizer || !this.activeTreeId) return current;
+    const vars = Object.fromEntries(this.variables.entries());
+    const base = `dialogue.${this.activeTreeId}.${current.id}`;
+    const localized: DialogueNode = { ...current };
+    if (typeof current.text === 'string') {
+      const resolved = this.localizer.t(base, vars);
+      localized.text = resolved === base ? current.text : resolved;
+    }
+    if (Array.isArray(current.choices)) {
+      localized.choices = current.choices.map(choice => {
+        const key = `${base}.choice.${choice.id}`;
+        const resolved = this.localizer!.t(key, vars);
+        return resolved === key ? choice : { ...choice, text: resolved };
+      });
+    }
+    return localized;
+  }
 
   public registerTree(tree: DialogueTree): void {
     if (!tree.id || !tree.startNodeId || !tree.nodes) {

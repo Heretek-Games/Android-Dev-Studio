@@ -397,6 +397,14 @@ const DIALOGUE_MAX_STEPS = 64;
 function setupDialogue(spec, engine) {
   const trees = spec.dialogues || {};
   const manager = new engine.DialogueManager();
+  let localization = null;
+  if (spec.localization && typeof spec.localization === 'object') {
+    localization = new engine.LocalizationService(
+      spec.localization.tables || {},
+      spec.localization.locale || 'en'
+    );
+    manager.setLocalization(localization);
+  }
   const transcripts = {};
   for (const [treeId, tree] of Object.entries(trees)) {
     const visited = [];
@@ -408,6 +416,9 @@ function setupDialogue(spec, engine) {
       let node = manager.startConversation(treeId);
       for (let step = 0; step < DIALOGUE_MAX_STEPS && node; step++) {
         visited.push(node.id);
+        // Resolve display text when a localization block is present: the
+        // resolution itself is the missing-key audit (literals unaffected).
+        if (localization) manager.getLocalizedNode();
         if (node.type === 'choice') {
           const available = manager.getAvailableChoices();
           if (!available.length) break;
@@ -425,7 +436,7 @@ function setupDialogue(spec, engine) {
     }
     transcripts[treeId] = { visited, events, error: null };
   }
-  return { manager, transcripts };
+  return { manager, transcripts, localization };
 }
 
 /**
@@ -695,6 +706,15 @@ function evaluateRules(spec, ctxData) {
         if (!tl) { pass = false; detail = `no TimelineLite on "${rule.target}"`; break; }
         pass = tl.finished === true;
         detail = `"${rule.target}" timeline time=${tl.time.toFixed(2)}/${tl.duration} finished=${tl.finished}`;
+        break;
+      }
+      case 'locale_missing_max': {
+        const missing = (dialogue && dialogue.localization && typeof dialogue.localization.missingKeys === 'function')
+          ? dialogue.localization.missingKeys()
+          : [];
+        const maxMissing = rule.maxMissing ?? 0;
+        pass = missing.length <= maxMissing;
+        detail = `locale missing=${missing.length} (max=${maxMissing}${missing.length ? `: ${missing.slice(0, 5).join(', ')}` : ''})`;
         break;
       }
       case 'object_count': {

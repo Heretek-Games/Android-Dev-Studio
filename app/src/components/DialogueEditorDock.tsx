@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { useStudio } from '../state/StudioState';
 import { sceneStore, type HarnessScene } from '../services/SceneStore';
-import { DialogueManager, type DialogueTree, type DialogueNode, type DialogueChoice } from '@heretek/engine';
+import { DialogueManager, LocalizationService, type DialogueTree, type DialogueNode, type DialogueChoice } from '@heretek/engine';
 
 const SAMPLE_SCRIPT = `
 [Tree: AncientBazaar (Ancient Bazaar Merchant)]
@@ -96,6 +96,18 @@ export const DialogueEditorDock: React.FC = () => {
   const [previewChoices, setPreviewChoices] = useState<Array<{ index: number; choice: DialogueChoice }>>([]);
   const [previewEvents, setPreviewEvents] = useState<string[]>([]);
   const [previewActive, setPreviewActive] = useState(false);
+  const [previewLocale, setPreviewLocale] = useState('en');
+
+  /** String tables from the canonical scene (scene.localization), if any. */
+  const localeTables = (harnessScene?.localization as unknown as
+    { locale?: string; tables?: Record<string, Record<string, string>> } | undefined)?.tables ?? null;
+  const previewLocales = localeTables ? Object.keys(localeTables).sort() : ['en'];
+
+  const bindPreviewLocale = (dm: DialogueManager, locale: string): void => {
+    if (localeTables) {
+      dm.setLocalization(new LocalizationService(localeTables, locale));
+    }
+  };
   const [variables, setVariables] = useState<Record<string, any>>({ gold: 100, rep: 5 });
 
   // ---- Load canonical scene ------------------------------------------------
@@ -235,6 +247,7 @@ export const DialogueEditorDock: React.FC = () => {
     const dm = new DialogueManager();
     for (const tree of trees) dm.registerTree(tree);
     for (const [k, v] of Object.entries(variables)) dm.setVariable(k, v);
+    bindPreviewLocale(dm, previewLocale);
     dm.addEventListener((eventName, payload) => {
       setPreviewEvents(prev => [
         ...prev.slice(-19),
@@ -244,9 +257,8 @@ export const DialogueEditorDock: React.FC = () => {
     });
     dmRef.current = dm;
     setPreviewEvents([]);
-    const first = dm.startConversation(activeTree.id);
-    setPreviewNode(first);
-    setPreviewChoices(dm.getAvailableChoices());
+    dm.startConversation(activeTree.id);
+    refreshPreviewState();
     setPreviewActive(true);
     setMode('preview');
   };
@@ -254,9 +266,26 @@ export const DialogueEditorDock: React.FC = () => {
   const refreshPreviewState = () => {
     const dm = dmRef.current;
     if (!dm) return;
-    setPreviewNode(dm.getCurrentNode());
-    setPreviewChoices(dm.getAvailableChoices());
+    // Localized display text; variable gating preserved via available indices.
+    const localized = dm.getLocalizedNode();
+    const byIndex = new Map((localized?.choices ?? []).map((c, i) => [i, c] as const));
+    setPreviewNode(localized);
+    setPreviewChoices(
+      dm.getAvailableChoices().map(({ index, choice }) => ({
+        index,
+        choice: byIndex.get(index) ?? choice
+      }))
+    );
     if (!dm.getCurrentNode()) setPreviewActive(false);
+  };
+
+  const handlePreviewLocale = (locale: string) => {
+    setPreviewLocale(locale);
+    const dm = dmRef.current;
+    if (dm) {
+      bindPreviewLocale(dm, locale);
+      refreshPreviewState();
+    }
   };
 
   const handleAdvance = () => {
@@ -523,6 +552,21 @@ export const DialogueEditorDock: React.FC = () => {
         {mode === 'preview' && (
           <div className="h-full flex">
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              <div className="flex items-center gap-2 text-[11px] text-zinc-400">
+                <span>Preview locale:</span>
+                <select
+                  value={previewLocale}
+                  onChange={(e) => handlePreviewLocale(e.target.value)}
+                  className="bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-zinc-200 outline-none"
+                >
+                  {previewLocales.map(l => (
+                    <option key={l} value={l}>{l}</option>
+                  ))}
+                </select>
+                {!localeTables && (
+                  <span className="text-zinc-600">(no scene.localization tables — showing literals)</span>
+                )}
+              </div>
               <div className="bg-[#202023] border border-zinc-800 rounded-lg p-4 space-y-3">
                 {previewNode ? (
                   <>

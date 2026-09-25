@@ -9,6 +9,7 @@
 
 import type { GameFlow, GamePhase } from '../game/GameFlow.js';
 import type { GameSession } from '../game/GameSession.js';
+import type { LocalizationService } from './Localization.js';
 
 export type ShellOverlay = 'menu' | 'hud' | 'paused' | 'won' | 'lost';
 
@@ -58,7 +59,28 @@ export interface GameShellOptions {
   onLoad?: () => void;
   /** HUD presentation overrides (e.g. distance runs hide wave/kills). */
   hud?: ShellHudConfig;
+  /** Optional key-based labels (Track 1.8); English defaults when absent. */
+  localization?: LocalizationService;
 }
+
+/** English defaults for every shell label key (also the fallback table). */
+export const SHELL_DEFAULT_EN: Record<string, string> = {
+  'shell.button.start': 'Start',
+  'shell.button.continue': 'Continue',
+  'shell.button.resume': 'Resume',
+  'shell.button.save': 'Save',
+  'shell.button.restart': 'Restart',
+  'shell.button.menu': 'Menu',
+  'shell.button.pause': '⏸ Pause',
+  'shell.hud.score': 'Score',
+  'shell.hud.wave': 'Wave',
+  'shell.hud.kills': 'Kills',
+  'shell.status.menu': 'Press Start to play',
+  'shell.status.paused': 'Paused',
+  'shell.status.won': 'Victory — {score}',
+  'shell.status.lost': 'Defeated — {score}',
+  'shell.score.unit': ' points'
+};
 
 const OVERLAY_FOR_PHASE: Record<GamePhase, ShellOverlay> = {
   menu: 'menu',
@@ -96,7 +118,7 @@ export class GameShell {
       title: this.title,
       score: this.session.getScore(),
       scoreSuffix: hud.scoreSuffix ?? '',
-      scoreLabel: hud.scoreLabel ?? 'Score',
+      scoreLabel: hud.scoreLabel ?? this.localize('shell.hud.score', 'Score'),
       showWave: hud.showWave ?? true,
       showKills: hud.showKills ?? true,
       showHealth: hud.showHealth ?? true,
@@ -105,8 +127,24 @@ export class GameShell {
       elapsedSeconds: this.session.getElapsedSeconds(),
       healthFraction: clamp01(this.options.getHealthFraction?.() ?? 1),
       hasSave: this.options.hasSave?.() ?? false,
-      statusText: statusTextFor(overlay, this.session, hud)
+      statusText: statusTextFor(overlay, this.session, hud, (k, f, v) => this.localize(k, f, v))
     };
+  }
+
+  /** Resolves a shell label key (English default when no service is bound). */
+  public localize(key: string, fallback?: string, vars?: Record<string, unknown>): string {
+    const tableFallback = fallback ?? SHELL_DEFAULT_EN[key] ?? key;
+    const svc = this.options.localization;
+    if (!svc) return substituteVars(tableFallback, vars);
+    const resolved = svc.t(key, vars);
+    if (resolved === key) return substituteVars(tableFallback, vars);
+    return resolved;
+  }
+
+  /** Switches the bound service locale and refreshes (no-op without a service). */
+  public setLocale(locale: string): void {
+    this.options.localization?.setLocale(locale);
+    this.refresh();
   }
 
   /** Attach to the DOM (when available) and start reacting to flow/session changes. */
@@ -181,17 +219,22 @@ export class GameShell {
   }
 }
 
-function statusTextFor(overlay: ShellOverlay, session: GameSession, hud: ShellHudConfig): string {
-  const score = `${session.getScore().toFixed(hud.scoreSuffix ? 1 : 0)}${hud.scoreSuffix ?? ' points'}`;
+function statusTextFor(
+  overlay: ShellOverlay,
+  session: GameSession,
+  hud: ShellHudConfig,
+  t: (key: string, fallback: string, vars?: Record<string, unknown>) => string
+): string {
+  const score = `${session.getScore().toFixed(hud.scoreSuffix ? 1 : 0)}${hud.scoreSuffix ?? t('shell.score.unit', ' points')}`;
   switch (overlay) {
     case 'menu':
-      return 'Press Start to play';
+      return t('shell.status.menu', 'Press Start to play');
     case 'paused':
-      return 'Paused';
+      return t('shell.status.paused', 'Paused');
     case 'won':
-      return `Victory — ${score}`;
+      return t('shell.status.won', 'Victory — {score}', { score });
     case 'lost':
-      return `Defeated — ${score}`;
+      return t('shell.status.lost', 'Defeated — {score}', { score });
     default:
       return '';
   }
@@ -200,6 +243,14 @@ function statusTextFor(overlay: ShellOverlay, session: GameSession, hud: ShellHu
 function clamp01(value: number): number {
   if (!Number.isFinite(value)) return 0;
   return Math.min(1, Math.max(0, value));
+}
+
+/** Minimal {var} substitution for the service-less path (mirrors the service). */
+function substituteVars(template: string, vars?: Record<string, unknown>): string {
+  return template.replace(/\{([a-zA-Z0-9_]+)\}/g, (match, name: string) => {
+    const value = vars?.[name];
+    return value === undefined || value === null ? match : String(value);
+  });
 }
 
 // --------------------------------------------------------------------- DOM layer
@@ -223,20 +274,26 @@ function buildDom(doc: Document, root: HTMLElement, shell: GameShell): Record<st
 
   const buttons = doc.createElement('div');
   buttons.style.cssText = 'display:flex;gap:10px;flex-wrap:wrap;justify-content:center;';
-  const makeButton = (label: string, action: Parameters<GameShell['handleButton']>[0]) => {
+  const makeButton = (
+    labelKey: string,
+    fallback: string,
+    action: Parameters<GameShell['handleButton']>[0]
+  ) => {
     const button = doc.createElement('button');
-    button.textContent = label;
+    button.textContent = shell.localize(labelKey, fallback);
+    button.setAttribute('data-shell-label', labelKey);
+    button.setAttribute('data-shell-fallback', fallback);
     button.style.cssText =
       'pointer-events:auto;padding:10px 22px;border-radius:8px;border:1px solid #3f3f46;background:#2563eb;color:#fff;font-size:15px;cursor:pointer;';
     button.addEventListener('click', () => shell.handleButton(action));
     return button;
   };
-  const startButton = makeButton('Start', 'start');
-  const continueButton = makeButton('Continue', 'load');
-  const resumeButton = makeButton('Resume', 'resume');
-  const saveButton = makeButton('Save', 'save');
-  const restartButton = makeButton('Restart', 'restart');
-  const quitButton = makeButton('Menu', 'quit');
+  const startButton = makeButton('shell.button.start', 'Start', 'start');
+  const continueButton = makeButton('shell.button.continue', 'Continue', 'load');
+  const resumeButton = makeButton('shell.button.resume', 'Resume', 'resume');
+  const saveButton = makeButton('shell.button.save', 'Save', 'save');
+  const restartButton = makeButton('shell.button.restart', 'Restart', 'restart');
+  const quitButton = makeButton('shell.button.menu', 'Menu', 'quit');
   buttons.append(startButton, continueButton, resumeButton, saveButton, restartButton, quitButton);
   overlay.append(title, status, stats, buttons);
 
@@ -249,7 +306,9 @@ function buildDom(doc: Document, root: HTMLElement, shell: GameShell): Record<st
   const hudKills = doc.createElement('span');
   const hudTime = doc.createElement('span');
   const pauseButton = doc.createElement('button');
-  pauseButton.textContent = '⏸ Pause';
+  pauseButton.textContent = shell.localize('shell.button.pause', '⏸ Pause');
+  pauseButton.setAttribute('data-shell-label', 'shell.button.pause');
+  pauseButton.setAttribute('data-shell-fallback', '⏸ Pause');
   pauseButton.style.cssText =
     'pointer-events:auto;position:absolute;right:14px;top:-4px;padding:6px 14px;border-radius:8px;border:1px solid #3f3f46;background:rgba(24,24,27,0.85);color:#e4e4e7;font-size:13px;cursor:pointer;';
   pauseButton.addEventListener('click', () => shell.handleButton('pause'));
@@ -289,7 +348,7 @@ function buildDom(doc: Document, root: HTMLElement, shell: GameShell): Record<st
   };
 }
 
-function applyView(doc: Document, elements: Record<string, HTMLElement>, view: ShellView, _shell: GameShell): void {
+function applyView(doc: Document, elements: Record<string, HTMLElement>, view: ShellView, shell: GameShell): void {
   if (!elements.root) return;
   const showOverlay = view.overlay !== 'hud';
   elements.overlay.style.display = showOverlay ? 'flex' : 'none';
@@ -299,10 +358,20 @@ function applyView(doc: Document, elements: Record<string, HTMLElement>, view: S
   elements.title.textContent = view.title;
   elements.status.textContent = view.statusText;
   const statParts = [`${view.scoreLabel} ${view.score.toFixed(view.scoreSuffix ? 1 : 0)}${view.scoreSuffix}`];
-  if (view.showWave) statParts.push(`Wave ${view.wave}`);
-  if (view.showKills) statParts.push(`Kills ${view.kills}`);
+  const waveLabel = shell.localize('shell.hud.wave', 'Wave');
+  const killsLabel = shell.localize('shell.hud.kills', 'Kills');
+  if (view.showWave) statParts.push(`${waveLabel} ${view.wave}`);
+  if (view.showKills) statParts.push(`${killsLabel} ${view.kills}`);
   statParts.push(`${view.elapsedSeconds.toFixed(1)}s`);
   elements.stats.textContent = view.overlay === 'menu' ? '' : statParts.join(' · ');
+
+  // Re-resolve every keyed label so runtime locale switches repaint the DOM.
+  for (const element of Object.values(elements)) {
+    const key = element.getAttribute?.('data-shell-label');
+    if (key) {
+      element.textContent = shell.localize(key, element.getAttribute('data-shell-fallback') ?? key);
+    }
+  }
 
   const show = (element: HTMLElement | undefined, visible: boolean) => {
     if (element) element.style.display = visible ? 'inline-block' : 'none';
@@ -316,8 +385,8 @@ function applyView(doc: Document, elements: Record<string, HTMLElement>, view: S
 
   show(elements.pauseButton, view.overlay === 'hud');
   elements.hudScore.textContent = `${view.scoreLabel} ${view.score.toFixed(view.scoreSuffix ? 1 : 0)}${view.scoreSuffix}`;
-  elements.hudWave.textContent = `Wave ${view.wave}`;
-  elements.hudKills.textContent = `Kills ${view.kills}`;
+  elements.hudWave.textContent = `${waveLabel} ${view.wave}`;
+  elements.hudKills.textContent = `${killsLabel} ${view.kills}`;
   elements.hudWave.style.display = view.showWave ? '' : 'none';
   elements.hudKills.style.display = view.showKills ? '' : 'none';
   elements.healthBar.style.display = view.showHealth && view.overlay !== 'hud' ? 'none' : view.showHealth ? 'block' : 'none';

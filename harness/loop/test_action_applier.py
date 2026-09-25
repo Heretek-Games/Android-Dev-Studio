@@ -1298,6 +1298,43 @@ class DialogueActionTests(unittest.TestCase):
         )
 
 
+class LocaleActionTests(unittest.TestCase):
+    def test_locale_config_registers_tables(self):
+        scene, result = apply_actions(
+            base_scene(),
+            [
+                {
+                    "type": "locale",
+                    "config": {
+                        "locale": "es",
+                        "tables": {
+                            "es": {"dialogue.keeper.greet": "Hola, héroe."},
+                            "en": {"dialogue.keeper.greet": "Hello, hero."},
+                        },
+                    },
+                }
+            ],
+        )
+        self.assertEqual(result.applied, 1)
+        self.assertEqual(scene["localization"]["locale"], "es")
+        self.assertEqual(
+            scene["localization"]["tables"]["es"]["dialogue.keeper.greet"],
+            "Hola, héroe.",
+        )
+
+    def test_locale_config_rejects_malformed(self):
+        for bad, hint in (
+            ({"locale": "es"}, "tables"),
+            ({"locale": "", "tables": {"en": {}}}, "locale"),
+            ({"locale": "es", "tables": {}}, "tables"),
+            ({"locale": "es", "tables": {"en": {"k": 5}}}, "strings"),
+            ({"locale": "es", "tables": {"en": {"k": "v"}}, "x": 1}, "x"),
+        ):
+            _, result = apply_actions(base_scene(), [{"type": "locale", "config": bad}])
+            self.assertEqual(result.invalid, 1, f"should reject {bad!r}")
+            self.assertIn(hint, result.outcomes[0]["detail"])
+
+
 class PrefabActionTests(unittest.TestCase):
     def test_prefab_define_registers_template(self):
         scene, result = apply_actions(
