@@ -137,4 +137,35 @@ TerrainMeshPlan planTerrainMeshes(const std::vector<TerrainLodRecord>& leaves, u
   return plan;
 }
 
+TerrainGpuData packTerrainGpuData(const std::vector<TerrainLodRecord>& leaves, uint32_t maxDepth,
+                                  uint32_t seed, float maxHeight) {
+  TerrainGpuData data;
+  data.plan = planTerrainMeshes(leaves, maxDepth, seed, maxHeight);
+  data.vertices.reserve(static_cast<size_t>(data.plan.totalVertices) * 6);
+  data.indices.reserve(data.plan.totalIndices);
+  data.commands.reserve(leaves.size());
+
+  uint32_t vertexOffset = 0;
+  uint32_t indexOffset = 0;
+  for (const auto& leaf : leaves) {
+    const uint32_t resolution = terrainResolutionForLod(leaf.lod, maxDepth);
+    const TerrainMeshData mesh = generateTerrainMesh(leaf, resolution, seed, maxHeight);
+
+    TerrainDrawCommand command;
+    command.indexCount = mesh.indexCount();
+    command.firstIndex = indexOffset;
+    command.vertexOffset = static_cast<int32_t>(vertexOffset);
+
+    data.vertices.insert(data.vertices.end(), mesh.vertices.begin(), mesh.vertices.end());
+    for (const uint16_t index : mesh.indices) {
+      data.indices.push_back(static_cast<uint16_t>(index + vertexOffset));
+    }
+    data.commands.push_back(command);
+
+    vertexOffset += mesh.vertexCount();
+    indexOffset += mesh.indexCount();
+  }
+  return data;
+}
+
 }  // namespace heretek

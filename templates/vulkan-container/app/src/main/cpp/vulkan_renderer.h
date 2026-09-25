@@ -68,8 +68,10 @@ class VulkanRenderer {
   VkDescriptorSetLayout graphicsSetLayout_ = VK_NULL_HANDLE;
   VkPipelineLayout computePipelineLayout_ = VK_NULL_HANDLE;
   VkPipelineLayout graphicsPipelineLayout_ = VK_NULL_HANDLE;
+  VkPipelineLayout terrainPipelineLayout_ = VK_NULL_HANDLE;
   VkPipeline cullPipeline_ = VK_NULL_HANDLE;
   VkPipeline scenePipeline_ = VK_NULL_HANDLE;
+  VkPipeline terrainPipeline_ = VK_NULL_HANDLE;
   VkDescriptorPool descriptorPool_ = VK_NULL_HANDLE;
   VkDescriptorSet computeSet_ = VK_NULL_HANDLE;
   VkDescriptorSet graphicsSet_ = VK_NULL_HANDLE;
@@ -88,6 +90,18 @@ class VulkanRenderer {
   VkDeviceMemory vertexMemory_ = VK_NULL_HANDLE;
   VkBuffer indexBuffer_ = VK_NULL_HANDLE;
   VkDeviceMemory indexMemory_ = VK_NULL_HANDLE;
+
+  // Terrain: one packed vertex/index pair + per-leaf indirect commands
+  VkBuffer terrainVertexBuffer_ = VK_NULL_HANDLE;
+  VkDeviceMemory terrainVertexMemory_ = VK_NULL_HANDLE;
+  VkBuffer terrainIndexBuffer_ = VK_NULL_HANDLE;
+  VkDeviceMemory terrainIndexMemory_ = VK_NULL_HANDLE;
+  VkBuffer terrainIndirectBuffer_ = VK_NULL_HANDLE;
+  VkDeviceMemory terrainIndirectMemory_ = VK_NULL_HANDLE;
+  void* terrainIndirectMapped_ = nullptr;
+  uint32_t terrainDrawCount_ = 0;
+
+  bool createTerrainBuffers(size_t vertexBytes, size_t indexBytes, size_t commandBytes);
 
   uint32_t instanceCount_ = 0;
   uint32_t indirectCommandCount_ = 0;

@@ -104,6 +104,31 @@ int main(int argc, char** argv) {
   CHECK(plan.maxVerticesPerLeaf == 33 * 33, "finest leaf uses 33x33 vertices");
   CHECK(plan.totalVertices == 64u * 33u * 33u, "total vertex budget is deterministic (69,696)");
   CHECK(plan.totalIndices == 64u * 32u * 32u * 6u, "total index budget is deterministic (393,216)");
+
+  // ---- GPU packing: single buffers + per-leaf indirect draw commands ----
+  const TerrainGpuData packed = packTerrainGpuData(scene.terrainLod, 3, 1337, 12.0f);
+  CHECK(packed.vertices.size() == static_cast<size_t>(plan.totalVertices) * 6,
+        "packed vertex buffer holds every interleaved vertex");
+  CHECK(packed.indices.size() == plan.totalIndices, "packed index buffer holds every index");
+  CHECK(packed.commands.size() == 64, "one indirect draw command per leaf");
+  CHECK(packed.commands[0].firstIndex == 0 && packed.commands[0].vertexOffset == 0,
+        "first command starts at the buffer origins");
+  CHECK(packed.commands[1].firstIndex == 32u * 32u * 6u, "second command offsets past the first index range");
+  CHECK(packed.commands[1].vertexOffset == static_cast<int32_t>(33 * 33),
+        "second command offsets past the first vertex range");
+  CHECK(packed.commands[63].firstIndex + packed.commands[63].indexCount == plan.totalIndices,
+        "last command covers the buffer tail");
+  CHECK(packed.commands[0].instanceCount == 1, "terrain draws are non-instanced");
+
+  uint16_t maxIndex = 0;
+  for (const uint16_t index : packed.indices) {
+    if (index > maxIndex) maxIndex = index;
+  }
+  CHECK(maxIndex < plan.totalVertices, "rebased indices stay inside the vertex buffer");
+
+  const TerrainGpuData packedAgain = packTerrainGpuData(scene.terrainLod, 3, 1337, 12.0f);
+  CHECK(packed.vertices == packedAgain.vertices && packed.indices == packedAgain.indices,
+        "GPU packing is deterministic");
   CHECK(scene.meshes[0].physics == PhysicsType::Fixed, "ground is fixed physics");
   CHECK(scene.meshes[1].physics == PhysicsType::Dynamic, "player is dynamic physics");
   CHECK(std::fabs(scene.meshes[0].sx - 24.0f) < 1e-3f, "ground size preserved");

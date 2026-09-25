@@ -69,12 +69,12 @@ cmake --build /tmp/tier2-build
 | Scene exporter (`project.scene.json` → `scene.native`) | ✅ done, unit-tested |
 | Native scene loader + draw-call/instance telemetry | ✅ done, host-tested |
 | CPU frustum culling + dispatch planning + indirect draw packing | ✅ done, host-tested (50k-scale checks) |
-| GLSL compute/render shaders compiled to SPIR-V (`glslc`) | ✅ 3 shaders, committed .spv |
+| GLSL compute/render shaders compiled to SPIR-V (`glslc`) | ✅ 4 shaders (cull + scene vert/frag + terrain), committed .spv |
 | Vulkan swapchain + render pass + framebuffers | ✅ compiles (NDK) |
 | Compute culling dispatch + instanced indirect draws | ✅ implemented, compiles; on-device runtime validation pending |
 | JNI bridge + SurfaceView frame loop + surface lifecycle | ✅ implemented, compiles |
 | Quadtree terrain LOD export + native parsing | ✅ focus-driven leaves exported (`--quadtree`), parsed into `TerrainLodRecord` (with `terrain_meta` depth), host-tested |
-| Native terrain mesh generation | ✅ heightmap-displaced grid meshes per leaf (LOD-scaled resolution, normals, deterministic budgets), host-tested; per-leaf GPU buffer upload remains |
+| Native terrain mesh generation + GPU upload | ✅ heightmap-displaced grid meshes packed into shared vertex/index buffers with per-leaf indirect draw commands; one `vkCmdDrawIndexedIndirect` renders every LOD leaf (terrain pipeline from `terrain.vert`), host-tested packing |
 
 Shaders are compiled with the NDK's bundled glslc:
 

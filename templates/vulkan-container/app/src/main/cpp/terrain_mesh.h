@@ -51,4 +51,33 @@ struct TerrainMeshPlan {
 TerrainMeshPlan planTerrainMeshes(const std::vector<TerrainLodRecord>& leaves, uint32_t maxDepth,
                                   uint32_t seed, float maxHeight);
 
+/**
+ * One packed draw range for a terrain leaf, matching
+ * VkDrawIndexedIndirectCommand semantics (instanceCount = 1).
+ */
+struct TerrainDrawCommand {
+  uint32_t indexCount = 0;
+  uint32_t instanceCount = 1;
+  uint32_t firstIndex = 0;
+  int32_t vertexOffset = 0;
+  uint32_t firstInstance = 0;
+};
+
+struct TerrainGpuData {
+  /** All leaf meshes concatenated (interleaved position + normal). */
+  std::vector<float> vertices;
+  /** All leaf indices, rebased by each leaf's vertex offset. */
+  std::vector<uint16_t> indices;
+  std::vector<TerrainDrawCommand> commands;
+  TerrainMeshPlan plan;
+};
+
+/**
+ * Generates and packs every leaf mesh into single vertex/index buffers plus
+ * per-leaf indirect draw commands (one drawIndexedIndirect call renders all).
+ * Pure function: the Vulkan layer uploads the result verbatim.
+ */
+TerrainGpuData packTerrainGpuData(const std::vector<TerrainLodRecord>& leaves, uint32_t maxDepth,
+                                  uint32_t seed, float maxHeight);
+
 }  // namespace heretek

@@ -338,6 +338,24 @@ bool VulkanRenderer::createDescriptors() {
   return true;
 }
 
+bool VulkanRenderer::createTerrainBuffers(size_t vertexBytes, size_t indexBytes, size_t commandBytes) {
+  if (vertexBytes == 0 || indexBytes == 0 || commandBytes == 0) return false;
+  if (!createBuffer(vertexBytes, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, &terrainVertexBuffer_,
+                    &terrainVertexMemory_, nullptr)) {
+    return false;
+  }
+  if (!createBuffer(indexBytes, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, &terrainIndexBuffer_,
+                    &terrainIndexMemory_, nullptr)) {
+    return false;
+  }
+  if (!createBuffer(commandBytes,
+                    VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                    &terrainIndirectBuffer_, &terrainIndirectMemory_, &terrainIndirectMapped_)) {
+    return false;
+  }
+  return true;
+}
+
 VkShaderModule VulkanRenderer::loadShader(const std::string& path) {
   std::ifstream file(path, std::ios::binary | std::ios::ate);
   if (!file.is_open()) {
@@ -498,6 +516,42 @@ bool VulkanRenderer::createPipelines() {
   }
   vkDestroyShaderModule(device_, vertexModule, nullptr);
   vkDestroyShaderModule(device_, fragmentModule, nullptr);
+
+  // ---- Terrain pipeline (no descriptor sets; push-constant viewProj) ------
+  VkShaderModule terrainVertexModule = loadShader(shaderDir_ + "/terrain.vert.spv");
+  VkShaderModule terrainFragmentModule = loadShader(shaderDir_ + "/scene.frag.spv");
+  if (terrainVertexModule == VK_NULL_HANDLE || terrainFragmentModule == VK_NULL_HANDLE) return false;
+
+  VkPipelineShaderStageCreateInfo terrainStages[2]{};
+  terrainStages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+  terrainStages[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
+  terrainStages[0].module = terrainVertexModule;
+  terrainStages[0].pName = "main";
+  terrainStages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+  terrainStages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+  terrainStages[1].module = terrainFragmentModule;
+  terrainStages[1].pName = "main";
+
+  VkPipelineLayoutCreateInfo terrainLayout{};
+  terrainLayout.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+  terrainLayout.pushConstantRangeCount = 1;
+  terrainLayout.pPushConstantRanges = &graphicsRange;
+  if (vkCreatePipelineLayout(device_, &terrainLayout, nullptr, &terrainPipelineLayout_) ==
+      VK_SUCCESS) {
+    VkGraphicsPipelineCreateInfo terrainInfo = graphicsInfo;
+    terrainInfo.pStages = terrainStages;
+    terrainInfo.layout = terrainPipelineLayout_;
+    if (vkCreateGraphicsPipelines(device_, VK_NULL_HANDLE, 1, &terrainInfo, nullptr,
+                                  &terrainPipeline_) != VK_SUCCESS) {
+      lastError_ = "terrain pipeline creation failed";
+      return false;
+    }
+  } else {
+    lastError_ = "terrain pipeline layout failed";
+    return false;
+  }
+  vkDestroyShaderModule(device_, terrainVertexModule, nullptr);
+  vkDestroyShaderModule(device_, terrainFragmentModule, nullptr);
   return true;
 }
 
@@ -586,6 +640,30 @@ void VulkanRenderer::uploadScene(const NativeScene& scene) {
   commands[0].vertexOffset = 0;
   commands[0].firstInstance = 0;
   indirectCommandCount_ = 1;
+
+  // ---- Terrain: pack all LOD leaf meshes + upload to shared buffers -------
+  const TerrainGpuData terrain = packTerrainGpuData(scene.terrainLod, maxDepth, 1337, 12.0f);
+  terrainDrawCount_ = static_cast<uint32_t>(terrain.commands.size());
+  if (terrainDrawCount_ > 0 && terrainVertexBuffer_ == VK_NULL_HANDLE) {
+    createTerrainBuffers(terrain.vertices.size() * sizeof(float),
+                         terrain.indices.size() * sizeof(uint16_t),
+                         terrain.commands.size() * sizeof(TerrainDrawCommand));
+  }
+  if (terrainDrawCount_ > 0 && terrainVertexBuffer_ != VK_NULL_HANDLE) {
+    void* mapped = nullptr;
+    vkMapMemory(device_, terrainVertexMemory_, 0, terrain.vertices.size() * sizeof(float), 0, &mapped);
+    std::memcpy(mapped, terrain.vertices.data(), terrain.vertices.size() * sizeof(float));
+    vkUnmapMemory(device_, terrainVertexMemory_);
+
+    vkMapMemory(device_, terrainIndexMemory_, 0, terrain.indices.size() * sizeof(uint16_t), 0, &mapped);
+    std::memcpy(mapped, terrain.indices.data(), terrain.indices.size() * sizeof(uint16_t));
+    vkUnmapMemory(device_, terrainIndexMemory_);
+
+    if (terrainIndirectMapped_ != nullptr) {
+      std::memcpy(terrainIndirectMapped_, terrain.commands.data(),
+                  terrain.commands.size() * sizeof(TerrainDrawCommand));
+    }
+  }
 }
 
 void VulkanRenderer::recordFrame(VkCommandBuffer cmd, uint32_t imageIndex) {
@@ -658,6 +736,18 @@ void VulkanRenderer::recordFrame(VkCommandBuffer cmd, uint32_t imageIndex) {
   if (indirectCommandCount_ > 0) {
     vkCmdDrawIndexedIndirect(cmd, indirectBuffer_, 0, indirectCommandCount_,
                              sizeof(IndirectDrawCommand));
+  }
+
+  // ---- Terrain: one indirect call renders every LOD leaf ------------------
+  if (terrainDrawCount_ > 0 && terrainPipeline_ != VK_NULL_HANDLE) {
+    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, terrainPipeline_);
+    vkCmdPushConstants(cmd, terrainPipelineLayout_, VK_SHADER_STAGE_VERTEX_BIT, 0,
+                       sizeof(GraphicsPushConstants), &graphicsConstants);
+    VkDeviceSize terrainOffset = 0;
+    vkCmdBindVertexBuffers(cmd, 0, 1, &terrainVertexBuffer_, &terrainOffset);
+    vkCmdBindIndexBuffer(cmd, terrainIndexBuffer_, 0, VK_INDEX_TYPE_UINT16);
+    vkCmdDrawIndexedIndirect(cmd, terrainIndirectBuffer_, 0, terrainDrawCount_,
+                             sizeof(TerrainDrawCommand));
   }
 
   vkCmdEndRenderPass(cmd);
@@ -733,6 +823,8 @@ void VulkanRenderer::destroySurface() {
   cullPipeline_ = VK_NULL_HANDLE;
   if (scenePipeline_ != VK_NULL_HANDLE) vkDestroyPipeline(device_, scenePipeline_, nullptr);
   scenePipeline_ = VK_NULL_HANDLE;
+  if (terrainPipeline_ != VK_NULL_HANDLE) vkDestroyPipeline(device_, terrainPipeline_, nullptr);
+  terrainPipeline_ = VK_NULL_HANDLE;
   if (computePipelineLayout_ != VK_NULL_HANDLE) {
     vkDestroyPipelineLayout(device_, computePipelineLayout_, nullptr);
   }
@@ -741,6 +833,10 @@ void VulkanRenderer::destroySurface() {
     vkDestroyPipelineLayout(device_, graphicsPipelineLayout_, nullptr);
   }
   graphicsPipelineLayout_ = VK_NULL_HANDLE;
+  if (terrainPipelineLayout_ != VK_NULL_HANDLE) {
+    vkDestroyPipelineLayout(device_, terrainPipelineLayout_, nullptr);
+  }
+  terrainPipelineLayout_ = VK_NULL_HANDLE;
   if (descriptorPool_ != VK_NULL_HANDLE) vkDestroyDescriptorPool(device_, descriptorPool_, nullptr);
   descriptorPool_ = VK_NULL_HANDLE;
   if (computeSetLayout_ != VK_NULL_HANDLE) {
@@ -763,6 +859,22 @@ void VulkanRenderer::destroySurface() {
   instanceMemory_ = visibleMemory_ = indirectMemory_ = vertexMemory_ = indexMemory_ = VK_NULL_HANDLE;
   instanceMapped_ = nullptr;
   indirectMapped_ = nullptr;
+
+  // Terrain buffers
+  if (terrainVertexBuffer_ != VK_NULL_HANDLE) vkDestroyBuffer(device_, terrainVertexBuffer_, nullptr);
+  if (terrainVertexMemory_ != VK_NULL_HANDLE) vkFreeMemory(device_, terrainVertexMemory_, nullptr);
+  if (terrainIndexBuffer_ != VK_NULL_HANDLE) vkDestroyBuffer(device_, terrainIndexBuffer_, nullptr);
+  if (terrainIndexMemory_ != VK_NULL_HANDLE) vkFreeMemory(device_, terrainIndexMemory_, nullptr);
+  if (terrainIndirectBuffer_ != VK_NULL_HANDLE) vkDestroyBuffer(device_, terrainIndirectBuffer_, nullptr);
+  if (terrainIndirectMemory_ != VK_NULL_HANDLE) vkFreeMemory(device_, terrainIndirectMemory_, nullptr);
+  terrainVertexBuffer_ = VK_NULL_HANDLE;
+  terrainVertexMemory_ = VK_NULL_HANDLE;
+  terrainIndexBuffer_ = VK_NULL_HANDLE;
+  terrainIndexMemory_ = VK_NULL_HANDLE;
+  terrainIndirectBuffer_ = VK_NULL_HANDLE;
+  terrainIndirectMemory_ = VK_NULL_HANDLE;
+  terrainIndirectMapped_ = nullptr;
+  terrainDrawCount_ = 0;
 
   swapchain_.destroy(device_);
 }

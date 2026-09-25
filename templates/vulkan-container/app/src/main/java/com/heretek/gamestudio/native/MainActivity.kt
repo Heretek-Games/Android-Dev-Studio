@@ -47,6 +47,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         copyAsset("shaders/cull.comp.spv", File(shaderDir, "cull.comp.spv"))
         copyAsset("shaders/scene.vert.spv", File(shaderDir, "scene.vert.spv"))
         copyAsset("shaders/scene.frag.spv", File(shaderDir, "scene.frag.spv"))
+        copyAsset("shaders/terrain.vert.spv", File(shaderDir, "terrain.vert.spv"))
 
         initialized = nativeInit(sceneFile.absolutePath, shaderDir.absolutePath)
         if (initialized) {

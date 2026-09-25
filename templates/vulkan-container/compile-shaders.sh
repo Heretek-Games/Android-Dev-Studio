@@ -20,5 +20,6 @@ mkdir -p "$OUT"
 "$GLSLC" "$SRC/cull.comp" -o "$OUT/cull.comp.spv"
 "$GLSLC" "$SRC/scene.vert" -o "$OUT/scene.vert.spv"
 "$GLSLC" "$SRC/scene.frag" -o "$OUT/scene.frag.spv"
+"$GLSLC" "$SRC/terrain.vert" -o "$OUT/terrain.vert.spv"
 
-echo "Compiled 3 shaders to $OUT using $GLSLC"
+echo "Compiled 4 shaders to $OUT using $GLSLC"
