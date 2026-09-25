@@ -16,12 +16,28 @@ export interface ShellView {
   overlay: ShellOverlay;
   title: string;
   score: number;
+  /** Unit suffix appended to the score in the HUD (e.g. 'm' for distance runs). */
+  scoreSuffix: string;
+  /** HUD labels; games can rename or hide the wave/kill counters. */
+  scoreLabel: string;
+  showWave: boolean;
+  showKills: boolean;
+  showHealth: boolean;
   wave: number;
   kills: number;
   elapsedSeconds: number;
   healthFraction: number;
   hasSave: boolean;
   statusText: string;
+}
+
+export interface ShellHudConfig {
+  scoreLabel?: string;
+  scoreSuffix?: string;
+  showWave?: boolean;
+  showKills?: boolean;
+  /** Hide the health bar for games without health (e.g. driving). */
+  showHealth?: boolean;
 }
 
 export interface GameShellOptions {
@@ -40,6 +56,8 @@ export interface GameShellOptions {
   onResume?: () => void;
   onSave?: () => void;
   onLoad?: () => void;
+  /** HUD presentation overrides (e.g. distance runs hide wave/kills). */
+  hud?: ShellHudConfig;
 }
 
 const OVERLAY_FOR_PHASE: Record<GamePhase, ShellOverlay> = {
@@ -72,16 +90,22 @@ export class GameShell {
   public getView(): ShellView {
     const phase = this.flow.getPhase();
     const overlay = OVERLAY_FOR_PHASE[phase];
+    const hud = this.options.hud ?? {};
     return {
       overlay,
       title: this.title,
       score: this.session.getScore(),
+      scoreSuffix: hud.scoreSuffix ?? '',
+      scoreLabel: hud.scoreLabel ?? 'Score',
+      showWave: hud.showWave ?? true,
+      showKills: hud.showKills ?? true,
+      showHealth: hud.showHealth ?? true,
       wave: this.session.getWave(),
       kills: this.session.getKills(),
       elapsedSeconds: this.session.getElapsedSeconds(),
       healthFraction: clamp01(this.options.getHealthFraction?.() ?? 1),
       hasSave: this.options.hasSave?.() ?? false,
-      statusText: statusTextFor(overlay, this.session)
+      statusText: statusTextFor(overlay, this.session, hud)
     };
   }
 
@@ -157,16 +181,17 @@ export class GameShell {
   }
 }
 
-function statusTextFor(overlay: ShellOverlay, session: GameSession): string {
+function statusTextFor(overlay: ShellOverlay, session: GameSession, hud: ShellHudConfig): string {
+  const score = `${session.getScore().toFixed(hud.scoreSuffix ? 1 : 0)}${hud.scoreSuffix ?? ' points'}`;
   switch (overlay) {
     case 'menu':
       return 'Press Start to play';
     case 'paused':
       return 'Paused';
     case 'won':
-      return `Victory — ${session.getScore()} points`;
+      return `Victory — ${score}`;
     case 'lost':
-      return `Defeated — ${session.getScore()} points`;
+      return `Defeated — ${score}`;
     default:
       return '';
   }
@@ -273,10 +298,11 @@ function applyView(doc: Document, elements: Record<string, HTMLElement>, view: S
 
   elements.title.textContent = view.title;
   elements.status.textContent = view.statusText;
-  elements.stats.textContent =
-    view.overlay === 'menu'
-      ? ''
-      : `Score ${view.score} · Wave ${view.wave} · Kills ${view.kills} · ${view.elapsedSeconds.toFixed(1)}s`;
+  const statParts = [`${view.scoreLabel} ${view.score.toFixed(view.scoreSuffix ? 1 : 0)}${view.scoreSuffix}`];
+  if (view.showWave) statParts.push(`Wave ${view.wave}`);
+  if (view.showKills) statParts.push(`Kills ${view.kills}`);
+  statParts.push(`${view.elapsedSeconds.toFixed(1)}s`);
+  elements.stats.textContent = view.overlay === 'menu' ? '' : statParts.join(' · ');
 
   const show = (element: HTMLElement | undefined, visible: boolean) => {
     if (element) element.style.display = visible ? 'inline-block' : 'none';
@@ -289,9 +315,12 @@ function applyView(doc: Document, elements: Record<string, HTMLElement>, view: S
   show(elements.quitButton, view.overlay !== 'menu');
 
   show(elements.pauseButton, view.overlay === 'hud');
-  elements.hudScore.textContent = `Score ${view.score}`;
+  elements.hudScore.textContent = `${view.scoreLabel} ${view.score.toFixed(view.scoreSuffix ? 1 : 0)}${view.scoreSuffix}`;
   elements.hudWave.textContent = `Wave ${view.wave}`;
   elements.hudKills.textContent = `Kills ${view.kills}`;
+  elements.hudWave.style.display = view.showWave ? '' : 'none';
+  elements.hudKills.style.display = view.showKills ? '' : 'none';
+  elements.healthBar.style.display = view.showHealth && view.overlay !== 'hud' ? 'none' : view.showHealth ? 'block' : 'none';
   elements.hudTime.textContent = `${view.elapsedSeconds.toFixed(1)}s`;
   elements.healthFill.style.width = `${Math.round(view.healthFraction * 100)}%`;
   elements.healthFill.style.background = view.healthFraction > 0.5 ? '#22c55e' : view.healthFraction > 0.2 ? '#eab308' : '#ef4444';

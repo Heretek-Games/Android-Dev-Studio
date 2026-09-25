@@ -90,6 +90,30 @@
           }
         ]
       }
+    },
+    {
+      "name": "Avenue Sun",
+      "kind": "light",
+      "lightType": "directional",
+      "color": "#ffd7a8",
+      "intensity": 2.6,
+      "position": [
+        30,
+        40,
+        20
+      ]
+    },
+    {
+      "name": "Avenue Ambient",
+      "kind": "light",
+      "lightType": "ambient",
+      "color": "#8fb4ff",
+      "intensity": 0.6,
+      "position": [
+        0,
+        20,
+        0
+      ]
     }
   ],
   "rules": [

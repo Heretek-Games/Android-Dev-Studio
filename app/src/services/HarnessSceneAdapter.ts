@@ -19,6 +19,7 @@ import {
   WeaponController,
   HealthComponent,
   EnemyAI,
+  VehicleController,
   type PrimitiveShape
 } from '@heretek/engine';
 import type { HarnessScene, HarnessSceneObject } from './SceneStore';
@@ -77,6 +78,14 @@ export function buildEngineScene(spec: HarnessScene): Scene {
       }
       if (obj.ai) {
         go.addComponent(new EnemyAI(obj.ai as never));
+      }
+      if (obj.vehicle) {
+        const vehicle = new VehicleController(obj.vehicle as never);
+        const config = obj.vehicle as { throttle?: number; steering?: number; brake?: number };
+        if (config.throttle !== undefined) vehicle.throttle = config.throttle;
+        if (config.steering !== undefined) vehicle.steering = config.steering;
+        if (config.brake !== undefined) vehicle.brake = config.brake;
+        go.addComponent(vehicle);
       }
       if (Array.isArray(obj.events) && obj.events.length) {
         go.addComponent(new EventSheet(obj.events as any));

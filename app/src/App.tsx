@@ -11,10 +11,14 @@ const StudioContent: React.FC = () => {
   );
 };
 
-/** `?play=1` boots straight into the playable arena (used by the Android container). */
+/**
+ * `?play=1` boots the arena, `?play=driving` the driving slice (the container and
+ * the studio header use these to jump straight into a playable game).
+ */
 const isGameMode = (): boolean => {
   if (typeof window === 'undefined') return false;
-  return new URLSearchParams(window.location.search).get('play') === '1';
+  const play = new URLSearchParams(window.location.search).get('play');
+  return play !== null && play !== '';
 };
 
 export const App: React.FC = () => {

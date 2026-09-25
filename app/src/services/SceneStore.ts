@@ -29,6 +29,7 @@ export interface HarnessSceneObject {
   weapon?: Record<string, unknown>;
   health?: Record<string, unknown>;
   ai?: Record<string, unknown>;
+  vehicle?: Record<string, unknown>;
   events?: HarnessSceneEvent[];
   lightType?: string;
   intensity?: number;

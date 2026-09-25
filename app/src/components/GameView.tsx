@@ -21,15 +21,29 @@ import {
   HealthComponent,
   MeshRenderer,
   EnemyAI,
+  VehicleController,
+  RigidBody3D,
   GameObject,
   type Scene as EngineScene
 } from '@heretek/engine';
 import { buildEngineScene } from '../services/HarnessSceneAdapter';
 import type { HarnessScene } from '../services/SceneStore';
 import fpsArenaSpec from '../../../harness/config/scenarios/fps_arena.json';
+import drivingSliceSpec from '../../../harness/config/scenarios/driving_slice.json';
+
+/** `?play=driving` boots the driving slice; anything else boots the arena. */
+type GameKind = 'arena' | 'driving';
+
+const gameKindFromUrl = (): GameKind => {
+  if (typeof window === 'undefined') return 'arena';
+  return new URLSearchParams(window.location.search).get('play') === 'driving' ? 'driving' : 'arena';
+};
 
 interface ArenaGameConfig {
+  mode?: 'waves' | 'distance';
   playerName?: string;
+  targetScore?: number;
+  timeLimitSeconds?: number;
   totalWaves?: number;
   enemiesPerWave?: number;
   spawnRadius?: number;
@@ -54,9 +68,11 @@ export const GameView: React.FC = () => {
     const container = containerRef.current;
     if (!container) return;
 
-    const spec = fpsArenaSpec as unknown as HarnessScene;
-    const gameConfig = (fpsArenaSpec as unknown as { game?: ArenaGameConfig }).game ?? {};
-    const playerName = gameConfig.playerName ?? 'Player Hero';
+    const kind = gameKindFromUrl();
+    const rawSpec = kind === 'driving' ? drivingSliceSpec : fpsArenaSpec;
+    const spec = rawSpec as unknown as HarnessScene;
+    const gameConfig = (rawSpec as unknown as { game?: ArenaGameConfig }).game ?? {};
+    const playerName = gameConfig.playerName ?? (kind === 'driving' ? 'Player Car' : 'Player Hero');
 
     let disposed = false;
     let renderer: THREE.WebGLRenderer | null = null;
@@ -70,6 +86,8 @@ export const GameView: React.FC = () => {
       if (!player) throw new Error(`GameView: player "${playerName}" missing from the scenario spec`);
       const health = player.getComponent(HealthComponent);
       const weapon = player.getComponent(WeaponController);
+      const vehicle = player.getComponent(VehicleController);
+      const playerBody = player.getComponent(RigidBody3D);
 
       const physicsWorld = new PhysicsWorld();
       await physicsWorld.initialize();
@@ -89,14 +107,17 @@ export const GameView: React.FC = () => {
 
       runtime = new GameRuntime({
         scene,
+        mode: kind === 'driving' ? 'distance' : 'waves',
         playerName,
+        targetScore: gameConfig.targetScore,
+        timeLimitSeconds: gameConfig.timeLimitSeconds,
         totalWaves: gameConfig.totalWaves ?? 2,
         enemiesPerWave: () => gameConfig.enemiesPerWave ?? 1,
         spawnRadius: gameConfig.spawnRadius ?? 8,
         scorePerKill: gameConfig.scorePerKill ?? 100,
         interWaveDelaySeconds: gameConfig.interWaveDelaySeconds ?? 1,
-        weapon: weapon ?? undefined,
-        buildEnemy: ({ name, position }) => {
+        weapon: kind === 'arena' ? weapon ?? undefined : undefined,
+        buildEnemy: kind === 'arena' ? ({ name, position }) => {
           const enemy = new GameObject(name);
           enemy.transform.setPosition(position[0], position[1] + (enemySpec.y ?? 0.8), position[2]);
           enemy.addComponent(
@@ -111,7 +132,7 @@ export const GameView: React.FC = () => {
           enemy.addComponent(new EnemyAI({ targetName: playerName, ...(enemySpec.ai ?? {}) }));
           scene.addGameObject(enemy);
           return enemy;
-        }
+        } : undefined
       });
 
       const resetArena = () => {
@@ -119,7 +140,14 @@ export const GameView: React.FC = () => {
           scene.findByName(name)?.destroy();
         }
         player.transform.setPosition(PLAYER_START[0], PLAYER_START[1], PLAYER_START[2]);
+        player.transform.setRotation(0, 0, 0);
+        playerBody?.setPosition(PLAYER_START[0], PLAYER_START[1], PLAYER_START[2]);
         health?.heal(health.maxHealth);
+        if (vehicle) {
+          vehicle.throttle = 0;
+          vehicle.steering = 0;
+          vehicle.brake = 0;
+        }
       };
 
       const saveSystem = new SaveSystem();
@@ -129,7 +157,11 @@ export const GameView: React.FC = () => {
       shell = new GameShell({
         flow: runtime.flow,
         session: runtime.session,
-        title: 'Heretek Arena — Wave Defense',
+        title: kind === 'driving' ? 'Heretek Drive — Avenue Sprint' : 'Heretek Arena — Wave Defense',
+        hud:
+          kind === 'driving'
+            ? { scoreLabel: 'Distance', scoreSuffix: 'm', showWave: false, showKills: false, showHealth: false }
+            : undefined,
         root: container,
         getHealthFraction: () => (health ? health.healthFraction : 1),
         onStart: () => {
@@ -216,6 +248,40 @@ export const GameView: React.FC = () => {
       context.setScene(scene);
 
       const clock = new THREE.Clock();
+
+      // Driving input: keyboard steering/throttle plus touch steering by screen half.
+      const keys = new Set<string>();
+      let touchSteer: number | null = null;
+      const onGameKeyDown = (event: KeyboardEvent) => keys.add(event.key.toLowerCase());
+      const onGameKeyUp = (event: KeyboardEvent) => keys.delete(event.key.toLowerCase());
+      const onPointer = (event: PointerEvent) => {
+        if (kind !== 'driving') return;
+        const half = container.clientWidth / 2;
+        touchSteer = Math.max(-1, Math.min(1, (event.clientX - container.getBoundingClientRect().left - half) / (half * 0.6)));
+      };
+      const onPointerUp = () => { touchSteer = null; };
+      window.addEventListener('keydown', onGameKeyDown);
+      window.addEventListener('keyup', onGameKeyUp);
+      container.addEventListener('pointerdown', onPointer);
+      container.addEventListener('pointermove', onPointer);
+      container.addEventListener('pointerup', onPointerUp);
+      container.addEventListener('pointerleave', onPointerUp);
+
+      const updateDrivingInput = () => {
+        if (!vehicle) return;
+        const throttleKey = keys.has('w') || keys.has('arrowup');
+        const brakeKey = keys.has('s') || keys.has('arrowdown');
+        let steer = 0;
+        if (keys.has('a') || keys.has('arrowleft')) steer += 1;
+        if (keys.has('d') || keys.has('arrowright')) steer -= 1;
+        if (steer === 0 && touchSteer !== null && Math.abs(touchSteer) > 0.15) steer = -touchSteer;
+        vehicle.steering = steer;
+        vehicle.brake = brakeKey ? 1 : 0;
+        // Auto-cruise keeps the slice playable on touch-only devices; releasing
+        // the throttle keys simply coasts at a moderate speed.
+        vehicle.throttle = brakeKey ? 0 : throttleKey ? 1 : 0.6;
+      };
+
       const aimAndFire = () => {
         if (!weapon || !runtime) return;
         let nearest: GameObject | null = null;
@@ -245,15 +311,24 @@ export const GameView: React.FC = () => {
         if (disposed || !renderer || !context || !runtime || !shell) return;
         const dt = Math.min(clock.getDelta(), 0.05);
         if (runtime.flow.isPlaying()) {
+          if (kind === 'driving') {
+            updateDrivingInput();
+          } else {
+            aimAndFire();
+          }
           context.step(dt);
-          aimAndFire();
         }
         runtime.update(dt);
         shell.update(dt);
 
         const p = player.transform.position;
-        camera.position.lerp(new THREE.Vector3(p.x, p.y + 7, p.z + 11), 0.12);
-        cameraTarget.lerp(new THREE.Vector3(p.x, p.y + 1, p.z), 0.2);
+        if (kind === 'driving') {
+          camera.position.lerp(new THREE.Vector3(p.x, p.y + 4.5, p.z + 9), 0.18);
+          cameraTarget.lerp(new THREE.Vector3(p.x, p.y + 0.8, p.z - 4), 0.25);
+        } else {
+          camera.position.lerp(new THREE.Vector3(p.x, p.y + 7, p.z + 11), 0.12);
+          cameraTarget.lerp(new THREE.Vector3(p.x, p.y + 1, p.z), 0.2);
+        }
         camera.lookAt(cameraTarget);
         renderer.render(scene.threeScene, camera);
       });
@@ -276,7 +351,12 @@ export const GameView: React.FC = () => {
       window.addEventListener('resize', onResize);
       return () => {
         window.removeEventListener('resize', onResize);
-        window.removeEventListener('keydown', onKeyDown);
+        window.removeEventListener('keydown', onGameKeyDown);
+        window.removeEventListener('keyup', onGameKeyUp);
+        container.removeEventListener('pointerdown', onPointer);
+        container.removeEventListener('pointermove', onPointer);
+        container.removeEventListener('pointerup', onPointerUp);
+        container.removeEventListener('pointerleave', onPointerUp);
       };
     };
 
