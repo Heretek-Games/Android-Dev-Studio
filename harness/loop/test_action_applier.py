@@ -619,6 +619,99 @@ class NpcRoutineTests(unittest.TestCase):
         self.assertTrue(valid, f"gate rejected NPC scene: {violations}")
 
 
+def keeper_tree():
+    return {
+        "id": "DungeonKeeper",
+        "title": "The Dungeon Keeper",
+        "startNodeId": "greet",
+        "nodes": {
+            "greet": {
+                "id": "greet",
+                "type": "choice",
+                "speaker": "Dungeon Keeper",
+                "text": "Take the blessing?",
+                "choices": [
+                    {"id": "bless", "text": "Take it", "nextNodeId": "blessed"},
+                    {"id": "refuse", "text": "Refuse", "nextNodeId": "refused"},
+                ],
+            },
+            "blessed": {
+                "id": "blessed",
+                "type": "action",
+                "action": {
+                    "setVariables": {"hydroBlessing": True},
+                    "emitEvent": {"eventName": "hydro_blessing"},
+                },
+                "nextNodeId": "farewell",
+            },
+            "refused": {
+                "id": "refused",
+                "type": "text",
+                "text": "Stubborn.",
+                "nextNodeId": "farewell",
+            },
+            "farewell": {"id": "farewell", "type": "end"},
+        },
+    }
+
+
+class DialogueActionTests(unittest.TestCase):
+    def test_dialogue_action_registers_tree(self):
+        scene, result = apply_actions(
+            base_scene(), [{"type": "dialogue", "tree": keeper_tree()}]
+        )
+        self.assertEqual(result.applied, 1)
+        self.assertEqual(scene["dialogues"]["DungeonKeeper"]["startNodeId"], "greet")
+
+    def test_dialogue_action_rejects_dangling_refs(self):
+        bad = keeper_tree()
+        bad["nodes"]["greet"]["choices"][0]["nextNodeId"] = "missing"
+        _, result = apply_actions(base_scene(), [{"type": "dialogue", "tree": bad}])
+        self.assertEqual(result.invalid, 1)
+        self.assertIn("missing", result.outcomes[0]["detail"])
+
+        bad_start = keeper_tree()
+        bad_start["startNodeId"] = "nowhere"
+        _, result = apply_actions(
+            base_scene(), [{"type": "dialogue", "tree": bad_start}]
+        )
+        self.assertEqual(result.invalid, 1)
+        self.assertIn("startNodeId", result.outcomes[0]["detail"])
+
+    def test_dialogue_action_rejects_malformed(self):
+        for bad in (
+            None,
+            "Keeper",
+            {},
+            {"id": "K", "startNodeId": "greet", "nodes": {}},
+            {
+                "id": "  ",
+                "startNodeId": "greet",
+                "nodes": {"greet": {"id": "greet", "type": "end"}},
+            },
+            {
+                "id": "K",
+                "startNodeId": "greet",
+                "nodes": {"greet": {"id": "greet", "type": "monologue"}},
+            },
+            {
+                "id": "K",
+                "startNodeId": "greet",
+                "nodes": {"greet": {"id": "greet", "type": "choice", "choices": []}},
+            },
+        ):
+            _, result = apply_actions(base_scene(), [{"type": "dialogue", "tree": bad}])
+            self.assertEqual(result.invalid, 1, f"should reject {bad!r}")
+
+    def test_dialogue_scene_passes_the_invariant_gate(self):
+        scene, result = apply_actions(
+            base_scene(), [{"type": "dialogue", "tree": keeper_tree()}]
+        )
+        self.assertEqual(result.failures, 0)
+        valid, violations = validate_scene_invariants(scene)
+        self.assertTrue(valid, f"gate rejected dialogue scene: {violations}")
+
+
 class ModifyTests(unittest.TestCase):
     def test_modify_position_and_color(self):
         scene, result = apply_actions(

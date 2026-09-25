@@ -74,6 +74,14 @@ ACTION_SCHEMA = """Action vocabulary (a JSON array named "actions"):
      and placements (no name/description keys); placements is an array of {type, x, z}
      with type house|farm|market and integer x/z plots inside the grid, e.g.
      "settlement": {"gridSize": 8, "targetPopulation": 6, "placements": [{"type": "house", "x": 0, "z": 0}]})
+  - {"type": "dialogue", "tree": {"id": "Keeper", "startNodeId": "greet", "nodes": {
+     "greet": {"id": "greet", "type": "choice", "speaker": "Keeper", "text": "...",
+      "choices": [{"id": "bless", "text": "...", "nextNodeId": "blessed"}]},
+     "blessed": {"id": "blessed", "type": "action",
+      "action": {"setVariables": {"blessed": true}}, "nextNodeId": "farewell"},
+     "farewell": {"id": "farewell", "type": "end"}}}
+     (quest dialogue: every nextNodeId/choice/condition ref must resolve; headless
+     auto-play takes the first available choice, so put the golden path first)}
   - {"type": "light", "name": "...", "lightType": "directional"|"point"|"ambient",
      "color": "#rrggbb", "intensity": 2.0, "position": [x,y,z]}
   - {"type": "modify", "target": "...", "position": [x,y,z], "color": "#rrggbb",
@@ -106,6 +114,12 @@ How acceptance rules map onto the schema (the QA runner checks these exact compo
     {"type": "game", "config": {"mode": "waves", "playerName": "Player Hero", "totalWaves": 2,
     "enemiesPerWave": 2, "hitDamage": 50}}. Without the "game" action every game_* rule fails
     with "no game config in scenario".
+  - dialogue_* rules (dialogue_reaches, dialogue_sets_variable, dialogue_event_fired) ->
+    emit one "dialogue" action per tree BEFORE anything can pass: the headless auto-play
+    registers spec.dialogues and walks each tree, so without the action every dialogue_*
+    rule fails with 'no dialogue transcript'. NOTE: action/condition nodes self-resolve and
+    never appear as visits — prove blessings via dialogue_event_fired / dialogue_sets_variable,
+    and reserve dialogue_reaches for stable choice/text nodes.
   - "EventSheet" / event_attached rules -> emit an "event" action targeting that object
   - "LightComponent" -> emit a "light" action
   - object_count rules count every entry in gameObjects (lights included)

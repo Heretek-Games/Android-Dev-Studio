@@ -9,6 +9,7 @@ Action vocabulary mirrors the studio's `applyActionsToScene`
     - delete  {target}
     - event   {target, event_name, condition, condition_params, action, params}
     - game    {config} — scene-level GameRuntime quest/combat config (waves/build)
+    - dialogue {tree} — scene-level DialogueTree graph (id/startNodeId/nodes)
 
 `apply_actions` is pure: it deep-copies the scene and returns
 `(new_scene, ApplyResult)`. Malformed actions become explicit outcomes
@@ -237,6 +238,130 @@ def _validate_ai(value: Any) -> Optional[Dict[str, Any]]:
         else:
             return None
     return normalized
+
+
+DIALOGUE_NODE_TYPES = {"text", "choice", "condition", "action", "end"}
+DIALOGUE_CONDITION_OPERATORS = {"==", "!=", ">", "<", ">=", "<="}
+
+
+def _validate_dialogue(
+    value: Any, errors: Optional[List[str]] = None
+) -> Optional[Dict[str, Any]]:
+    """DialogueTree graphs pass straight to the QA runner (spec.dialogues).
+
+    Returns the normalized tree, or None when malformed. `id` and
+    `startNodeId` must be non-empty; `nodes` a non-empty id→node map. Every
+    node needs a valid type, and every node reference (choice nextNodeId,
+    text/action nextNodeId, condition onTrue/onFalse) must resolve to a node
+    in the same tree — dangling refs are rejected with indexed reasons so the
+    headless auto-play can never walk off the graph. When `errors` is given,
+    the specific offense is appended for repair prompts.
+    """
+
+    def fail(reason: str) -> None:
+        if errors is not None:
+            errors.append(reason)
+        return None
+
+    if not isinstance(value, dict):
+        fail("dialogue 'tree' must be an object")
+        return None
+    tree_id = value.get("id")
+    if not isinstance(tree_id, str) or not tree_id.strip():
+        fail("dialogue tree 'id' must be a non-empty string")
+        return None
+    start = value.get("startNodeId")
+    if not isinstance(start, str) or not start.strip():
+        fail("dialogue tree 'startNodeId' must be a non-empty string")
+        return None
+    nodes = value.get("nodes")
+    if not isinstance(nodes, dict) or not nodes:
+        fail("dialogue tree 'nodes' must be a non-empty id→node map")
+        return None
+    if start not in nodes:
+        fail(f"dialogue startNodeId '{start}' does not match any node id")
+        return None
+    normalized_nodes: Dict[str, Any] = {}
+    for node_id, node in nodes.items():
+        validated = _validate_dialogue_node(node_id, node, set(nodes.keys()), errors)
+        if validated is None:
+            return None
+        normalized_nodes[node_id] = validated
+    normalized: Dict[str, Any] = {
+        "id": tree_id.strip(),
+        "startNodeId": start,
+        "nodes": normalized_nodes,
+    }
+    title = value.get("title")
+    if title is not None:
+        if not isinstance(title, str):
+            fail("dialogue tree 'title' must be a string")
+            return None
+        normalized["title"] = title
+    return normalized
+
+
+def _validate_dialogue_node(
+    node_id: Any, node: Any, node_ids: set, errors: Optional[List[str]]
+) -> Optional[Dict[str, Any]]:
+    def fail(reason: str) -> None:
+        if errors is not None:
+            errors.append(reason)
+        return None
+
+    if not isinstance(node, dict):
+        fail(f"dialogue node '{node_id}' must be an object")
+        return None
+    ntype = node.get("type")
+    if ntype not in DIALOGUE_NODE_TYPES:
+        fail(
+            f"dialogue node '{node_id}' type must be one of "
+            f"{sorted(DIALOGUE_NODE_TYPES)} (got {ntype!r})"
+        )
+        return None
+
+    def check_ref(ref: Any, field: str) -> bool:
+        if not isinstance(ref, str) or ref not in node_ids:
+            fail(
+                f"dialogue node '{node_id}' {field} must name an existing node "
+                f"(got {ref!r})"
+            )
+            return False
+        return True
+
+    if ntype == "choice":
+        choices = node.get("choices")
+        if not isinstance(choices, list) or not choices:
+            fail(f"dialogue choice node '{node_id}' needs a non-empty 'choices' array")
+            return None
+        for i, choice in enumerate(choices):
+            if not isinstance(choice, dict):
+                fail(f"dialogue node '{node_id}' choices[{i}] must be an object")
+                return None
+            if not check_ref(choice.get("nextNodeId"), f"choices[{i}].nextNodeId"):
+                return None
+    elif ntype in ("text", "action"):
+        if node.get("nextNodeId") is not None and not check_ref(
+            node.get("nextNodeId"), "nextNodeId"
+        ):
+            return None
+        if ntype == "action":
+            action = node.get("action")
+            if action is not None and not isinstance(action, dict):
+                fail(f"dialogue action node '{node_id}' 'action' must be an object")
+                return None
+    elif ntype == "condition":
+        condition = node.get("condition")
+        if not isinstance(condition, dict):
+            fail(f"dialogue condition node '{node_id}' needs a 'condition' object")
+            return None
+        if not check_ref(condition.get("onTrueNodeId"), "condition.onTrueNodeId"):
+            return None
+        if condition.get("onFalseNodeId") is not None and not check_ref(
+            condition.get("onFalseNodeId"), "condition.onFalseNodeId"
+        ):
+            return None
+    return dict(node)
 
 
 GAME_MODES = {"waves", "build"}
@@ -1030,6 +1155,31 @@ def _apply_game(
     )
 
 
+def _apply_dialogue(
+    scene: Dict[str, Any], action: Dict[str, Any], result: ApplyResult, index: int
+) -> None:
+    reasons: List[str] = []
+    tree = _validate_dialogue(action.get("tree"), reasons)
+    if tree is None:
+        detail = reasons[0] if reasons else "malformed tree"
+        return _outcome(
+            result,
+            index,
+            "dialogue",
+            "invalid",
+            f"dialogue tree rejected — {detail}",
+        )
+    scene.setdefault("dialogues", {})[tree["id"]] = tree
+    _outcome(
+        result,
+        index,
+        "dialogue",
+        "applied",
+        f"Registered dialogue tree '{tree['id']}' "
+        f"({len(tree['nodes'])} nodes from '{tree['startNodeId']}')",
+    )
+
+
 def _apply_event(
     scene: Dict[str, Any], action: Dict[str, Any], result: ApplyResult, index: int
 ) -> None:
@@ -1126,6 +1276,7 @@ _HANDLERS = {
     "delete": _apply_delete,
     "event": _apply_event,
     "game": _apply_game,
+    "dialogue": _apply_dialogue,
 }
 
 
