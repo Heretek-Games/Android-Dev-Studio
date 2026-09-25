@@ -1,0 +1,728 @@
+{
+  "goal": "Keeper Blessing",
+  "rules": [
+    {
+      "type": "entity_exists",
+      "target": "Dungeon Keeper",
+      "id": "keeper-present"
+    },
+    {
+      "type": "entity_component",
+      "target": "Adventurer",
+      "component": "WeaponController",
+      "id": "adventurer-ready"
+    },
+    {
+      "type": "dialogue_event_fired",
+      "tree": "DungeonKeeper",
+      "event": "hydro_blessing",
+      "id": "blessing-taken"
+    },
+    {
+      "type": "dialogue_sets_variable",
+      "tree": "DungeonKeeper",
+      "variable": "hydroBlessing",
+      "value": true,
+      "id": "blessing-flagged"
+    },
+    {
+      "type": "game_reactions_min",
+      "min": 2,
+      "id": "reactions-fired"
+    },
+    {
+      "type": "game_phase",
+      "phase": "won",
+      "id": "hall-cleared"
+    },
+    {
+      "type": "draw_call_budget",
+      "max": 100,
+      "id": "draw-budget"
+    },
+    {
+      "type": "fps_min",
+      "min": 30,
+      "id": "sim-fps"
+    }
+  ],
+  "verdict": "unresolved",
+  "iterations": [
+    {
+      "iteration": 1,
+      "phase": "generate",
+      "visionNotes": [],
+      "llm": {
+        "model": "mimo-v2.6-flash",
+        "promptTokens": 2412,
+        "completionTokens": 3377,
+        "totalTokens": 5789,
+        "latencySeconds": 42.785,
+        "finishReason": "stop",
+        "attempts": 1
+      },
+      "parse": {
+        "strategy": "raw",
+        "actionCount": 21,
+        "summary": "A compact dungeon hall where the Adventurer (armed player) meets the Dungeon Keeper, receives the hydro blessing via dialogue, and clears two wraiths to win the hall.",
+        "error": null
+      },
+      "apply": {
+        "applied": 21,
+        "targetMissing": 0,
+        "invalid": 0,
+        "failed": 0,
+        "outcomes": [
+          {
+            "index": 0,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Ground Plane (plane) at [0.0, 0.0, 0.0]",
+            "target": "Ground Plane"
+          },
+          {
+            "index": 1,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Dungeon Keeper (capsule) at [0.0, 1.15, -6.0]",
+            "target": "Dungeon Keeper"
+          },
+          {
+            "index": 2,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Keeper Altar (box) at [0.0, 0.5, -7.6]",
+            "target": "Keeper Altar"
+          },
+          {
+            "index": 3,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Adventurer (capsule) at [0.0, 1.1, 4.0]",
+            "target": "Adventurer"
+          },
+          {
+            "index": 4,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Pillar Left (cylinder) at [-5.0, 2.0, -4.0]",
+            "target": "Pillar Left"
+          },
+          {
+            "index": 5,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Pillar Right (cylinder) at [5.0, 2.0, -4.0]",
+            "target": "Pillar Right"
+          },
+          {
+            "index": 6,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Hall Back Wall (box) at [0.0, 2.0, -10.0]",
+            "target": "Hall Back Wall"
+          },
+          {
+            "index": 7,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Torch Left (box) at [-5.0, 3.2, -3.6]",
+            "target": "Torch Left"
+          },
+          {
+            "index": 8,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Torch Right (box) at [5.0, 3.2, -3.6]",
+            "target": "Torch Right"
+          },
+          {
+            "index": 9,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Crypt Wraith One (capsule) at [3.2, 1.1, -2.0]",
+            "target": "Crypt Wraith One"
+          },
+          {
+            "index": 10,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Crypt Wraith Two (capsule) at [-3.2, 1.1, -2.0]",
+            "target": "Crypt Wraith Two"
+          },
+          {
+            "index": 11,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Rubble A (box) at [2.0, 0.25, 3.0]",
+            "target": "Rubble A"
+          },
+          {
+            "index": 12,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Rubble B (box) at [-2.4, 0.2, 2.2]",
+            "target": "Rubble B"
+          },
+          {
+            "index": 13,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added directional light 'Key Light' (intensity 1.4)",
+            "target": "Key Light"
+          },
+          {
+            "index": 14,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added ambient light 'Hall Ambient' (intensity 0.6)",
+            "target": "Hall Ambient"
+          },
+          {
+            "index": 15,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added point light 'Torch Glow Left' (intensity 2.2)",
+            "target": "Torch Glow Left"
+          },
+          {
+            "index": 16,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added point light 'Torch Glow Right' (intensity 2.2)",
+            "target": "Torch Glow Right"
+          },
+          {
+            "index": 17,
+            "type": "game",
+            "status": "applied",
+            "detail": "Set waves-mode quest config for player 'Adventurer'"
+          },
+          {
+            "index": 18,
+            "type": "dialogue",
+            "status": "applied",
+            "detail": "Registered dialogue tree 'DungeonKeeper' (5 nodes from 'greet')"
+          },
+          {
+            "index": 19,
+            "type": "event",
+            "status": "applied",
+            "detail": "Wired Timer -> SetColor on Torch Left",
+            "target": "Torch Left"
+          },
+          {
+            "index": 20,
+            "type": "event",
+            "status": "applied",
+            "detail": "Wired Timer -> SetColor on Torch Right",
+            "target": "Torch Right"
+          }
+        ],
+        "appliedDescriptions": [
+          "Spawned Ground Plane (plane) at [0.0, 0.0, 0.0]",
+          "Spawned Dungeon Keeper (capsule) at [0.0, 1.15, -6.0]",
+          "Spawned Keeper Altar (box) at [0.0, 0.5, -7.6]",
+          "Spawned Adventurer (capsule) at [0.0, 1.1, 4.0]",
+          "Spawned Pillar Left (cylinder) at [-5.0, 2.0, -4.0]",
+          "Spawned Pillar Right (cylinder) at [5.0, 2.0, -4.0]",
+          "Spawned Hall Back Wall (box) at [0.0, 2.0, -10.0]",
+          "Spawned Torch Left (box) at [-5.0, 3.2, -3.6]",
+          "Spawned Torch Right (box) at [5.0, 3.2, -3.6]",
+          "Spawned Crypt Wraith One (capsule) at [3.2, 1.1, -2.0]",
+          "Spawned Crypt Wraith Two (capsule) at [-3.2, 1.1, -2.0]",
+          "Spawned Rubble A (box) at [2.0, 0.25, 3.0]",
+          "Spawned Rubble B (box) at [-2.4, 0.2, 2.2]",
+          "Added directional light 'Key Light' (intensity 1.4)",
+          "Added ambient light 'Hall Ambient' (intensity 0.6)",
+          "Added point light 'Torch Glow Left' (intensity 2.2)",
+          "Added point light 'Torch Glow Right' (intensity 2.2)",
+          "Set waves-mode quest config for player 'Adventurer'",
+          "Registered dialogue tree 'DungeonKeeper' (5 nodes from 'greet')",
+          "Wired Timer -> SetColor on Torch Left",
+          "Wired Timer -> SetColor on Torch Right"
+        ]
+      },
+      "gate": {
+        "valid": false,
+        "violations": [
+          {
+            "code": "COLLIDER_PENETRATION_AT_SPAWN",
+            "message": "Dynamic collider 'Adventurer' penetrates fixed collider 'Ground Plane' at spawn",
+            "entity": "Adventurer"
+          },
+          {
+            "code": "COLLIDER_PENETRATION_AT_SPAWN",
+            "message": "Dynamic collider 'Rubble A' penetrates fixed collider 'Ground Plane' at spawn",
+            "entity": "Rubble A"
+          },
+          {
+            "code": "COLLIDER_PENETRATION_AT_SPAWN",
+            "message": "Dynamic collider 'Rubble B' penetrates fixed collider 'Ground Plane' at spawn",
+            "entity": "Rubble B"
+          }
+        ]
+      },
+      "qa": {
+        "verdict": "skipped",
+        "reason": "invariant gate violation"
+      }
+    },
+    {
+      "iteration": 2,
+      "phase": "repair",
+      "visionNotes": [],
+      "llm": {
+        "model": "mimo-v2.6-flash",
+        "promptTokens": 4371,
+        "completionTokens": 434,
+        "totalTokens": 4805,
+        "latencySeconds": 7.386,
+        "finishReason": "stop",
+        "attempts": 1
+      },
+      "parse": {
+        "strategy": "raw",
+        "actionCount": 3,
+        "summary": "Raised the three dynamic objects so their colliders rest on top of the fixed Ground Plane instead of intersecting it at spawn.",
+        "error": null
+      },
+      "apply": {
+        "applied": 3,
+        "targetMissing": 0,
+        "invalid": 0,
+        "failed": 0,
+        "outcomes": [
+          {
+            "index": 0,
+            "type": "modify",
+            "status": "applied",
+            "detail": "Modified Adventurer: position",
+            "target": "Adventurer"
+          },
+          {
+            "index": 1,
+            "type": "modify",
+            "status": "applied",
+            "detail": "Modified Rubble A: position",
+            "target": "Rubble A"
+          },
+          {
+            "index": 2,
+            "type": "modify",
+            "status": "applied",
+            "detail": "Modified Rubble B: position",
+            "target": "Rubble B"
+          }
+        ],
+        "appliedDescriptions": [
+          "Modified Adventurer: position",
+          "Modified Rubble A: position",
+          "Modified Rubble B: position"
+        ]
+      },
+      "gate": {
+        "valid": true,
+        "violations": []
+      },
+      "qa": {
+        "verdict": "FAILED",
+        "passed": 5,
+        "total": 8,
+        "failedRules": [
+          {
+            "id": "adventurer-ready",
+            "type": "entity_component",
+            "detail": "missing \"Adventurer\""
+          },
+          {
+            "id": "blessing-taken",
+            "type": "dialogue_event_fired",
+            "detail": "dialogue \"DungeonKeeper\" never fired \"hydro_blessing\" (fired: [none])"
+          },
+          {
+            "id": "reactions-fired",
+            "type": "game_reactions_min",
+            "detail": "reactions=0 (min 2)"
+          }
+        ],
+        "metrics": {
+          "avgFrameTimeMs": 0.1903,
+          "p95FrameTimeMs": 0.2869,
+          "maxFrameTimeMs": 24.4454,
+          "simFpsEstimate": 5254.95,
+          "drawCallEstimate": 12,
+          "instancedBatches": 0,
+          "memoryHeapMb": 22.66,
+          "objectCount": 16,
+          "physicsBodyCount": 11,
+          "eventCount": 2
+        }
+      }
+    },
+    {
+      "iteration": 3,
+      "phase": "repair",
+      "visionNotes": [],
+      "llm": {
+        "model": "mimo-v2.6-flash",
+        "promptTokens": 4383,
+        "completionTokens": 4000,
+        "totalTokens": 8383,
+        "latencySeconds": 74.046,
+        "finishReason": "length",
+        "attempts": 1
+      },
+      "parse": {
+        "strategy": "failed",
+        "actionCount": 0,
+        "summary": null,
+        "error": "empty response"
+      },
+      "apply": {
+        "applied": 0,
+        "targetMissing": 0,
+        "invalid": 0,
+        "failed": 0,
+        "outcomes": [],
+        "appliedDescriptions": []
+      },
+      "gate": {
+        "valid": true,
+        "violations": []
+      },
+      "qa": {
+        "verdict": "FAILED",
+        "passed": 5,
+        "total": 8,
+        "failedRules": [
+          {
+            "id": "adventurer-ready",
+            "type": "entity_component",
+            "detail": "missing \"Adventurer\""
+          },
+          {
+            "id": "blessing-taken",
+            "type": "dialogue_event_fired",
+            "detail": "dialogue \"DungeonKeeper\" never fired \"hydro_blessing\" (fired: [none])"
+          },
+          {
+            "id": "reactions-fired",
+            "type": "game_reactions_min",
+            "detail": "reactions=0 (min 2)"
+          }
+        ],
+        "metrics": {
+          "avgFrameTimeMs": 0.1819,
+          "p95FrameTimeMs": 0.2993,
+          "maxFrameTimeMs": 26.7448,
+          "simFpsEstimate": 5498.17,
+          "drawCallEstimate": 12,
+          "instancedBatches": 0,
+          "memoryHeapMb": 22.65,
+          "objectCount": 16,
+          "physicsBodyCount": 11,
+          "eventCount": 2
+        }
+      }
+    },
+    {
+      "iteration": 4,
+      "phase": "repair",
+      "visionNotes": [],
+      "llm": {
+        "model": "mimo-v2.6-flash",
+        "promptTokens": 4383,
+        "completionTokens": 4000,
+        "totalTokens": 8383,
+        "latencySeconds": 104.925,
+        "finishReason": "length",
+        "attempts": 1
+      },
+      "parse": {
+        "strategy": "failed",
+        "actionCount": 0,
+        "summary": null,
+        "error": "empty response"
+      },
+      "apply": {
+        "applied": 0,
+        "targetMissing": 0,
+        "invalid": 0,
+        "failed": 0,
+        "outcomes": [],
+        "appliedDescriptions": []
+      },
+      "gate": {
+        "valid": true,
+        "violations": []
+      },
+      "qa": {
+        "verdict": "FAILED",
+        "passed": 5,
+        "total": 8,
+        "failedRules": [
+          {
+            "id": "adventurer-ready",
+            "type": "entity_component",
+            "detail": "missing \"Adventurer\""
+          },
+          {
+            "id": "blessing-taken",
+            "type": "dialogue_event_fired",
+            "detail": "dialogue \"DungeonKeeper\" never fired \"hydro_blessing\" (fired: [none])"
+          },
+          {
+            "id": "reactions-fired",
+            "type": "game_reactions_min",
+            "detail": "reactions=0 (min 2)"
+          }
+        ],
+        "metrics": {
+          "avgFrameTimeMs": 0.243,
+          "p95FrameTimeMs": 0.4551,
+          "maxFrameTimeMs": 40.8477,
+          "simFpsEstimate": 4116.05,
+          "drawCallEstimate": 12,
+          "instancedBatches": 0,
+          "memoryHeapMb": 22.41,
+          "objectCount": 16,
+          "physicsBodyCount": 11,
+          "eventCount": 2
+        }
+      }
+    },
+    {
+      "iteration": 5,
+      "phase": "repair",
+      "visionNotes": [],
+      "llm": {
+        "model": "mimo-v2.6-flash",
+        "promptTokens": 4382,
+        "completionTokens": 4000,
+        "totalTokens": 8382,
+        "latencySeconds": 71.289,
+        "finishReason": "length",
+        "attempts": 1
+      },
+      "parse": {
+        "strategy": "failed",
+        "actionCount": 0,
+        "summary": null,
+        "error": "empty response"
+      },
+      "apply": {
+        "applied": 0,
+        "targetMissing": 0,
+        "invalid": 0,
+        "failed": 0,
+        "outcomes": [],
+        "appliedDescriptions": []
+      },
+      "gate": {
+        "valid": true,
+        "violations": []
+      },
+      "qa": {
+        "verdict": "FAILED",
+        "passed": 5,
+        "total": 8,
+        "failedRules": [
+          {
+            "id": "adventurer-ready",
+            "type": "entity_component",
+            "detail": "missing \"Adventurer\""
+          },
+          {
+            "id": "blessing-taken",
+            "type": "dialogue_event_fired",
+            "detail": "dialogue \"DungeonKeeper\" never fired \"hydro_blessing\" (fired: [none])"
+          },
+          {
+            "id": "reactions-fired",
+            "type": "game_reactions_min",
+            "detail": "reactions=0 (min 2)"
+          }
+        ],
+        "metrics": {
+          "avgFrameTimeMs": 0.2311,
+          "p95FrameTimeMs": 0.3065,
+          "maxFrameTimeMs": 35.4774,
+          "simFpsEstimate": 4327.57,
+          "drawCallEstimate": 12,
+          "instancedBatches": 0,
+          "memoryHeapMb": 22.75,
+          "objectCount": 16,
+          "physicsBodyCount": 11,
+          "eventCount": 2
+        }
+      }
+    },
+    {
+      "iteration": 6,
+      "phase": "repair",
+      "visionNotes": [],
+      "llm": {
+        "model": "mimo-v2.6-flash",
+        "promptTokens": 4383,
+        "completionTokens": 4000,
+        "totalTokens": 8383,
+        "latencySeconds": 82.901,
+        "finishReason": "length",
+        "attempts": 1
+      },
+      "parse": {
+        "strategy": "failed",
+        "actionCount": 0,
+        "summary": null,
+        "error": "empty response"
+      },
+      "apply": {
+        "applied": 0,
+        "targetMissing": 0,
+        "invalid": 0,
+        "failed": 0,
+        "outcomes": [],
+        "appliedDescriptions": []
+      },
+      "gate": {
+        "valid": true,
+        "violations": []
+      },
+      "qa": {
+        "verdict": "FAILED",
+        "passed": 5,
+        "total": 8,
+        "failedRules": [
+          {
+            "id": "adventurer-ready",
+            "type": "entity_component",
+            "detail": "missing \"Adventurer\""
+          },
+          {
+            "id": "blessing-taken",
+            "type": "dialogue_event_fired",
+            "detail": "dialogue \"DungeonKeeper\" never fired \"hydro_blessing\" (fired: [none])"
+          },
+          {
+            "id": "reactions-fired",
+            "type": "game_reactions_min",
+            "detail": "reactions=0 (min 2)"
+          }
+        ],
+        "metrics": {
+          "avgFrameTimeMs": 0.1539,
+          "p95FrameTimeMs": 0.216,
+          "maxFrameTimeMs": 25.8677,
+          "simFpsEstimate": 6496.15,
+          "drawCallEstimate": 12,
+          "instancedBatches": 0,
+          "memoryHeapMb": 23.61,
+          "objectCount": 16,
+          "physicsBodyCount": 11,
+          "eventCount": 2
+        }
+      }
+    }
+  ],
+  "totalTokens": 44125,
+  "totalLatencySeconds": 383.331,
+  "finalReport": {
+    "schemaVersion": 1,
+    "runner": "qa_scenario_runner.mjs",
+    "scenario": "loop_work_scene.json",
+    "goal": "Keeper Blessing",
+    "timestamp": 1790363442.573,
+    "frames": 600,
+    "fixedDeltaSeconds": 0.016666666666666666,
+    "metrics": {
+      "avgFrameTimeMs": 0.1539,
+      "p95FrameTimeMs": 0.216,
+      "maxFrameTimeMs": 25.8677,
+      "simFpsEstimate": 6496.15,
+      "drawCallEstimate": 12,
+      "instancedBatches": 0,
+      "memoryHeapMb": 23.61,
+      "objectCount": 16,
+      "physicsBodyCount": 11,
+      "eventCount": 2
+    },
+    "game": {
+      "mode": "waves",
+      "phase": "won",
+      "score": 200,
+      "kills": 2,
+      "wave": 1,
+      "traveledDistance": 0,
+      "settlement": null,
+      "reactions": 0,
+      "shots": 2,
+      "maxEnemyDisplacement": 0.792
+    },
+    "dialogue": {
+      "DungeonKeeper": {
+        "visited": [
+          "greet"
+        ],
+        "events": [],
+        "error": null
+      }
+    },
+    "rules": [
+      {
+        "id": "keeper-present",
+        "type": "entity_exists",
+        "pass": true,
+        "detail": "found \"Dungeon Keeper\""
+      },
+      {
+        "id": "adventurer-ready",
+        "type": "entity_component",
+        "pass": false,
+        "detail": "missing \"Adventurer\""
+      },
+      {
+        "id": "blessing-taken",
+        "type": "dialogue_event_fired",
+        "pass": false,
+        "detail": "dialogue \"DungeonKeeper\" never fired \"hydro_blessing\" (fired: [none])"
+      },
+      {
+        "id": "blessing-flagged",
+        "type": "dialogue_sets_variable",
+        "pass": true,
+        "detail": "dialogue variable \"hydroBlessing\"=true (expected true)"
+      },
+      {
+        "id": "reactions-fired",
+        "type": "game_reactions_min",
+        "pass": false,
+        "detail": "reactions=0 (min 2)"
+      },
+      {
+        "id": "hall-cleared",
+        "type": "game_phase",
+        "pass": true,
+        "detail": "phase=won (expected won)"
+      },
+      {
+        "id": "draw-budget",
+        "type": "draw_call_budget",
+        "pass": true,
+        "detail": "drawCallEstimate=12 (budget 100)"
+      },
+      {
+        "id": "sim-fps",
+        "type": "fps_min",
+        "pass": true,
+        "detail": "simFpsEstimate=6496.1 (min 30)"
+      }
+    ],
+    "passed": 5,
+    "total": 8,
+    "verdict": "FAILED",
+    "confidence": 0.625
+  },
+  "error": null,
+  "workScene": "/home/john/Projects/Android-Dev-Studio/harness/scenes/loop_work_scene.json"
+}

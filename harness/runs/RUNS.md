@@ -702,3 +702,26 @@ fired: specific rejection → REJECTED channel → strict plots → placement
 footnote → green. **Phase 3 rung 2 PASSED.**
 
 Evidence: `harness/runs/loop_runs/20260925-150134-*.json`.
+
+---
+
+## Run Block 18 — 2026-09-25, Phase 3 Rung 3: Keeper Blessing FAILED 5/8 (Precise Defects) → Fix Forward
+
+**Dialogue brief** (`harness/briefs/examples/keeper_blessing.json`: 10 criteria, 8 automatable:
+dialogue event/variable + reactions/phase + components + budget) through the production
+loop — **FAILED** 5/8 across 6 iterations (44,125 tokens), with three root-caused
+defects, two fixed before relaunch.
+
+### Defect report
+
+| # | Rule | Root cause | Fix (status) |
+|---|------|-----------|--------------|
+| 1 | `adventurer-ready` (`missing "Adventurer"`) | valid staged hero killed mid-run by its own wraiths; entity rules evaluate post-run and `destroyOnDeath` defaults true | prompt rule: size hero `maxHealth` with margin (shipped); ADR-1790363670157 |
+| 2 | `blessing-taken` (fired `[none]`, flag set) | model's action node used bare `event`/`fireEvent` keys; engine only fires `emitEvent:{eventName}` | action-payload validator rejects unknown keys + malformed `emitEvent` with indexed reasons; exact shape in prompt docs (shipped) |
+| 3 | `reactions-fired` (`reactions=0`) | loop had no elemental vocabulary: `hitElement`/`hitGauge` rejected as unknown game keys, no aura fields anywhere, zero prompt docs | `hitElement`+`hitGauge` game keys, `enemy.elemental`, spawn/modify `elemental`, both-halves prompt mapping (shipped, proven 3/3 on scratch) |
+
+Loop-level defect: iters 3–6 burned on **empty LLM responses** (0 actions, identical QA) — new stall guard stops after 2 consecutive no-op iterations with a precise verdict (shipped, 2 tests).
+
+Loop trace: generate (21 actions incl. valid game + dialogue) → gate rejected penetrations → repair (3 position fixes) → QA 5/8 → 4× empty responses → budget exhausted.
+
+Evidence: `harness/runs/loop_runs/20260925-151042-*.json`. Relaunched with all three fixes.

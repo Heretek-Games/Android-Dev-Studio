@@ -1,159 +1,370 @@
 {
   "id": "loop_work_scene",
   "name": "Loop Work Scene",
-  "goal": "Founding Hollow",
+  "goal": "Keeper Blessing",
   "gameObjects": [
     {
-      "name": "Settlement Ground",
+      "name": "Ground Plane",
       "shape": "plane",
       "size": [
-        60.0,
+        40.0,
         1.0,
-        60.0
+        40.0
       ],
       "position": [
         0.0,
         0.0,
         0.0
       ],
-      "color": "#6f9b52",
-      "physics": "fixed",
-      "biome": "hollow meadow"
+      "color": "#4a4a55",
+      "physics": "fixed"
     },
     {
-      "name": "Player Hero",
+      "name": "Dungeon Keeper",
       "shape": "capsule",
       "size": [
         0.7,
-        1.6,
+        1.4,
         0.7
       ],
       "position": [
         0.0,
-        1.6,
-        0.0
+        1.15,
+        -6.0
       ],
-      "color": "#d8c48a",
+      "color": "#6b4fa0",
+      "physics": "fixed"
+    },
+    {
+      "name": "Keeper Altar",
+      "shape": "box",
+      "size": [
+        3.0,
+        1.0,
+        1.5
+      ],
+      "position": [
+        0.0,
+        0.5,
+        -7.6
+      ],
+      "color": "#3b3b48",
+      "physics": "fixed"
+    },
+    {
+      "name": "Adventurer",
+      "shape": "capsule",
+      "size": [
+        0.6,
+        1.6,
+        0.6
+      ],
+      "position": [
+        0.0,
+        1.4,
+        4.0
+      ],
+      "color": "#d9a441",
       "physics": "dynamic",
       "mass": 1.0,
       "controller": true,
+      "weapon": {
+        "damage": 50.0,
+        "fireRate": 6.0,
+        "range": 60.0,
+        "maxAmmo": 30.0
+      },
       "health": {
         "maxHealth": 100.0
       }
     },
     {
-      "name": "Old Oak",
+      "name": "Pillar Left",
       "shape": "cylinder",
       "size": [
-        1.2,
-        5.0,
-        1.2
-      ],
-      "position": [
-        -6.0,
-        2.5,
-        -5.0
-      ],
-      "color": "#5a4030",
-      "physics": "fixed",
-      "biome": "hollow meadow"
-    },
-    {
-      "name": "Oak Canopy",
-      "shape": "sphere",
-      "size": [
-        3.5,
-        3.0,
-        3.5
-      ],
-      "position": [
-        -6.0,
-        6.0,
-        -5.0
-      ],
-      "color": "#3f7a3a",
-      "physics": "none",
-      "biome": "hollow meadow"
-    },
-    {
-      "name": "Stone Well",
-      "shape": "cylinder",
-      "size": [
-        1.4,
-        1.2,
-        1.4
-      ],
-      "position": [
-        5.0,
         0.6,
-        4.0
-      ],
-      "color": "#9a9a9a",
-      "physics": "fixed",
-      "biome": "hollow meadow"
-    },
-    {
-      "name": "Founding Banner",
-      "shape": "box",
-      "size": [
-        0.2,
-        3.2,
-        0.2
+        4.0,
+        0.6
       ],
       "position": [
-        3.0,
-        1.6,
+        -5.0,
+        2.0,
         -4.0
       ],
-      "color": "#b3452f",
+      "color": "#5a5a68",
+      "physics": "fixed"
+    },
+    {
+      "name": "Pillar Right",
+      "shape": "cylinder",
+      "size": [
+        0.6,
+        4.0,
+        0.6
+      ],
+      "position": [
+        5.0,
+        2.0,
+        -4.0
+      ],
+      "color": "#5a5a68",
+      "physics": "fixed"
+    },
+    {
+      "name": "Hall Back Wall",
+      "shape": "box",
+      "size": [
+        22.0,
+        4.0,
+        1.0
+      ],
+      "position": [
+        0.0,
+        2.0,
+        -10.0
+      ],
+      "color": "#33333d",
+      "physics": "fixed"
+    },
+    {
+      "name": "Torch Left",
+      "shape": "box",
+      "size": [
+        0.25,
+        0.7,
+        0.25
+      ],
+      "position": [
+        -5.0,
+        3.2,
+        -3.6
+      ],
+      "color": "#ff8c2b",
       "physics": "fixed",
-      "biome": "hollow meadow"
+      "events": [
+        {
+          "name": "TorchFlickerLeft",
+          "conditions": [
+            {
+              "type": "Timer",
+              "params": {
+                "interval": 1.5
+              }
+            }
+          ],
+          "actions": [
+            {
+              "type": "SetColor",
+              "params": {
+                "color": "#ffb054"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Torch Right",
+      "shape": "box",
+      "size": [
+        0.25,
+        0.7,
+        0.25
+      ],
+      "position": [
+        5.0,
+        3.2,
+        -3.6
+      ],
+      "color": "#ff8c2b",
+      "physics": "fixed",
+      "events": [
+        {
+          "name": "TorchFlickerRight",
+          "conditions": [
+            {
+              "type": "Timer",
+              "params": {
+                "interval": 1.5
+              }
+            }
+          ],
+          "actions": [
+            {
+              "type": "SetColor",
+              "params": {
+                "color": "#ff9040"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Crypt Wraith One",
+      "shape": "capsule",
+      "size": [
+        0.7,
+        1.5,
+        0.7
+      ],
+      "position": [
+        3.2,
+        1.1,
+        -2.0
+      ],
+      "color": "#2f8f8f",
+      "physics": "none",
+      "health": {
+        "maxHealth": 100.0
+      },
+      "ai": {
+        "targetName": "Adventurer",
+        "moveSpeed": 2.2,
+        "attackRange": 2.0
+      }
+    },
+    {
+      "name": "Crypt Wraith Two",
+      "shape": "capsule",
+      "size": [
+        0.7,
+        1.5,
+        0.7
+      ],
+      "position": [
+        -3.2,
+        1.1,
+        -2.0
+      ],
+      "color": "#2f8f8f",
+      "physics": "none",
+      "health": {
+        "maxHealth": 100.0
+      },
+      "ai": {
+        "targetName": "Adventurer",
+        "moveSpeed": 2.2,
+        "attackRange": 2.0
+      }
+    },
+    {
+      "name": "Rubble A",
+      "shape": "box",
+      "size": [
+        0.8,
+        0.5,
+        0.8
+      ],
+      "position": [
+        2.0,
+        0.8,
+        3.0
+      ],
+      "color": "#55555f",
+      "physics": "dynamic",
+      "mass": 1.0
+    },
+    {
+      "name": "Rubble B",
+      "shape": "box",
+      "size": [
+        0.7,
+        0.4,
+        0.7
+      ],
+      "position": [
+        -2.4,
+        0.75,
+        2.2
+      ],
+      "color": "#55555f",
+      "physics": "dynamic",
+      "mass": 1.0
     },
     {
       "kind": "light",
-      "name": "Sun Light",
+      "name": "Key Light",
       "lightType": "directional",
-      "color": "#fff3d6",
-      "intensity": 2.0,
+      "color": "#fff2d8",
+      "intensity": 1.4,
       "position": [
-        10.0,
-        20.0,
+        8.0,
+        14.0,
         8.0
       ]
     },
     {
       "kind": "light",
-      "name": "Hollow Ambient",
+      "name": "Hall Ambient",
       "lightType": "ambient",
-      "color": "#9fb8d8",
+      "color": "#5a6a8a",
       "intensity": 0.6,
       "position": [
         0.0,
-        5.0,
+        6.0,
         0.0
+      ]
+    },
+    {
+      "kind": "light",
+      "name": "Torch Glow Left",
+      "lightType": "point",
+      "color": "#ff9a3c",
+      "intensity": 2.2,
+      "position": [
+        -5.0,
+        3.4,
+        -3.4
+      ]
+    },
+    {
+      "kind": "light",
+      "name": "Torch Glow Right",
+      "lightType": "point",
+      "color": "#ff9a3c",
+      "intensity": 2.2,
+      "position": [
+        5.0,
+        3.4,
+        -3.4
       ]
     }
   ],
   "rules": [
     {
       "type": "entity_exists",
-      "target": "Settlement Ground",
-      "id": "settlement-ground"
+      "target": "Dungeon Keeper",
+      "id": "keeper-present"
     },
     {
-      "type": "game_settlement_pop_min",
-      "min": 6,
-      "id": "population-grown"
+      "type": "entity_component",
+      "target": "Adventurer",
+      "component": "WeaponController",
+      "id": "adventurer-ready"
     },
     {
-      "type": "game_settlement_gold_min",
-      "min": 1,
-      "id": "treasury-healthy"
+      "type": "dialogue_event_fired",
+      "tree": "DungeonKeeper",
+      "event": "hydro_blessing",
+      "id": "blessing-taken"
+    },
+    {
+      "type": "dialogue_sets_variable",
+      "tree": "DungeonKeeper",
+      "variable": "hydroBlessing",
+      "value": true,
+      "id": "blessing-flagged"
+    },
+    {
+      "type": "game_reactions_min",
+      "min": 2,
+      "id": "reactions-fired"
     },
     {
       "type": "game_phase",
       "phase": "won",
-      "id": "charter-granted"
+      "id": "hall-cleared"
     },
     {
       "type": "draw_call_budget",
@@ -167,45 +378,88 @@
     }
   ],
   "game": {
-    "mode": "build",
-    "playerName": "Player Hero",
-    "settlement": {
-      "gridSize": 8.0,
-      "targetPopulation": 6.0,
-      "startingGold": 500.0,
-      "startingFood": 200.0,
-      "placements": [
-        {
-          "type": "house",
-          "x": 0,
-          "z": 0
+    "mode": "waves",
+    "playerName": "Adventurer",
+    "totalWaves": 1.0,
+    "enemiesPerWave": 2.0,
+    "hitDamage": 50.0
+  },
+  "dialogues": {
+    "DungeonKeeper": {
+      "id": "DungeonKeeper",
+      "startNodeId": "greet",
+      "nodes": {
+        "greet": {
+          "id": "greet",
+          "type": "choice",
+          "speaker": "Dungeon Keeper",
+          "text": "Kneel, wanderer. The deep waters remember those who ask politely. Do you seek my blessing?",
+          "choices": [
+            {
+              "id": "accept",
+              "text": "Yes, Keeper, bless me.",
+              "nextNodeId": "blessed"
+            },
+            {
+              "id": "decline",
+              "text": "Not now.",
+              "nextNodeId": "farewell"
+            }
+          ]
         },
-        {
-          "type": "farm",
-          "x": 1,
-          "z": 1
+        "blessed": {
+          "id": "blessed",
+          "type": "action",
+          "speaker": "Dungeon Keeper",
+          "text": "Then drink of the hydro light.",
+          "action": {
+            "setVariables": {
+              "hydroBlessing": true
+            },
+            "event": "hydro_blessing",
+            "fireEvent": "hydro_blessing"
+          },
+          "nextNodeId": "offer"
         },
-        {
-          "type": "market",
-          "x": 2,
-          "z": 0
+        "offer": {
+          "id": "offer",
+          "type": "choice",
+          "speaker": "Dungeon Keeper",
+          "text": "Two wraiths haunt this hall. Take the blessing and clear them, or walk away unfavored.",
+          "choices": [
+            {
+              "id": "take",
+              "text": "I take the blessing and will clear the hall.",
+              "nextNodeId": "thanks"
+            },
+            {
+              "id": "refuse",
+              "text": "I'll leave them be.",
+              "nextNodeId": "farewell"
+            }
+          ]
         },
-        {
-          "type": "house",
-          "x": 3,
-          "z": 1
+        "thanks": {
+          "id": "thanks",
+          "type": "action",
+          "speaker": "Dungeon Keeper",
+          "text": "Go then. The hall answers to the blessed.",
+          "action": {
+            "setVariables": {
+              "blessingTaken": true
+            },
+            "event": "keeper_thanks",
+            "fireEvent": "keeper_thanks"
+          },
+          "nextNodeId": "farewell"
         },
-        {
-          "type": "farm",
-          "x": 0,
-          "z": 2
-        },
-        {
-          "type": "market",
-          "x": 2,
-          "z": 3
+        "farewell": {
+          "id": "farewell",
+          "type": "end",
+          "speaker": "Dungeon Keeper",
+          "text": "The waters watch you."
         }
-      ]
+      }
     }
   }
 }
