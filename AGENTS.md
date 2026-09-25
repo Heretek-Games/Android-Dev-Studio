@@ -27,7 +27,9 @@ implemented and verified:
 - **Playable slices** — `?play=1` (header **Game**) boots the arena run (menu → waves → HUD →
   win/lose → restart, audio, save/load, real weapon damage; on-device: Victory 200 points);
   `?play=driving` (header **Drive**) boots the driving sprint (auto-cruise vehicle, chase
-  camera, distance HUD; on-device: Victory 120.7 m, all wheels grounded).
+  camera, distance HUD; on-device: Victory 120.7 m, all wheels grounded);
+  `?play=dungeon` (header **Dungeon**) boots the dungeon run (keeper dialogue → Hydro
+  blessing → elemental waves → win; QA 11/11 with 2 Vaporize reactions).
 
 Known gaps and follow-up work are tracked as GitHub issues on
 [`Heretek-Games/Android-Dev-Studio`](https://github.com/Heretek-Games/Android-Dev-Studio/issues):

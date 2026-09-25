@@ -412,3 +412,30 @@ the ground and the distance stayed 0 while the dev server worked perfectly. Fixe
 `toJSON().type` over `constructor.name` for the same reason. The on-device telemetry hook
 (`AndroidBridge.log` every 2 s: phase/distance/throttle/wheels/grounded/body) is what
 pinpointed it and stays in place for future device debugging.
+
+---
+
+## Run Block 9 — 2026-09-25, Vertical Slice #3: Dungeon Action RPG (Phase 5)
+
+### What shipped
+
+- **Elemental damage routing** — `DamageRouter` routes hits through the target's
+  `ElementalReactionComponent` when a hit element is configured (auras, Vaporize/Melt/
+  Freeze/Overload scaling, physics effects), with single kill reporting and entity removal
+  on elemental death; physical hits still apply plain damage to elemental health pools.
+- **`GameRuntime.setHitElement`** — swaps the weapon hit element at runtime and re-attaches
+  only the weapon router; the DungeonKeeper dialogue blessing drives it via the
+  `hydro_blessing` event.
+- **Genre QA scenario** (`dungeon_slice.json`, 11 rules): hydro-armed adventurer vs two waves
+  of pyro slimes; rules cover the adventurer component stack, enemy chase, reactions, kills,
+  won phase, transforms, draw budget, FPS — plus a `DungeonKeeper` dialogue tree.
+- **Playable mode** (`?play=dungeon`, studio header **Dungeon** button): keeper dialogue
+  overlay on Start, blessing choice, elemental enemy factory, reactions/dialogue debug surface.
+
+### Verification
+
+| Check | Evidence |
+|-------|----------|
+| Engine | **278/278 tests green** (`npm test`), app production build green |
+| Genre QA | **11/11 rules SUCCEEDED** — `phase=won`, `kills=2`, `reactions=2`, enemy displacement 1.93 m, 2 draw calls |
+| Playable | Code-complete and building; in-browser playthrough re-verification pending (dev-server/chrome tooling unavailable in this session) |
