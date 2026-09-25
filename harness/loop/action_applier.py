@@ -928,9 +928,14 @@ def _validate_particle(
                 )
                 return None
             normalized[key] = item
-        elif key in ("loop", "autostart"):
+        elif key in ("loop", "autostart", "governorEnabled"):
             if not isinstance(item, bool):
                 fail(f"spawn particle '{key}' must be true/false (got {item!r})")
+                return None
+            normalized[key] = item
+        elif key == "tier":
+            if item not in ("S", "A", "X"):
+                fail(f"spawn particle 'tier' must be S|A|X (got {item!r})")
                 return None
             normalized[key] = item
         elif key in {lo for pair in PARTICLE_RANGES for lo in pair} | {

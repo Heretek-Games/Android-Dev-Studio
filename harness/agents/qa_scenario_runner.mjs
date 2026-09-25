@@ -885,6 +885,21 @@ function evaluateRules(spec, ctxData) {
         detail = `"${rule.target}" particles alive=${ps.aliveCount} (min=${rule.min ?? 1}, cap=${ps.maxParticles})`;
         break;
       }
+      case 'particle_budget': {
+        const go = scene.findByName(rule.target);
+        const ps = go ? go.components.find(c => c.constructor.name === 'ParticleSystem') : null;
+        if (!ps) { pass = false; detail = `no ParticleSystem on "${rule.target}"`; break; }
+        const audit = ps.auditBudget({
+          maxAlive: rule.maxAlive,
+          maxOverdraw: rule.maxOverdraw,
+          pixelsPerUnit: rule.pixelsPerUnit,
+          viewportW: rule.viewportW,
+          viewportH: rule.viewportH
+        });
+        pass = audit.pass;
+        detail = `"${rule.target}" budget ${audit.pass ? 'PASS' : 'FAIL'}: ${audit.checks.join('; ')} (tier=${ps.tier})`;
+        break;
+      }
       case 'anim_state_is': {
         const go = scene.findByName(rule.target);
         const fsm = go ? go.components.find(c => c.constructor.name === 'AnimFSM') : null;

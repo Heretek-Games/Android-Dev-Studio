@@ -23,6 +23,11 @@ RULE_DESCRIPTIONS = {
     "particle_count_min": lambda r: (
         f"'{r.get('target')}' must hold at least {r.get('min', 1)} live particles"
     ),
+    "particle_budget": lambda r: (
+        "'{t}' must hold its fill budget (alive cap, overdraw ceiling)".format(
+            t=r.get("target")
+        )
+    ),
     "anim_state_is": lambda r: (
         f"'{r.get('target')}' must end in anim state '{r.get('state')}'"
     ),
@@ -99,7 +104,7 @@ ACTION_SCHEMA = """Action vocabulary (a JSON array named "actions"):
      "elemental": {"aura": "Pyro", "maxHealth": 80} (optional: seeds an elemental aura for reaction quests; aura is one of Pyro|Hydro|Cryo|Electro|Anemo|Geo|Dendro),
      "cel": {"baseColor": "#38bdf8", "shadowColor": "#1e3a8a", "rimPower": 3.5} (optional: calibrates an AnimeCelShader look-dev pass; colors #rgb/#rrggbb, outlineThickness/rimPower non-negative numbers),
      "behaviors": [{"type": "TopDownMovement", "options": {"moveSpeed": 5}}] (optional: attaches behavior components; Tween takes play-spec options, TopDownMovement takes moveSpeed/allowDiagonals/rotateToHeading/simulate),
-     "particle": {"rate": 60, "maxParticles": 200, "shape": "sphere", "direction": [0,1,0], "speedMin": 2, "speedMax": 5, "lifetimeMin": 0.5, "lifetimeMax": 1.5, "startColor": "#ffaa00", "endColor": "#ff0000", "seed": 7} (optional: adds a CPU-sim ParticleSystem, one draw; shape point|box|sphere, blending additive|normal),
+     "particle": {"rate": 60, "maxParticles": 200, "shape": "sphere", "direction": [0,1,0], "speedMin": 2, "speedMax": 5, "lifetimeMin": 0.5, "lifetimeMax": 1.5, "startColor": "#ffaa00", "endColor": "#ff0000", "seed": 7, "tier": "A"} (optional: adds a CPU-sim ParticleSystem, one draw; shape point|box|sphere, blending additive|normal, tier S|A|X scalability),
      "anim": {"states": {"Idle": {"clip": "idle", "clipLength": 2}, "Run": {"clip": "run", "clipLength": 1}}, "initial": "Idle", "transitions": [{"from": "Idle", "to": "Run", "conditions": [{"param": "speed", "op": ">", "value": 0.5}]}]} (optional: adds an AnimFSM state machine; ops ==,!=,>,<,>=,<=,trigger; from "*" matches any state),
      "timeline": {"duration": 4, "tracks": [{"target": "Mover", "clips": [{"id": "m1", "start": 1, "dur": 2, "type": "move", "data": {"to": [6,0,0]}}]}]} (optional: adds a TimelineLite cutscene; clip types move|rotate|event|anim|camera),
      "audio": {"clipId": "coin", "bus": "sfx", "volume": 0.8} (optional: adds an AudioSource voice; bus routes through the scene mixer when present),

@@ -26,6 +26,8 @@ import {
   LightProbeVolume,
   ColorGrade,
   CineCamera,
+  TFIntegrator,
+  probeTransformFeedback,
   type PrefabStore
 } from '@heretek/engine';
 
@@ -303,6 +305,31 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           coverage: Number(volume.coverage(meshPoints).toFixed(3)),
           graded: grade.grade(0.9, 0.5, 0.2).map(v => Number(v.toFixed(4)))
         };
+      },
+      probeTFParticles: () => {
+        // Live transform-feedback self-test on a scratch WebGL2 context:
+        // compiles the integrator, runs one pass, compares vs CPU Euler.
+        try {
+          const canvas = document.createElement('canvas');
+          const gl = canvas.getContext('webgl2');
+          const probe = probeTransformFeedback(gl);
+          if (!probe.supported || !gl) {
+            return { supported: false, pass: false, reason: probe.reason };
+          }
+          const tf = new TFIntegrator(gl);
+          const result = tf.selfTest();
+          tf.dispose();
+          const lose = gl.getError();
+          return {
+            supported: true,
+            pass: result.pass && lose === gl.NO_ERROR,
+            maxError: result.maxError,
+            detail: result.detail,
+            glError: lose
+          };
+        } catch (error) {
+          return { supported: false, pass: false, reason: String(error) };
+        }
       },
       probeInputMap: () => {
         // End-to-end through the real capture path: synthetic key events on

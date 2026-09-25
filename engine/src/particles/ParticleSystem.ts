@@ -40,6 +40,32 @@ export interface ParticleEmitterOptions {
   seed?: number;
   /** Start emitting on attach. Default true. */
   autostart?: boolean;
+  /** Scalability tier (Niagara-lite S/A/X). Default 'A'. */
+  tier?: ParticleTier;
+  /** Frame-time governor (auto step-down on sustained overruns). Default false. */
+  governorEnabled?: boolean;
+}
+
+export type ParticleTier = 'S' | 'A' | 'X';
+
+/** Niagara-lite scalability caps (alive cap, rate scale, sprite-size scale). */
+export const TIER_CAPS: Record<ParticleTier, { max: number; rateScale: number; sizeScale: number }> = {
+  S: { max: 512, rateScale: 0.5, sizeScale: 0.75 },
+  A: { max: 2048, rateScale: 1.0, sizeScale: 1.0 },
+  X: { max: 8192, rateScale: 1.5, sizeScale: 1.25 }
+};
+
+/** Device class -> tier (low phones S, mids A, desktops/high X). */
+export function tierForDeviceClass(deviceClass: 'low' | 'mid' | 'high'): ParticleTier {
+  return deviceClass === 'low' ? 'S' : deviceClass === 'high' ? 'X' : 'A';
+}
+
+/** Capability probe -> device class (WebGL caps; pure, headless-testable). */
+export function probeDeviceClass(caps: { maxTextureSize?: number }): 'low' | 'mid' | 'high' {
+  const size = caps.maxTextureSize ?? 4096;
+  if (size <= 2048) return 'low';
+  if (size <= 8192) return 'mid';
+  return 'high';
 }
 
 /** Boundary tolerance for IEEE754 emitter-clock accumulation. */
@@ -80,8 +106,21 @@ export class ParticleSystem extends Component {
   public blending: ParticleBlending = 'additive';
   public seed: number = 1234;
   public emitting: boolean = true;
+  public tier: ParticleTier = 'A';
+  public governorEnabled: boolean = false;
+  /** Frame-time ms above which the governor steps down (sustained). */
+  public governorThresholdMs: number = 25;
+  public downgrades: number = 0;
 
   public aliveCount: number = 0;
+
+  private baseMaxParticles: number = 256;
+  private baseRate: number = 32;
+  private baseSizeMin: number = 0.1;
+  private baseSizeMax: number = 0.3;
+  private allocated: number = 0;
+  private frameEmaMs: number = 0;
+  private governorWindow: number = 0;
 
   private pos: Float32Array = new Float32Array(0);
   private vel: Float32Array = new Float32Array(0);
@@ -103,7 +142,9 @@ export class ParticleSystem extends Component {
   constructor(options?: ParticleEmitterOptions) {
     super();
     if (options) this.applyOptions(options);
-    this.allocate();
+    this.snapshotBases();
+    this.applyTier(options?.tier ?? 'A');
+    if (options?.governorEnabled !== undefined) this.governorEnabled = options.governorEnabled;
     this.rngState = this.seed >>> 0;
   }
 
@@ -136,6 +177,7 @@ export class ParticleSystem extends Component {
 
   private allocate(): void {
     const n = this.maxParticles;
+    this.allocated = n;
     this.pos = new Float32Array(n * 3);
     this.vel = new Float32Array(n * 3);
     this.life = new Float32Array(n);
@@ -149,6 +191,115 @@ export class ParticleSystem extends Component {
     this.geometry = null;
     this.points = null;
     this.material = null;
+  }
+
+  /** Snapshots tier bases (construction/authoring values; tiers scale these). */
+  private snapshotBases(): void {
+    this.baseMaxParticles = this.maxParticles;
+    this.baseRate = this.rate;
+    this.baseSizeMin = this.sizeMin;
+    this.baseSizeMax = this.sizeMax;
+  }
+
+  /**
+   * Applies a scalability tier from the bases (idempotent — never compounds).
+   * Growing past allocated capacity reallocates (pool restarts, Godot amount
+   * semantics); shrinking truncates the pool cap in place. Re-attaches the
+   * draw object when it was already in the scene graph.
+   */
+  public applyTier(tier: ParticleTier): void {
+    this.tier = tier;
+    const cap = TIER_CAPS[tier];
+    this.maxParticles = Math.min(this.baseMaxParticles, cap.max);
+    this.rate = this.baseRate * cap.rateScale;
+    this.sizeMin = this.baseSizeMin * cap.sizeScale;
+    this.sizeMax = this.baseSizeMax * cap.sizeScale;
+    if (this.maxParticles > this.allocated) {
+      const scene = this.gameObject?.scene ?? null;
+      const parent = this.points?.parent ?? null;
+      this.allocate();
+      this.geometry = null;
+      this.points = null;
+      this.material = null;
+      this.ensureDraw();
+      const rebuilt = this.points as THREE.Points | null;
+      if (parent && rebuilt && !rebuilt.parent) {
+        parent.add(rebuilt);
+      }
+    } else {
+      this.aliveCount = Math.min(this.aliveCount, this.maxParticles);
+    }
+    this.attrsDirty = true;
+  }
+
+  /** Convenience: probe caps (or explicit class) -> tier -> apply. */
+  public autoTier(
+    deviceClass: 'low' | 'mid' | 'high' | { maxTextureSize?: number }
+  ): ParticleTier {
+    const tier = typeof deviceClass === 'string'
+      ? tierForDeviceClass(deviceClass)
+      : tierForDeviceClass(probeDeviceClass(deviceClass));
+    this.applyTier(tier);
+    return tier;
+  }
+
+  /**
+   * Frame-time governor sample (wall ms, called by the app loop — never by
+   * update(), keeping sim determinism). Sustained overruns step down a tier.
+   */
+  public governorSample(frameMs: number): void {
+    if (!this.governorEnabled) return;
+    const alpha = 0.1;
+    this.frameEmaMs = this.frameEmaMs === 0 ? frameMs : this.frameEmaMs + (frameMs - this.frameEmaMs) * alpha;
+    this.governorWindow++;
+    if (this.governorWindow >= 60) {
+      this.governorWindow = 0;
+      if (this.frameEmaMs > this.governorThresholdMs) {
+        const next = this.tier === 'X' ? 'A' : this.tier === 'A' ? 'S' : null;
+        if (next) {
+          this.applyTier(next);
+          this.downgrades++;
+        }
+      }
+    }
+  }
+
+  /** Fill load in px² plus overdraw vs a viewport (tile-GPU budget math). */
+  public fillLoadPx(pixelsPerUnit: number, viewportW: number, viewportH: number): { load: number; overdraw: number } {
+    let load = 0;
+    for (let i = 0; i < this.aliveCount; i++) {
+      const px = this.size[i] * pixelsPerUnit;
+      load += px * px;
+    }
+    const area = Math.max(1, viewportW * viewportH);
+    return { load, overdraw: load / area };
+  }
+
+  /** Budget audit (headless gate): alive cap + overdraw ceiling. */
+  public auditBudget(options?: {
+    maxAlive?: number;
+    maxOverdraw?: number;
+    pixelsPerUnit?: number;
+    viewportW?: number;
+    viewportH?: number;
+  }): { pass: boolean; checks: string[] } {
+    const checks: string[] = [];
+    let pass = true;
+    if (options?.maxAlive !== undefined && this.aliveCount > options.maxAlive) {
+      pass = false;
+      checks.push(`alive ${this.aliveCount} exceeds cap ${options.maxAlive} (tier ${this.tier} caps ${TIER_CAPS[this.tier].max})`);
+    }
+    if (options?.maxOverdraw !== undefined) {
+      const { overdraw } = this.fillLoadPx(
+        options.pixelsPerUnit ?? 20, options.viewportW ?? 1280, options.viewportH ?? 720
+      );
+      if (overdraw > options.maxOverdraw) {
+        pass = false;
+        checks.push(`overdraw ${overdraw.toFixed(2)} exceeds ${options.maxOverdraw} (tier down or shrink sprites)`);
+      }
+    }
+    if (pass) checks.push('within budget');
+    return { pass, checks };
   }
 
   /** Deterministic RNG (mulberry32); state serializes for exact resume. */
@@ -474,6 +625,13 @@ export class ParticleSystem extends Component {
       blending: this.blending,
       seed: this.seed,
       emitting: this.emitting,
+      tier: this.tier,
+      baseMaxParticles: this.baseMaxParticles,
+      baseRate: this.baseRate,
+      baseSizeMin: this.baseSizeMin,
+      baseSizeMax: this.baseSizeMax,
+      governorEnabled: this.governorEnabled,
+      downgrades: this.downgrades,
       aliveCount: this.aliveCount,
       rngState: this.rngState,
       spawnAcc: this.spawnAcc,
@@ -520,6 +678,20 @@ export class ParticleSystem extends Component {
     // Reallocate only when capacity changed (constructor already allocated).
     if (this.pos.length !== this.maxParticles * 3) this.allocate();
     if (data.emitting !== undefined) this.emitting = data.emitting;
+    // Tier bases (absent in pre-tier snapshots: re-snapshot from authored values).
+    if (typeof data.baseMaxParticles === 'number') this.baseMaxParticles = data.baseMaxParticles;
+    else this.baseMaxParticles = this.maxParticles;
+    if (typeof data.baseRate === 'number') this.baseRate = data.baseRate;
+    else this.baseRate = this.rate;
+    if (typeof data.baseSizeMin === 'number') this.baseSizeMin = data.baseSizeMin;
+    else this.baseSizeMin = this.sizeMin;
+    if (typeof data.baseSizeMax === 'number') this.baseSizeMax = data.baseSizeMax;
+    else this.baseSizeMax = this.sizeMax;
+    if (typeof data.tier === 'string' && (data.tier === 'S' || data.tier === 'A' || data.tier === 'X')) {
+      this.tier = data.tier;
+    }
+    if (typeof data.governorEnabled === 'boolean') this.governorEnabled = data.governorEnabled;
+    if (typeof data.downgrades === 'number') this.downgrades = data.downgrades;
     if (typeof data.rngState === 'number') this.rngState = data.rngState >>> 0;
     if (typeof data.spawnAcc === 'number') this.spawnAcc = data.spawnAcc;
     if (typeof data.emitterTime === 'number') this.emitterTime = data.emitterTime;

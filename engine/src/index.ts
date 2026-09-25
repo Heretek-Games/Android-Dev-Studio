@@ -71,6 +71,7 @@ export * from './behaviors/Timer.js';
 export * from './behaviors/Spawner.js';
 export * from './behaviors/SaveSlot.js';
 export * from './particles/ParticleSystem.js';
+export * from './particles/TFIntegrator.js';
 export * from './animation/AnimFSM.js';
 export * from './cinematics/TimelineLite.js';
 export * from './navigation/NavAgent.js';

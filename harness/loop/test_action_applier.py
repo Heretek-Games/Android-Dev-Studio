@@ -1026,6 +1026,8 @@ class BehaviorArrayTests(unittest.TestCase):
                         "endColor": "#ff0000",
                         "blending": "additive",
                         "seed": 7,
+                        "tier": "S",
+                        "governorEnabled": True,
                     },
                 }
             ],
@@ -1034,6 +1036,8 @@ class BehaviorArrayTests(unittest.TestCase):
         particle = scene["gameObjects"][1]["particle"]
         self.assertEqual(particle["maxParticles"], 200)
         self.assertEqual(particle["shape"], "sphere")
+        self.assertEqual(particle["tier"], "S")
+        self.assertEqual(particle["governorEnabled"], True)
 
         for bad, hint in (
             ({"rate": -1}, "rate"),
@@ -1048,6 +1052,8 @@ class BehaviorArrayTests(unittest.TestCase):
             ({"spread": 4}, "spread"),
             ({"opacity": 2}, "opacity"),
             ({"friction": 1}, "friction"),
+            ({"tier": "XXL"}, "tier"),
+            ({"governorEnabled": "yes"}, "governorEnabled"),
         ):
             _, result = apply_actions(
                 base_scene(), [{"type": "spawn", "name": "W", "particle": bad}]
