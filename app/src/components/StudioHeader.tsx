@@ -82,7 +82,8 @@ export const StudioHeader: React.FC<StudioHeaderProps> = ({
     { id: 'ai_harness', title: 'AI Copilot', icon: Sparkles },
     { id: 'agent_swarm', title: 'Agent Swarm', icon: Users },
     { id: 'artemis_qa', title: 'Artemis Mobile QA', icon: Bot },
-    { id: 'profiler', title: 'Mobile Profiler', icon: Activity }
+    { id: 'profiler', title: 'Mobile Profiler', icon: Activity },
+    { id: 'device_mirror', title: 'Device Mirror & Profiler', icon: Smartphone }
   ];
 
   return (

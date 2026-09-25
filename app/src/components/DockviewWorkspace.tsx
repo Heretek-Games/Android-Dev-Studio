@@ -23,6 +23,7 @@ import { TerrainSculptorDock } from './TerrainSculptorDock';
 import { AnimationBlendTreeDock } from './AnimationBlendTreeDock';
 import { LargeScaleWorldDock } from './LargeScaleWorldDock';
 import { DialogueEditorDock } from './DialogueEditorDock';
+import { DeviceMirrorDock } from './DeviceMirrorDock';
 
 export type WorkspacePreset = 'default' | 'level_design' | 'visual_scripting' | 'ai_swarm' | 'mobile_qa';
 
@@ -41,7 +42,8 @@ const components: Record<string, React.FunctionComponent<IDockviewPanelProps>> =
   terrain_sculptor: () => <TerrainSculptorDock />,
   animation_studio: () => <AnimationBlendTreeDock />,
   large_world: () => <LargeScaleWorldDock />,
-  dialogue_editor: () => <DialogueEditorDock />
+  dialogue_editor: () => <DialogueEditorDock />,
+  device_mirror: () => <DeviceMirrorDock />
 };
 
 export const DockviewWorkspace: React.FC = () => {
@@ -284,6 +286,13 @@ export const DockviewWorkspace: React.FC = () => {
         component: 'profiler',
         title: '60 FPS Profiler & Memory',
         position: { referencePanel: 'scene_viewport', direction: 'below' }
+      });
+
+      api.addPanel({
+        id: 'device_mirror',
+        component: 'device_mirror',
+        title: 'Device Mirror & Profiler',
+        position: { referencePanel: 'profiler', direction: 'within' }
       });
 
       api.addPanel({
