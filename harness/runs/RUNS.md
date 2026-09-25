@@ -341,3 +341,38 @@ This is an environment limitation rather than renderer logic: the CPU reference 
 GPU indirect packing remain host-verified at 50k, and the on-device path is correct at small
 scale. Multi-thousand-instance on-device validation therefore moves to physical hardware
 (issue #1); issue #3 stays open with this characterization.
+
+---
+
+## Run Block 7 — 2026-09-25, Native Foliage Wind + Category Culling (issue #2, final item)
+
+### What shipped
+
+- **Instance categories**: the instance SSBO's unused `color.a` now carries 0 (scene) or
+  1 (foliage; batch key `foliage`). The loader flags it, `packInstanceBatches` marks the CPU
+  reference category, and host checks pin both.
+- **Category-aware compute culling**: `cull.comp` compacts visible indices into per-category
+  ranges and grows one indirect command per category; the renderer issues two indirect draws —
+  scene geometry with `scenePipeline_`, foliage with the new `foliagePipeline_`.
+- **Wind shader** (`foliage.vert`): pivot-at-base 3-unit blades with a two-frequency sway
+  (slow gust + flutter), phase-offset per blade, driven by a wall-clock time push constant;
+  shares the scene fragment lighting. Compiled SPIR-V committed (now 6 shaders).
+
+### On-device verification (emulator, foliage grove scene, `--no-quadtree`)
+
+| Check | Evidence |
+|-------|----------|
+| Foliage renders | `foliageVisible=240`; frame shows a green blade cluster on the arena |
+| Wind animates | two captures 4 s apart differ by **0.57%** of sampled pixels, diff bbox exactly over the blade cluster |
+| Scene path unaffected | canonical scene: `sceneVisible=3 foliageVisible=0`, terrain renders (1,122 colours) |
+| Budget | foliage grove: 66 draws (1 mesh + 1 foliage batch + 64 terrain leaves) |
+
+### Two real bugs found while validating
+
+1. **Indirect counts never reset** — the culler's `atomicAdd` accumulated across frames
+   (`foliageVisible` reached 14,160 after ~60 frames) and draws referenced stale visible slots.
+   `recordFrame` now zeroes each category's count before the dispatch.
+2. **Push constants never filled** — `graphicsConstants.time` and `foliageVisibleBase` were
+   added to the struct but not assigned, so the foliage read the scene's visible range with
+   `time=0` (static, wrong geometry). Both are set now, and the status log prints
+   `sceneVisible`/`foliageVisible`/`time`, which is what exposed the issue.
