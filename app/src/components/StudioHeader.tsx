@@ -40,6 +40,7 @@ export const StudioHeader: React.FC<StudioHeaderProps> = ({
   onSelectPreset,
   onOpenPanel
 }) => {
+  const [deployTier, setDeployTier] = useState<1 | 2>(1);
   const {
     isPlaying,
     isPaused,
@@ -318,10 +319,19 @@ export const StudioHeader: React.FC<StudioHeaderProps> = ({
         </div>
 
         {/* Deploy APK */}
+        <select
+          value={deployTier}
+          onChange={(e) => setDeployTier(Number(e.target.value) === 2 ? 2 : 1)}
+          title="Packaging tier: Tier 1 WebView container or Tier 2 native Vulkan container"
+          className="bg-zinc-900 border border-zinc-800 rounded px-2 py-1 text-xs text-zinc-200 outline-none cursor-pointer"
+        >
+          <option value={1} className="bg-zinc-900 text-zinc-200">Tier 1 · WebView</option>
+          <option value={2} className="bg-zinc-900 text-zinc-200">Tier 2 · Vulkan</option>
+        </select>
         <button
-          onClick={deployToDevice}
+          onClick={() => deployToDevice(deployTier)}
           className="flex items-center space-x-1 px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs shadow-sm shadow-blue-600/30 transition-all active:scale-95"
-          title="Build APK and Deploy to connected Android Device via ADB"
+          title={deployTier === 2 ? "Export scene and cross-compile the native Vulkan library (arm64-v8a)" : "Build APK and Deploy to connected Android Device via ADB"}
         >
           <Zap className="w-3.5 h-3.5 fill-current" />
           <span>Deploy APK</span>

@@ -110,7 +110,7 @@ real engine runtime. The Studio UI writes through the same gate via `POST /api/s
 5. `studio_delete_entity`: Safely remove an entity by name and persist the change.
 6. `studio_search_and_install_asset`: Search CC0 3D models (Quaternius, Kenney, Poly Haven) and instantiate to scene.
 7. `studio_self_heal_error`: Run autonomous diagnosis and apply corrective restorative patches to corrupted scenes.
-8. `studio_build_and_deploy_apk`: Package and launch the hardware-accelerated WebView container on Android.
+8. `studio_build_and_deploy_apk`: Package and launch the hardware-accelerated WebView container on Android (`tier: 2` packages the native Vulkan container: scene export + NDK cross-compile).
 9. `studio_run_artemis_qa`: Boot the active scene headless (real Rapier3D + EventSheet runtime), evaluate game-rule assertions, record real telemetry (sim FPS, frame time, GPU draw-call estimate, memory heap), and detect regressions against the `project_memory` baseline.
 10. `studio_configure_lod`: Configure camera-distance LOD thresholds and enforce mobile draw budget.
 11. `studio_configure_spatial_grid`: Query or configure uniform 3D spatial hash partitions (Veloren / SS14 pattern).
@@ -158,8 +158,10 @@ All studio↔harness bridges run through the Vite dev server (dev-only, like `/a
   `adb devices -l` result — the DeviceBar shows "No device detected" when nothing is attached
   (no mocked devices).
 - `POST /api/deploy` — real packaging through `harness/build/apk_builder.py` (dry-run by default,
-  `{real:true}` attempts the Gradle build); the DeviceBar logs bundle-built/assets-synced/APK-path
-  results and explicitly notes when on-device deployment is skipped (no device attached).
+  `{real:true}` attempts the Gradle build; `{tier:2}` targets the native Vulkan container and runs a
+  real NDK cross-compile of `libheretek_native.so`); the studio header logs
+  bundle-built/assets-synced/APK-path or scene-exported/native-library/scene.native-counts results
+  and explicitly notes when on-device deployment is skipped (no device attached).
 
 ### Studio ↔ Harness Scene Bridge (`/api/scene`)
 - The canonical scene is `harness/scenes/active_scene.json` (source of truth for the studio and agents).
@@ -193,6 +195,9 @@ All studio↔harness bridges run through the Vite dev server (dev-only, like `/a
 - `artemis_qa_runner.py`: Orchestrator — invokes the Node runner, compares metrics against the persisted baseline (FPS drop >20%, frame time rise >20%, draw calls rise >25%, heap rise >30% ⇒ `REGRESSED`), records benchmarks into `project_memory.sqlite`, and writes `harness/artemis_report.json`.
 - Scenario specs live in `harness/config/scenarios/` (e.g. `mini_arena.json`, `driving_course.json`); the live MCP-controlled scene is `harness/scenes/active_scene.json`.
 - Tier 2 scene export: `harness/build/scene_exporter.py` emits `scene.native` (meshes/instances/lights) plus optional focus-driven `terrain_lod` quadtree leaves (`--quadtree --lod-depth N --lod-focus X Z`), consumed by `templates/vulkan-container`.
+- Tier 2 packaging: `python3 harness/build/apk_builder.py --tier2` exports the canonical scene (honoring
+  the persisted `scene.quadtree` config) and cross-compiles `libheretek_native.so` (arm64-v8a) with the
+  NDK toolchain into `harness/build/tier2-build/`; APK assembly runs when a Gradle wrapper is present.
 
 ---
 

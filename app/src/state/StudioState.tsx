@@ -60,7 +60,7 @@ interface StudioStateContextType {
   artemisRunning: boolean;
   artemisLog: string[];
   runArtemisTask: (prompt: string) => Promise<void>;
-  deployToDevice: () => Promise<void>;
+  deployToDevice: (tier?: 1 | 2) => Promise<void>;
   gizmoMode: GizmoMode;
   setGizmoMode: (mode: GizmoMode) => void;
   snapping: boolean;
@@ -136,12 +136,13 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       getComponents: (name: string) => {
         const go: any = scene.findByName(name);
         return go ? go.components.map((c: any) => c.constructor.name) : null;
-      }
+      },
+      getLogs: () => logs.map((l: any) => `${l.level}|${l.source}|${l.message}`)
     };
     return () => {
       delete (window as any).__STUDIO_DEBUG__;
     };
-  }, [scene, engineContext, isPlaying]);
+  }, [scene, engineContext, isPlaying, logs]);
 
   const isInitializedRef = useRef(false);
 
@@ -461,19 +462,29 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   };
 
-  const deployToDevice = async () => {
-    addLog('info', 'Deploy', `📦 Packaging bundle via apk_builder (dry-run)${selectedDevice ? ` · device ${selectedDevice}` : ''}…`);
+  const deployToDevice = async (tier: 1 | 2 = 1) => {
+    const tierLabel = tier === 2 ? 'Tier 2 native Vulkan' : 'Tier 1 WebView';
+    const real = tier === 2; // native library build is the Tier 2 deliverable (no Gradle required)
+    addLog('info', 'Deploy', `📦 Packaging ${tierLabel} via apk_builder (${real ? 'real build' : 'dry-run'})${selectedDevice ? ` · device ${selectedDevice}` : ''}…`);
     try {
       const res = await fetch('/api/deploy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ device: selectedDevice, real: false })
+        body: JSON.stringify({ device: selectedDevice, real, tier })
       });
       const data = await res.json();
       const resultMatch = (data.stdout || '').match(/Result: (\{.*\})/);
       if (resultMatch) {
         const result = JSON.parse(resultMatch[1]);
-        addLog(result.success ? 'info' : 'error', 'Deploy', `Bundle built: ${result.bundle_built} | assets synced: ${result.assets_synced}`);
+        if (tier === 2) {
+          addLog(result.success ? 'info' : 'error', 'Deploy', `Scene exported: ${result.scene_exported} | native library: ${result.native_library || 'not built'}`);
+          const counts = result.scene_summary?.counts;
+          if (counts) {
+            addLog('info', 'Deploy', `scene.native: ${counts.meshes} meshes, ${counts.lights} lights, ${counts.terrainLodLeaves} terrain LOD leaves (draws ${result.scene_summary.drawCalls}/${result.scene_summary.drawBudget})`);
+          }
+        } else {
+          addLog(result.success ? 'info' : 'error', 'Deploy', `Bundle built: ${result.bundle_built} | assets synced: ${result.assets_synced}`);
+        }
         if (result.apk_path) addLog('info', 'Deploy', `APK target: ${result.apk_path}`);
         addLog(result.success ? 'info' : 'error', 'Deploy', result.message);
         if (!selectedDevice) {

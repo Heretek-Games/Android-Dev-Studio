@@ -154,10 +154,12 @@ function deviceBridgePlugin(): Plugin {
         req.on('end', () => {
           let device: string | null = null;
           let real = false;
+          let tier = 1;
           try {
             const parsed = JSON.parse(body || '{}');
             device = parsed.device ? String(parsed.device) : null;
             real = Boolean(parsed.real);
+            tier = Number(parsed.tier) === 2 ? 2 : 1;
           } catch {
             // defaults
           }
@@ -165,6 +167,7 @@ function deviceBridgePlugin(): Plugin {
           const args = ['harness/build/apk_builder.py'];
           if (!real) args.push('--dry-run');
           if (device) args.push('--device', device);
+          if (tier === 2) args.push('--tier2');
           const proc = spawn('python3', args, { cwd: repoRoot });
           let out = '';
           let err = '';
@@ -175,6 +178,7 @@ function deviceBridgePlugin(): Plugin {
             res.end(JSON.stringify({
               ok: code === 0,
               mode: real ? 'build' : 'dry-run',
+              tier,
               stdout: out.trim(),
               stderr: err.trim()
             }));

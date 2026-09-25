@@ -18,6 +18,10 @@ APP_DIR = PROJECT_ROOT / "app"
 APP_DIST_DIR = APP_DIR / "dist"
 CONTAINER_DIR = PROJECT_ROOT / "templates" / "android-container"
 CONTAINER_ASSETS_DIR = CONTAINER_DIR / "app" / "src" / "main" / "assets" / "game"
+VULKAN_CONTAINER_DIR = PROJECT_ROOT / "templates" / "vulkan-container"
+VULKAN_CPP_DIR = VULKAN_CONTAINER_DIR / "app" / "src" / "main" / "cpp"
+VULKAN_ASSETS_DIR = VULKAN_CONTAINER_DIR / "app" / "src" / "main" / "assets"
+VULKAN_BUILD_DIR = PROJECT_ROOT / "harness" / "build" / "tier2-build"
 
 
 class AndroidApkBuilder:
@@ -25,7 +29,8 @@ class AndroidApkBuilder:
         self.verbose = verbose
 
     def log(self, msg: str):
-        print(f"[APK-Builder] {msg}")
+        # MCP stdio framing owns stdout; all human-readable logs go to stderr.
+        print(f"[APK-Builder] {msg}", file=sys.stderr)
 
     def build_web_bundle(self) -> bool:
         """Compiles the TypeScript & Vite web bundle for production."""
@@ -39,7 +44,7 @@ class AndroidApkBuilder:
                 check=True,
             )
             if self.verbose:
-                print(res.stdout)
+                print(res.stdout, file=sys.stderr)
             self.log("WebGL bundle compiled successfully.")
             return True
         except subprocess.CalledProcessError as e:
@@ -96,6 +101,7 @@ class AndroidApkBuilder:
         device_serial: Optional[str] = None,
         dry_run: bool = False,
         build_only: bool = False,
+        tier: int = 1,
     ) -> Dict[str, Any]:
         """
         Orchestrates full pipeline:
@@ -103,7 +109,13 @@ class AndroidApkBuilder:
         2. Sync to Android assets
         3. Build APK with Gradle (or dry-run verification)
         4. Deploy to ADB device and launch
+
+        tier=2 targets the native Vulkan container instead: exports the scene +
+        shaders and cross-compiles libheretek_native.so with the NDK.
         """
+        if tier == 2:
+            return self.build_tier2(dry_run=dry_run)
+
         result = {
             "success": False,
             "bundle_built": False,
@@ -207,6 +219,177 @@ class AndroidApkBuilder:
 
         return result
 
+    def find_ndk(self) -> Optional[Path]:
+        """Locate the newest installed Android NDK under ANDROID_HOME."""
+        android_home = os.environ.get("ANDROID_HOME") or os.environ.get(
+            "ANDROID_SDK_ROOT"
+        )
+        if not android_home:
+            return None
+        ndk_root = Path(android_home) / "ndk"
+        if not ndk_root.exists():
+            return None
+        versions = sorted(
+            [d for d in ndk_root.iterdir() if d.is_dir()],
+            key=lambda d: [int(p) if p.isdigit() else p for p in d.name.split(".")],
+        )
+        return versions[-1] if versions else None
+
+    def build_tier2(self, dry_run: bool = False) -> Dict[str, Any]:
+        """
+        Tier 2 native Vulkan container pipeline:
+        1. Export the canonical scene (+ focus-driven quadtree from scene.quadtree)
+           into the container assets
+        2. Cross-compile libheretek_native.so for arm64-v8a with the NDK toolchain
+        3. Attempt APK assembly when the Gradle wrapper is present
+        """
+        result = {
+            "success": False,
+            "tier": 2,
+            "scene_exported": False,
+            "scene_summary": None,
+            "native_library": None,
+            "apk_path": None,
+            "message": "",
+        }
+
+        # 1. Scene export — honor the scene's persisted terrain LOD config
+        quadtree_cfg = {}
+        try:
+            scene_data = json.loads(
+                (PROJECT_ROOT / "harness" / "scenes" / "active_scene.json").read_text()
+            )
+            quadtree_cfg = scene_data.get("quadtree") or {}
+        except Exception:
+            pass
+        depth = int(quadtree_cfg.get("maxDepth", 3))
+        focus = quadtree_cfg.get("focus") or [0.0, 0.0]
+
+        export_cmd = [
+            sys.executable,
+            str(PROJECT_ROOT / "harness" / "build" / "scene_exporter.py"),
+            "--out",
+            str(VULKAN_ASSETS_DIR),
+            "--quadtree",
+            "--lod-depth",
+            str(depth),
+            "--lod-focus",
+            str(focus[0]),
+            str(focus[1]),
+        ]
+        self.log(
+            f"Exporting scene to {VULKAN_ASSETS_DIR} (quadtree depth {depth}, focus {focus})..."
+        )
+        export = subprocess.run(export_cmd, capture_output=True, text=True)
+        if export.returncode not in (0, 1):  # 1 = draw-budget warning, still exported
+            result["message"] = f"Scene export failed: {export.stderr[-300:]}"
+            return result
+        result["scene_exported"] = True
+        summary_path = VULKAN_ASSETS_DIR / "scene.summary.json"
+        if summary_path.exists():
+            try:
+                result["scene_summary"] = json.loads(summary_path.read_text())
+            except Exception:
+                pass
+
+        # 2. NDK cross-compile
+        ndk = self.find_ndk()
+        if ndk is None:
+            result["message"] = (
+                "Scene exported, but no NDK found under ANDROID_HOME — native library not built."
+            )
+            return result
+        if dry_run:
+            result["success"] = True
+            result["message"] = (
+                f"Scene exported (quadtree depth {depth}). Dry-run: native build skipped "
+                f"(NDK {ndk.name} detected)."
+            )
+            return result
+
+        self.log(
+            f"Cross-compiling libheretek_native.so with NDK {ndk.name} (arm64-v8a)..."
+        )
+        toolchain = ndk / "build" / "cmake" / "android.toolchain.cmake"
+        configure = subprocess.run(
+            [
+                "cmake",
+                "-G",
+                "Unix Makefiles",
+                "-S",
+                str(VULKAN_CPP_DIR),
+                "-B",
+                str(VULKAN_BUILD_DIR),
+                f"-DCMAKE_TOOLCHAIN_FILE={toolchain}",
+                "-DANDROID_ABI=arm64-v8a",
+                "-DANDROID_PLATFORM=android-24",
+                "-DCMAKE_BUILD_TYPE=Release",
+            ],
+            capture_output=True,
+            text=True,
+        )
+        if configure.returncode != 0:
+            result["message"] = f"CMake configure failed: {configure.stderr[-300:]}"
+            return result
+        build = subprocess.run(
+            ["cmake", "--build", str(VULKAN_BUILD_DIR), "--parallel"],
+            capture_output=True,
+            text=True,
+        )
+        if build.returncode != 0:
+            result["message"] = f"Native build failed: {build.stderr[-300:]}"
+            return result
+        so_path = VULKAN_BUILD_DIR / "libheretek_native.so"
+        if not so_path.exists():
+            result["message"] = (
+                "Native build reported success but libheretek_native.so is missing."
+            )
+            return result
+        result["native_library"] = str(so_path)
+
+        # 3. APK assembly (requires the vendored Gradle wrapper)
+        gradlew = VULKAN_CONTAINER_DIR / "gradlew"
+        if gradlew.exists() and os.access(str(gradlew), os.X_OK):
+            self.log("Assembling Tier 2 APK with Gradle...")
+            try:
+                subprocess.run(
+                    [str(gradlew), ":app:assembleDebug"],
+                    cwd=str(VULKAN_CONTAINER_DIR),
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                )
+                apk = (
+                    VULKAN_CONTAINER_DIR
+                    / "app"
+                    / "build"
+                    / "outputs"
+                    / "apk"
+                    / "debug"
+                    / "app-debug.apk"
+                )
+                if apk.exists():
+                    result["apk_path"] = str(apk)
+            except subprocess.CalledProcessError as e:
+                result["message"] = f"Gradle assemble failed: {(e.stderr or '')[-300:]}"
+                return result
+        else:
+            self.log(
+                "Gradle wrapper not present in the Tier 2 container — skipping APK assembly."
+            )
+
+        result["success"] = True
+        if result["apk_path"]:
+            result["message"] = (
+                f"Tier 2 APK built: {result['apk_path']} (native library: {so_path})"
+            )
+        else:
+            result["message"] = (
+                f"Tier 2 native library built for arm64-v8a: {so_path}. "
+                "APK assembly skipped (gradle wrapper not present — add it to assemble the APK)."
+            )
+        return result
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -225,12 +408,20 @@ def main():
     parser.add_argument(
         "--device", type=str, default=None, help="Target ADB device serial"
     )
+    parser.add_argument(
+        "--tier2",
+        action="store_true",
+        help="Target the native Vulkan container (export scene + NDK cross-compile)",
+    )
     parser.add_argument("--verbose", action="store_true", help="Verbose output")
     args = parser.parse_args()
 
     builder = AndroidApkBuilder(verbose=args.verbose)
     res = builder.build_and_deploy(
-        device_serial=args.device, dry_run=args.dry_run, build_only=args.build_only
+        device_serial=args.device,
+        dry_run=args.dry_run,
+        build_only=args.build_only,
+        tier=2 if args.tier2 else 1,
     )
     print("\nResult: " + json.dumps(res))
     sys.exit(0 if res["success"] else 1)

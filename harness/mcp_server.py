@@ -223,7 +223,7 @@ TOOLS = [
     },
     {
         "name": "studio_build_and_deploy_apk",
-        "description": "Builds the hardware-accelerated 3D Android game APK and deploys to target device via ADB.",
+        "description": "Builds the hardware-accelerated 3D Android game APK and deploys to target device via ADB. tier=2 packages the native Vulkan container instead (scene export + NDK cross-compile of libheretek_native.so).",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -232,6 +232,12 @@ TOOLS = [
                     "description": "ADB device serial (e.g. emulator-5554)",
                 },
                 "launch_immediately": {"type": "boolean", "default": True},
+                "tier": {
+                    "type": "integer",
+                    "enum": [1, 2],
+                    "default": 1,
+                    "description": "1 = WebView container (default), 2 = native Vulkan container",
+                },
             },
         },
     },
@@ -1051,10 +1057,27 @@ def handle_request(req: Dict[str, Any]) -> Dict[str, Any]:
         elif tool_name == "studio_build_and_deploy_apk":
             serial = args.get("device_serial")
             launch = args.get("launch_immediately", True)
+            tier = int(args.get("tier", 1))
             builder = AndroidApkBuilder()
             build_res = builder.build_and_deploy(
-                device_serial=serial, dry_run=False, build_only=not launch
+                device_serial=serial, dry_run=False, build_only=not launch, tier=tier
             )
+            if tier == 2:
+                return {
+                    "jsonrpc": "2.0",
+                    "id": req_id,
+                    "result": {
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": (
+                                    f"Tier 2 Native Packaging: {build_res['message']} "
+                                    f"(library: {build_res.get('native_library')}, APK: {build_res.get('apk_path')})"
+                                ),
+                            }
+                        ]
+                    },
+                }
             return {
                 "jsonrpc": "2.0",
                 "id": req_id,
