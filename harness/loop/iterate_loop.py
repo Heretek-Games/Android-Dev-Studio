@@ -29,6 +29,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 from harness.loop.action_applier import ApplyResult, apply_actions
 from harness.loop.llm_client import LlmClient, LlmError, LlmResponse
 from harness.loop.prompts import generation_messages, repair_messages
+from harness.loop.vision import VisionResult
 from harness.validation.scene_invariants import validate_scene_invariants
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -161,6 +162,24 @@ def default_qa_runner(
         raise RuntimeError(
             f"QA runner emitted invalid JSON: {error}: {proc.stdout[:300]}"
         ) from error
+
+
+def _normalize_vision(value: Any) -> Tuple[List[str], Optional[Dict[str, Any]]]:
+    """Accept a `VisionResult` or a plain notes list; return (notes, telemetry)."""
+    if isinstance(value, VisionResult):
+        return (
+            list(value.notes),
+            {
+                "model": value.model,
+                "promptTokens": value.prompt_tokens,
+                "completionTokens": value.completion_tokens,
+                "totalTokens": value.total_tokens,
+                "latencySeconds": round(value.latency_seconds, 3),
+            },
+        )
+    if isinstance(value, list):
+        return [str(v) for v in value], None
+    return [], None
 
 
 # --------------------------------------------------------------------------- loop
@@ -300,11 +319,19 @@ class IterateLoop:
         for iteration in range(1, self.max_iterations + 1):
             phase = "generate" if iteration == 1 else "repair"
             vision_notes: List[str] = []
+            vision_record: Optional[Dict[str, Any]] = None
             if phase == "repair" and self.vision_critique is not None:
                 try:
-                    vision_notes = self.vision_critique(scene) or []
+                    critique = self.vision_critique(scene, failed_rules)
+                    vision_notes, vision_record = _normalize_vision(critique)
                 except Exception as error:  # vision is advisory; never break the loop
                     vision_notes = [f"(vision critique failed: {error})"]
+                    vision_record = {"error": str(error)}
+                if vision_record:
+                    result.total_tokens += int(vision_record.get("totalTokens") or 0)
+                    result.total_latency_seconds += float(
+                        vision_record.get("latencySeconds") or 0.0
+                    )
 
             if phase == "generate":
                 messages = generation_messages(
@@ -326,6 +353,8 @@ class IterateLoop:
                 "phase": phase,
                 "visionNotes": vision_notes,
             }
+            if vision_record:
+                record["vision"] = vision_record
 
             try:
                 response = self.client.chat(messages, model=self.model)

@@ -123,7 +123,7 @@ class CritiqueTests(unittest.TestCase):
             )
         )
         critique = make_layout_critique(client, model="auto/best-vision")
-        notes = critique(scene())
+        result = critique(scene(), [])
 
         self.assertEqual(len(client.calls), 1)
         call = client.calls[0]
@@ -131,26 +131,27 @@ class CritiqueTests(unittest.TestCase):
         self.assertEqual(call["model"], "auto/best-vision")
         self.assertIn("TOP-DOWN", call["prompt"])
         self.assertEqual(
-            notes,
+            result.notes,
             [
                 "Issue: coin is unreachable",
                 "Suggestion: move the coin inside the arena",
             ],
         )
+        self.assertEqual(result.model, "auto/best-vision")
 
     def test_critique_caps_notes(self):
         client = FakeClient(
             json.dumps({"issues": [f"issue {i}" for i in range(10)], "suggestions": []})
         )
-        notes = make_layout_critique(client, max_notes=3)(scene())
-        self.assertEqual(len(notes), 3)
+        result = make_layout_critique(client, max_notes=3)(scene(), [])
+        self.assertEqual(len(result.notes), 3)
 
     def test_critique_frame_passes_bytes_through(self):
         client = FakeClient(
             json.dumps({"issues": ["scene is empty"], "suggestions": []})
         )
-        notes = critique_frame(client, b"\x89PNG-rendered-frame")
-        self.assertEqual(notes, ["Issue: scene is empty"])
+        result = critique_frame(client, b"\x89PNG-rendered-frame")
+        self.assertEqual(result.notes, ["Issue: scene is empty"])
         self.assertEqual(client.calls[0]["image"], b"\x89PNG-rendered-frame")
 
 

@@ -302,7 +302,9 @@ class LoopTests(unittest.TestCase):
                 tmp,
                 client,
                 qa,
-                vision_critique=lambda scene: ["player is missing from the layout"],
+                vision_critique=lambda scene, failed_rules: [
+                    "player is missing from the layout"
+                ],
             )
             result = loop.run()
 
@@ -312,6 +314,52 @@ class LoopTests(unittest.TestCase):
         )
         self.assertEqual(
             result.iterations[1]["visionNotes"], ["player is missing from the layout"]
+        )
+
+    def test_vision_result_telemetry_counts_toward_totals(self):
+        from harness.loop.vision import VisionResult
+
+        with tempfile.TemporaryDirectory() as tmp:
+            client = FakeClient(
+                [
+                    llm_response({"summary": "x", "actions": []}),
+                    llm_response(
+                        {
+                            "summary": "ok",
+                            "actions": [
+                                {
+                                    "type": "spawn",
+                                    "name": "Player Hero",
+                                    "position": [0, 1.5, 0],
+                                    "physics": "dynamic",
+                                }
+                            ],
+                        }
+                    ),
+                ]
+            )
+            qa = FakeQaRunner([qa_report(False), qa_report(True)])
+            loop = self._loop(
+                tmp,
+                client,
+                qa,
+                vision_critique=lambda scene, failed_rules: VisionResult(
+                    notes=["Issue: ground is missing"],
+                    model="auto/best-vision",
+                    prompt_tokens=900,
+                    completion_tokens=100,
+                    latency_seconds=2.5,
+                ),
+            )
+            result = loop.run()
+
+        # 150 + 150 LLM tokens + 1000 vision tokens
+        self.assertEqual(result.total_tokens, 1300)
+        vision = result.iterations[1]["vision"]
+        self.assertEqual(vision["totalTokens"], 1000)
+        self.assertEqual(vision["model"], "auto/best-vision")
+        self.assertEqual(
+            result.iterations[1]["visionNotes"], ["Issue: ground is missing"]
         )
 
 

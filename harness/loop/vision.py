@@ -6,10 +6,14 @@ response into short, actionable notes for the repair prompt. The image is either
 the deterministic top-down layout preview (`scene_preview.render_layout_png`) or
 any rendered frame (studio screenshot / emulator frame readback) supplied by the
 caller — the critique logic is identical.
+
+Critique calls carry their own telemetry (`VisionResult`) so the loop can include
+vision tokens/latency in the run dashboard.
 """
 
 import json
 import re
+from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional
 
 from harness.loop.llm_client import DEFAULT_VISION_MODEL, LlmClient
@@ -31,6 +35,22 @@ excessive clutter. Do not invent details that are not visible.
 Respond with a single JSON object and nothing else:
 {"issues": ["..."], "suggestions": ["..."]}
 """
+
+
+@dataclass
+class VisionResult:
+    """Critique notes plus the telemetry of the underlying vision call."""
+
+    notes: List[str] = field(default_factory=list)
+    model: str = ""
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    latency_seconds: float = 0.0
+    error: Optional[str] = None
+
+    @property
+    def total_tokens(self) -> int:
+        return self.prompt_tokens + self.completion_tokens
 
 
 def parse_critique(text: str) -> List[str]:
@@ -61,19 +81,42 @@ def parse_critique(text: str) -> List[str]:
     return []
 
 
+def _failure_context(failed_rules: Optional[List[Dict[str, Any]]]) -> str:
+    if not failed_rules:
+        return ""
+    lines = []
+    for rule in failed_rules:
+        detail = rule.get("detail") or ""
+        lines.append(f"- [{rule.get('id', rule.get('type'))}] {detail}".strip())
+    return (
+        "\nThe automated QA just reported these failures — look for visual evidence of them "
+        "(spawn overlaps, missing ground, unreachable props):\n" + "\n".join(lines)
+    )
+
+
 def make_layout_critique(
     client: LlmClient,
     model: Optional[str] = None,
     max_notes: int = 6,
-) -> Callable[[Dict[str, Any]], List[str]]:
-    """Build a `scene -> notes` critique callable backed by the vision model route."""
+) -> Callable[..., VisionResult]:
+    """Build a `(scene, failed_rules) -> VisionResult` critique backed by the vision route."""
 
-    def critique(scene: Dict[str, Any]) -> List[str]:
+    def critique(
+        scene: Dict[str, Any],
+        failed_rules: Optional[List[Dict[str, Any]]] = None,
+    ) -> VisionResult:
         png = render_layout_png(scene)
+        prompt = CRITIQUE_PROMPT + _failure_context(failed_rules)
         response = client.chat_with_image(
-            CRITIQUE_PROMPT, png, model=model or DEFAULT_VISION_MODEL
+            prompt, png, model=model or DEFAULT_VISION_MODEL
         )
-        return parse_critique(response.text)[:max_notes]
+        return VisionResult(
+            notes=parse_critique(response.text)[:max_notes],
+            model=response.model,
+            prompt_tokens=response.prompt_tokens,
+            completion_tokens=response.completion_tokens,
+            latency_seconds=response.latency_seconds,
+        )
 
     return critique
 
@@ -84,9 +127,17 @@ def critique_frame(
     mime: str = "image/png",
     model: Optional[str] = None,
     max_notes: int = 6,
-) -> List[str]:
+    failed_rules: Optional[List[Dict[str, Any]]] = None,
+) -> VisionResult:
     """Critique an actual rendered frame (studio screenshot / emulator readback)."""
+    prompt = CRITIQUE_PROMPT + _failure_context(failed_rules)
     response = client.chat_with_image(
-        CRITIQUE_PROMPT, frame_bytes, mime=mime, model=model or DEFAULT_VISION_MODEL
+        prompt, frame_bytes, mime=mime, model=model or DEFAULT_VISION_MODEL
     )
-    return parse_critique(response.text)[:max_notes]
+    return VisionResult(
+        notes=parse_critique(response.text)[:max_notes],
+        model=response.model,
+        prompt_tokens=response.prompt_tokens,
+        completion_tokens=response.completion_tokens,
+        latency_seconds=response.latency_seconds,
+    )
