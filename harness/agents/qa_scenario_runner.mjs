@@ -367,6 +367,7 @@ function setupGame(spec, scene, engine) {
   };
 
   let settlement = null;
+  const placementResults = [];
   if (mode === 'build') {
     const settlementSpec = config.settlement || {};
     settlement = new engine.Settlement(
@@ -376,7 +377,17 @@ function setupGame(spec, scene, engine) {
       settlementSpec.startingFood ?? 20
     );
     for (const placement of settlementSpec.placements || []) {
-      settlement.place(placement.type, placement.x, placement.z);
+      // place() skips invalid plots silently (returns {id: null, reason});
+      // record every outcome so settlement rules can quote the first failure
+      // instead of reporting a bare population shortfall.
+      const outcome = settlement.place(placement.type, placement.x, placement.z);
+      placementResults.push({
+        type: placement.type,
+        x: placement.x,
+        z: placement.z,
+        id: outcome.id,
+        reason: outcome.reason ?? null,
+      });
     }
   }
 
@@ -455,6 +466,15 @@ function setupGame(spec, scene, engine) {
       let max = 0;
       for (const value of maxDisplacement.values()) max = Math.max(max, value);
       return max;
+    },
+    placementSummary() {
+      const placed = placementResults.filter(r => r.id !== null && r.id !== undefined).length;
+      const firstFailure = placementResults.find(r => r.id === null || r.id === undefined);
+      return {
+        attempted: placementResults.length,
+        placed,
+        firstFailureReason: firstFailure ? (firstFailure.reason ?? 'rejected') : null,
+      };
     }
   };
 }
@@ -473,6 +493,20 @@ function transformField(go, field) {
     case 'scaleZ': return t.scale.z;
     default: return null;
   }
+}
+
+/**
+ * Placement footnote for settlement rules: when plots fail, quote placed /
+ * attempted plus the first engine reason (e.g. insufficient gold) so repair
+ * sees the cause, not just the population shortfall. Empty when every plot
+ * placed or no build game is present.
+ */
+function placementNote(game) {
+  if (!game || typeof game.placementSummary !== 'function') return '';
+  const summary = game.placementSummary();
+  if (!summary || !summary.attempted || summary.placed === summary.attempted) return '';
+  const reason = summary.firstFailureReason ? `; first failure: ${summary.firstFailureReason}` : '';
+  return `; plots placed ${summary.placed}/${summary.attempted}${reason}`;
 }
 
 function evaluateRules(spec, ctxData) {
@@ -696,7 +730,7 @@ function evaluateRules(spec, ctxData) {
         if (!settlement) { pass = false; detail = 'no settlement in build-mode game'; break; }
         const population = settlement.snapshot().population;
         pass = population >= (rule.min ?? 1);
-        detail = `population=${population} (min ${rule.min ?? 1})`;
+        detail = `population=${population} (min ${rule.min ?? 1})${placementNote(game)}`;
         break;
       }
       case 'game_settlement_gold_min': {
@@ -705,7 +739,7 @@ function evaluateRules(spec, ctxData) {
         if (!settlement) { pass = false; detail = 'no settlement in build-mode game'; break; }
         const gold = Math.floor(settlement.snapshot().gold);
         pass = gold >= (rule.min ?? 1);
-        detail = `gold=${gold} (min ${rule.min ?? 1})`;
+        detail = `gold=${gold} (min ${rule.min ?? 1})${placementNote(game)}`;
         break;
       }
       default: {
