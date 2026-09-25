@@ -406,6 +406,8 @@ def _validate_game_settlement(
     if not isinstance(value, dict):
         fail("game 'settlement' must be an object")
         return None
+    grid_raw = value.get("gridSize", 8)
+    grid_size = grid_raw if _is_finite_number(grid_raw) and grid_raw > 0 else 8
     normalized: Dict[str, Any] = {}
     for key, item in value.items():
         if key in {
@@ -421,12 +423,10 @@ def _validate_game_settlement(
                 return None
             normalized[key] = float(item)
         elif key == "placements":
-            if not isinstance(item, list):
-                fail(
-                    "game settlement 'placements' must be an array of {type, x, z} plots"
-                )
+            plots = _validate_settlement_plots(item, grid_size, errors)
+            if plots is None:
                 return None
-            normalized[key] = list(item)
+            normalized[key] = plots
         else:
             fail(
                 f"unknown game settlement key '{key}' (allowed: gridSize, "
@@ -434,6 +434,58 @@ def _validate_game_settlement(
             )
             return None
     return normalized
+
+
+SETTLEMENT_BUILDINGS = {"house", "farm", "market"}
+
+
+def _validate_settlement_plots(
+    value: Any, grid_size: float, errors: Optional[List[str]]
+) -> Optional[List[Dict[str, Any]]]:
+    """Placement plots pass to Settlement.place(type, x, z) in the QA runner.
+
+    Invalid plots are skipped SILENTLY by the engine (place() returns a reason
+    the runner never surfaces), so a bad plot shows up downstream as a
+    population shortfall, not an error. Validate strictly here instead: type
+    must be house/farm/market and x/z integer plots inside the grid.
+    """
+
+    def fail(reason: str) -> None:
+        if errors is not None:
+            errors.append(reason)
+        return None
+
+    if not isinstance(value, list):
+        fail("game settlement 'placements' must be an array of {type, x, z} plots")
+        return None
+    grid = int(grid_size) if _is_finite_number(grid_size) and grid_size > 0 else 8
+    plots: List[Dict[str, Any]] = []
+    for i, plot in enumerate(value):
+        if not isinstance(plot, dict):
+            fail(f"settlement placements[{i}] must be an object (got {plot!r})")
+            return None
+        ptype = plot.get("type")
+        if ptype not in SETTLEMENT_BUILDINGS:
+            fail(
+                f"settlement placements[{i}].type must be one of "
+                f"{sorted(SETTLEMENT_BUILDINGS)} (got {ptype!r})"
+            )
+            return None
+        for axis in ("x", "z"):
+            coord = plot.get(axis)
+            if (
+                not isinstance(coord, int)
+                or isinstance(coord, bool)
+                or coord < 0
+                or coord >= grid
+            ):
+                fail(
+                    f"settlement placements[{i}].{axis} must be an integer plot "
+                    f"inside the {grid}x{grid} grid (got {coord!r})"
+                )
+                return None
+        plots.append({"type": ptype, "x": plot["x"], "z": plot["z"]})
+    return plots
 
 
 @dataclass

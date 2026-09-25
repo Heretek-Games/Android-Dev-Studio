@@ -69,7 +69,11 @@ ACTION_SCHEMA = """Action vocabulary (a JSON array named "actions"):
   - {"type": "game", "config": {"mode": "waves", "playerName": "Player Hero",
      "totalWaves": 2, "enemiesPerWave": 2, "hitDamage": 50} (quest/combat setup: spawns a
      GameRuntime that runs wave defense or settlement-build around the named player object;
-     "mode": "build" with a "settlement" block runs the settlement path instead)}
+     "mode": "build" with a "settlement" block runs the settlement path instead.
+     Settlement blocks take ONLY gridSize, targetPopulation, startingGold, startingFood,
+     and placements (no name/description keys); placements is an array of {type, x, z}
+     with type house|farm|market and integer x/z plots inside the grid, e.g.
+     "settlement": {"gridSize": 8, "targetPopulation": 6, "placements": [{"type": "house", "x": 0, "z": 0}]})
   - {"type": "light", "name": "...", "lightType": "directional"|"point"|"ambient",
      "color": "#rrggbb", "intensity": 2.0, "position": [x,y,z]}
   - {"type": "modify", "target": "...", "position": [x,y,z], "color": "#rrggbb",

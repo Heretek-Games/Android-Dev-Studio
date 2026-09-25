@@ -652,3 +652,21 @@ quotes rejections; absent by default) and a hermetic loop test proving an
 invalid `game` action's reason reaches the next repair prompt. 105 loop tests green.
 
 Evidence: `harness/runs/loop_runs/20260925-143603-*.json`. Third run queued.
+
+### Third run (2026-09-25 14:39): FAILED 4/6 — feedback loop proven working, one schema gap left
+
+Real movement: the model read the REJECTED-actions section, dropped the `name`
+key, and landed a valid build config (treasury now passes, phase runs). Remaining
+defect: `population-grown` 0/6, `charter-granted` stuck at `playing` — the applied
+config has **no placements**, and the iter-4 placements attempt died on a bare
+`must be an array` message. Root cause class: the engine's `Settlement.place()`
+skips bad plots **silently**, so plot errors surface only as population
+shortfalls. Fix: strict per-plot validation in the loop (type house/farm/market,
+integer x/z inside the grid — mirroring `Settlement.place` preconditions) with
+indexed reasons (`settlement placements[2].type must be one of …`), plus the
+exact placements shape in the prompt schema doc. 106 loop tests green; the
+known-good settle probe still SUCCEEDS 7/7 (validator is backward compatible).
+
+Evidence: `harness/runs/loop_runs/20260925-143909-*.json`. Fourth run queued
+with a wider iteration budget (6) since schema negotiation demonstrably consumes
+rounds.

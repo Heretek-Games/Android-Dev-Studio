@@ -475,6 +475,46 @@ class CombatQuestTests(unittest.TestCase):
             detail = result.outcomes[0]["detail"]
             self.assertIn(hint, detail, f"rejection should name '{hint}': {detail}")
 
+    def test_settlement_plots_validate_type_and_grid(self):
+        good = {
+            "mode": "build",
+            "settlement": {
+                "gridSize": 8,
+                "targetPopulation": 6,
+                "placements": [
+                    {"type": "house", "x": 0, "z": 0},
+                    {"type": "farm", "x": 1, "z": 0},
+                ],
+            },
+        }
+        scene, result = apply_actions(base_scene(), [{"type": "game", "config": good}])
+        self.assertEqual(result.applied, 1)
+        self.assertEqual(
+            scene["game"]["settlement"]["placements"],
+            [
+                {"type": "house", "x": 0, "z": 0},
+                {"type": "farm", "x": 1, "z": 0},
+            ],
+        )
+        bad_plots = [
+            [{"tpye": "house", "x": 0, "z": 0}],
+            [{"type": "castle", "x": 0, "z": 0}],
+            [{"type": "house", "x": -1, "z": 0}],
+            [{"type": "house", "x": 8, "z": 0}],
+            [{"type": "house", "x": 0.5, "z": 0}],
+            [{"type": "house", "x": 0}],
+            ["house"],
+        ]
+        for plots in bad_plots:
+            bad = {"mode": "build", "settlement": {"placements": plots}}
+            _, result = apply_actions(base_scene(), [{"type": "game", "config": bad}])
+            self.assertEqual(result.invalid, 1, f"should reject {plots!r}")
+            self.assertIn(
+                "placements",
+                result.outcomes[0]["detail"],
+                f"rejection should name placements: {result.outcomes[0]['detail']}",
+            )
+
     def test_quest_scene_passes_the_invariant_gate(self):
         scene, result = apply_actions(
             base_scene(),
