@@ -99,6 +99,15 @@ function buildScene(spec, engine) {
       if (objSpec.controller) {
         go.addComponent(new engine.MobileController(objSpec.controllerOptions || {}));
       }
+      if (objSpec.weapon) {
+        go.addComponent(new engine.WeaponController(objSpec.weapon));
+      }
+      if (objSpec.health) {
+        go.addComponent(new engine.HealthComponent(objSpec.health));
+      }
+      if (objSpec.ai) {
+        go.addComponent(new engine.EnemyAI(objSpec.ai));
+      }
       if (objSpec.vehicle) {
         const vehicle = new engine.VehicleController(objSpec.vehicle);
         if (objSpec.vehicle.throttle !== undefined) vehicle.throttle = objSpec.vehicle.throttle;
@@ -121,6 +130,99 @@ function buildScene(spec, engine) {
   return scene;
 }
 
+/**
+ * Game scenarios: build the engine GameRuntime (waves, kills, win/lose) and a
+ * deterministic synthetic hit source. The runner aims hits at the nearest alive
+ * enemy every `hitEveryFrames` frames — the real damage router, health, kill and
+ * wave-clear code paths execute; only aiming is simulated.
+ */
+function setupGame(spec, scene, engine) {
+  const config = spec.game;
+  if (!config) return null;
+
+  const enemySpec = config.enemy || {};
+  const enemyHealth = enemySpec.health || { maxHealth: 50, destroyOnDeath: true };
+  const enemyAi = enemySpec.ai || { targetName: config.playerName || 'Player Hero' };
+
+  const listeners = new Set();
+  const hitSource = {
+    onHit(listener) {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+    fireAt(name, damage) {
+      for (const listener of listeners) listener({ hitObjectName: name, damage });
+    }
+  };
+
+  const runtime = new engine.GameRuntime({
+    scene,
+    playerName: config.playerName || 'Player Hero',
+    totalWaves: config.totalWaves ?? 2,
+    enemiesPerWave: config.enemiesPerWave ? () => config.enemiesPerWave : undefined,
+    spawnRadius: config.spawnRadius ?? 8,
+    scorePerKill: config.scorePerKill ?? 100,
+    interWaveDelaySeconds: config.interWaveDelaySeconds ?? 1,
+    weapon: hitSource,
+    buildEnemy: ({ name, position }) => {
+      const enemy = new engine.GameObject(name);
+      enemy.transform.setPosition(position[0], position[1] + (enemySpec.y ?? 0.8), position[2]);
+      enemy.addComponent(
+        new engine.MeshRenderer({
+          shape: enemySpec.shape || 'box',
+          size: enemySpec.size || [1, 1.5, 1],
+          color: enemySpec.color || '#ef4444',
+          roughness: 0.5
+        })
+      );
+      enemy.addComponent(new engine.HealthComponent(enemyHealth));
+      enemy.addComponent(new engine.EnemyAI(enemyAi));
+      scene.addGameObject(enemy);
+      return enemy;
+    }
+  });
+
+  const firstSeen = new Map();
+  const maxDisplacement = new Map();
+  runtime.start();
+
+  return {
+    runtime,
+    hitEveryFrames: config.hitEveryFrames ?? 20,
+    hitDamage: config.hitDamage ?? enemyHealth.maxHealth ?? 50,
+    fireCount: 0,
+    maybeFire(frame) {
+      if (frame % this.hitEveryFrames !== 0) return;
+      const alive = runtime.spawner
+        .getSpawnedNames()
+        .map(name => scene.findByName(name))
+        .filter(Boolean);
+      if (!alive.length) return;
+      this.fireAt(alive[0].name, this.hitDamage);
+      this.fireCount += 1;
+    },
+    fireAt(name, damage) {
+      hitSource.fireAt(name, damage);
+    },
+    trackEnemies() {
+      for (const name of runtime.spawner.getSpawnedNames()) {
+        const enemy = scene.findByName(name);
+        if (!enemy) continue;
+        const p = enemy.transform.position;
+        if (!firstSeen.has(name)) firstSeen.set(name, { x: p.x, z: p.z });
+        const first = firstSeen.get(name);
+        const moved = Math.hypot(p.x - first.x, p.z - first.z);
+        maxDisplacement.set(name, Math.max(maxDisplacement.get(name) ?? 0, moved));
+      }
+    },
+    maxEnemyDisplacement() {
+      let max = 0;
+      for (const value of maxDisplacement.values()) max = Math.max(max, value);
+      return max;
+    }
+  };
+}
+
 function transformField(go, field) {
   const t = go.transform;
   switch (field) {
@@ -138,7 +240,7 @@ function transformField(go, field) {
 }
 
 function evaluateRules(spec, ctxData) {
-  const { scene, samples, firstSamples, metrics, dt } = ctxData;
+  const { scene, samples, firstSamples, metrics, dt, game } = ctxData;
   const results = [];
 
   for (const rule of spec.rules || []) {
@@ -255,6 +357,41 @@ function evaluateRules(spec, ctxData) {
         detail = `simFpsEstimate=${metrics.simFpsEstimate.toFixed(1)} (min ${rule.min})`;
         break;
       }
+      case 'game_phase': {
+        if (!game) { pass = false; detail = 'no game config in scenario'; break; }
+        const phase = game.runtime.flow.getPhase();
+        pass = phase === rule.phase;
+        detail = `phase=${phase} (expected ${rule.phase})`;
+        break;
+      }
+      case 'game_score_min': {
+        if (!game) { pass = false; detail = 'no game config in scenario'; break; }
+        const score = game.runtime.session.getScore();
+        pass = score >= (rule.min ?? 1);
+        detail = `score=${score} (min ${rule.min ?? 1})`;
+        break;
+      }
+      case 'game_kills_min': {
+        if (!game) { pass = false; detail = 'no game config in scenario'; break; }
+        const kills = game.runtime.session.getKills();
+        pass = kills >= (rule.min ?? 1);
+        detail = `kills=${kills} (min ${rule.min ?? 1})`;
+        break;
+      }
+      case 'game_wave_reached': {
+        if (!game) { pass = false; detail = 'no game config in scenario'; break; }
+        const wave = game.runtime.spawner.getWave();
+        pass = wave >= (rule.wave ?? 1);
+        detail = `wave=${wave} (min ${rule.wave ?? 1})`;
+        break;
+      }
+      case 'game_enemy_chase_min': {
+        if (!game) { pass = false; detail = 'no game config in scenario'; break; }
+        const moved = game.maxEnemyDisplacement();
+        pass = moved >= (rule.min ?? 1);
+        detail = `max enemy displacement=${moved.toFixed(2)}m (min ${rule.min ?? 1})`;
+        break;
+      }
       default: {
         pass = false;
         detail = `unknown rule type "${rule.type}"`;
@@ -293,6 +430,8 @@ async function main() {
   const ctx = new engine.EngineContext();
   ctx.setScene(scene);
 
+  const game = setupGame(spec, scene, engine);
+
   const eventCount = scene.gameObjects.reduce(
     (n, go) => n + go.components.filter(c => c.constructor.name === 'EventSheet').reduce((m, es) => m + es.events.length, 0), 0
   );
@@ -313,6 +452,11 @@ async function main() {
   for (let frame = 0; frame < args.frames; frame++) {
     const t0 = performance.now();
     ctx.step(args.dt);
+    if (game) {
+      game.runtime.update(args.dt);
+      game.maybeFire(frame);
+      game.trackEnemies();
+    }
     times.push(performance.now() - t0);
     if (frame % sampleEvery === 0 || frame === args.frames - 1) {
       const fieldsNow = {};
@@ -343,7 +487,7 @@ async function main() {
     eventCount
   };
 
-  const ruleResults = evaluateRules(spec, { scene, samples, firstSamples, metrics, dt: args.dt });
+  const ruleResults = evaluateRules(spec, { scene, samples, firstSamples, metrics, dt: args.dt, game });
   const passed = ruleResults.filter(r => r.pass).length;
   const total = ruleResults.length;
   const allPass = total > 0 && passed === total;
@@ -357,6 +501,18 @@ async function main() {
     frames: args.frames,
     fixedDeltaSeconds: args.dt,
     metrics,
+    ...(game
+      ? {
+          game: {
+            phase: game.runtime.flow.getPhase(),
+            score: game.runtime.session.getScore(),
+            kills: game.runtime.session.getKills(),
+            wave: game.runtime.spawner.getWave(),
+            shots: game.fireCount,
+            maxEnemyDisplacement: Number(game.maxEnemyDisplacement().toFixed(3))
+          }
+        }
+      : {}),
     rules: ruleResults,
     passed,
     total,

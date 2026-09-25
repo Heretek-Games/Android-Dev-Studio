@@ -1,0 +1,72 @@
+{
+  "name": "fps_arena",
+  "goal": "FPS arena: a player capsule with a weapon and mobile controls clears two waves of chasing enemies; each kill scores 100 points; clearing the last wave wins the run",
+  "game": {
+    "playerName": "Player Hero",
+    "totalWaves": 2,
+    "enemiesPerWave": 1,
+    "spawnRadius": 8,
+    "scorePerKill": 100,
+    "interWaveDelaySeconds": 1,
+    "hitEveryFrames": 20,
+    "hitDamage": 50,
+    "enemy": {
+      "shape": "box",
+      "size": [1, 1.5, 1],
+      "color": "#ef4444",
+      "y": 0.8,
+      "health": { "maxHealth": 50, "destroyOnDeath": true },
+      "ai": {
+        "targetName": "Player Hero",
+        "moveSpeed": 2.5,
+        "attackRange": 2.2,
+        "attackDamage": 5,
+        "attackIntervalSeconds": 1
+      }
+    }
+  },
+  "gameObjects": [
+    {
+      "name": "Ground Arena",
+      "shape": "box",
+      "size": [24, 1, 24],
+      "position": [0, -0.5, 0],
+      "color": "#27272a",
+      "physics": "fixed"
+    },
+    {
+      "name": "Player Hero",
+      "shape": "capsule",
+      "size": [1, 1.5, 1],
+      "position": [0, 1.5, 0],
+      "color": "#3b82f6",
+      "physics": "dynamic",
+      "mass": 1,
+      "controller": true,
+      "weapon": { "damage": 50, "fireRate": 8, "range": 100, "maxAmmo": 30 },
+      "health": { "maxHealth": 100, "destroyOnDeath": false }
+    },
+    {
+      "name": "Sunset Sun",
+      "kind": "light",
+      "lightType": "directional",
+      "color": "#ffd7a8",
+      "intensity": 2.5,
+      "position": [5, 12, 6]
+    }
+  ],
+  "rules": [
+    { "id": "player_exists", "type": "entity_exists", "target": "Player Hero" },
+    { "id": "player_has_weapon", "type": "entity_component", "target": "Player Hero", "component": "WeaponController" },
+    { "id": "player_has_controls", "type": "entity_component", "target": "Player Hero", "component": "MobileController" },
+    { "id": "player_has_health", "type": "entity_component", "target": "Player Hero", "component": "HealthComponent" },
+    { "id": "enemies_chase", "type": "game_enemy_chase_min", "min": 0.5 },
+    { "id": "kills_scored", "type": "game_kills_min", "min": 2 },
+    { "id": "score_awarded", "type": "game_score_min", "min": 200 },
+    { "id": "wave_advanced", "type": "game_wave_reached", "wave": 2 },
+    { "id": "run_won", "type": "game_phase", "phase": "won" },
+    { "id": "finite_transforms", "type": "no_nan_transforms" },
+    { "id": "mobile_draw_budget", "type": "draw_call_budget", "max": 100 },
+    { "id": "sim_performance", "type": "fps_min", "min": 30 }
+  ]
+}
