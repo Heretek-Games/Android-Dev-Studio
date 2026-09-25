@@ -22,7 +22,9 @@ import {
   Sparkles,
   Zap,
   Flame,
-  Activity
+  Activity,
+  Undo2,
+  Redo2
 } from 'lucide-react';
 
 export const Hierarchy: React.FC = () => {
@@ -32,6 +34,10 @@ export const Hierarchy: React.FC = () => {
     setSelectedId,
     addPrimitive,
     deleteSelected,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
     refreshScene
   } = useStudio();
 
@@ -107,6 +113,23 @@ export const Hierarchy: React.FC = () => {
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
             )}
+
+            <button
+              onClick={undo}
+              disabled={!canUndo}
+              title="Undo (Ctrl+Z)"
+              className="p-1 rounded text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors disabled:opacity-30 disabled:hover:bg-transparent"
+            >
+              <Undo2 className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={redo}
+              disabled={!canRedo}
+              title="Redo (Ctrl+Shift+Z)"
+              className="p-1 rounded text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors disabled:opacity-30 disabled:hover:bg-transparent"
+            >
+              <Redo2 className="w-3.5 h-3.5" />
+            </button>
 
             {/* Add Primitive Dropdown Menu */}
             {showAddMenu && (

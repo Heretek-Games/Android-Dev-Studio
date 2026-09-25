@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { isNativeContainer, nativeDeviceLabel, readNativeDeviceInfo } from '../services/NativeBridge';
+import { undoService } from '../services/UndoService';
 import {
   Scene,
   GameObject,
@@ -51,6 +52,10 @@ interface StudioStateContextType {
   refreshScene: () => void;
   addPrimitive: (shape: 'box' | 'sphere' | 'cylinder' | 'plane' | 'light' | 'camera') => GameObject;
   deleteSelected: () => void;
+  undo: () => boolean;
+  redo: () => boolean;
+  canUndo: boolean;
+  canRedo: boolean;
   devices: DeviceInfo[];
   selectedDevice: string | null;
   setSelectedDevice: (id: string) => void;
@@ -146,6 +151,30 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       delete (window as any).__STUDIO_DEBUG__;
     };
   }, [scene, engineContext, isPlaying, logs]);
+
+  // Undo service: refresh binding + Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y shortcuts.
+  useEffect(() => {
+    undoService.bindRefresh(refreshScene);
+    const onKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) return;
+      if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 'z') {
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
+          e.preventDefault();
+          redo();
+        }
+        return;
+      }
+      e.preventDefault();
+      if (e.shiftKey) {
+        redo();
+      } else {
+        undo();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [scene]);
 
   const isInitializedRef = useRef(false);
 
@@ -323,7 +352,7 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, []);
 
   const addPrimitive = (shape: 'box' | 'sphere' | 'cylinder' | 'plane' | 'light' | 'camera'): GameObject => {
-    let go: GameObject;
+    undoService.checkpoint(scene);    let go: GameObject;
     switch (shape) {
       case 'light':
         go = new GameObject('Point Light');
@@ -377,11 +406,30 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     if (!selectedId) return;
     const go = scene.findById(selectedId);
     if (go) {
+      undoService.checkpoint(scene);
       go.destroy();
       setSelectedId(null);
       refreshScene();
       addLog('info', 'Scene', `Deleted ${go.name}`);
     }
+  };
+
+  const undo = () => {
+    const ok = undoService.undo(scene);
+    if (ok) {
+      setSelectedId(null);
+      addLog('info', 'Scene', 'Undo applied.');
+    }
+    return ok;
+  };
+
+  const redo = () => {
+    const ok = undoService.redo(scene);
+    if (ok) {
+      setSelectedId(null);
+      addLog('info', 'Scene', 'Redo applied.');
+    }
+    return ok;
   };
 
   const startPlayMode = () => {
@@ -587,6 +635,10 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         refreshScene,
         addPrimitive,
         deleteSelected,
+        undo,
+        redo,
+        canUndo: undoService.canUndo,
+        canRedo: undoService.canRedo,
         devices,
         selectedDevice,
         setSelectedDevice,
