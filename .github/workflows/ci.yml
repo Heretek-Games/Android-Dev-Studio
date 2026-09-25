@@ -1,22 +1,59 @@
 name: CI
 
+# Track 1 CI/CD x 3 (ADR-1790376266094): OS matrix (Linux + Windows) over
+# engine, harness, and the studio bundle, plus Tier-1 Android APK assembly.
+# Emulator smoke + Tier-2 NDK cross-compile + nightly releases are Phase 2.
+
 on:
   push:
     branches: [main]
   pull_request:
 
+env:
+  NODE_VERSION: "20"
+  PYTHON_VERSION: "3.12"
+  JAVA_VERSION: "17"
+  ANDROID_API: "34"
+  ANDROID_BUILD_TOOLS: "34.0.0"
+
 jobs:
   engine:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
       - run: npm install
       - run: npm --workspace=engine run build
       - run: npm test
+
+  studio-build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm install
+      - run: npm --workspace=engine run build
+      - run: npm --workspace=app run build
+      - if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: studio-dist
+          path: app/dist
+          retention-days: 7
 
   harness:
     runs-on: ubuntu-latest
@@ -24,8 +61,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
-      - run: python3 -m unittest harness.validation.test_scene_invariants harness.validation.test_quadtree_parity harness.build.test_scene_exporter harness.build.test_apk_builder harness.build.test_tier2_parity harness.briefs.test_game_brief harness.scenes.test_v2 harness.perf.test_tiers
+          python-version: ${{ env.PYTHON_VERSION }}
+      - run: python3 -m unittest harness.validation.test_scene_invariants harness.validation.test_quadtree_parity harness.build.test_scene_exporter harness.build.test_apk_builder harness.build.test_tier2_parity harness.briefs.test_game_brief harness.scenes.test_v2 harness.perf.test_tiers harness.assets.test_importer harness.memory.test_project_memory harness.orchestrator.test_agent_swarm harness.prefabs.test_prefabs
       - run: python3 -m unittest discover -s harness/loop -p "test_*.py"
       - run: python3 -m unittest discover -s harness/agents -p "test_*.py"
 
@@ -41,5 +78,32 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: ${{ env.PYTHON_VERSION }}
       - run: python3 harness/build/check_tier2_parity.py
+
+  android-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+      - uses: android-actions/setup-android@v3
+      - run: npm install
+      - run: npm --workspace=app run build
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Accept SDK licenses and assemble Tier-1 debug APK
+        run: |
+          yes | sdkmanager --licenses > /dev/null
+          python3 harness/build/apk_builder.py --build-only
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tier1-debug-apk
+          path: templates/android-container/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 7
+          if-no-files-found: error
