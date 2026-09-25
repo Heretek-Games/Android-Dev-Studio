@@ -11,19 +11,19 @@ This document is the single source of truth for AI agents (Antigravity, Claude C
 All four genre milestone sets, the autonomous harness, and both Android containers are
 implemented and verified:
 
-- **Engine** — 171 tests / 38 suites green (`npm test`); every logic source file has a companion
+- **Engine** — 290 tests / 59 suites green (`npm test`); every logic source file has a companion
   headless `.test.ts` (Zero Untested Code).
 - **Harness** — 24 MCP tools behind the transactional 7-point invariant gate; Artemis QA with
   scenario-keyed regression baselines; 50 Python tests (invariants, exporter, apk_builder,
   cross-tier quadtree parity); an **autonomous iterate-until-green loop** (`harness/loop/`)
   that drives generated scenes to QA-verified green with vision critique, regression bisect,
-  and a cost/latency dashboard (63 loop tests).
+  and a cost/latency dashboard (91 loop tests).
 - **Containers** — both tiers assemble real debug APKs and deploy/launch on an attached device.
   Tier 2 is validated on an Android target (emulator): real swapchain, 3 instanced cubes +
   64 terrain LOD leaf draws, `VK_SUCCESS` acquire/submit/present at ~61.5 FPS, rendered output
   confirmed on-display and via in-renderer frame readback — see
   [`harness/runs/RUNS.md`](file:///home/john/Projects/Android-Dev-Studio/harness/runs/RUNS.md) (Run Block 2).
-- **Native host checks** — 61 checks (scene loader, culling, terrain meshing/packing, Vulkan projection).
+- **Native host checks** — 66 checks (scene loader, culling, terrain meshing/packing, Vulkan projection).
 - **Playable slices** — `?play=1` (header **Game**) boots the arena run (menu → waves → HUD →
   win/lose → restart, audio, save/load, real weapon damage; on-device: Victory 200 points);
   `?play=driving` (header **Drive**) boots the driving sprint (auto-cruise vehicle, chase
