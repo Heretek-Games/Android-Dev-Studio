@@ -39,6 +39,12 @@ TOOLS = [
                     "enum": ["box", "sphere", "cylinder", "capsule", "plane"],
                     "default": "box",
                 },
+                "size": {
+                    "type": "array",
+                    "items": {"type": "number"},
+                    "description": "Full [x, y, z] box dimensions in world units; defaults to [1,1,1]",
+                    "default": [1, 1, 1],
+                },
                 "color": {
                     "type": "string",
                     "description": "Hex color code, e.g. #3b82f6",
@@ -393,8 +399,16 @@ TOOLS = [
             "properties": {
                 "width": {"type": "integer", "default": 32},
                 "height": {"type": "integer", "default": 32},
-                "start": {"type": "array", "items": {"type": "integer"}, "default": [0, 0]},
-                "goal": {"type": "array", "items": {"type": "integer"}, "default": [15, 15]},
+                "start": {
+                    "type": "array",
+                    "items": {"type": "integer"},
+                    "default": [0, 0],
+                },
+                "goal": {
+                    "type": "array",
+                    "items": {"type": "integer"},
+                    "default": [15, 15],
+                },
                 "blocked_rects": {
                     "type": "array",
                     "items": {"type": "array", "items": {"type": "integer"}},
@@ -477,8 +491,14 @@ TOOLS = [
                     "default": "get_tree",
                 },
                 "tree_id": {"type": "string", "default": "MainDialogue"},
-                "script_text": {"type": "string", "description": "Markdown-style dialogue script"},
-                "tree": {"type": "object", "description": "Full DialogueTree AST object"},
+                "script_text": {
+                    "type": "string",
+                    "description": "Markdown-style dialogue script",
+                },
+                "tree": {
+                    "type": "object",
+                    "description": "Full DialogueTree AST object",
+                },
             },
         },
     },
@@ -578,7 +598,9 @@ def save_active_scene(scene: Dict[str, Any]) -> None:
         pass  # persistence best-effort: never block a tool call on memory errors
 
 
-def save_active_scene_transactional(scene: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
+def save_active_scene_transactional(
+    scene: Dict[str, Any],
+) -> Tuple[bool, Optional[str]]:
     """
     Validates scene against the 7 scene invariants before persisting.
     If valid, persists to disk and saves snapshot to project_memory.
@@ -676,6 +698,7 @@ def handle_request(req: Dict[str, Any]) -> Dict[str, Any]:
             entity = {
                 "name": args.get("name"),
                 "shape": args.get("shape", "box"),
+                "size": args.get("size", [1, 1, 1]),
                 "position": args.get("position", [0, 1, 0]),
                 "color": args.get("color", "#3b82f6"),
                 "physics": args.get("physics", "dynamic"),
@@ -688,7 +711,10 @@ def handle_request(req: Dict[str, Any]) -> Dict[str, Any]:
                 return {
                     "jsonrpc": "2.0",
                     "id": req_id,
-                    "error": {"code": -32000, "message": f"Invariant Violation during spawn: {err}"},
+                    "error": {
+                        "code": -32000,
+                        "message": f"Invariant Violation during spawn: {err}",
+                    },
                 }
             return {
                 "jsonrpc": "2.0",
@@ -750,7 +776,10 @@ def handle_request(req: Dict[str, Any]) -> Dict[str, Any]:
                 return {
                     "jsonrpc": "2.0",
                     "id": req_id,
-                    "error": {"code": -32000, "message": f"Invariant Violation during component modification: {err}"},
+                    "error": {
+                        "code": -32000,
+                        "message": f"Invariant Violation during component modification: {err}",
+                    },
                 }
             return {
                 "jsonrpc": "2.0",
@@ -799,7 +828,10 @@ def handle_request(req: Dict[str, Any]) -> Dict[str, Any]:
                 return {
                     "jsonrpc": "2.0",
                     "id": req_id,
-                    "error": {"code": -32000, "message": f"Invariant Violation adding event: {err}"},
+                    "error": {
+                        "code": -32000,
+                        "message": f"Invariant Violation adding event: {err}",
+                    },
                 }
             return {
                 "jsonrpc": "2.0",
@@ -828,7 +860,10 @@ def handle_request(req: Dict[str, Any]) -> Dict[str, Any]:
                     return {
                         "jsonrpc": "2.0",
                         "id": req_id,
-                        "error": {"code": -32000, "message": f"Invariant Violation after deletion: {err}"},
+                        "error": {
+                            "code": -32000,
+                            "message": f"Invariant Violation after deletion: {err}",
+                        },
                     }
             return {
                 "jsonrpc": "2.0",
@@ -1222,7 +1257,10 @@ def handle_request(req: Dict[str, Any]) -> Dict[str, Any]:
                 return {
                     "jsonrpc": "2.0",
                     "id": req_id,
-                    "error": {"code": -32001, "message": f"Entity '{ent_name}' not found in active scene"},
+                    "error": {
+                        "code": -32001,
+                        "message": f"Entity '{ent_name}' not found in active scene",
+                    },
                 }
             obj["lod"] = {"distances": dists}
             saved, err = save_active_scene_transactional(scene)
@@ -1230,7 +1268,10 @@ def handle_request(req: Dict[str, Any]) -> Dict[str, Any]:
                 return {
                     "jsonrpc": "2.0",
                     "id": req_id,
-                    "error": {"code": -32000, "message": f"Invariant Violation during LOD config: {err}"},
+                    "error": {
+                        "code": -32000,
+                        "message": f"Invariant Violation during LOD config: {err}",
+                    },
                 }
             return {
                 "jsonrpc": "2.0",
@@ -1249,7 +1290,9 @@ def handle_request(req: Dict[str, Any]) -> Dict[str, Any]:
             action = args.get("action", "stats")
             cell_size = args.get("cell_size", 10.0)
             scene = load_active_scene()
-            grid_meta = scene.setdefault("spatialGrid", {"cellSize": cell_size, "entries": {}})
+            grid_meta = scene.setdefault(
+                "spatialGrid", {"cellSize": cell_size, "entries": {}}
+            )
 
             if action == "insert":
                 ent_name = args.get("entity_name", "Unknown")
@@ -1286,7 +1329,8 @@ def handle_request(req: Dict[str, Any]) -> Dict[str, Any]:
                         "content": [
                             {
                                 "type": "text",
-                                "text": f"SpatialGrid Query (center={center}, radius={rad}m): Found {len(found)} entities:\n" + json.dumps(found, indent=2),
+                                "text": f"SpatialGrid Query (center={center}, radius={rad}m): Found {len(found)} entities:\n"
+                                + json.dumps(found, indent=2),
                             }
                         ]
                     },
@@ -1328,7 +1372,12 @@ def handle_request(req: Dict[str, Any]) -> Dict[str, Any]:
                     break
                 for dx, dy in [(1, 0), (-1, 0), (0, 1), (0, -1)]:
                     nxt = (curr[0] + dx, curr[1] + dy)
-                    if 0 <= nxt[0] < width and 0 <= nxt[1] < height and nxt not in blocked and nxt not in came_from:
+                    if (
+                        0 <= nxt[0] < width
+                        and 0 <= nxt[1] < height
+                        and nxt not in blocked
+                        and nxt not in came_from
+                    ):
                         came_from[nxt] = curr
                         queue.append(nxt)
 
@@ -1360,7 +1409,10 @@ def handle_request(req: Dict[str, Any]) -> Dict[str, Any]:
         elif tool_name == "studio_configure_economy":
             action = args.get("action", "get_resources")
             scene = load_active_scene()
-            econ = scene.setdefault("economy", {"resources": {"gold": 100, "iron": 50, "food": 200}, "rules": []})
+            econ = scene.setdefault(
+                "economy",
+                {"resources": {"gold": 100, "iron": 50, "food": 200}, "rules": []},
+            )
 
             if action == "add_rule":
                 rule = {
@@ -1390,13 +1442,17 @@ def handle_request(req: Dict[str, Any]) -> Dict[str, Any]:
                     # Check requirements
                     req_met = True
                     for req in r.get("requires", []):
-                        if econ["resources"].get(req.get("resource"), 0) < req.get("min", 0):
+                        if econ["resources"].get(req.get("resource"), 0) < req.get(
+                            "min", 0
+                        ):
                             req_met = False
                             break
                     if req_met:
                         for eff in r.get("effects", []):
                             res_name = eff.get("resource", "gold")
-                            econ["resources"][res_name] = econ["resources"].get(res_name, 0) + eff.get("delta", 0)
+                            econ["resources"][res_name] = econ["resources"].get(
+                                res_name, 0
+                            ) + eff.get("delta", 0)
                 save_active_scene_transactional(scene)
                 return {
                     "jsonrpc": "2.0",
@@ -1405,7 +1461,8 @@ def handle_request(req: Dict[str, Any]) -> Dict[str, Any]:
                         "content": [
                             {
                                 "type": "text",
-                                "text": f"Advanced EconomyTick by {dt}s. Current resources:\n" + json.dumps(econ["resources"], indent=2),
+                                "text": f"Advanced EconomyTick by {dt}s. Current resources:\n"
+                                + json.dumps(econ["resources"], indent=2),
                             }
                         ]
                     },
@@ -1418,7 +1475,8 @@ def handle_request(req: Dict[str, Any]) -> Dict[str, Any]:
                         "content": [
                             {
                                 "type": "text",
-                                "text": f"Economy State (Deterministic Fixed-Step):\n" + json.dumps(econ, indent=2),
+                                "text": f"Economy State (Deterministic Fixed-Step):\n"
+                                + json.dumps(econ, indent=2),
                             }
                         ]
                     },
@@ -1453,7 +1511,9 @@ def handle_request(req: Dict[str, Any]) -> Dict[str, Any]:
                     },
                 }
             else:
-                online_cnt = sum(1 for a in alife.get("agents", []) if a.get("isOnline"))
+                online_cnt = sum(
+                    1 for a in alife.get("agents", []) if a.get("isOnline")
+                )
                 offline_cnt = len(alife.get("agents", [])) - online_cnt
                 return {
                     "jsonrpc": "2.0",
@@ -1515,7 +1575,12 @@ def handle_request(req: Dict[str, Any]) -> Dict[str, Any]:
                         "content": [
                             {
                                 "type": "text",
-                                "text": f"Dialogue Tree '{tree_id}':\n" + (json.dumps(tree, indent=2) if tree else "Not found in scene."),
+                                "text": f"Dialogue Tree '{tree_id}':\n"
+                                + (
+                                    json.dumps(tree, indent=2)
+                                    if tree
+                                    else "Not found in scene."
+                                ),
                             }
                         ]
                     },
