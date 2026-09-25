@@ -309,6 +309,9 @@ All studio↔harness bridges run through the Vite dev server (dev-only, like `/a
 - `artemis_qa_runner.py`: Orchestrator — invokes the Node runner, compares metrics against the persisted baseline (FPS drop >20%, frame time rise >20%, draw calls rise >25%, heap rise >30% ⇒ `REGRESSED`), records benchmarks into `project_memory.sqlite`, and writes `harness/artemis_report.json`.
 - Scenario specs live in `harness/config/scenarios/` (e.g. `mini_arena.json`, `driving_course.json`); the live MCP-controlled scene is `harness/scenes/active_scene.json`.
 - Tier 2 scene export: `harness/build/scene_exporter.py` emits `scene.native` (meshes/instances/lights) plus optional focus-driven `terrain_lod` quadtree leaves (`--quadtree --lod-depth N --lod-focus X Z`), consumed by `templates/vulkan-container`.
+- Scale/stress validation: `python3 harness/agents/stress_scene_gen.py --count N --out <scene>` generates a
+  batched-instance grid, and `apk_builder.py --tier2 --scene <scene>` exports that scene instead of the
+  canonical one (10,000 instances → 1 indirect draw, 66 total draws).
 - Tier 2 packaging: `python3 harness/build/apk_builder.py --tier2` exports the canonical scene (honoring
   the persisted `scene.quadtree` config) and cross-compiles `libheretek_native.so` (arm64-v8a) with the
   NDK toolchain into `harness/build/tier2-build/`, then assembles `app-debug.apk` with the vendored
