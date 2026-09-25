@@ -348,9 +348,45 @@ def _validate_dialogue_node(
             return None
         if ntype == "action":
             action = node.get("action")
-            if action is not None and not isinstance(action, dict):
-                fail(f"dialogue action node '{node_id}' 'action' must be an object")
-                return None
+            if action is not None:
+                if not isinstance(action, dict):
+                    fail(f"dialogue action node '{node_id}' 'action' must be an object")
+                    return None
+                for akey in action:
+                    if akey not in ("setVariables", "emitEvent", "nextNodeId"):
+                        fail(
+                            f"dialogue action node '{node_id}' unknown action key "
+                            f"'{akey}' (allowed: setVariables, emitEvent, nextNodeId) — "
+                            'bare "event"/"fireEvent" keys never fire'
+                        )
+                        return None
+                variables = action.get("setVariables")
+                if variables is not None and not isinstance(variables, dict):
+                    fail(
+                        f"dialogue action node '{node_id}' 'action.setVariables' "
+                        "must be an object"
+                    )
+                    return None
+                if action.get("nextNodeId") is not None and not check_ref(
+                    action.get("nextNodeId"), "action.nextNodeId"
+                ):
+                    return None
+                emit = action.get("emitEvent")
+                if emit is not None:
+                    # The engine only fires emitEvent:{eventName}; bare "event"
+                    # or "fireEvent" keys are silently ignored, so a blessing
+                    # that sets its flag but never fires is the classic miss.
+                    if (
+                        not isinstance(emit, dict)
+                        or not isinstance(emit.get("eventName"), str)
+                        or not emit.get("eventName").strip()
+                    ):
+                        fail(
+                            f"dialogue action node '{node_id}' 'action.emitEvent' "
+                            "must be an object with a non-empty 'eventName' "
+                            f"(got {emit!r})"
+                        )
+                        return None
     elif ntype == "condition":
         condition = node.get("condition")
         if not isinstance(condition, dict):

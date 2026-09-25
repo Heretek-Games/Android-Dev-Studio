@@ -778,6 +778,35 @@ class DialogueActionTests(unittest.TestCase):
         valid, violations = validate_scene_invariants(scene)
         self.assertTrue(valid, f"gate rejected dialogue scene: {violations}")
 
+    def test_dialogue_action_payload_validates_emit_shape(self):
+        # The classic miss: flag set, event never fired (bare event/fireEvent keys).
+        bad = keeper_tree()
+        bad["nodes"]["blessed"]["action"] = {
+            "setVariables": {"hydroBlessing": True},
+            "event": "hydro_blessing",
+            "fireEvent": "hydro_blessing",
+        }
+        _, result = apply_actions(base_scene(), [{"type": "dialogue", "tree": bad}])
+        self.assertEqual(result.invalid, 1)
+        self.assertIn("fireEvent", result.outcomes[0]["detail"])
+
+        good = keeper_tree()
+        good["nodes"]["blessed"]["action"] = {
+            "setVariables": {"hydroBlessing": True},
+            "emitEvent": {"eventName": "hydro_blessing"},
+        }
+        scene, result = apply_actions(
+            base_scene(), [{"type": "dialogue", "tree": good}]
+        )
+        self.assertEqual(result.applied, 1)
+        self.assertEqual(
+            scene["dialogues"]["DungeonKeeper"]["nodes"]["blessed"]["action"],
+            {
+                "setVariables": {"hydroBlessing": True},
+                "emitEvent": {"eventName": "hydro_blessing"},
+            },
+        )
+
 
 class ModifyTests(unittest.TestCase):
     def test_modify_position_and_color(self):

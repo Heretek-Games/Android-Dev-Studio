@@ -82,7 +82,11 @@ ACTION_SCHEMA = """Action vocabulary (a JSON array named "actions"):
       "action": {"setVariables": {"blessed": true}}, "nextNodeId": "farewell"},
      "farewell": {"id": "farewell", "type": "end"}}}
      (quest dialogue: every nextNodeId/choice/condition ref must resolve; headless
-     auto-play takes the first available choice, so put the golden path first)}
+     auto-play takes the first available choice, so put the golden path first;
+     action nodes take ONLY setVariables/emitEvent/nextNodeId — the engine fires
+     "action": {"emitEvent": {"eventName": "hydro_blessing"}} and silently ignores
+     bare "event"/"fireEvent" keys, so a blessing that sets its flag but never fires
+     always means a malformed emitEvent)}
   - {"type": "light", "name": "...", "lightType": "directional"|"point"|"ambient",
      "color": "#rrggbb", "intensity": 2.0, "position": [x,y,z]}
   - {"type": "modify", "target": "...", "position": [x,y,z], "color": "#rrggbb",
@@ -127,6 +131,10 @@ How acceptance rules map onto the schema (the QA runner checks these exact compo
     rule fails with 'no dialogue transcript'. NOTE: action/condition nodes self-resolve and
     never appear as visits — prove blessings via dialogue_event_fired / dialogue_sets_variable,
     and reserve dialogue_reaches for stable choice/text nodes.
+  - Quest-critical heroes/NPCs must survive the whole run: entity rules evaluate POST-run,
+    and HealthComponent destroys its owner at 0 HP by default — so a hero chewed down by
+    its own quest enemies reads as 'missing "Hero"'. Give the hero generous maxHealth
+    (or weaker/slower attackers) with margin, e.g. "health": {"maxHealth": 500}.
   - "EventSheet" / event_attached rules -> emit an "event" action targeting that object
   - "LightComponent" -> emit a "light" action
   - object_count rules count every entry in gameObjects (lights included)
