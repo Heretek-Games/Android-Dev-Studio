@@ -1,0 +1,128 @@
+{
+  "title": "Urban Outskirts",
+  "fantasy": {
+    "genre": "driving exploration",
+    "inspirations": ["downtown test grid", "suburban fringe routes"],
+    "tone": "city survey: downtown towers, suburban blocks, and a green park fringe in one drive",
+    "loop": "Drive the urban transect, confirm downtown, suburbs, and park are populated, traversable, and streaming."
+  },
+  "experience": {
+    "beats": ["entering the downtown grid", "full transect with no stuck zones"],
+    "feedback": ["steady cruising", "district props marking each zone"],
+    "inputs": ["touch steering slider", "throttle and brake pedals"]
+  },
+  "world": {
+    "areaKm2": 0.16,
+    "biomes": ["downtown", "suburbs", "park"],
+    "poiDensityPerKm2": 160,
+    "traversalSpeedsMps": {"drive": 12},
+    "streamingRadiusM": 160
+  },
+  "systems": {
+    "components": ["RigidBody3D", "Collider3D", "VehicleController", "MobileController", "WorldStreamer"],
+    "physics": ["raycast vehicle suspension", "static ground collider"],
+    "ai": [],
+    "dialogue": [],
+    "inventory": [],
+    "questStates": [],
+    "saveSchema": {}
+  },
+  "lookdev": {
+    "palette": ["#8a93a6", "#c9b896", "#3f7d3a"],
+    "lighting": "stylized",
+    "silhouette": "downtown towers center, low blocks west, tree clusters east",
+    "post": ["none (mobile budget)"]
+  },
+  "performance": {
+    "deviceProfile": "android16-snapdragon8elite",
+    "targetFps": 60,
+    "maxDrawCalls": 100,
+    "maxTrisPerChunk": 150000,
+    "maxTrisPerScene": 1200000,
+    "maxTextureMb": 256,
+    "maxPhysicsBodies": 256,
+    "maxApkMb": 200,
+    "maxLoadSeconds": 8.0
+  },
+  "acceptance": [
+    {
+      "id": "urban-ground",
+      "axis": "Functional",
+      "description": "a drivable urban ground plane exists",
+      "qaRule": {"type": "entity_exists", "target": "Urban Ground"}
+    },
+    {
+      "id": "player-car",
+      "axis": "Functional",
+      "description": "a player car with vehicle physics and streaming focus exists",
+      "qaRule": {"type": "entity_component", "target": "Player Car", "component": "VehicleController"}
+    },
+    {
+      "id": "downtown-held",
+      "axis": "Playable",
+      "description": "the downtown core holds at least 4 live downtown towers",
+      "qaRule": {
+        "type": "biome_coverage_min",
+        "biome": "downtown",
+        "min": 4,
+        "region": {"minX": -15, "maxX": 15, "minZ": -25, "maxZ": 25}
+      }
+    },
+    {
+      "id": "suburbs-held",
+      "axis": "Playable",
+      "description": "the west suburbs hold at least 3 live suburban blocks",
+      "qaRule": {
+        "type": "biome_coverage_min",
+        "biome": "suburbs",
+        "min": 3,
+        "region": {"minX": -60, "maxX": -15, "minZ": -25, "maxZ": 25}
+      }
+    },
+    {
+      "id": "park-held",
+      "axis": "Playable",
+      "description": "the east park fringe holds at least 2 live park props",
+      "qaRule": {
+        "type": "biome_coverage_min",
+        "biome": "park",
+        "min": 2,
+        "region": {"minX": 15, "maxX": 60, "minZ": -25, "maxZ": 25}
+      }
+    },
+    {
+      "id": "urban-traversable",
+      "axis": "Playable",
+      "description": "the urban floor has no void holes under the play area",
+      "qaRule": {"type": "traversal_coverage_min", "min": 0.8}
+    },
+    {
+      "id": "streaming-seamless",
+      "axis": "Playable",
+      "description": "terrain chunks stream seamlessly around the player with no gaps",
+      "qaRule": {"type": "streaming_coherence_min", "min": 1.0}
+    },
+    {
+      "id": "draw-budget",
+      "axis": "Performant",
+      "description": "scene stays within the mobile draw-call budget",
+      "qaRule": {"type": "draw_call_budget", "max": 100}
+    },
+    {
+      "id": "sim-fps",
+      "axis": "Performant",
+      "description": "headless simulation holds interactive frame rates",
+      "qaRule": {"type": "fps_min", "min": 30}
+    },
+    {
+      "id": "urban-read",
+      "axis": "Visually Coherent",
+      "description": "the city reads as downtown center, suburbs west, park fringe east"
+    },
+    {
+      "id": "brief-faithful",
+      "axis": "Spec-Accurate",
+      "description": "the scene matches this brief: dense urban center with outskirts, drivable, stylized light"
+    }
+  ]
+}
