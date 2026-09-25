@@ -2,14 +2,15 @@
   "format": "heretek-native-scene/v1",
   "scene": "MainArena",
   "source": "active_scene.json",
-  "exportedAt": "2026-09-25T02:41:06.600809+00:00",
+  "exportedAt": "2026-09-25T02:53:47.121463+00:00",
   "counts": {
     "meshes": 3,
     "instances": 0,
-    "lights": 1
+    "lights": 1,
+    "terrainLodLeaves": 64
   },
-  "drawCalls": 3,
+  "drawCalls": 67,
   "drawBudget": 100,
   "withinBudget": true,
-  "lines": 6
+  "lines": 70
 }

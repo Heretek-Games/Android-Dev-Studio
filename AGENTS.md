@@ -188,6 +188,7 @@ All studio↔harness bridges run through the Vite dev server (dev-only, like `/a
 - Rule vocabulary: `entity_exists`, `entity_component`, `event_attached`, `object_count`, `transform_changes`, `transform_bounds`, `distance_traveled`, `speed_min`, `no_nan_transforms`, `draw_call_budget`, `fps_min`.
 - `artemis_qa_runner.py`: Orchestrator — invokes the Node runner, compares metrics against the persisted baseline (FPS drop >20%, frame time rise >20%, draw calls rise >25%, heap rise >30% ⇒ `REGRESSED`), records benchmarks into `project_memory.sqlite`, and writes `harness/artemis_report.json`.
 - Scenario specs live in `harness/config/scenarios/` (e.g. `mini_arena.json`, `driving_course.json`); the live MCP-controlled scene is `harness/scenes/active_scene.json`.
+- Tier 2 scene export: `harness/build/scene_exporter.py` emits `scene.native` (meshes/instances/lights) plus optional focus-driven `terrain_lod` quadtree leaves (`--quadtree --lod-depth N --lod-focus X Z`), consumed by `templates/vulkan-container`.
 
 ---
 

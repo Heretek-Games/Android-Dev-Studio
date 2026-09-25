@@ -15,6 +15,7 @@ from harness.build.scene_exporter import (  # noqa: E402
     MAX_DRAW_CALLS,
     export_scene,
     hex_to_rgb,
+    quadtree_leaves,
 )
 
 
@@ -153,7 +154,10 @@ class SceneExporterTests(unittest.TestCase):
 
     def test_summary_counts_and_draw_budget(self):
         _, summary = export_scene(fixture_scene())
-        self.assertEqual(summary["counts"], {"meshes": 3, "instances": 3, "lights": 1})
+        self.assertEqual(
+            summary["counts"],
+            {"meshes": 3, "instances": 3, "lights": 1, "terrainLodLeaves": 0},
+        )
         # 3 meshes + 1 unique batch key = 4 draw calls
         self.assertEqual(summary["drawCalls"], 4)
         self.assertTrue(summary["withinBudget"])
@@ -192,6 +196,66 @@ class SceneExporterTests(unittest.TestCase):
         )
         self.assertIn("mesh Player_Hero", text)
         self.assertNotIn("mesh Player Hero", text)
+
+    # ---- Quadtree terrain LOD export ----------------------------------------
+
+    def test_quadtree_focus_outside_bounds_keeps_root_leaf(self):
+        leaves = quadtree_leaves(-512, -512, 512, 512, 4000, 4000, max_depth=4)
+        self.assertEqual(len(leaves), 1)
+        self.assertEqual(leaves[0]["depth"], 0)
+
+    def test_quadtree_center_subdivision_tiles_the_bounds(self):
+        leaves = quadtree_leaves(-512, -512, 512, 512, 0, 0, max_depth=2)
+        self.assertEqual(len(leaves), 16, "depth 2 with center focus -> 4^2 leaves")
+        area = sum(
+            (leaf["maxX"] - leaf["minX"]) * (leaf["maxZ"] - leaf["minZ"])
+            for leaf in leaves
+        )
+        self.assertAlmostEqual(
+            area, 1024.0 * 1024.0, places=3, msg="leaves cover the bounds exactly once"
+        )
+        for leaf in leaves:
+            self.assertEqual(leaf["lod"], leaf["depth"])
+            self.assertEqual(leaf["blend"], 1.0, "max-depth leaves are fully blended")
+
+    def test_quadtree_export_is_deterministic_and_budgeted(self):
+        a = quadtree_leaves(-512, -512, 512, 512, 100, -50, max_depth=3)
+        b = quadtree_leaves(-512, -512, 512, 512, 100, -50, max_depth=3)
+        self.assertEqual(a, b, "subdivision order is deterministic")
+
+        text, summary = export_scene(
+            fixture_scene(),
+            quadtree={"focusX": 100, "focusZ": -50, "maxDepth": 3},
+        )
+        self.assertEqual(summary["counts"]["terrainLodLeaves"], len(a))
+        self.assertEqual(
+            summary["drawCalls"],
+            summary["counts"]["meshes"] + 1 + len(a),
+            "draws include LOD leaves",
+        )
+
+        # Exactly one leaf contains the focus point, and it is at max depth
+        records = [
+            line.split()
+            for line in text.splitlines()
+            if line.startswith("terrain_lod ")
+        ]
+        containing = [
+            r
+            for r in records
+            if float(r[3]) <= 100 <= float(r[5]) and float(r[4]) <= -50 <= float(r[6])
+        ]
+        self.assertEqual(len(containing), 1, "leaves partition the bounds")
+        self.assertEqual(
+            containing[0][2], "3", "the focus leaf subdivides to max depth"
+        )
+
+    def test_quadtree_blend_transition_band(self):
+        # A leaf just outside its split radius blends toward the finer level
+        leaves = quadtree_leaves(-512, -512, 512, 512, 600, 600, max_depth=2)
+        blend_leaf = next(leaf for leaf in leaves if leaf["id"] == "0.0")
+        self.assertGreater(blend_leaf["blend"], 0.5)
+        self.assertLess(blend_leaf["blend"], 1.0)
 
 
 if __name__ == "__main__":

@@ -42,7 +42,19 @@ int main(int argc, char** argv) {
   CHECK(scene.name == "MainArena", "scene name parses");
   CHECK(scene.meshes.size() == 3, "3 mesh records");
   CHECK(scene.lights.size() == 1, "1 light record");
-  CHECK(scene.drawCallEstimate() == 3, "draw estimate is 3");
+  CHECK(scene.terrainLod.size() == 64, "64 quadtree terrain LOD leaves (depth 3)");
+  CHECK(scene.drawCallEstimate() == 67, "draw estimate includes mesh + LOD leaves (3 + 64)");
+
+  // LOD leaves tile the world bounds exactly once
+  double leafArea = 0;
+  for (const auto& leaf : scene.terrainLod) {
+    leafArea += static_cast<double>(leaf.maxX - leaf.minX) * (leaf.maxZ - leaf.minZ);
+  }
+  const double boundsArea = 1024.0 * 1024.0;
+  CHECK(std::fabs(leafArea - boundsArea) < 1.0, "LOD leaves cover the bounds without overlap");
+
+  CHECK(scene.terrainLod[0].depth == 3, "leaves are at the configured depth");
+  CHECK(scene.terrainLod[0].blend == 1.0f, "max-depth leaves are fully blended to finest");
   CHECK(scene.meshes[0].physics == PhysicsType::Fixed, "ground is fixed physics");
   CHECK(scene.meshes[1].physics == PhysicsType::Dynamic, "player is dynamic physics");
   CHECK(std::fabs(scene.meshes[0].sx - 24.0f) < 1e-3f, "ground size preserved");

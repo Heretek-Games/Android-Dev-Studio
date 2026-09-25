@@ -37,13 +37,23 @@ struct LightRecord {
   std::string type = "directional";
 };
 
+/** Focus-driven terrain LOD leaf (one draw call per leaf in the native path). */
+struct TerrainLodRecord {
+  std::string id;
+  uint32_t depth = 0;
+  float minX = 0, minZ = 0, maxX = 0, maxZ = 0;
+  uint32_t lod = 0;
+  float blend = 0;
+};
+
 struct NativeScene {
   std::string name;
   std::vector<MeshRecord> meshes;
   std::vector<InstanceRecord> instances;
   std::vector<LightRecord> lights;
+  std::vector<TerrainLodRecord> terrainLod;
 
-  /** One draw per mesh + one draw per unique instanced batch. */
+  /** One draw per mesh + one draw per unique instanced batch + one per LOD leaf. */
   int drawCallEstimate() const;
   int uniqueBatchCount() const;
 };

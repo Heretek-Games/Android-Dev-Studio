@@ -28,6 +28,7 @@ vulkan-container/
 ```bash
 python3 harness/build/scene_exporter.py \
   --scene harness/scenes/active_scene.json \
+  --quadtree --lod-depth 3 --lod-focus 0 0 \
   --out templates/vulkan-container/app/src/main/assets
 ```
 
@@ -72,7 +73,8 @@ cmake --build /tmp/tier2-build
 | Vulkan swapchain + render pass + framebuffers | ✅ compiles (NDK) |
 | Compute culling dispatch + instanced indirect draws | ✅ implemented, compiles; on-device runtime validation pending |
 | JNI bridge + SurfaceView frame loop + surface lifecycle | ✅ implemented, compiles |
-| Quadtree terrain + mesh LOD streaming | 🚧 next (TS engine has `TerrainChunk`/`StreamingCells` today) |
+| Quadtree terrain LOD export + native parsing | ✅ focus-driven leaves exported (`--quadtree`), parsed into `TerrainLodRecord`, host-tested |
+| Native terrain mesh streaming | 🚧 next (LOD leaves are data-complete; mesh generation lands with the terrain pass) |
 
 Shaders are compiled with the NDK's bundled glslc:
 

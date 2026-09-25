@@ -13,7 +13,8 @@ int NativeScene::uniqueBatchCount() const {
 }
 
 int NativeScene::drawCallEstimate() const {
-  return static_cast<int>(meshes.size()) + uniqueBatchCount();
+  return static_cast<int>(meshes.size()) + uniqueBatchCount() +
+         static_cast<int>(terrainLod.size());
 }
 
 namespace {
@@ -75,6 +76,14 @@ bool parseSceneText(const std::string& text, NativeScene& out, std::string& erro
         return false;
       }
       out.lights.push_back(std::move(light));
+    } else if (kind == "terrain_lod") {
+      TerrainLodRecord leaf;
+      if (!(tokens >> leaf.id >> leaf.depth >> leaf.minX >> leaf.minZ >> leaf.maxX >> leaf.maxZ >>
+            leaf.lod >> leaf.blend)) {
+        error = "line " + std::to_string(lineNumber) + ": malformed terrain_lod record";
+        return false;
+      }
+      out.terrainLod.push_back(std::move(leaf));
     } else {
       error = "line " + std::to_string(lineNumber) + ": unknown record type '" + kind + "'";
       return false;
