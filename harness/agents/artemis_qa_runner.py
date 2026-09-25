@@ -87,6 +87,17 @@ def parse_args():
         action="store_true",
         help="Skip regression comparison against project_memory",
     )
+    parser.add_argument(
+        "--vision",
+        action="store_true",
+        help="Run the multimodal layout critique and attach its notes to the report (advisory only; never changes the verdict)",
+    )
+    parser.add_argument(
+        "--vision-model",
+        type=str,
+        default=None,
+        help="Vision model route (default: auto/best-vision)",
+    )
     return parser.parse_args()
 
 
@@ -101,6 +112,69 @@ def check_adb_devices():
         return lines
     except Exception:
         return []
+
+
+def build_vision_block(scenario, failed_rules, critique_fn):
+    """Build the report's vision block via an injected critique callable.
+
+    critique_fn(png_bytes, failed_rules) must return a dict with notes (list),
+    model (str), totalTokens (int) and latencySeconds (float). Never raises:
+    missing geometry yields a skipped block, critique failures yield an error
+    block. The vision critique is advisory — callers must not let it change
+    the QA verdict.
+    """
+    objects = [
+        o for o in (scenario or {}).get("gameObjects", []) if isinstance(o, dict)
+    ]
+    if not objects:
+        return {"status": "skipped", "reason": "scenario has no gameObjects to preview"}
+    try:
+        if HARNESS_DIR not in sys.path:
+            sys.path.insert(0, HARNESS_DIR)
+        from loop.scene_preview import render_layout_png
+
+        png = render_layout_png({"gameObjects": objects})
+    except Exception as e:
+        return {"status": "skipped", "reason": f"layout preview unavailable: {e}"}
+    try:
+        result = critique_fn(png, failed_rules)
+    except Exception as e:
+        return {"status": "error", "error": str(e)[:300], "notes": []}
+    notes = result.get("notes") or []
+    return {
+        "status": "ok",
+        "notes": list(notes),
+        "model": result.get("model", ""),
+        "totalTokens": int(result.get("totalTokens") or 0),
+        "latencySeconds": round(float(result.get("latencySeconds") or 0.0), 3),
+    }
+
+
+def default_vision_critique(model=None):
+    """Real critique callable backed by the loop's vision route (needs LLM creds)."""
+
+    def critique_fn(png_bytes, failed_rules):
+        if HARNESS_DIR not in sys.path:
+            sys.path.insert(0, HARNESS_DIR)
+        if REPO_ROOT not in sys.path:
+            sys.path.insert(0, REPO_ROOT)
+        from loop.llm_client import LlmClient
+        from loop.vision import critique_frame
+
+        client = LlmClient()
+        result = critique_frame(
+            client, png_bytes, model=model, failed_rules=failed_rules
+        )
+        if result.error:
+            raise RuntimeError(result.error)
+        return {
+            "notes": result.notes,
+            "model": result.model,
+            "totalTokens": result.total_tokens,
+            "latencySeconds": result.latency_seconds,
+        }
+
+    return critique_fn
 
 
 def run_headless_scenario(scenario_path, frames, report_path):
@@ -215,6 +289,38 @@ def main():
     report["device"] = target_serial
     report["profile"] = args.profile
     report["wallClockSeconds"] = round(time.time() - started, 3)
+
+    # --- Opt-in multimodal layout critique (advisory; never changes verdict) ---
+    if args.vision:
+        try:
+            with open(args.scenario, "r", encoding="utf-8") as f:
+                scenario_spec = json.load(f)
+        except Exception as e:
+            scenario_spec = {}
+            log(f"[!] Vision critique skipped (unreadable scenario): {e}")
+        if isinstance(scenario_spec, dict) and scenario_spec:
+            failed_rules = [r for r in report.get("rules", []) if not r.get("pass")]
+            report["vision"] = build_vision_block(
+                scenario_spec,
+                failed_rules,
+                default_vision_critique(model=args.vision_model),
+            )
+            vision = report["vision"]
+            if vision.get("status") == "ok":
+                log(
+                    f"👁  Vision critique ({vision.get('model')}): {len(vision.get('notes', []))} note(s)"
+                )
+                for note in vision.get("notes", []):
+                    log(f"     - {note}")
+            else:
+                log(
+                    f"👁  Vision critique {vision.get('status')}: {vision.get('reason', vision.get('error', ''))}"
+                )
+        else:
+            report["vision"] = {
+                "status": "skipped",
+                "reason": "unreadable scenario spec",
+            }
 
     # --- Regression comparison against project_memory baseline ---
     regression_findings = []
