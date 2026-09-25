@@ -479,3 +479,38 @@ pinpointed it and stays in place for future device debugging.
 2. **Silent tap path** — every tap/placement now logs to logcat (`CityTap` with NDC + hit
    count, `CityPlace` with plot + ok/reason), and placement rejections show in the message
    panel. This instrumentation is what exposed finding 1 and stays for device debugging.
+
+---
+
+## Run Block 11 — 2026-09-25, Phase 1 Milestone: Brief-Driven Production Run ✅
+
+**Milestone check:** "build a small drivable island with 1 collection quest" through the full
+recursive loop — **PASSED**.
+
+### What shipped this block
+
+- **Production-run CLI** (`python3 -m harness.loop.production_run --brief ...`) — was written
+  but never committed before the first milestone attempt; committed now. Also fixes the
+  `__main__` guard placement that crashed the first attempt before any work happened.
+- **Vehicle wheels in the loop vocabulary** — attempt 1 failed precisely on `player-car`
+  (the QA runner accepts `vehicle` configs but the loop couldn't emit them); spawn/modify
+  now accept validated `vehicle` objects and prompts document the shape.
+- **Wheels required, not optional** — attempt 2 crashed the QA runner
+  (`VehicleController requires at least one wheel`); configs now require a non-empty
+  `wheels` array with per-wheel offsets, matching the engine schema.
+- **QA-crash recovery** — runner crashes feed the next repair iteration as a synthetic
+  `qa_runner` failure (crash detail included) instead of aborting; still bounded by
+  iteration/token/wall budgets, with the success path guarded so crashes can't fall through.
+- **ADR-1790357825384** recorded: loop vocabulary must cover every QA-runner component a
+  brief can require.
+
+### Verification
+
+| Check | Evidence |
+|-------|----------|
+| Milestone run | **GREEN** — 6/6 automatable criteria verified (`island-ground`, `player-car`, `buoy-field`, `buoys-spin`, `draw-budget`, `sim-fps`); 2 critic-owned (`island-read`, `brief-faithful`) listed as scope candidates, not silently passed |
+| Loop trace | generate (10 actions incl. 4-wheel vehicle with offsets) → gate rejected spawn penetration → repair (3 actions) → QA **SUCCEEDED 6/6** in 2 iterations, 7,897 tokens |
+| DAG + memory | 16 tasks (8 criteria × build + critique) in the ledger, states reflect the outcome; brief persisted and retrievable |
+| Suites | 80 loop + 112 harness Python tests green |
+
+Evidence: `harness/runs/loop_runs/20260925-133811-*.json` + `harness/scenes/loop_work_scene.json`.
