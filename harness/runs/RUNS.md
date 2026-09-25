@@ -820,3 +820,16 @@ baseline. ADR-1790368134523.
 ### Prescription
 Per-frame tracing window (log every frame for ~60 frames post-tap) or hardware measurement
 (blocked: #1) to resolve ≤ 3. Path proven; no architecture change indicated. ADR-1790368461390.
+
+---
+
+## Run Block 23 — 2026-09-25, Track 0: Tier 2 Parity Checklist + CI Flip Rule ✅
+
+**Parity gate mechanized:** `harness/tier2_parity.json` (20 entries: full/partial/missing/web-tier
+with notes) is now the source of truth for Tier 1 vs Tier 2 capability coverage;
+`harness/build/check_tier2_parity.py` fails when any runner-constructed capability lacks
+an entry (it caught a missing `VehicleController` entry on its own first run);
+`.github/workflows/ci.yml` runs engine + harness + native + parity on every push/PR —
+the repo's first CI. Honest count: 6 missing (camera, physics, input-productized,
+models, cel-shader, runtime stream refocus). 3 checker tests green; all CI commands
+verified locally (70-module suite OK).

@@ -1,0 +1,26 @@
+{
+  "_comment": "Tier 2 native renderer parity vs the Tier 1 engine path. Source of truth for the CI flip rule: every visual/logic capability the headless QA runner constructs (buildScene) must appear here. Statuses: full | partial | missing | web-tier (runs WebView-side under Option A, never native). Update this file when adding runner capabilities; CI fails otherwise.",
+  "updated": "2026-09-25",
+  "entries": {
+    "MeshRenderer": {"tier1": "full", "tier2": "partial", "notes": "Native flattens all shapes to instanced cubes; no per-shape geometry."},
+    "InstancedMeshBatcher": {"tier1": "full", "tier2": "full", "notes": "Indirect instanced draws with compute culling."},
+    "TerrainChunk/WorldStreamer": {"tier1": "full", "tier2": "partial", "notes": "Baked terrain_lod leaves at export focus; no runtime refocus/streaming."},
+    "FoliageInstancer": {"tier1": "full", "tier2": "full", "notes": "Wind-animated foliage range verified on-display."},
+    "LightComponent": {"tier1": "full", "tier2": "partial", "notes": "Light records parsed; renderer uses single hardcoded directional light."},
+    "CameraComponent": {"tier1": "full", "tier2": "missing", "notes": "Camera hardcoded lookAt({14,30,44}); no configurable camera."},
+    "ModelRenderer": {"tier1": "full", "tier2": "missing", "notes": "No GLTF/model loading natively."},
+    "AnimeCelShader/cel": {"tier1": "full", "tier2": "missing", "notes": "Loop vocabulary exists; no native cel shader."},
+    "RigidBody3D/Collider3D": {"tier1": "full", "tier2": "missing", "notes": "PhysicsType parsed then ignored; no native physics."},
+    "VehicleController": {"tier1": "full", "tier2": "partial", "notes": "Raycast-vehicle physics web-tier under Option A; chassis mesh renders via the MeshRenderer path (cube-flattened)."},
+    "MobileController/input": {"tier1": "full", "tier2": "missing", "notes": "Exp-2 probe only (tap path proven, staged motion); not productized."},
+    "syncInstances-transport": {"tier1": "n/a", "tier2": "partial", "notes": "Exp-1: positions-only in-place sync; JNI 33us mean; host-device race open; no spawn/material/event records yet."},
+    "WeaponController": {"tier1": "full", "tier2": "web-tier", "notes": "Gameplay logic stays WebView-side under Option A."},
+    "HealthComponent": {"tier1": "full", "tier2": "web-tier", "notes": "Gameplay logic stays WebView-side under Option A."},
+    "EnemyAI": {"tier1": "full", "tier2": "web-tier", "notes": "Gameplay logic stays WebView-side under Option A."},
+    "ElementalReactionComponent": {"tier1": "full", "tier2": "web-tier", "notes": "Gameplay logic stays WebView-side under Option A."},
+    "EventSheet": {"tier1": "full", "tier2": "web-tier", "notes": "Gameplay logic stays WebView-side under Option A."},
+    "DialogueManager": {"tier1": "full", "tier2": "web-tier", "notes": "Gameplay logic stays WebView-side under Option A."},
+    "GameRuntime/Settlement": {"tier1": "full", "tier2": "web-tier", "notes": "Gameplay logic stays WebView-side under Option A."},
+    "WorldStreamer-runtime": {"tier1": "full", "tier2": "missing", "notes": "Covered above as TerrainChunk partial; runtime refocus is the missing half."}
+  }
+}

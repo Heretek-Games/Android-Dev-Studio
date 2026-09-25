@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  engine:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm install
+      - run: npm --workspace=engine run build
+      - run: npm test
+
+  harness:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python3 -m unittest harness.validation.test_scene_invariants harness.validation.test_quadtree_parity harness.build.test_scene_exporter harness.build.test_apk_builder harness.build.test_tier2_parity harness.briefs.test_game_brief
+      - run: python3 -m unittest discover -s harness/loop -p "test_*.py"
+      - run: python3 -m unittest discover -s harness/agents -p "test_*.py"
+
+  native:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: cd templates/vulkan-container/app/src/main/cpp && g++ -std=c++17 -Wall -Wextra scene_loader.cpp culling.cpp terrain_mesh.cpp tests/native_scene_test.cpp -o /tmp/native_scene_test && /tmp/native_scene_test ../assets/scene.native
+
+  tier2-parity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python3 harness/build/check_tier2_parity.py
