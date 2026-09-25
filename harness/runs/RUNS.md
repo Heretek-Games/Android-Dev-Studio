@@ -823,6 +823,22 @@ Per-frame tracing window (log every frame for ~60 frames post-tap) or hardware m
 
 ---
 
+## Run Block 24 — 2026-09-25, Track 0 Gate Review: GREEN ✅
+
+Every Track 0 item verified with evidence; Track 1 unlocked (bridge ADR satisfied).
+
+| Item | Evidence | Status |
+|------|----------|--------|
+| Desktop shell | Electron-first ADR-1790367094692 (WebKitGTK risk, verbatim bridges, skill fit) | ✅ closed |
+| Tier 2 parity + flip rule | `tier2_parity.json` (20 entries, 6 honestly missing) + checker + first CI (commit `5229b3f`) | ✅ closed |
+| Bridge spike | Option A delta bridge ADR-1790367301826; exp-1 transport exonerated (33 µs), exp-2 input path proven; wasmtime tracked successor (fit-check pending, non-blocking) | ✅ closed |
+| Scene migration | `harness/scenes/v2.py` + 5 gate tests + QA parity 5/5 original vs reassembled (commit `d463f0f`) | ✅ closed |
+| Scalability tiers | `harness/perf/tiers.py` (S/A/X + fallback ladder) wired into brief validation, backward compatible (commit `d39e5e4`) | ✅ closed |
+
+**Track 1 unlocked.** First item: prefabs/variants (builds directly on the v2 format).
+
+---
+
 ## Run Block 23 — 2026-09-25, Track 0: Tier 2 Parity Checklist + CI Flip Rule ✅
 
 **Parity gate mechanized:** `harness/tier2_parity.json` (20 entries: full/partial/missing/web-tier
