@@ -84,11 +84,31 @@ bool VulkanRenderer::createInstance() {
 
   const char* extensions[] = {"VK_KHR_surface", "VK_KHR_android_surface"};
 
+  // Opt-in validation layers: enabled automatically in debug builds when the
+  // layer is present on the device (release builds skip the lookup entirely).
+  std::vector<const char*> layers;
+#ifndef NDEBUG
+  uint32_t layerCount = 0;
+  if (vkEnumerateInstanceLayerProperties(&layerCount, nullptr) == VK_SUCCESS && layerCount > 0) {
+    std::vector<VkLayerProperties> available(layerCount);
+    vkEnumerateInstanceLayerProperties(&layerCount, available.data());
+    for (const auto& layer : available) {
+      if (std::strcmp(layer.layerName, "VK_LAYER_KHRONOS_validation") == 0) {
+        layers.push_back("VK_LAYER_KHRONOS_validation");
+        LOGI("Vulkan validation layer enabled (debug build)");
+        break;
+      }
+    }
+  }
+#endif
+
   VkInstanceCreateInfo createInfo{};
   createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
   createInfo.pApplicationInfo = &appInfo;
   createInfo.enabledExtensionCount = 2;
   createInfo.ppEnabledExtensionNames = extensions;
+  createInfo.enabledLayerCount = static_cast<uint32_t>(layers.size());
+  createInfo.ppEnabledLayerNames = layers.empty() ? nullptr : layers.data();
 
   if (vkCreateInstance(&createInfo, nullptr, &instance_) != VK_SUCCESS) {
     lastError_ = "vkCreateInstance failed";
