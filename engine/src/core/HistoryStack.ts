@@ -25,11 +25,16 @@ export class HistoryStack {
 
   /** Records the pre-mutation state; clears the redo branch. */
   public checkpoint(snapshot: string): void {
+    this.pushUndo(snapshot);
+    this.redoStack = [];
+  }
+
+  /** Pushes onto the undo branch without touching redo (redo navigation). */
+  public pushUndo(snapshot: string): void {
     this.undoStack.push(snapshot);
     while (this.undoStack.length > this.capacity) {
       this.undoStack.shift();
     }
-    this.redoStack = [];
   }
 
   /**

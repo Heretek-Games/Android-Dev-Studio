@@ -93,4 +93,16 @@ describe('Scene restore — toJSON/fromJSON round-trip + HistoryStack', () => {
     assert.ok(goblin);
     assert.strictEqual(goblin?.getComponent(HealthComponent)?.maxHealth, 50);
   });
+
+  test('pushUndo preserves the redo branch for redo navigation', () => {
+    const history = new HistoryStack();
+    history.checkpoint('s0');
+    history.checkpoint('s1');
+    assert.strictEqual(history.popUndo(), 's1');
+    history.stageRedo('s2');
+    history.pushUndo('s1-again');
+    // Redo branch intact: s2 still available.
+    assert.strictEqual(history.popRedo(), 's2');
+    assert.strictEqual(history.canRedo, false);
+  });
 });
