@@ -300,6 +300,56 @@ class StreamerTests(unittest.TestCase):
         self.assertEqual(scene["gameObjects"][1]["streamer"], {"renderDistance": 2.0})
 
 
+class BiomeTests(unittest.TestCase):
+    def test_spawn_biome_tag_applies_stripped(self):
+        scene, result = apply_actions(
+            base_scene(),
+            [{"type": "spawn", "name": "Dune", "biome": "  sand rim  "}],
+        )
+        self.assertEqual(result.applied, 1)
+        self.assertEqual(scene["gameObjects"][1]["biome"], "sand rim")
+
+    def test_spawn_biome_rejects_malformed(self):
+        for bad in (42, "", "   ", "x" * 41, "sand;rim", "sand/rim"):
+            _, result = apply_actions(
+                base_scene(), [{"type": "spawn", "name": "Dune", "biome": bad}]
+            )
+            self.assertEqual(result.invalid, 1, f"should reject {bad!r}")
+
+    def test_modify_biome_tags_and_rejects(self):
+        scene, result = apply_actions(
+            base_scene(),
+            [
+                {"type": "spawn", "name": "Dune"},
+                {"type": "modify", "target": "Dune", "biome": "grass infield"},
+            ],
+        )
+        self.assertEqual(result.applied, 2)
+        self.assertEqual(scene["gameObjects"][1]["biome"], "grass infield")
+
+        rejected, result = apply_actions(
+            base_scene(),
+            [
+                {"type": "spawn", "name": "Dune"},
+                {"type": "modify", "target": "Dune", "biome": ""},
+            ],
+        )
+        self.assertEqual(result.invalid, 1)
+        # The rejected tag leaves no residue on the object.
+        self.assertNotIn("biome", rejected["gameObjects"][1])
+
+    def test_tagged_scene_passes_the_invariant_gate(self):
+        from harness.validation.scene_invariants import validate_scene_invariants
+
+        scene, result = apply_actions(
+            base_scene(),
+            [{"type": "spawn", "name": "Dune", "biome": "sand rim"}],
+        )
+        self.assertEqual(result.failures, 0)
+        valid, violations = validate_scene_invariants(scene)
+        self.assertTrue(valid, f"gate rejected tagged scene: {violations}")
+
+
 class ModifyTests(unittest.TestCase):
     def test_modify_position_and_color(self):
         scene, result = apply_actions(

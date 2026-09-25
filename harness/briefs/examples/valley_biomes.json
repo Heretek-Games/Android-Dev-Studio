@@ -1,0 +1,117 @@
+{
+  "title": "Two-Biome Valley",
+  "fantasy": {
+    "genre": "driving exploration",
+    "inspirations": ["biome-contrast trial courses", "open test ranges"],
+    "tone": "survey run across contrasting country",
+    "loop": "Drive the valley, confirm both biomes are populated, traversable, and streaming."
+  },
+  "experience": {
+    "beats": ["cresting from sand into grass country", "full transect with no stuck zones"],
+    "feedback": ["steady cruising", "biome props marking each region"],
+    "inputs": ["touch steering slider", "throttle and brake pedals"]
+  },
+  "world": {
+    "areaKm2": 0.08,
+    "biomes": ["sand flats", "grass downs"],
+    "poiDensityPerKm2": 80,
+    "traversalSpeedsMps": {"drive": 12},
+    "streamingRadiusM": 120
+  },
+  "systems": {
+    "components": ["RigidBody3D", "Collider3D", "VehicleController", "MobileController", "WorldStreamer"],
+    "physics": ["raycast vehicle suspension", "static ground collider"],
+    "ai": [],
+    "dialogue": [],
+    "inventory": [],
+    "questStates": [],
+    "saveSchema": {}
+  },
+  "lookdev": {
+    "palette": ["#e0c080", "#4d8b3a", "#7fb2d9"],
+    "lighting": "stylized",
+    "silhouette": "sand props west, grass props east, ridge on the horizon",
+    "post": ["none (mobile budget)"]
+  },
+  "performance": {
+    "deviceProfile": "android16-snapdragon8elite",
+    "targetFps": 60,
+    "maxDrawCalls": 100,
+    "maxTrisPerChunk": 150000,
+    "maxTrisPerScene": 1200000,
+    "maxTextureMb": 256,
+    "maxPhysicsBodies": 256,
+    "maxApkMb": 200,
+    "maxLoadSeconds": 8.0
+  },
+  "acceptance": [
+    {
+      "id": "valley-ground",
+      "axis": "Functional",
+      "description": "a drivable valley ground plane exists",
+      "qaRule": {"type": "entity_exists", "target": "Valley Ground"}
+    },
+    {
+      "id": "player-car",
+      "axis": "Functional",
+      "description": "a player car with vehicle physics and streaming focus exists",
+      "qaRule": {"type": "entity_component", "target": "Player Car", "component": "VehicleController"}
+    },
+    {
+      "id": "sand-held",
+      "axis": "Playable",
+      "description": "the west sand flats hold at least 2 live sand props",
+      "qaRule": {
+        "type": "biome_coverage_min",
+        "biome": "sand",
+        "min": 2,
+        "region": {"minX": -30, "maxX": 0, "minZ": -15, "maxZ": 15}
+      }
+    },
+    {
+      "id": "grass-held",
+      "axis": "Playable",
+      "description": "the east grass downs hold at least 2 live grass props",
+      "qaRule": {
+        "type": "biome_coverage_min",
+        "biome": "grass",
+        "min": 2,
+        "region": {"minX": 0, "maxX": 30, "minZ": -15, "maxZ": 15}
+      }
+    },
+    {
+      "id": "valley-traversable",
+      "axis": "Playable",
+      "description": "the valley floor has no void holes under the play area",
+      "qaRule": {"type": "traversal_coverage_min", "min": 0.8}
+    },
+    {
+      "id": "streaming-seamless",
+      "axis": "Playable",
+      "description": "terrain chunks stream seamlessly around the player with no gaps",
+      "qaRule": {"type": "streaming_coherence_min", "min": 1.0}
+    },
+    {
+      "id": "draw-budget",
+      "axis": "Performant",
+      "description": "scene stays within the mobile draw-call budget",
+      "qaRule": {"type": "draw_call_budget", "max": 100}
+    },
+    {
+      "id": "sim-fps",
+      "axis": "Performant",
+      "description": "headless simulation holds interactive frame rates",
+      "qaRule": {"type": "fps_min", "min": 30}
+    },
+    {
+      "id": "valley-read",
+      "axis": "Visually Coherent",
+      "description": "the valley reads as west sand country meeting east grass country"
+    },
+    {
+      "id": "brief-faithful",
+      "axis": "Spec-Accurate",
+      "description": "the scene matches this brief: two-biome streaming valley, drivable, sunset light"
+    }
+  ]
+}

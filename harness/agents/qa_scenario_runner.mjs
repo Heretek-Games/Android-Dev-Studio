@@ -617,6 +617,37 @@ function evaluateRules(spec, ctxData) {
         detail = `coverage=${streaming.coverage} (min ${min}), gaps=${streaming.gaps.length}, thrashReloads=${streaming.thrashReloads}, maxActive=${streaming.maxActiveChunks}`;
         break;
       }
+      case 'biome_coverage_min': {
+        // Composition audit: tagged objects must exist LIVE in the built scene
+        // (not just in the spec) and inside the optional region bounds.
+        const want = rule.biome;
+        if (typeof want !== 'string' || !want) {
+          pass = false;
+          detail = 'biome_coverage_min requires a biome name string';
+          break;
+        }
+        const region = rule.region || null;
+        const inRegion = (go) => {
+          if (!region) return true;
+          const p = go.transform?.position;
+          if (!p) return false;
+          return (
+            (region.minX === undefined || p.x >= region.minX) &&
+            (region.maxX === undefined || p.x <= region.maxX) &&
+            (region.minZ === undefined || p.z >= region.minZ) &&
+            (region.maxZ === undefined || p.z <= region.maxZ)
+          );
+        };
+        const tagged = (spec.gameObjects || []).filter(
+          (o) => o && o.biome === want
+        );
+        const live = tagged.filter((o) => scene.findByName(o.name) && inRegion(scene.findByName(o.name)));
+        const min = rule.min ?? 1;
+        pass = live.length >= min;
+        detail = `biome '${want}': ${live.length} live objects in region (min ${min})` +
+          (live.length < min ? `; tagged: [${tagged.map((o) => o.name).join(', ')}]` : '');
+        break;
+      }
       case 'game_phase': {
         if (!game) { pass = false; detail = 'no game config in scenario'; break; }
         const phase = game.runtime.flow.getPhase();

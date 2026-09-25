@@ -125,5 +125,111 @@ class StreamingAuditTests(unittest.TestCase):
         self.assertIn("did not run", rule["detail"])
 
 
+class BiomeCoverageTests(unittest.TestCase):
+    def test_tagged_objects_in_region_pass(self):
+        spec = {
+            "name": "BiomeFixture",
+            "goal": "biome audit",
+            "gameObjects": [
+                {
+                    "name": "Dune A",
+                    "shape": "box",
+                    "size": [2, 1, 2],
+                    "position": [-5, 0.5, 0],
+                    "color": "#e0c080",
+                    "physics": "fixed",
+                    "biome": "sand",
+                },
+                {
+                    "name": "Dune B",
+                    "shape": "box",
+                    "size": [2, 1, 2],
+                    "position": [5, 0.5, 0],
+                    "color": "#e0c080",
+                    "physics": "fixed",
+                    "biome": "sand",
+                },
+                {
+                    "name": "Far Rock",
+                    "shape": "box",
+                    "size": [2, 1, 2],
+                    "position": [50, 0.5, 50],
+                    "color": "#e0c080",
+                    "physics": "fixed",
+                    "biome": "sand",
+                },
+            ],
+            "rules": [
+                {
+                    "id": "sand-held",
+                    "type": "biome_coverage_min",
+                    "biome": "sand",
+                    "min": 2,
+                    "region": {"minX": -10, "maxX": 10, "minZ": -10, "maxZ": 10},
+                }
+            ],
+        }
+        proc = run_scenario(spec)
+        report = json.loads(proc.stdout)
+        rule = next(r for r in report["rules"] if r["id"] == "sand-held")
+        self.assertTrue(rule["pass"], rule["detail"])
+        self.assertIn("2 live objects", rule["detail"])
+        self.assertEqual(report["verdict"], "SUCCEEDED")
+
+    def test_shortfall_fails_with_tagged_names(self):
+        spec = {
+            "name": "BiomeShortfall",
+            "goal": "biome audit",
+            "gameObjects": [
+                {
+                    "name": "Dune A",
+                    "shape": "box",
+                    "size": [2, 1, 2],
+                    "position": [-5, 0.5, 0],
+                    "color": "#e0c080",
+                    "physics": "fixed",
+                    "biome": "sand",
+                }
+            ],
+            "rules": [
+                {
+                    "id": "sand-held",
+                    "type": "biome_coverage_min",
+                    "biome": "sand",
+                    "min": 2,
+                }
+            ],
+        }
+        proc = run_scenario(spec)
+        report = json.loads(proc.stdout)
+        rule = next(r for r in report["rules"] if r["id"] == "sand-held")
+        self.assertFalse(rule["pass"])
+        self.assertIn("Dune A", rule["detail"])
+        self.assertEqual(report["verdict"], "FAILED")
+
+    def test_missing_biome_name_fails_explicitly(self):
+        spec = {
+            "name": "BiomeNameless",
+            "goal": "biome audit",
+            "gameObjects": [
+                {
+                    "name": "Dune A",
+                    "shape": "box",
+                    "size": [2, 1, 2],
+                    "position": [0, 0.5, 0],
+                    "color": "#e0c080",
+                    "physics": "fixed",
+                    "biome": "sand",
+                }
+            ],
+            "rules": [{"id": "sand-held", "type": "biome_coverage_min", "min": 1}],
+        }
+        proc = run_scenario(spec)
+        report = json.loads(proc.stdout)
+        rule = next(r for r in report["rules"] if r["id"] == "sand-held")
+        self.assertFalse(rule["pass"])
+        self.assertIn("requires a biome name", rule["detail"])
+
+
 if __name__ == "__main__":
     unittest.main()

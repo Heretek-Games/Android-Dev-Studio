@@ -45,6 +45,7 @@ MODIFY_FIELDS = (
     "controller",
     "vehicle",
     "streamer",
+    "biome",
 )
 
 
@@ -120,6 +121,23 @@ def _validate_streamer(value: Any) -> Optional[Dict[str, Any]]:
             return None
         normalized[key] = float(item) if key != "seed" else int(item)
     return normalized
+
+
+def _validate_biome(value: Any) -> Optional[str]:
+    """Biome tags label composition regions (free-form, sanitized).
+
+    Returns the stripped tag, or None when malformed. Tags are intentionally
+    open-vocabulary — briefs define their own biomes ("sand rim", "grass
+    infield") — but restricted to a safe charset so scene JSON stays clean.
+    """
+    if not isinstance(value, str):
+        return None
+    tag = value.strip()
+    if not tag or len(tag) > 40:
+        return None
+    if not all(ch.isalnum() or ch in " _-" for ch in tag):
+        return None
+    return tag
 
 
 @dataclass
@@ -293,6 +311,19 @@ def _apply_spawn(
                 "(allowed: chunkSize, renderDistance, resolution, maxHeight, seed)",
             )
         obj["streamer"] = streamer
+    if action.get("biome") is not None:
+        # Composition tag audited by the biome_coverage_min QA rule.
+        biome = _validate_biome(action.get("biome"))
+        if biome is None:
+            return _outcome(
+                result,
+                index,
+                "spawn",
+                "invalid",
+                "spawn 'biome' must be a 1-40 character tag "
+                "(letters, digits, spaces, _ and - only)",
+            )
+        obj["biome"] = biome
 
     scene.setdefault("gameObjects", []).append(obj)
     _outcome(
@@ -491,6 +522,18 @@ def _apply_modify(
                     "(allowed: chunkSize, renderDistance, resolution, maxHeight, seed)",
                 )
             obj["streamer"] = streamer
+        elif field_name == "biome":
+            biome = _validate_biome(value)
+            if biome is None:
+                return _outcome(
+                    result,
+                    index,
+                    "modify",
+                    "invalid",
+                    "modify 'biome' must be a 1-40 character tag "
+                    "(letters, digits, spaces, _ and - only)",
+                )
+            obj["biome"] = biome
         changed.append(field_name)
 
     if not changed:
