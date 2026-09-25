@@ -143,6 +143,14 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         const es = go.getComponent(EventSheet);
         return es ? JSON.parse(JSON.stringify(es.events)) : [];
       },
+      getEventTrace: (name: string) => {
+        const go: any = scene.findByName(name);
+        if (!go) return null;
+        const es = go.getComponent(EventSheet);
+        return es && typeof es.getTrace === 'function'
+          ? JSON.parse(JSON.stringify(es.getTrace()))
+          : [];
+      },
       getComponents: (name: string) => {
         const go: any = scene.findByName(name);
         return go
@@ -173,6 +181,33 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         refreshScene();
         addLog('info', 'Scene', 'Spawned prefab probe instances.');
         return [a.name, b.name];
+      },
+      spawnEventProbe: () => {
+        undoService.checkpoint(scene);
+        const go = new GameObject('Probe Spinner');
+        go.transform.setPosition(0, 3, 0);
+        go.addComponent(new MeshRenderer({ shape: 'box', size: [1, 1, 1], color: '#f59e0b' }));
+        go.addComponent(new EventSheet([
+          {
+            id: 'probe-spin',
+            name: 'Probe Spin',
+            enabled: true,
+            conditions: [{ type: 'EveryFrame' }],
+            actions: [{ type: 'RotateY', params: { speed: 1 } }]
+          },
+          {
+            id: 'probe-slow',
+            name: 'Probe Slow Pulse',
+            enabled: true,
+            conditions: [{ type: 'Timer', params: { name: 'probe', interval: 5 } }],
+            actions: [{ type: 'SetColor', params: { color: '#10b981' } }]
+          }
+        ]));
+        scene.addGameObject(go);
+        setSelectedId(go.id);
+        refreshScene();
+        addLog('info', 'Scene', 'Spawned event-trace probe.');
+        return go.name;
       },
       getLogs: () => logs.map((l: any) => `${l.level}|${l.source}|${l.message}`)
     };

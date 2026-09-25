@@ -16,6 +16,10 @@ RULE_DESCRIPTIONS = {
         f"'{r.get('target')}' must have component {r.get('component')}"
     ),
     "event_attached": lambda r: f"'{r.get('target')}' must have an EventSheet event",
+    "event_fired_min": lambda r: (
+        f"event '{r.get('event')}' on '{r.get('target')}' must fire "
+        f"at least {r.get('min', 1)}x during the run"
+    ),
     "object_count": lambda r: (
         f"the scene must contain exactly {r.get('count')} objects"
     ),

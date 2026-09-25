@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useStudio } from '../state/StudioState';
 import { EventSheet, VisualEvent, EventCondition, EventAction } from '@heretek/engine';
 import {
@@ -15,9 +15,16 @@ import {
 } from 'lucide-react';
 
 export const EventSheetEditor: React.FC = () => {
-  const { selectedGameObject, refreshScene } = useStudio();
+  const { selectedGameObject, refreshScene, isPlaying } = useStudio();
   const [showAddCondition, setShowAddCondition] = useState<string | null>(null);
   const [showAddAction, setShowAddAction] = useState<string | null>(null);
+  // Live debugger tick: re-render twice a second during play so fire badges track the run.
+  const [, setLiveTick] = useState(0);
+  useEffect(() => {
+    if (!isPlaying) return;
+    const id = setInterval(() => setLiveTick(t => t + 1), 500);
+    return () => clearInterval(id);
+  }, [isPlaying]);
 
   if (!selectedGameObject) {
     return (
@@ -30,6 +37,10 @@ export const EventSheetEditor: React.FC = () => {
   }
 
   let eventSheet = selectedGameObject.getComponent(EventSheet);
+
+  const traceById = new Map(
+    (eventSheet?.getTrace() ?? []).map(t => [t.eventId, t])
+  );
 
   const handleAddEventSheet = () => {
     eventSheet = selectedGameObject.addComponent(new EventSheet());
@@ -103,6 +114,20 @@ export const EventSheetEditor: React.FC = () => {
         </button>
       </div>
 
+      {/* Debugger trace bar */}
+      <div className="flex items-center justify-between px-3 py-1.5 border-b border-studio-border bg-zinc-950/60 text-[11px]">
+        <span className="text-zinc-500 font-mono">
+          {isPlaying ? '● live trace' : '○ trace idle (enter Play for live fire counts)'}
+        </span>
+        <button
+          onClick={() => { eventSheet!.resetTrace(); refreshScene(); }}
+          className="text-zinc-400 hover:text-amber-300 transition-colors"
+          title="Reset fire counters"
+        >
+          Reset trace
+        </button>
+      </div>
+
       {/* Events Table / Sheet */}
       <div className="p-3 space-y-3 flex-1">
         {eventSheet.events.length === 0 && (
@@ -126,6 +151,22 @@ export const EventSheetEditor: React.FC = () => {
                   className="rounded border-studio-border text-blue-600 cursor-pointer"
                 />
                 <span className="font-semibold text-gray-300">{ev.name}</span>
+                {(() => {
+                  const rec = traceById.get(ev.id);
+                  if (!rec) return null;
+                  return (
+                    <span
+                      title={rec.conditions.map(c => `${c.type}: ${c.lastResult === null ? 'never evaluated' : c.lastResult ? 'pass' : 'BLOCKED'}`).join(' | ') || 'no conditions'}
+                      className={`font-mono text-[10px] px-1.5 py-0.5 rounded border ${
+                        rec.fireCount > 0
+                          ? 'text-emerald-300 bg-emerald-950/50 border-emerald-800/50'
+                          : 'text-zinc-400 bg-zinc-900 border-zinc-700'
+                      }`}
+                    >
+                      ×{rec.fireCount}{rec.lastFireTick >= 0 ? ` @${rec.lastFireTick}` : ' never'}
+                    </span>
+                  );
+                })()}
               </div>
               <button
                 onClick={() => { eventSheet!.removeEvent(ev.id); refreshScene(); }}
@@ -157,6 +198,17 @@ export const EventSheetEditor: React.FC = () => {
                       className="flex items-center justify-between bg-zinc-800 px-2 py-1 rounded border border-studio-border/60 text-gray-200"
                     >
                       <div className="flex items-center space-x-1.5">
+                        {(() => {
+                          const last = traceById.get(ev.id)?.conditions[cIdx]?.lastResult;
+                          return (
+                            <span
+                              title={last === null ? 'never evaluated' : last ? 'passing' : 'blocking the event'}
+                              className={`w-2 h-2 rounded-full shrink-0 ${
+                                last === null ? 'bg-zinc-600' : last ? 'bg-emerald-400' : 'bg-rose-500'
+                              }`}
+                            />
+                          );
+                        })()}
                         <CheckCircle2 className="w-3 h-3 text-emerald-400" />
                         <span>{cond.type}</span>
                       </div>

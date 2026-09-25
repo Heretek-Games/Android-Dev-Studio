@@ -649,6 +649,21 @@ function evaluateRules(spec, ctxData) {
         }
         break;
       }
+      case 'event_fired_min': {
+        const go = scene.findByName(rule.target);
+        const es = go ? go.components.find(c => c.constructor.name === 'EventSheet') : null;
+        if (!es) { pass = false; detail = `no EventSheet on "${rule.target}"`; break; }
+        const trace = typeof es.getTrace === 'function' ? es.getTrace() : [];
+        const rec = trace.find(t => t.eventId === rule.event || t.name === rule.event);
+        if (!rec) {
+          pass = false;
+          detail = `"${rule.event}" not found on "${rule.target}" (events: [${trace.map(t => t.eventId).join(', ')}])`;
+          break;
+        }
+        pass = rec.fireCount >= (rule.min ?? 1);
+        detail = `"${rule.event}" fired ${rec.fireCount}x (min=${rule.min ?? 1}, lastTick=${rec.lastFireTick}, blockedBy=[${rec.conditions.filter(c => c.lastResult === false).map(c => c.type).join(', ') || 'none'}])`;
+        break;
+      }
       case 'object_count': {
         const n = scene.gameObjects.length;
         pass = (rule.min === undefined || n >= rule.min) && (rule.max === undefined || n <= rule.max);

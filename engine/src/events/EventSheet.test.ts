@@ -133,3 +133,99 @@ describe('EventSheet Condition/Action Runtime', () => {
     assert.ok(Math.abs(go.transform.rotation.y - expectedFastOnly) < 1e-6);
   });
 });
+
+describe('EventSheet execution trace (debugger core)', () => {
+  function tracedScene(): { sheet: EventSheet; ctx: EngineContext } {
+    const scene = new Scene('TraceScene');
+    const go = new GameObject('Actor');
+    const sheet = go.addComponent(new EventSheet([
+      {
+        id: 'spin',
+        name: 'Spin',
+        enabled: true,
+        conditions: [{ type: 'EveryFrame' }],
+        actions: [{ type: 'RotateY', params: { speed: 1 } }]
+      },
+      {
+        id: 'delayed',
+        name: 'Delayed',
+        enabled: true,
+        conditions: [{ type: 'Timer', params: { name: 'd', interval: 1.0 } }],
+        actions: [{ type: 'RotateY', params: { degrees: 5 } }]
+      },
+      {
+        id: 'quiet',
+        name: 'Never Fires',
+        enabled: true,
+        conditions: [{ type: 'Timer', params: { name: 'q', interval: 100.0 } }],
+        actions: [{ type: 'RotateY', params: { degrees: 5 } }]
+      }
+    ]));
+    scene.addGameObject(go);
+    const ctx = new EngineContext();
+    ctx.setScene(scene);
+    return { sheet, ctx };
+  }
+
+  test('fire counts and last-fire ticks track evaluation', () => {
+    const { sheet, ctx } = tracedScene();
+    // Attach runs the OnStart pass (tick 1); Timer conditions stay false there.
+    assert.strictEqual(sheet.fireCount('spin'), 0);
+    for (let i = 0; i < 120; i++) ctx.step(1 / 60);
+    const trace = sheet.getTrace();
+    const spin = trace.find(t => t.eventId === 'spin')!;
+    assert.strictEqual(spin.fireCount, 120);
+    assert.strictEqual(spin.lastFireTick, 121); // 1 start pass + 120 updates
+    assert.strictEqual(spin.evalCount, 121);
+    const delayed = trace.find(t => t.eventId === 'delayed')!;
+    assert.strictEqual(delayed.fireCount, 2); // 2s at a 1.0s interval
+    const quiet = trace.find(t => t.eventId === 'quiet')!;
+    assert.strictEqual(quiet.fireCount, 0);
+    assert.strictEqual(quiet.lastFireTick, -1);
+    // Lookup by name agrees with lookup by id.
+    assert.strictEqual(sheet.fireCount('Delayed'), 2);
+    assert.strictEqual(sheet.fireCount('nope'), 0);
+  });
+
+  test('condition outcomes record pass/fail with a capped ring', () => {
+    const { sheet, ctx } = tracedScene();
+    for (let i = 0; i < 20; i++) ctx.step(1 / 60);
+    const trace = sheet.getTrace();
+    const spinCond = trace.find(t => t.eventId === 'spin')!.conditions[0];
+    assert.strictEqual(spinCond.lastResult, true);
+    assert.strictEqual(spinCond.evalCount, 21);
+    assert.ok(spinCond.recent.length <= 8);
+    assert.ok(spinCond.recent.every(Boolean));
+    const quietCond = trace.find(t => t.eventId === 'quiet')!.conditions[0];
+    assert.strictEqual(quietCond.lastResult, false);
+  });
+
+  test('disabled events never evaluate or fire', () => {
+    const { sheet, ctx } = tracedScene();
+    const spin = sheet.events.find(e => e.id === 'spin')!;
+    spin.enabled = false;
+    for (let i = 0; i < 60; i++) ctx.step(1 / 60);
+    const record = sheet.getTrace().find(t => t.eventId === 'spin')!;
+    assert.strictEqual(record.fireCount, 0);
+    // Only the attach-time OnStart pass (which ran while still enabled).
+    assert.strictEqual(record.evalCount, 1);
+  });
+
+  test('reset clears records; trace survives JSON round-trip', () => {
+    const { sheet, ctx } = tracedScene();
+    for (let i = 0; i < 60; i++) ctx.step(1 / 60);
+    assert.strictEqual(sheet.fireCount('spin'), 60);
+    sheet.resetTrace();
+    assert.strictEqual(sheet.fireCount('spin'), 0);
+    assert.deepStrictEqual(sheet.getTrace().find(t => t.eventId === 'spin')!.conditions[0].recent, []);
+
+    for (let i = 0; i < 30; i++) ctx.step(1 / 60);
+    const json = JSON.stringify(sheet.toJSON());
+    const restored = new EventSheet();
+    restored.fromJSON(JSON.parse(json));
+    assert.strictEqual(restored.fireCount('spin'), 30);
+    assert.strictEqual(restored.fireCount('delayed'), 0);
+    const cond = restored.getTrace().find(t => t.eventId === 'spin')!.conditions[0];
+    assert.strictEqual(cond.lastResult, true);
+  });
+});
