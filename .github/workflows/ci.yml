@@ -25,7 +25,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: python3 -m unittest harness.validation.test_scene_invariants harness.validation.test_quadtree_parity harness.build.test_scene_exporter harness.build.test_apk_builder harness.build.test_tier2_parity harness.briefs.test_game_brief
+      - run: python3 -m unittest harness.validation.test_scene_invariants harness.validation.test_quadtree_parity harness.build.test_scene_exporter harness.build.test_apk_builder harness.build.test_tier2_parity harness.briefs.test_game_brief harness.scenes.test_v2 harness.perf.test_tiers
       - run: python3 -m unittest discover -s harness/loop -p "test_*.py"
       - run: python3 -m unittest discover -s harness/agents -p "test_*.py"
 

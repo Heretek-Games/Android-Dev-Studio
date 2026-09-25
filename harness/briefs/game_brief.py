@@ -60,9 +60,10 @@ def _require_nonnegative_number(data: Dict[str, Any], key: str, context: str) ->
 
 @dataclass(frozen=True)
 class PerformanceContract:
-    """Snapdragon 8 Elite / Android 16 budgets. Defaults encode the house profile."""
+    """Scalability-tier budgets. Defaults encode the tier-A house profile."""
 
     deviceProfile: str = "android16-snapdragon8elite"
+    tier: str = "A"
     targetFps: int = 60
     maxDrawCalls: int = 100
     maxTrisPerChunk: int = 150000
@@ -74,9 +75,21 @@ class PerformanceContract:
 
     @staticmethod
     def from_dict(data: Optional[Dict[str, Any]]) -> "PerformanceContract":
+        from harness.perf.tiers import resolve_tier
+
         if data is None:
             return PerformanceContract()
         data = _require_dict(data, "performance")
+
+        tier_id = data.get("tier", "A")
+        if not isinstance(tier_id, str):
+            raise BriefValidationError("performance 'tier' must be a string")
+        try:
+            tier = resolve_tier(tier_id)
+        except ValueError:
+            raise BriefValidationError(
+                f"performance tier must be one of S, A, X (got {tier_id!r})"
+            )
 
         def pick(key: str, default: Any) -> Any:
             value = data.get(key, default)
@@ -84,19 +97,32 @@ class PerformanceContract:
                 raise BriefValidationError(f"performance '{key}' must be numeric")
             return value
 
-        target_fps = int(pick("targetFps", 60))
+        def within_ceiling(key: str, value: float, ceiling: float) -> None:
+            if value > ceiling:
+                raise BriefValidationError(
+                    f"performance {key} must be <= tier {tier_id.strip().upper()} "
+                    f"ceiling {ceiling:g} (got {value:g})"
+                )
+
+        target_fps = int(pick("targetFps", tier.target_fps))
         if target_fps < MIN_TARGET_FPS:
             raise BriefValidationError(
                 f"performance targetFps must be >= {MIN_TARGET_FPS} (got {target_fps})"
             )
-        max_draws = int(pick("maxDrawCalls", 100))
-        if max_draws > MAX_DRAW_CALLS_CEILING:
-            raise BriefValidationError(
-                f"performance maxDrawCalls must be <= {MAX_DRAW_CALLS_CEILING} (got {max_draws})"
-            )
-        max_apk = float(pick("maxApkMb", 200))
+        max_draws = int(pick("maxDrawCalls", tier.max_draw_calls))
+        within_ceiling("maxDrawCalls", max_draws, tier.max_draw_calls)
+        max_tris_chunk = int(pick("maxTrisPerChunk", tier.max_tris_per_chunk))
+        within_ceiling("maxTrisPerChunk", max_tris_chunk, tier.max_tris_per_chunk)
+        max_tris_scene = int(pick("maxTrisPerScene", tier.max_tris_per_scene))
+        within_ceiling("maxTrisPerScene", max_tris_scene, tier.max_tris_per_scene)
+        max_tex = int(pick("maxTextureMb", tier.max_texture_mb))
+        within_ceiling("maxTextureMb", max_tex, tier.max_texture_mb)
+        max_bodies = int(pick("maxPhysicsBodies", tier.max_physics_bodies))
+        within_ceiling("maxPhysicsBodies", max_bodies, tier.max_physics_bodies)
+        max_apk = float(pick("maxApkMb", tier.max_apk_mb))
         if max_apk <= 0:
             raise BriefValidationError("performance maxApkMb must be positive")
+        within_ceiling("maxApkMb", max_apk, tier.max_apk_mb)
         profile = data.get("deviceProfile", "android16-snapdragon8elite")
         if not isinstance(profile, str) or not profile.strip():
             raise BriefValidationError(
@@ -104,12 +130,13 @@ class PerformanceContract:
             )
         return PerformanceContract(
             deviceProfile=profile.strip(),
+            tier=tier_id.strip().upper(),
             targetFps=target_fps,
             maxDrawCalls=max_draws,
-            maxTrisPerChunk=int(pick("maxTrisPerChunk", 150000)),
-            maxTrisPerScene=int(pick("maxTrisPerScene", 1200000)),
-            maxTextureMb=int(pick("maxTextureMb", 256)),
-            maxPhysicsBodies=int(pick("maxPhysicsBodies", 256)),
+            maxTrisPerChunk=max_tris_chunk,
+            maxTrisPerScene=max_tris_scene,
+            maxTextureMb=max_tex,
+            maxPhysicsBodies=max_bodies,
             maxApkMb=max_apk,
             maxLoadSeconds=float(pick("maxLoadSeconds", 8.0)),
         )
@@ -117,6 +144,7 @@ class PerformanceContract:
     def to_dict(self) -> Dict[str, Any]:
         return {
             "deviceProfile": self.deviceProfile,
+            "tier": self.tier,
             "targetFps": self.targetFps,
             "maxDrawCalls": self.maxDrawCalls,
             "maxTrisPerChunk": self.maxTrisPerChunk,
