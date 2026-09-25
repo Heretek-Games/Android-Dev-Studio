@@ -11,7 +11,7 @@ This document is the single source of truth for AI agents (Antigravity, Claude C
 All four genre milestone sets, the autonomous harness, and both Android containers are
 implemented and verified:
 
-- **Engine** — 374 tests / 74 suites green (`npm test`); every logic source file has a companion
+- **Engine** — 381 tests / 75 suites green (`npm test`); every logic source file has a companion
   headless `.test.ts` (Zero Untested Code).
 - **Harness** — 24 MCP tools behind the transactional 7-point invariant gate; Artemis QA with
   scenario-keyed regression baselines; 50 Python tests (invariants, exporter, apk_builder,

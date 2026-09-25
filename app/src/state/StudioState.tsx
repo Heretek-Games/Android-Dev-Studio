@@ -17,6 +17,7 @@ import {
   ParticleSystem,
   AnimFSM,
   TimelineLite,
+  InputActionMap,
   type PrefabStore
 } from '@heretek/engine';
 
@@ -168,6 +169,36 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           maxParticles: ps.maxParticles,
           frame: engineContext.frameCount
         };
+      },
+      probeInputMap: () => {
+        // End-to-end through the real capture path: synthetic key events on
+        // window flow through MobileInput listeners into a fresh action map.
+        const map = new InputActionMap({
+          actions: {
+            jump: { type: 'button', bindings: [{ source: 'key', code: 'Space' }] },
+            move: {
+              type: 'axis2',
+              bindings: [
+                { source: 'key', code: 'KeyW', output2: [0, 1] },
+                { source: 'key', code: 'KeyS', output2: [0, -1] },
+                { source: 'key', code: 'KeyA', output2: [-1, 0] },
+                { source: 'key', code: 'KeyD', output2: [1, 0] }
+              ]
+            }
+          }
+        });
+        window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyW' }));
+        window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyD' }));
+        const move = map.getAxis2('move');
+        const jumpBefore = map.getButton('jump');
+        map.inject('jump', true, 1);
+        const jumpDuring = map.getButton('jump');
+        map.endFrame();
+        const jumpAfter = map.getButton('jump');
+        window.dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyW' }));
+        window.dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyD' }));
+        const moveAfter = map.getAxis2('move');
+        return { move, jumpBefore, jumpDuring, jumpAfter, moveAfter };
       },
       getComponents: (name: string) => {
         const go: any = scene.findByName(name);

@@ -386,6 +386,45 @@ function addElementalComponent(go, spec, engine) {
 }
 
 /**
+ * Scripted input (Track 1.9): builds the scene-level InputActionMap from
+ * spec.inputmap and plays spec.inputScript injections per frame
+ * (UE InjectInputForAction / Godot parse_input_event parity). Samples every
+ * named action each frame for the input_action_min rule.
+ */
+function setupInput(spec, engine) {
+  if (!spec.inputmap || typeof spec.inputmap !== 'object') return null;
+  const map = new engine.InputActionMap(spec.inputmap);
+  const script = Array.isArray(spec.inputScript) ? spec.inputScript : [];
+  const peak = {};
+  return {
+    map,
+    beginFrame(frame) {
+      for (const entry of script) {
+        if (!entry || typeof entry.action !== 'string') continue;
+        const start = entry.start ?? 0;
+        const frames = entry.frames ?? 1;
+        if (frame === start) map.inject(entry.action, entry.value ?? true, frames);
+      }
+    },
+    sampleFrame() {
+      for (const name of map.actions.keys()) {
+        const action = map.actions.get(name);
+        const rec = peak[name] ?? (peak[name] = { button: false, axis1: 0, axis2: 0 });
+        if (map.getButton(name)) rec.button = true;
+        if (action.type !== 'button') {
+          if (action.type === 'axis1') {
+            rec.axis1 = Math.max(rec.axis1, Math.abs(map.getAxis1(name)));
+          } else {
+            const v = map.getAxis2(name);
+            rec.axis2 = Math.max(rec.axis2, Math.hypot(v.x, v.y));
+          }
+        }
+      }
+    },
+    peak
+  };
+}
+/**
  * Dialogue auto-play: register every spec.dialogues tree and walk each one
  * deterministically (first available choice, bounded steps), recording stable
  * node visits plus emitted events. Action/condition nodes self-resolve inside
@@ -634,7 +673,7 @@ function placementNote(game) {
 }
 
 function evaluateRules(spec, ctxData) {
-  const { scene, samples, firstSamples, metrics, dt, game, dialogue } = ctxData;
+  const { scene, samples, firstSamples, metrics, dt, game, dialogue, input } = ctxData;
   const results = [];
 
   for (const rule of spec.rules || []) {
@@ -715,6 +754,24 @@ function evaluateRules(spec, ctxData) {
         const maxMissing = rule.maxMissing ?? 0;
         pass = missing.length <= maxMissing;
         detail = `locale missing=${missing.length} (max=${maxMissing}${missing.length ? `: ${missing.slice(0, 5).join(', ')}` : ''})`;
+        break;
+      }
+      case 'input_action_min': {
+        if (!input) { pass = false; detail = 'no spec.inputmap present'; break; }
+        const rec = input.peak[rule.action];
+        if (!rec) { pass = false; detail = `unknown action "${rule.action}"`; break; }
+        const kind = rule.kind || 'button';
+        const min = rule.min ?? (kind === 'button' ? true : 0.5);
+        if (kind === 'button') {
+          pass = rec.button === true;
+          detail = `"${rule.action}" pressed=${rec.button}`;
+        } else if (kind === 'axis1') {
+          pass = rec.axis1 >= min;
+          detail = `"${rule.action}" peak|axis1|=${rec.axis1.toFixed(3)} (min=${min})`;
+        } else {
+          pass = rec.axis2 >= (rule.min ?? 0.5);
+          detail = `"${rule.action}" peak|axis2|=${rec.axis2.toFixed(3)} (min=${rule.min ?? 0.5})`;
+        }
         break;
       }
       case 'object_count': {
@@ -1009,6 +1066,7 @@ async function main() {
     r => r && r.type === 'game_save_restore'
   );
   const dialogue = setupDialogue(spec, engine);
+  const input = setupInput(spec, engine);
 
   const eventCount = scene.gameObjects.reduce(
     (n, go) => n + go.components.filter(c => c.constructor.name === 'EventSheet').reduce((m, es) => m + es.events.length, 0), 0
@@ -1029,7 +1087,9 @@ async function main() {
   const times = [];
   for (let frame = 0; frame < args.frames; frame++) {
     const t0 = performance.now();
+    if (input) input.beginFrame(frame);
     ctx.step(args.dt);
+    if (input) input.sampleFrame(frame);
     if (game) {
       game.runtime.update(args.dt);
       game.maybeFire(frame);
@@ -1048,6 +1108,7 @@ async function main() {
       }
       samples.push({ frame, fields: fieldsNow });
     }
+    if (input) input.map.endFrame();
   }
 
   const sorted = [...times].sort((a, b) => a - b);
@@ -1104,7 +1165,7 @@ async function main() {
     }
   }
 
-  const ruleResults = evaluateRules(spec, { scene, samples, firstSamples, metrics, dt: args.dt, game, dialogue });
+  const ruleResults = evaluateRules(spec, { scene, samples, firstSamples, metrics, dt: args.dt, game, dialogue, input });
   const passed = ruleResults.filter(r => r.pass).length;
   const total = ruleResults.length;
   const allPass = total > 0 && passed === total;

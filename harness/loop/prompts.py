@@ -32,6 +32,9 @@ RULE_DESCRIPTIONS = {
     "locale_missing_max": lambda r: (
         f"at most {r.get('maxMissing', 0)} localization keys may go missing"
     ),
+    "input_action_min": lambda r: (
+        f"input action '{r.get('action')}' must register during the run"
+    ),
     "object_count": lambda r: (
         f"the scene must contain exactly {r.get('count')} objects"
     ),
@@ -130,6 +133,10 @@ ACTION_SCHEMA = """Action vocabulary (a JSON array named "actions"):
   - {"type": "locale", "config": {"locale": "es", "tables": {"es": {"dialogue.keeper.greet": "Hola, héroe."}, "en": {"dialogue.keeper.greet": "Hello, hero."}}}}
     (registers scene string tables for the locale_missing_max audit; dialogue node
     text resolves via dialogue.<tree>.<node> keys with literal fallback)
+  - {"type": "input", "map": {"actions": {"jump": {"type": "button", "bindings": [{"source": "key", "code": "Space"}]}, "move": {"type": "axis2", "bindings": [{"source": "key", "code": "KeyW", "output2": [0, 1]}, {"source": "key", "code": "KeyS", "output2": [0, -1]}]}}}, "script": [{"action": "jump", "value": true, "start": 10, "frames": 5}]}
+    (registers the scene input-action map plus a scripted injection schedule for the
+    input_action_min audit; binding sources key|button|stick|gamepad-button|gamepad-axis;
+    digital axis2 bindings REQUIRE output2; script actions must name mapped actions)
 
 How acceptance rules map onto the schema (the QA runner checks these exact components):
   - "RigidBody3D"/"Collider3D" component -> the spawn has "physics": "dynamic" (or "fixed")

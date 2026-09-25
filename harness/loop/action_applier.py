@@ -2362,6 +2362,248 @@ def _apply_prefab(
     )
 
 
+INPUT_ACTION_TYPES = {"button", "axis1", "axis2"}
+INPUT_SOURCES = {"key", "button", "stick", "gamepad-button", "gamepad-axis"}
+INPUT_PAD_BUTTONS = {
+    "a",
+    "b",
+    "x",
+    "y",
+    "lb",
+    "rb",
+    "lt",
+    "rt",
+    "select",
+    "start",
+    "l3",
+    "r3",
+    "up",
+    "down",
+    "left",
+    "right",
+    "home",
+}
+
+
+def _validate_input_binding(
+    binding: Any, action_type: str, where: str, errors: Optional[List[str]]
+) -> Optional[Dict[str, Any]]:
+    def fail(reason: str) -> None:
+        if errors is not None:
+            errors.append(reason)
+        return None
+
+    if not isinstance(binding, dict):
+        fail(f"{where} must be an object")
+        return None
+    source = binding.get("source")
+    if source not in INPUT_SOURCES:
+        fail(f"{where}.source must be one of {sorted(INPUT_SOURCES)} (got {source!r})")
+        return None
+    code = binding.get("code")
+    if not isinstance(code, str) or not code.strip():
+        fail(f"{where} needs a non-empty 'code'")
+        return None
+    code = code.strip()
+    if source == "stick" and code not in ("left", "right"):
+        fail(f"{where}.code for stick must be left|right (got {code!r})")
+        return None
+    if source == "gamepad-button" and (
+        code.lower() not in INPUT_PAD_BUTTONS
+        and not (code.lower().startswith("pad") and code[3:].isdigit())
+    ):
+        fail(f"{where}.code unknown gamepad button (got {code!r})")
+        return None
+    if source == "gamepad-axis" and code.lower() not in (
+        "axis0",
+        "axis1",
+        "axis2",
+        "axis3",
+    ):
+        fail(f"{where}.code must be axis0..axis3 (got {code!r})")
+        return None
+    normalized: Dict[str, Any] = {"source": source, "code": code}
+    if "axis" in binding:
+        if binding["axis"] not in ("x", "y"):
+            fail(f"{where}.axis must be x|y (got {binding['axis']!r})")
+            return None
+        normalized["axis"] = binding["axis"]
+    if "output" in binding:
+        if not _is_finite_number(binding["output"]):
+            fail(f"{where}.output must be a finite number")
+            return None
+        normalized["output"] = float(binding["output"])
+    if "output2" in binding:
+        pair = binding["output2"]
+        if (
+            not isinstance(pair, (list, tuple))
+            or len(pair) != 2
+            or not all(_is_finite_number(v) for v in pair)
+        ):
+            fail(f"{where}.output2 must be a finite [x, y] pair")
+            return None
+        normalized["output2"] = [float(pair[0]), float(pair[1])]
+    if "scale" in binding:
+        if not _is_finite_number(binding["scale"]):
+            fail(f"{where}.scale must be a finite number")
+            return None
+        normalized["scale"] = float(binding["scale"])
+    # Digital sources on axis2 actions without output2 contribute [0,0]
+    # silently at runtime: reject the typo-class here instead.
+    if (
+        action_type == "axis2"
+        and source in ("key", "button", "gamepad-button")
+        and "output2" not in normalized
+    ):
+        fail(f"{where} needs 'output2' ([x, y]) for axis2 actions")
+        return None
+    for key in binding:
+        if key not in ("source", "code", "axis", "output", "output2", "scale"):
+            fail(f"{where} unknown key '{key}'")
+            return None
+    return normalized
+
+
+def _validate_inputmap(
+    value: Any, errors: Optional[List[str]] = None
+) -> Optional[Dict[str, Any]]:
+    """Input map specs pass straight to the QA runner (spec.inputmap)."""
+
+    def fail(reason: str) -> None:
+        if errors is not None:
+            errors.append(reason)
+        return None
+
+    if not isinstance(value, dict):
+        fail("input 'map' must be an object with an actions map")
+        return None
+    raw_actions = value.get("actions")
+    if not isinstance(raw_actions, dict) or not raw_actions:
+        fail("input map 'actions' must be a non-empty name->spec map")
+        return None
+    actions: Dict[str, Any] = {}
+    for name, spec in raw_actions.items():
+        if not isinstance(name, str) or not name.strip() or not isinstance(spec, dict):
+            fail(f"input action {name!r} must be an object")
+            return None
+        atype = spec.get("type")
+        if atype not in INPUT_ACTION_TYPES:
+            fail(
+                f"input action '{name}'.type must be one of {sorted(INPUT_ACTION_TYPES)}"
+            )
+            return None
+        entry: Dict[str, Any] = {"type": atype}
+        if "deadzone" in spec:
+            if not _is_finite_number(spec["deadzone"]) or spec["deadzone"] < 0:
+                fail(f"input action '{name}'.deadzone must be >= 0")
+                return None
+            entry["deadzone"] = float(spec["deadzone"])
+        raw_bindings = spec.get("bindings")
+        if not isinstance(raw_bindings, list) or not raw_bindings:
+            fail(f"input action '{name}'.bindings must be a non-empty array")
+            return None
+        bindings = []
+        for i, b in enumerate(raw_bindings):
+            checked = _validate_input_binding(
+                b, atype, f"input action '{name}'.bindings[{i}]", errors
+            )
+            if checked is None:
+                return None
+            bindings.append(checked)
+        entry["bindings"] = bindings
+        actions[name] = entry
+    normalized: Dict[str, Any] = {"actions": actions}
+    for key in value:
+        if key not in ("actions",):
+            fail(f"unknown input map key '{key}' (allowed: actions)")
+            return None
+    return normalized
+
+
+def _validate_input_script(
+    value: Any, action_names: set, errors: Optional[List[str]]
+) -> Optional[List[Dict[str, Any]]]:
+    def fail(reason: str) -> None:
+        if errors is not None:
+            errors.append(reason)
+        return None
+
+    if value is None:
+        return []
+    if not isinstance(value, list):
+        fail("input 'script' must be an array of {action, value, start, frames}")
+        return None
+    script: List[Dict[str, Any]] = []
+    for i, entry in enumerate(value):
+        if not isinstance(entry, dict):
+            fail(f"input script[{i}] must be an object")
+            return None
+        action = entry.get("action")
+        if action not in action_names:
+            fail(f"input script[{i}].action must name a mapped action (got {action!r})")
+            return None
+        step: Dict[str, Any] = {"action": action}
+        item = entry.get("value", True)
+        if isinstance(item, bool):
+            step["value"] = item
+        elif _is_finite_number(item):
+            step["value"] = float(item)
+        elif (
+            isinstance(item, dict)
+            and _is_finite_number(item.get("x"))
+            and _is_finite_number(item.get("y"))
+        ):
+            step["value"] = {"x": float(item["x"]), "y": float(item["y"])}
+        else:
+            fail(f"input script[{i}].value must be bool, number, or {{x, y}}")
+            return None
+        for numkey, floor in (("start", 0), ("frames", 1)):
+            num = entry.get(numkey, floor if numkey == "frames" else 0)
+            if (
+                isinstance(num, bool)
+                or not isinstance(num, (int, float))
+                or int(num) != num
+                or num < floor
+            ):
+                fail(f"input script[{i}].{numkey} must be an integer >= {floor}")
+                return None
+            step[numkey] = int(num)
+        script.append(step)
+    return script
+
+
+def _apply_input(
+    scene: Dict[str, Any], action: Dict[str, Any], result: ApplyResult, index: int
+) -> None:
+    reasons: List[str] = []
+    game_map = _validate_inputmap(action.get("map"), reasons)
+    if game_map is None:
+        detail = reasons[0] if reasons else "malformed map"
+        return _outcome(
+            result, index, "input", "invalid", f"input map rejected — {detail}"
+        )
+    script = _validate_input_script(
+        action.get("script"), set(game_map["actions"]), reasons
+    )
+    if script is None:
+        detail = reasons[0] if reasons else "malformed script"
+        return _outcome(
+            result, index, "input", "invalid", f"input script rejected — {detail}"
+        )
+    scene["inputmap"] = game_map
+    if script:
+        scene["inputScript"] = script
+    elif "inputScript" in scene:
+        del scene["inputScript"]
+    _outcome(
+        result,
+        index,
+        "input",
+        "applied",
+        f"Registered input map ({len(game_map['actions'])} action(s), {len(script)} script step(s))",
+    )
+
+
 def _validate_locale(
     value: Any, errors: Optional[List[str]] = None
 ) -> Optional[Dict[str, Any]]:
@@ -2571,6 +2813,7 @@ _HANDLERS = {
     "dialogue": _apply_dialogue,
     "prefab": _apply_prefab,
     "locale": _apply_locale,
+    "input": _apply_input,
 }
 
 

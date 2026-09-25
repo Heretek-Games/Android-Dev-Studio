@@ -38,6 +38,7 @@ export * from './dialogue/DialogueManager.js';
 
 // Input & Physics
 export * from './input/MobileInput.js';
+export * from './input/InputActionMap.js';
 export * from './physics/PhysicsWorld.js';
 
 // AAA Engine Systems (Genshin, COD Mobile, Doom scope)

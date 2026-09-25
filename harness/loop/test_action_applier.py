@@ -1335,6 +1335,145 @@ class LocaleActionTests(unittest.TestCase):
             self.assertIn(hint, result.outcomes[0]["detail"])
 
 
+class InputActionTests(unittest.TestCase):
+    def test_input_action_registers_map_and_script(self):
+        scene, result = apply_actions(
+            base_scene(),
+            [
+                {
+                    "type": "input",
+                    "map": {
+                        "actions": {
+                            "jump": {
+                                "type": "button",
+                                "bindings": [{"source": "key", "code": "Space"}],
+                            },
+                            "move": {
+                                "type": "axis2",
+                                "bindings": [
+                                    {
+                                        "source": "key",
+                                        "code": "KeyW",
+                                        "output2": [0, 1],
+                                    },
+                                    {
+                                        "source": "key",
+                                        "code": "KeyS",
+                                        "output2": [0, -1],
+                                    },
+                                ],
+                            },
+                        }
+                    },
+                    "script": [
+                        {"action": "jump", "value": True, "start": 10, "frames": 5},
+                        {
+                            "action": "move",
+                            "value": {"x": 0, "y": 1},
+                            "start": 0,
+                            "frames": 30,
+                        },
+                    ],
+                }
+            ],
+        )
+        self.assertEqual(result.applied, 1)
+        self.assertEqual(
+            scene["inputmap"]["actions"]["jump"]["bindings"],
+            [{"source": "key", "code": "Space"}],
+        )
+        self.assertEqual(len(scene["inputScript"]), 2)
+        self.assertEqual(scene["inputScript"][0]["frames"], 5)
+
+    def test_input_action_rejects_malformed(self):
+        good_map = {
+            "actions": {
+                "jump": {
+                    "type": "button",
+                    "bindings": [{"source": "key", "code": "Space"}],
+                }
+            }
+        }
+        for kwargs, hint in (
+            ({"map": {"actions": {}}}, "actions"),
+            (
+                {"map": {"actions": {"jump": {"type": "trigger", "bindings": []}}}},
+                "button",
+            ),
+            (
+                {"map": {"actions": {"jump": {"type": "button", "bindings": []}}}},
+                "bindings",
+            ),
+            (
+                {
+                    "map": {
+                        "actions": {
+                            "jump": {
+                                "type": "button",
+                                "bindings": [{"source": "mouse", "code": "L"}],
+                            }
+                        }
+                    }
+                },
+                "source",
+            ),
+            (
+                {
+                    "map": {
+                        "actions": {
+                            "jump": {
+                                "type": "button",
+                                "bindings": [{"source": "stick", "code": "middle"}],
+                            }
+                        }
+                    }
+                },
+                "left|right",
+            ),
+            (
+                {
+                    "map": {
+                        "actions": {
+                            "jump": {
+                                "type": "button",
+                                "bindings": [{"source": "gamepad-button", "code": "z"}],
+                            }
+                        }
+                    }
+                },
+                "gamepad button",
+            ),
+            (
+                {
+                    "map": {
+                        "actions": {
+                            "move": {
+                                "type": "axis2",
+                                "bindings": [{"source": "key", "code": "KeyW"}],
+                            }
+                        }
+                    }
+                },
+                "output2",
+            ),
+            ({"map": good_map, "script": [{"action": "fly", "value": True}]}, "fly"),
+            (
+                {"map": good_map, "script": [{"action": "jump", "value": "hard"}]},
+                "value",
+            ),
+            (
+                {
+                    "map": good_map,
+                    "script": [{"action": "jump", "value": True, "frames": 0}],
+                },
+                "frames",
+            ),
+        ):
+            _, result = apply_actions(base_scene(), [{"type": "input", **kwargs}])
+            self.assertEqual(result.invalid, 1, f"should reject {kwargs!r}")
+            self.assertIn(hint, result.outcomes[0]["detail"])
+
+
 class PrefabActionTests(unittest.TestCase):
     def test_prefab_define_registers_template(self):
         scene, result = apply_actions(

@@ -118,6 +118,30 @@ export class MobileInput {
     return this.buttons.get(btn) || false;
   }
 
+  /** Physical key state reader (KeyboardEvent.code) for action-map polling. */
+  public isKeyDown(code: string): boolean {
+    return this.keysDown.has(code);
+  }
+
+  /** Scripted key state (headless QA / action-map tests); mirrors setButton. */
+  public setKey(code: string, down: boolean): void {
+    if (down) this.keysDown.add(code);
+    else this.keysDown.delete(code);
+    this.updateKeyboardJoystick();
+  }
+
+  /** Clears all capture state (test/automation isolation hook). */
+  public reset(): void {
+    this.keysDown.clear();
+    this.buttons.clear();
+    this.buttons.set('jump', false);
+    this.buttons.set('fire', false);
+    this.buttons.set('action', false);
+    this.touches.clear();
+    this.leftJoystick = { x: 0, y: 0, angle: 0, distance: 0, isActive: false };
+    this.rightJoystick = { x: 0, y: 0, angle: 0, distance: 0, isActive: false };
+  }
+
   public getAxis(axis: 'Horizontal' | 'Vertical'): number {
     if (axis === 'Horizontal') return this.leftJoystick.x;
     if (axis === 'Vertical') return this.leftJoystick.y;
