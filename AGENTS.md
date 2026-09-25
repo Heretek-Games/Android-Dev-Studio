@@ -17,7 +17,7 @@ implemented and verified:
   scenario-keyed regression baselines; 50 Python tests (invariants, exporter, apk_builder,
   cross-tier quadtree parity); an **autonomous iterate-until-green loop** (`harness/loop/`)
   that drives generated scenes to QA-verified green with vision critique, regression bisect,
-  and a cost/latency dashboard (91 loop tests).
+  and a cost/latency dashboard (106 loop tests).
 - **Containers** — both tiers assemble real debug APKs and deploy/launch on an attached device.
   Tier 2 is validated on an Android target (emulator): real swapchain, 3 instanced cubes +
   64 terrain LOD leaf draws, `VK_SUCCESS` acquire/submit/present at ~61.5 FPS, rendered output
