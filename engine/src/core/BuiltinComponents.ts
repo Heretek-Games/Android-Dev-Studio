@@ -28,6 +28,8 @@ import { Timer } from '../behaviors/Timer.js';
 import { Spawner } from '../behaviors/Spawner.js';
 import { SaveSlot } from '../behaviors/SaveSlot.js';
 import { ParticleSystem } from '../particles/ParticleSystem.js';
+import { AnimFSM } from '../animation/AnimFSM.js';
+import { TimelineLite } from '../cinematics/TimelineLite.js';
 
 /**
  * Registers every restorable built-in component by its toJSON type name.
@@ -63,6 +65,8 @@ export function registerBuiltinComponents(): void {  registerComponent('MeshRend
   registerComponent('Spawner', Spawner);
   registerComponent('SaveSlot', SaveSlot);
   registerComponent('ParticleSystem', ParticleSystem);
+  registerComponent('AnimFSM', AnimFSM);
+  registerComponent('TimelineLite', TimelineLite);
 }
 
 // Self-register on import so restores work without a manual init call.

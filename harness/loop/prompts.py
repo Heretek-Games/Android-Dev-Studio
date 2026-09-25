@@ -23,6 +23,12 @@ RULE_DESCRIPTIONS = {
     "particle_count_min": lambda r: (
         f"'{r.get('target')}' must hold at least {r.get('min', 1)} live particles"
     ),
+    "anim_state_is": lambda r: (
+        f"'{r.get('target')}' must end in anim state '{r.get('state')}'"
+    ),
+    "timeline_finished": lambda r: (
+        f"the timeline on '{r.get('target')}' must play to completion"
+    ),
     "object_count": lambda r: (
         f"the scene must contain exactly {r.get('count')} objects"
     ),
@@ -69,7 +75,10 @@ ACTION_SCHEMA = """Action vocabulary (a JSON array named "actions"):
      "ai": {"targetName": "Player Hero", "moveSpeed": 2.5} (optional: adds an EnemyAI NPC routine that chases/attacks the named target),
      "elemental": {"aura": "Pyro", "maxHealth": 80} (optional: seeds an elemental aura for reaction quests; aura is one of Pyro|Hydro|Cryo|Electro|Anemo|Geo|Dendro),
      "cel": {"baseColor": "#38bdf8", "shadowColor": "#1e3a8a", "rimPower": 3.5} (optional: calibrates an AnimeCelShader look-dev pass; colors #rgb/#rrggbb, outlineThickness/rimPower non-negative numbers),
-     "behaviors": [{"type": "TopDownMovement", "options": {"moveSpeed": 5}}] (optional: attaches behavior components; Tween takes play-spec options, TopDownMovement takes moveSpeed/allowDiagonals/rotateToHeading/simulate)}
+     "behaviors": [{"type": "TopDownMovement", "options": {"moveSpeed": 5}}] (optional: attaches behavior components; Tween takes play-spec options, TopDownMovement takes moveSpeed/allowDiagonals/rotateToHeading/simulate),
+     "particle": {"rate": 60, "maxParticles": 200, "shape": "sphere", "direction": [0,1,0], "speedMin": 2, "speedMax": 5, "lifetimeMin": 0.5, "lifetimeMax": 1.5, "startColor": "#ffaa00", "endColor": "#ff0000", "seed": 7} (optional: adds a CPU-sim ParticleSystem, one draw; shape point|box|sphere, blending additive|normal),
+     "anim": {"states": {"Idle": {"clip": "idle", "clipLength": 2}, "Run": {"clip": "run", "clipLength": 1}}, "initial": "Idle", "transitions": [{"from": "Idle", "to": "Run", "conditions": [{"param": "speed", "op": ">", "value": 0.5}]}]} (optional: adds an AnimFSM state machine; ops ==,!=,>,<,>=,<=,trigger; from "*" matches any state),
+     "timeline": {"duration": 4, "tracks": [{"target": "Mover", "clips": [{"id": "m1", "start": 1, "dur": 2, "type": "move", "data": {"to": [6,0,0]}}]}]} (optional: adds a TimelineLite cutscene; clip types move|rotate|event|anim|camera)}
   - {"type": "light", "name": "...", "lightType": "directional"|"point"|"ambient",
      "color": "#rrggbb", "intensity": 2.0, "position": [x,y,z]}
   - {"type": "modify", "target": "...", "position": [x,y,z], "color": "#rrggbb",

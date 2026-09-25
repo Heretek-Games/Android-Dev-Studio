@@ -1055,6 +1055,126 @@ class BehaviorArrayTests(unittest.TestCase):
             self.assertEqual(result.invalid, 1, f"should reject {bad!r}")
             self.assertIn(hint, result.outcomes[0]["detail"])
 
+    def test_anim_and_timeline_validate(self):
+        scene, result = apply_actions(
+            base_scene(),
+            [
+                {
+                    "type": "spawn",
+                    "name": "Dancer",
+                    "physics": "none",
+                    "anim": {
+                        "states": {
+                            "Idle": {"clip": "idle", "clipLength": 2},
+                            "Run": {"clip": "run", "clipLength": 1},
+                        },
+                        "initial": "Idle",
+                        "transitions": [
+                            {
+                                "from": "Idle",
+                                "to": "Run",
+                                "conditions": [
+                                    {"param": "speed", "op": ">", "value": 0.5}
+                                ],
+                            },
+                            {
+                                "from": "*",
+                                "to": "Idle",
+                                "conditions": [{"param": "stop", "op": "trigger"}],
+                            },
+                        ],
+                    },
+                    "timeline": {
+                        "duration": 4,
+                        "tracks": [
+                            {
+                                "target": "Dancer",
+                                "clips": [
+                                    {
+                                        "id": "m1",
+                                        "start": 1,
+                                        "dur": 2,
+                                        "type": "move",
+                                        "data": {"to": [6, 0, 0]},
+                                    },
+                                    {
+                                        "id": "e1",
+                                        "start": 3,
+                                        "type": "event",
+                                        "data": {"name": "finale"},
+                                    },
+                                ],
+                            },
+                        ],
+                    },
+                }
+            ],
+        )
+        self.assertEqual(result.applied, 1)
+        obj = scene["gameObjects"][1]
+        self.assertEqual(obj["anim"]["initial"], "Idle")
+        self.assertEqual(len(obj["anim"]["transitions"]), 2)
+        self.assertEqual(obj["timeline"]["tracks"][0]["clips"][1]["type"], "event")
+
+        for bad_field, bad, hint in (
+            ("anim", {"states": {}}, "states"),
+            ("anim", {"states": {"A": {}}}, "clip"),
+            ("anim", {"states": {"A": {"clip": "a"}}, "initial": "B"}, "initial"),
+            (
+                "anim",
+                {
+                    "states": {"A": {"clip": "a"}},
+                    "transitions": [{"from": "A", "to": "B"}],
+                },
+                "to",
+            ),
+            (
+                "anim",
+                {
+                    "states": {"A": {"clip": "a"}},
+                    "transitions": [
+                        {
+                            "from": "A",
+                            "to": "A",
+                            "conditions": [{"param": "x", "op": "~"}],
+                        }
+                    ],
+                },
+                "op",
+            ),
+            ("timeline", {"tracks": []}, "tracks"),
+            ("timeline", {"tracks": [{"target": "X", "clips": []}]}, "clips"),
+            (
+                "timeline",
+                {
+                    "tracks": [
+                        {
+                            "target": "X",
+                            "clips": [{"id": "c", "start": -1, "type": "move"}],
+                        }
+                    ]
+                },
+                "start",
+            ),
+            (
+                "timeline",
+                {
+                    "tracks": [
+                        {
+                            "target": "X",
+                            "clips": [{"id": "c", "start": 0, "type": "warp"}],
+                        }
+                    ]
+                },
+                "type",
+            ),
+        ):
+            _, result = apply_actions(
+                base_scene(), [{"type": "spawn", "name": "W", bad_field: bad}]
+            )
+            self.assertEqual(result.invalid, 1, f"should reject {bad!r}")
+            self.assertIn(hint, result.outcomes[0]["detail"])
+
 
 def keeper_tree():
     return {

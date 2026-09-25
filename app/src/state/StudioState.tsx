@@ -15,6 +15,8 @@ import {
   PhysicsWorld,
   instantiatePrefab,
   ParticleSystem,
+  AnimFSM,
+  TimelineLite,
   type PrefabStore
 } from '@heretek/engine';
 
@@ -252,6 +254,42 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         refreshScene();
         addLog('info', 'Scene', 'Spawned particle probe.');
         return go.name;
+      },
+      spawnAnimProbe: () => {
+        undoService.checkpoint(scene);
+        const mover = new GameObject('Probe Mover');
+        mover.transform.setPosition(0, 1, 0);
+        scene.addGameObject(mover);
+        const dancer = new GameObject('Probe Dancer');
+        dancer.transform.setPosition(3, 1, 0);
+        dancer.addComponent(new AnimFSM({
+          states: {
+            Idle: { clip: 'idle', clipLength: 2.0 },
+            Run: { clip: 'run', clipLength: 1.0 }
+          },
+          initial: 'Idle',
+          params: { speed: 3 },
+          transitions: [
+            { from: 'Idle', to: 'Run', conditions: [{ param: 'speed', op: '>', value: 0.5 }] }
+          ]
+        }));
+        scene.addGameObject(dancer);
+        const director = new GameObject('Probe Director');
+        director.addComponent(new TimelineLite({
+          duration: 4,
+          tracks: [{
+            target: 'Probe Mover',
+            clips: [
+              { id: 'pm-move', start: 1, dur: 2, type: 'move', data: { to: [6, 1, 0] } },
+              { id: 'pm-done', start: 3, type: 'event', data: { name: 'probe-finale' } }
+            ]
+          }]
+        }));
+        scene.addGameObject(director);
+        setSelectedId(dancer.id);
+        refreshScene();
+        addLog('info', 'Scene', 'Spawned anim/FSM + timeline probe.');
+        return ['Probe Mover', 'Probe Dancer', 'Probe Director'];
       },
       getLogs: () => logs.map((l: any) => `${l.level}|${l.source}|${l.message}`)
     };

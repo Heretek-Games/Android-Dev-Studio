@@ -323,6 +323,12 @@ function buildScene(spec, engine) {
       if (objSpec.particle) {
         go.addComponent(new engine.ParticleSystem(objSpec.particle));
       }
+      if (objSpec.anim) {
+        go.addComponent(new engine.AnimFSM(objSpec.anim));
+      }
+      if (objSpec.timeline) {
+        go.addComponent(new engine.TimelineLite(objSpec.timeline));
+      }
       if (objSpec.health) {
         go.addComponent(new engine.HealthComponent(objSpec.health));
       }
@@ -673,6 +679,22 @@ function evaluateRules(spec, ctxData) {
         if (!ps) { pass = false; detail = `no ParticleSystem on "${rule.target}"`; break; }
         pass = ps.aliveCount >= (rule.min ?? 1);
         detail = `"${rule.target}" particles alive=${ps.aliveCount} (min=${rule.min ?? 1}, cap=${ps.maxParticles})`;
+        break;
+      }
+      case 'anim_state_is': {
+        const go = scene.findByName(rule.target);
+        const fsm = go ? go.components.find(c => c.constructor.name === 'AnimFSM') : null;
+        if (!fsm) { pass = false; detail = `no AnimFSM on "${rule.target}"`; break; }
+        pass = fsm.current === rule.state;
+        detail = `"${rule.target}" anim state=${fsm.current} (want ${rule.state}, transitions=${fsm.transitionsTaken})`;
+        break;
+      }
+      case 'timeline_finished': {
+        const go = scene.findByName(rule.target);
+        const tl = go ? go.components.find(c => c.constructor.name === 'TimelineLite') : null;
+        if (!tl) { pass = false; detail = `no TimelineLite on "${rule.target}"`; break; }
+        pass = tl.finished === true;
+        detail = `"${rule.target}" timeline time=${tl.time.toFixed(2)}/${tl.duration} finished=${tl.finished}`;
         break;
       }
       case 'object_count': {

@@ -954,6 +954,226 @@ def _validate_particle(
     return normalized
 
 
+ANIM_CONDITION_OPS = {"==", "!=", ">", "<", ">=", "<=", "trigger"}
+
+
+def _validate_anim(
+    value: Any, errors: Optional[List[str]] = None
+) -> Optional[Dict[str, Any]]:
+    """AnimFSM specs pass straight to the QA runner (objSpec.anim).
+
+    Returns the normalized spec, or None when malformed. States map names
+    to {clip, loop?, clipLength?}; transitions reference declared states
+    ('*' allowed as from); initial must name a declared state.
+    """
+
+    def fail(reason: str) -> None:
+        if errors is not None:
+            errors.append(reason)
+        return None
+
+    if not isinstance(value, dict):
+        fail("spawn 'anim' must be an object with states/transitions")
+        return None
+    raw_states = value.get("states")
+    if not isinstance(raw_states, dict) or not raw_states:
+        fail("spawn anim 'states' must be a non-empty name->spec map")
+        return None
+    states: Dict[str, Any] = {}
+    for name, spec in raw_states.items():
+        if not isinstance(name, str) or not name.strip() or not isinstance(spec, dict):
+            fail(f"spawn anim state {name!r} must be an object")
+            return None
+        clip = spec.get("clip")
+        if not isinstance(clip, str) or not clip.strip():
+            fail(f"spawn anim state '{name}' needs a non-empty 'clip'")
+            return None
+        entry: Dict[str, Any] = {"clip": clip.strip()}
+        if "loop" in spec:
+            if not isinstance(spec["loop"], bool):
+                fail(f"spawn anim state '{name}' 'loop' must be true/false")
+                return None
+            entry["loop"] = spec["loop"]
+        if "clipLength" in spec:
+            if not _is_finite_number(spec["clipLength"]) or spec["clipLength"] <= 0:
+                fail(f"spawn anim state '{name}' 'clipLength' must be positive")
+                return None
+            entry["clipLength"] = float(spec["clipLength"])
+        for key in spec:
+            if key not in ("clip", "loop", "clipLength"):
+                fail(f"spawn anim state '{name}' unknown key '{key}'")
+                return None
+        states[name] = entry
+    normalized: Dict[str, Any] = {"states": states}
+    initial = value.get("initial", next(iter(states)))
+    if not isinstance(initial, str) or initial not in states:
+        fail(f"spawn anim 'initial' must name a declared state (got {initial!r})")
+        return None
+    normalized["initial"] = initial
+    raw_transitions = value.get("transitions", [])
+    if not isinstance(raw_transitions, list):
+        fail("spawn anim 'transitions' must be an array")
+        return None
+    transitions: List[Dict[str, Any]] = []
+    for i, t in enumerate(raw_transitions):
+        if not isinstance(t, dict):
+            fail(f"spawn anim transitions[{i}] must be an object")
+            return None
+        src, dst = t.get("from"), t.get("to")
+        if not isinstance(src, str) or (src != "*" and src not in states):
+            fail(f"spawn anim transitions[{i}].from must be '*' or a declared state")
+            return None
+        if not isinstance(dst, str) or dst not in states:
+            fail(f"spawn anim transitions[{i}].to must name a declared state")
+            return None
+        entry_t: Dict[str, Any] = {"from": src, "to": dst}
+        raw_conds = t.get("conditions", [])
+        if not isinstance(raw_conds, list):
+            fail(f"spawn anim transitions[{i}].conditions must be an array")
+            return None
+        conds: List[Dict[str, Any]] = []
+        for j, c in enumerate(raw_conds):
+            if not isinstance(c, dict):
+                fail(f"spawn anim transitions[{i}].conditions[{j}] must be an object")
+                return None
+            param, op = c.get("param"), c.get("op")
+            if not isinstance(param, str) or not param.strip():
+                fail(f"spawn anim transitions[{i}].conditions[{j}] needs a 'param'")
+                return None
+            if op not in ANIM_CONDITION_OPS:
+                fail(
+                    f"spawn anim transitions[{i}].conditions[{j}].op must be one of "
+                    f"{sorted(ANIM_CONDITION_OPS)} (got {op!r})"
+                )
+                return None
+            cond: Dict[str, Any] = {"param": param.strip(), "op": op}
+            if "value" in c:
+                if not _is_finite_number(c["value"]):
+                    fail(
+                        f"spawn anim transitions[{i}].conditions[{j}].value must be finite"
+                    )
+                    return None
+                cond["value"] = float(c["value"])
+            conds.append(cond)
+        entry_t["conditions"] = conds
+        for numkey in ("exitTime", "duration"):
+            if numkey in t:
+                if not _is_finite_number(t[numkey]) or t[numkey] < 0:
+                    fail(f"spawn anim transitions[{i}].{numkey} must be >= 0")
+                    return None
+                entry_t[numkey] = float(t[numkey])
+        transitions.append(entry_t)
+    normalized["transitions"] = transitions
+    if "params" in value:
+        if not isinstance(value["params"], dict) or not all(
+            isinstance(k, str) and _is_finite_number(v)
+            for k, v in value["params"].items()
+        ):
+            fail("spawn anim 'params' must be a string->finite-number map")
+            return None
+        normalized["params"] = {k: float(v) for k, v in value["params"].items()}
+    for key in value:
+        if key not in ("states", "transitions", "initial", "params"):
+            fail(f"unknown spawn anim key '{key}'")
+            return None
+    return normalized
+
+
+TIMELINE_CLIP_TYPES = {"move", "rotate", "event", "anim", "camera"}
+
+
+def _validate_timeline(
+    value: Any, errors: Optional[List[str]] = None
+) -> Optional[Dict[str, Any]]:
+    """TimelineLite specs pass straight to the QA runner (objSpec.timeline).
+
+    Returns the normalized spec, or None when malformed. Tracks bind live
+    object names to non-empty id/start/type clip arrays.
+    """
+
+    def fail(reason: str) -> None:
+        if errors is not None:
+            errors.append(reason)
+        return None
+
+    if not isinstance(value, dict):
+        fail("spawn 'timeline' must be an object with duration/tracks")
+        return None
+    normalized: Dict[str, Any] = {}
+    if "duration" in value:
+        if not _is_finite_number(value["duration"]) or value["duration"] <= 0:
+            fail("spawn timeline 'duration' must be positive")
+            return None
+        normalized["duration"] = float(value["duration"])
+    for flag in ("loop", "autostart"):
+        if flag in value:
+            if not isinstance(value[flag], bool):
+                fail(f"spawn timeline '{flag}' must be true/false")
+                return None
+            normalized[flag] = value[flag]
+    raw_tracks = value.get("tracks")
+    if not isinstance(raw_tracks, list) or not raw_tracks:
+        fail("spawn timeline 'tracks' must be a non-empty array")
+        return None
+    tracks: List[Dict[str, Any]] = []
+    for i, track in enumerate(raw_tracks):
+        if not isinstance(track, dict):
+            fail(f"spawn timeline tracks[{i}] must be an object")
+            return None
+        target = track.get("target")
+        if not isinstance(target, str) or not target.strip():
+            fail(f"spawn timeline tracks[{i}] needs a non-empty 'target'")
+            return None
+        raw_clips = track.get("clips")
+        if not isinstance(raw_clips, list) or not raw_clips:
+            fail(f"spawn timeline tracks[{i}].clips must be a non-empty array")
+            return None
+        clips: List[Dict[str, Any]] = []
+        for j, clip in enumerate(raw_clips):
+            if not isinstance(clip, dict):
+                fail(f"spawn timeline tracks[{i}].clips[{j}] must be an object")
+                return None
+            cid = clip.get("id")
+            if not isinstance(cid, str) or not cid.strip():
+                fail(f"spawn timeline tracks[{i}].clips[{j}] needs a non-empty 'id'")
+                return None
+            start = clip.get("start")
+            if not _is_finite_number(start) or start < 0:
+                fail(f"spawn timeline tracks[{i}].clips[{j}].start must be >= 0")
+                return None
+            dur = clip.get("dur", 0)
+            if not _is_finite_number(dur) or dur < 0:
+                fail(f"spawn timeline tracks[{i}].clips[{j}].dur must be >= 0")
+                return None
+            ctype = clip.get("type")
+            if ctype not in TIMELINE_CLIP_TYPES:
+                fail(
+                    f"spawn timeline tracks[{i}].clips[{j}].type must be one of "
+                    f"{sorted(TIMELINE_CLIP_TYPES)} (got {ctype!r})"
+                )
+                return None
+            data = clip.get("data", {})
+            if not isinstance(data, dict):
+                fail(f"spawn timeline tracks[{i}].clips[{j}].data must be an object")
+                return None
+            clips.append(
+                {
+                    "id": cid.strip(),
+                    "start": float(start),
+                    "dur": float(dur),
+                    "type": ctype,
+                    "data": dict(data),
+                }
+            )
+        tracks.append({"target": target.strip(), "clips": clips})
+    normalized["tracks"] = tracks
+    for key in value:
+        if key not in ("duration", "loop", "autostart", "tracks"):
+            fail(f"unknown spawn timeline key '{key}'")
+            return None
+    return normalized
+
+
 DIALOGUE_NODE_TYPES = {"text", "choice", "condition", "action", "end"}
 DIALOGUE_CONDITION_OPERATORS = {"==", "!=", ">", "<", ">=", "<="}
 
@@ -1732,6 +1952,32 @@ def _apply_spawn(
                 f"spawn particle rejected — {particle_reasons[0] if particle_reasons else 'malformed'}",
             )
         obj["particle"] = particle
+    if action.get("anim") is not None:
+        # Maps to an AnimFSM in the QA runner (objSpec.anim).
+        anim_reasons: List[str] = []
+        anim = _validate_anim(action.get("anim"), anim_reasons)
+        if anim is None:
+            return _outcome(
+                result,
+                index,
+                "spawn",
+                "invalid",
+                f"spawn anim rejected — {anim_reasons[0] if anim_reasons else 'malformed'}",
+            )
+        obj["anim"] = anim
+    if action.get("timeline") is not None:
+        # Maps to a TimelineLite in the QA runner (objSpec.timeline).
+        timeline_reasons: List[str] = []
+        timeline = _validate_timeline(action.get("timeline"), timeline_reasons)
+        if timeline is None:
+            return _outcome(
+                result,
+                index,
+                "spawn",
+                "invalid",
+                f"spawn timeline rejected — {timeline_reasons[0] if timeline_reasons else 'malformed'}",
+            )
+        obj["timeline"] = timeline
 
     scene.setdefault("gameObjects", []).append(obj)
     _outcome(
