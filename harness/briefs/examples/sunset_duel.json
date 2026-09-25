@@ -1,0 +1,101 @@
+{
+  "title": "Sunset Duel",
+  "fantasy": {
+    "genre": "stylized arena duel",
+    "inspirations": ["anime fighters", "sunset trial grounds"],
+    "tone": "two cel-shaded duelists under a low sun",
+    "loop": "Calibrate the anime look, survive the duel, win the round."
+  },
+  "experience": {
+    "beats": ["sunset reveal on rim-lit duelists", "round victory"],
+    "feedback": ["cel banding and rim light", "kill score and win phase"],
+    "inputs": ["touch move stick", "auto-fire weapon"]
+  },
+  "world": {
+    "areaKm2": 0.002,
+    "biomes": ["duel-ring"],
+    "poiDensityPerKm2": 500,
+    "traversalSpeedsMps": {"walk": 5},
+    "streamingRadiusM": 60
+  },
+  "systems": {
+    "components": ["RigidBody3D", "Collider3D", "MobileController", "WeaponController", "HealthComponent", "EnemyAI", "AnimeCelShader"],
+    "physics": ["dynamic duelist capsules", "static ring floor"],
+    "ai": ["rival chase and melee"],
+    "dialogue": [],
+    "inventory": [],
+    "questStates": ["duel-active", "won"],
+    "saveSchema": {}
+  },
+  "lookdev": {
+    "palette": ["#38bdf8", "#1e3a8a", "#f97316"],
+    "lighting": "cel-shaded",
+    "silhouette": "flat ring, blue duelist, orange rival, low sun",
+    "post": ["inverted-hull outlines", "fresnel rim"]
+  },
+  "performance": {
+    "deviceProfile": "android16-snapdragon8elite",
+    "targetFps": 60,
+    "maxDrawCalls": 100,
+    "maxTrisPerChunk": 150000,
+    "maxTrisPerScene": 1200000,
+    "maxTextureMb": 256,
+    "maxPhysicsBodies": 256,
+    "maxApkMb": 200,
+    "maxLoadSeconds": 8.0
+  },
+  "acceptance": [
+    {
+      "id": "ring-floor",
+      "axis": "Functional",
+      "description": "a fixed duel ring floor exists",
+      "qaRule": {"type": "entity_exists", "target": "Duel Ring"}
+    },
+    {
+      "id": "hero-shaded",
+      "axis": "Functional",
+      "description": "the hero carries an anime cel-shader calibration",
+      "qaRule": {"type": "entity_component", "target": "Duelist Hero", "component": "AnimeCelShader"}
+    },
+    {
+      "id": "rival-shaded",
+      "axis": "Functional",
+      "description": "the rival carries an anime cel-shader calibration",
+      "qaRule": {"type": "entity_component", "target": "Duelist Rival", "component": "AnimeCelShader"}
+    },
+    {
+      "id": "rival-chases",
+      "axis": "Playable",
+      "description": "the rival actively chases the hero",
+      "qaRule": {"type": "distance_traveled", "target": "Duelist Rival", "min": 0.5}
+    },
+    {
+      "id": "round-won",
+      "axis": "Playable",
+      "description": "the duel ends in the won phase",
+      "qaRule": {"type": "game_phase", "phase": "won"}
+    },
+    {
+      "id": "draw-budget",
+      "axis": "Performant",
+      "description": "scene stays within the mobile draw-call budget",
+      "qaRule": {"type": "draw_call_budget", "max": 100}
+    },
+    {
+      "id": "sim-fps",
+      "axis": "Performant",
+      "description": "headless simulation holds interactive frame rates",
+      "qaRule": {"type": "fps_min", "min": 30}
+    },
+    {
+      "id": "sunset-read",
+      "axis": "Visually Coherent",
+      "description": "the ring reads as a cel-shaded sunset duel"
+    },
+    {
+      "id": "brief-faithful",
+      "axis": "Spec-Accurate",
+      "description": "the scene matches this brief: cel-shaded duel, rim light, won round"
+    }
+  ]
+}
