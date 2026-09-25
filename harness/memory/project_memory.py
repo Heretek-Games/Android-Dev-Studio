@@ -107,6 +107,17 @@ class ProjectMemory:
                 except sqlite3.OperationalError:
                     pass  # column already exists
 
+            # 5. Game Production Briefs (machine-checkable production specs)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS production_briefs (
+                    brief_id TEXT PRIMARY KEY,
+                    title TEXT NOT NULL,
+                    brief_json TEXT NOT NULL,
+                    created_at REAL NOT NULL,
+                    updated_at REAL NOT NULL
+                )
+            """)
+
             conn.commit()
 
     # --- ADR Management ---
@@ -301,10 +312,79 @@ class ProjectMemory:
                 for r in rows
             ]
 
+    # --- Game Production Briefs ---
+
+    def record_brief(self, brief: Dict[str, Any]) -> str:
+        """Persist a validated Game Production Brief; returns its brief_id."""
+        from harness.briefs.game_brief import GameProductionBrief
+
+        parsed = GameProductionBrief.from_dict(brief)
+        brief_id = f"brief_{int(time.time() * 1000)}_{os.urandom(2).hex()}"
+        now = time.time()
+        with self._get_connection() as conn:
+            conn.execute(
+                """INSERT INTO production_briefs (brief_id, title, brief_json, created_at, updated_at)
+                   VALUES (?, ?, ?, ?, ?)""",
+                (brief_id, parsed.title, json.dumps(parsed.to_dict()), now, now),
+            )
+            conn.commit()
+        return brief_id
+
+    def get_brief(self, brief_id: str) -> Optional[Dict[str, Any]]:
+        with self._get_connection() as conn:
+            row = conn.execute(
+                "SELECT * FROM production_briefs WHERE brief_id = ?", (brief_id,)
+            ).fetchone()
+            if row is None:
+                return None
+            return {
+                "brief_id": row["brief_id"],
+                "title": row["title"],
+                "brief": json.loads(row["brief_json"]),
+                "created_at": row["created_at"],
+                "updated_at": row["updated_at"],
+            }
+
+    def list_briefs(self, limit: int = 20) -> List[Dict[str, Any]]:
+        with self._get_connection() as conn:
+            rows = conn.execute(
+                "SELECT brief_id, title, created_at, updated_at FROM production_briefs"
+                " ORDER BY created_at DESC LIMIT ?",
+                (limit,),
+            ).fetchall()
+            return [
+                {
+                    "brief_id": r["brief_id"],
+                    "title": r["title"],
+                    "created_at": r["created_at"],
+                    "updated_at": r["updated_at"],
+                }
+                for r in rows
+            ]
+
+    def query_production_context(self, brief_id: str) -> Dict[str, Any]:
+        """Mandatory retrieval bundle: brief + recent ADRs + failed tasks + latest QA.
+
+        No agent may execute a build or refactor task without consulting this
+        bundle first (past failures and architectural constraints).
+        """
+        brief = self.get_brief(brief_id)
+        if brief is None:
+            raise ValueError(f"unknown brief_id '{brief_id}'")
+        return {
+            "brief": brief["brief"],
+            "adrs": self.list_adrs()[:10],
+            "failed_tasks": self.list_tasks(state="failed")[-10:],
+            "latest_qa": self.get_latest_benchmarks(limit=1),
+        }
+
     # --- Project Summary ---
     def get_project_summary(self) -> Dict[str, Any]:
         with self._get_connection() as conn:
             adr_count = conn.execute("SELECT COUNT(*) FROM adrs").fetchone()[0]
+            brief_count = conn.execute(
+                "SELECT COUNT(*) FROM production_briefs"
+            ).fetchone()[0]
             scene_count = conn.execute(
                 "SELECT COUNT(*) FROM scene_snapshots"
             ).fetchone()[0]
@@ -320,6 +400,7 @@ class ProjectMemory:
 
             return {
                 "adr_count": adr_count,
+                "brief_count": brief_count,
                 "scene_snapshots": scene_count,
                 "tasks": {"pending": task_pending, "completed": task_completed},
                 "latest_qa": dict(latest_qa) if latest_qa else None,

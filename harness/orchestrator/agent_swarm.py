@@ -34,6 +34,30 @@ class SubagentRole:
     AUDITOR = "InvariantAuditor"
     REVIEWER = "CodeReviewer"
     QA = "ArtemisQA"
+    # Builder pod (production-loop roles; extend, do not rename, the above)
+    EXECUTIVE_PRODUCER = "ExecutiveProducer"
+    WORLD_DIRECTOR = "WorldDirector"
+    GAMEPLAY_LEAD = "GameplayLead"
+    SYSTEMS_ENGINEER = "SystemsEngineer"
+    CONTENT_DESIGNER = "ContentDesigner"
+    TECH_ARTIST = "TechArtist"
+    # Independent critic & audit pod
+    PLAYTESTER = "AutonomousPlaytester"
+    VISUAL_CRITIC = "VisualCritic"
+    PERFORMANCE_ENGINEER = "PerformanceEngineer"
+    RED_TEAM = "RedTeam"
+    HISTORIAN = "HistorianMemory"
+
+
+#: Acceptance axis -> (builder role, critic role). The critic is never the
+#: builder: builders must never grade their own work.
+AXIS_POD_ASSIGNMENT = {
+    "Functional": (SubagentRole.SYSTEMS_ENGINEER, SubagentRole.QA),
+    "Playable": (SubagentRole.GAMEPLAY_LEAD, SubagentRole.PLAYTESTER),
+    "Performant": (SubagentRole.TECH_ARTIST, SubagentRole.PERFORMANCE_ENGINEER),
+    "Visually Coherent": (SubagentRole.TECH_ARTIST, SubagentRole.VISUAL_CRITIC),
+    "Spec-Accurate": (SubagentRole.CONTENT_DESIGNER, SubagentRole.REVIEWER),
+}
 
 
 class AgentSwarmOrchestrator:
@@ -198,6 +222,62 @@ class AgentSwarmOrchestrator:
         )
 
         return tasks
+
+    def plan_from_brief(self, brief_id: str) -> Dict[str, Any]:
+        """Build the production DAG from a persisted Game Production Brief.
+
+        Every acceptance criterion becomes a builder task plus a critic task that
+        depends on it. The critic is never the builder. Tasks land in the
+        existing subagent_tasks ledger; use get_ready_tasks() to schedule them.
+        """
+        from harness.briefs.game_brief import GameProductionBrief
+
+        stored = self.memory.get_brief(brief_id)
+        if stored is None:
+            raise ValueError(f"unknown brief_id '{brief_id}'")
+        brief = GameProductionBrief.from_dict(stored["brief"])
+
+        tasks = []
+        for criterion in brief.acceptance:
+            builder_role, critic_role = AXIS_POD_ASSIGNMENT[criterion.axis]
+            check = ""
+            if criterion.qa_rule is not None:
+                check = f" Headless check: {criterion.qa_rule}."
+            build_id = self.memory.create_task(
+                title=f"Build: {criterion.description}",
+                description=(
+                    f"[{criterion.axis}] {criterion.description} "
+                    f"(criterion {criterion.id} of brief '{brief.title}').{check}"
+                ),
+                assigned_agent=builder_role,
+            )
+            tasks.append(
+                {"id": build_id, "role": builder_role, "criterionId": criterion.id}
+            )
+            critic_id = self.memory.create_task(
+                title=f"Critique: {criterion.description}",
+                description=(
+                    f"[{criterion.axis}] Independently verify criterion {criterion.id} "
+                    f"of brief '{brief.title}': {criterion.description}.{check}"
+                ),
+                assigned_agent=critic_role,
+                dependencies=[build_id],
+            )
+            tasks.append(
+                {"id": critic_id, "role": critic_role, "criterionId": criterion.id}
+            )
+        return {"brief_id": brief_id, "title": brief.title, "tasks": tasks}
+
+    def get_ready_tasks(self) -> List[Dict[str, Any]]:
+        """Pending tasks whose dependencies are all completed (schedulable now)."""
+        completed = {
+            task["task_id"] for task in self.memory.list_tasks(state="completed")
+        }
+        ready = []
+        for task in self.memory.list_tasks(state="pending"):
+            if all(dep in completed for dep in task.get("dependencies", [])):
+                ready.append(task)
+        return ready
 
     def execute_swarm_pipeline(self, prompt: str) -> Dict[str, Any]:
         """
