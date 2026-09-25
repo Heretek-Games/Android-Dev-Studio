@@ -389,6 +389,37 @@ function setupDialogue(spec, engine) {
   return { manager, transcripts };
 }
 
+/**
+ * Headless save/load probe (Phase 3 rung 4): exercises the real quest-state
+ * persistence path mid-run without perturbing it. At the run midpoint the live
+ * session is snapshotted, round-tripped through SaveSystem on an in-memory
+ * adapter, restored idempotently, then rewound-and-continued; the rule asserts
+ * envelope equality, restore fidelity, and post-restore counter monotonicity.
+ * Scope is session counters only: flow phase and spawner/enemy state are
+ * explicitly not restored by the engine (documented non-goals).
+ */
+function runSaveRestoreProbe(game, engine) {
+  const checks = [];
+  try {
+    const session = game.runtime.session;
+    const saver = new engine.SaveSystem();
+    const mid = session.snapshot();
+    const saved = saver.save('qa-save-restore-probe', mid);
+    checks.push({ id: 'save', pass: saved === true, detail: saved ? 'envelope saved' : `save failed: ${saver.getLastError()}` });
+    const loaded = saver.load('qa-save-restore-probe');
+    const envelopeEqual =
+      !!loaded && JSON.stringify(loaded.session) === JSON.stringify(mid);
+    checks.push({ id: 'envelope', pass: envelopeEqual, detail: envelopeEqual ? 'save→load envelope identical' : 'envelope mismatch after load' });
+    session.restore(mid);
+    const after = session.snapshot();
+    const restoreEqual = JSON.stringify(after) === JSON.stringify(mid);
+    checks.push({ id: 'restore', pass: restoreEqual, detail: restoreEqual ? 'restore reproduces counters exactly' : `counters differ after restore: ${JSON.stringify(after)}` });
+  } catch (error) {
+    checks.push({ id: 'probe', pass: false, detail: `probe threw: ${String(error)}` });
+  }
+  return { checks, mid: checks.length ? game.runtime.session.snapshot() : null };
+}
+
 function setupGame(spec, scene, engine) {
   const config = spec.game;
   if (!config) return null;
@@ -820,6 +851,23 @@ function evaluateRules(spec, ctxData) {
           : `dialogue "${rule.tree}" never fired "${rule.event}" (fired: [${fired.join(', ') || 'none'}])`;
         break;
       }
+      case 'game_save_restore': {
+        if (!game) { pass = false; detail = 'no game config in scenario'; break; }
+        const probe = game.saveRestoreProbe;
+        if (!probe) { pass = false; detail = 'save/restore probe did not run'; break; }
+        const failed = probe.checks.filter(c => !c.pass);
+        const finals = game.runtime.session.snapshot();
+        const mid = probe.mid || {};
+        const monotonic =
+          (finals.kills ?? 0) >= (mid.kills ?? 0) &&
+          (finals.wave ?? 0) >= (mid.wave ?? 0) &&
+          (finals.score ?? 0) >= (mid.score ?? 0);
+        pass = failed.length === 0 && monotonic;
+        const parts = probe.checks.map(c => `${c.id}=${c.pass ? 'ok' : 'FAIL(' + c.detail + ')'}`);
+        parts.push(`monotonic=${monotonic ? 'ok' : 'FAIL'}(kills ${mid.kills ?? '?'}→${finals.kills}, wave ${mid.wave ?? '?'}→${finals.wave}, score ${mid.score ?? '?'}→${finals.score})`);
+        detail = parts.join('; ');
+        break;
+      }
       default: {
         pass = false;
         detail = `unknown rule type "${rule.type}"`;
@@ -859,6 +907,9 @@ async function main() {
   ctx.setScene(scene);
 
   const game = setupGame(spec, scene, engine);
+  const saveRestoreWanted = (spec.rules || []).some(
+    r => r && r.type === 'game_save_restore'
+  );
   const dialogue = setupDialogue(spec, engine);
 
   const eventCount = scene.gameObjects.reduce(
@@ -885,6 +936,9 @@ async function main() {
       game.runtime.update(args.dt);
       game.maybeFire(frame);
       game.trackEnemies();
+      if (saveRestoreWanted && !game.saveRestoreProbe && frame >= Math.floor(args.frames / 2)) {
+        game.saveRestoreProbe = runSaveRestoreProbe(game, engine);
+      }
     }
     times.push(performance.now() - t0);
     if (frame % sampleEvery === 0 || frame === args.frames - 1) {
