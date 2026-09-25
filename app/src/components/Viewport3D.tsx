@@ -24,10 +24,11 @@ export const Viewport3D: React.FC = () => {
     selectedGameObject,
     setSelectedId,
     isPlaying,
-    refreshScene
+    refreshScene,
+    gizmoMode,
+    setGizmoMode,
+    snapping
   } = useStudio();
-
-  const [gizmoMode, setGizmoMode] = useState<'translate' | 'rotate' | 'scale'>('translate');
   const [showDeviceFrame, setShowDeviceFrame] = useState(false);
   const [joystickActive, setJoystickActive] = useState(false);
   const [joystickPos, setJoystickPos] = useState({ x: 0, y: 0 });
@@ -49,6 +50,15 @@ export const Viewport3D: React.FC = () => {
       transformControlsRef.current.setMode(gizmoMode);
     }
   }, [gizmoMode]);
+
+  // Sync TransformControls snapping dynamically
+  useEffect(() => {
+    if (transformControlsRef.current) {
+      transformControlsRef.current.setTranslationSnap(snapping ? 1.0 : null);
+      transformControlsRef.current.setRotationSnap(snapping ? Math.PI / 12 : null);
+      transformControlsRef.current.setScaleSnap(snapping ? 0.25 : null);
+    }
+  }, [snapping]);
 
   // Global keyboard shortcuts (W: translate, E: rotate, R: scale)
   useEffect(() => {

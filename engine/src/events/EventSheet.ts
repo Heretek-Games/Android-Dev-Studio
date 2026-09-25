@@ -37,11 +37,6 @@ export class EventSheet extends Component {
   }
 
   public override update(deltaTime: number): void {
-    // Update active timers
-    for (const [key, val] of this.timers.entries()) {
-      this.timers.set(key, val + deltaTime);
-    }
-
     this.evaluateEvents('EveryFrame', deltaTime);
   }
 
@@ -76,7 +71,7 @@ export class EventSheet extends Component {
     }
   }
 
-  private checkCondition(cond: EventCondition, trigger: string, _dt: number): boolean {
+  private checkCondition(cond: EventCondition, trigger: string, dt: number): boolean {
     switch (cond.type) {
       case 'OnStart':
         return trigger === 'OnStart';
@@ -89,13 +84,16 @@ export class EventSheet extends Component {
       case 'OnTouchTap':
         return MobileInput.instance.touches.size > 0;
       case 'Timer': {
+        // Lazy accumulation: a timer starts counting from its first evaluation
+        // so Timer conditions fire even when the named timer never existed.
         const timerName = cond.params?.name || 'timer_0';
         const interval = cond.params?.interval || 1.0;
-        const current = this.timers.get(timerName) || 0;
+        const current = (this.timers.get(timerName) || 0) + dt;
         if (current >= interval) {
           this.timers.set(timerName, current % interval);
           return true;
         }
+        this.timers.set(timerName, current);
         return false;
       }
       default:
@@ -116,8 +114,14 @@ export class EventSheet extends Component {
         break;
       }
       case 'RotateY': {
-        const speed = p.speed || 1.0;
-        t.rotateY(speed * dt);
+        // "degrees" rotates a fixed step per event fire (Timer/OnStart triggers);
+        // "speed" is an angular velocity in rad/s for continuous EveryFrame spins.
+        if (p.degrees !== undefined) {
+          t.rotateY((p.degrees * Math.PI) / 180);
+        } else {
+          const speed = p.speed || 1.0;
+          t.rotateY(speed * dt);
+        }
         break;
       }
       case 'ApplyImpulse': {

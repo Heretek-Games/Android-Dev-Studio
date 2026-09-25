@@ -30,6 +30,8 @@ export interface StudioLog {
   message: string;
 }
 
+export type GizmoMode = 'translate' | 'rotate' | 'scale';
+
 interface StudioStateContextType {
   scene: Scene;
   engineContext: EngineContext;
@@ -56,6 +58,10 @@ interface StudioStateContextType {
   artemisLog: string[];
   runArtemisTask: (prompt: string) => Promise<void>;
   deployToDevice: () => Promise<void>;
+  gizmoMode: GizmoMode;
+  setGizmoMode: (mode: GizmoMode) => void;
+  snapping: boolean;
+  setSnapping: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const StudioStateContext = createContext<StudioStateContextType | null>(null);
@@ -73,6 +79,8 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [logs, setLogs] = useState<StudioLog[]>([]);
   const [artemisRunning, setArtemisRunning] = useState<boolean>(false);
   const [artemisLog, setArtemisLog] = useState<string[]>([]);
+  const [gizmoMode, setGizmoMode] = useState<GizmoMode>('translate');
+  const [snapping, setSnapping] = useState<boolean>(false);
 
   const sceneSnapshotRef = useRef<string | null>(null);
 
@@ -90,6 +98,38 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const clearLogs = () => setLogs([]);
+
+  // QA / automation debug hook: exposes live scene introspection for
+  // chrome-devtools verification (transform sampling, event inspection, play state).
+  useEffect(() => {
+    (window as any).__STUDIO_DEBUG__ = {
+      objectCount: () => scene.gameObjects.length,
+      objectNames: () => scene.gameObjects.map((g: any) => g.name),
+      isPlaying: () => isPlaying,
+      getTransform: (name: string) => {
+        const go: any = scene.findByName(name);
+        if (!go) return null;
+        return {
+          position: [go.transform.position.x, go.transform.position.y, go.transform.position.z],
+          rotation: [go.transform.rotation.x, go.transform.rotation.y, go.transform.rotation.z],
+          scale: [go.transform.scale.x, go.transform.scale.y, go.transform.scale.z]
+        };
+      },
+      getEvents: (name: string) => {
+        const go: any = scene.findByName(name);
+        if (!go) return null;
+        const es = go.getComponent(EventSheet);
+        return es ? JSON.parse(JSON.stringify(es.events)) : [];
+      },
+      getComponents: (name: string) => {
+        const go: any = scene.findByName(name);
+        return go ? go.components.map((c: any) => c.constructor.name) : null;
+      }
+    };
+    return () => {
+      delete (window as any).__STUDIO_DEBUG__;
+    };
+  }, [scene, engineContext, isPlaying]);
 
   const isInitializedRef = useRef(false);
 
@@ -469,7 +509,11 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         artemisRunning,
         artemisLog,
         runArtemisTask,
-        deployToDevice
+        deployToDevice,
+        gizmoMode,
+        setGizmoMode,
+        snapping,
+        setSnapping
       }}
     >
       {children}

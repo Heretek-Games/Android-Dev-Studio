@@ -22,24 +22,102 @@ import {
   Plus,
   Trash2,
   ChevronDown,
+  ChevronRight,
   Flame,
   Droplet,
   Snowflake,
   Wind,
   ShieldAlert,
-  Sparkles
+  Sparkles,
+  Layers,
+  Compass
 } from 'lucide-react';
+
+interface AccordionCardProps {
+  title: string;
+  icon: React.ComponentType<{ className?: string }>;
+  colorClass: string;
+  isOpen: boolean;
+  onToggle: () => void;
+  onRemove?: () => void;
+  badge?: React.ReactNode;
+  children: React.ReactNode;
+}
+
+const AccordionCard: React.FC<AccordionCardProps> = ({
+  title,
+  icon: Icon,
+  colorClass,
+  isOpen,
+  onToggle,
+  onRemove,
+  badge,
+  children
+}) => {
+  return (
+    <div className="bg-zinc-900/80 border border-zinc-800/80 rounded-lg overflow-hidden transition-all shadow-sm">
+      {/* Header */}
+      <div
+        onClick={onToggle}
+        className="flex items-center justify-between px-3 py-2 bg-zinc-900/90 hover:bg-zinc-800/60 cursor-pointer border-b border-zinc-800/40 transition-colors"
+      >
+        <div className="flex items-center space-x-2">
+          {isOpen ? (
+            <ChevronDown className="w-3.5 h-3.5 text-zinc-400" />
+          ) : (
+            <ChevronRight className="w-3.5 h-3.5 text-zinc-400" />
+          )}
+          <Icon className={`w-3.5 h-3.5 ${colorClass}`} />
+          <span className={`text-xs font-semibold uppercase tracking-wider ${colorClass}`}>
+            {title}
+          </span>
+        </div>
+
+        <div className="flex items-center space-x-1.5" onClick={e => e.stopPropagation()}>
+          {badge}
+          {onRemove && (
+            <button
+              onClick={onRemove}
+              className="p-1 rounded text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors ml-1"
+              title="Remove Component"
+            >
+              <Trash2 className="w-3 h-3" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Body */}
+      {isOpen && <div className="p-3 space-y-2.5">{children}</div>}
+    </div>
+  );
+};
 
 export const Inspector: React.FC = () => {
   const { selectedGameObject, refreshScene } = useStudio();
   const [showAddComponent, setShowAddComponent] = useState(false);
+  const [openCards, setOpenCards] = useState<Record<string, boolean>>({
+    transform: true,
+    mesh: true,
+    rigidBody: false,
+    controller: false,
+    elemental: true,
+    celShader: false,
+    light: true
+  });
+
+  const toggleCard = (key: string) => {
+    setOpenCards(prev => ({ ...prev, [key]: !prev[key] }));
+  };
 
   if (!selectedGameObject) {
     return (
-      <div className="flex flex-col items-center justify-center h-full p-4 text-center text-gray-500 text-xs bg-studio-surface border-l border-studio-border">
-        <Sliders className="w-8 h-8 mb-2 opacity-40 text-gray-400" />
-        <span>No Entity Selected</span>
-        <span className="text-[11px] text-gray-600 mt-1">Select an object in the Hierarchy or 3D Viewport to inspect properties.</span>
+      <div className="flex flex-col items-center justify-center h-full p-4 text-center text-zinc-500 text-xs bg-zinc-950 border-l border-zinc-800">
+        <Sliders className="w-8 h-8 mb-2 opacity-30 text-zinc-400" />
+        <span className="font-medium text-zinc-400">No Entity Selected</span>
+        <span className="text-[11px] text-zinc-600 mt-1 max-w-[200px]">
+          Click an object in the Scene Hierarchy or 3D Viewport to inspect and edit components.
+        </span>
       </div>
     );
   }
@@ -76,43 +154,55 @@ export const Inspector: React.FC = () => {
   const celShader = go.getComponent(AnimeCelShader);
 
   return (
-    <div className="flex flex-col h-full bg-studio-surface select-none border-l border-studio-border overflow-y-auto">
+    <div className="flex flex-col h-full bg-zinc-950 select-none border-l border-zinc-800 overflow-y-auto">
       {/* Top Entity Details Header */}
-      <div className="p-3 border-b border-studio-border bg-studio-bg/40 space-y-2">
+      <div className="p-3 border-b border-zinc-800 bg-zinc-900/50 space-y-2">
         <div className="flex items-center space-x-2">
           <input
             type="checkbox"
             checked={go.active}
             onChange={(e) => { go.active = e.target.checked; refreshScene(); }}
-            className="rounded border-studio-border text-blue-600 focus:ring-0 cursor-pointer"
+            className="w-4 h-4 rounded border-zinc-700 bg-zinc-900 text-blue-600 focus:ring-0 cursor-pointer"
+            title="Toggle Entity Active"
           />
           <input
             type="text"
             value={go.name}
             onChange={(e) => { go.name = e.target.value; refreshScene(); }}
-            className="flex-1 bg-zinc-900 border border-studio-border rounded px-2 py-1 text-xs text-white font-medium focus:border-blue-500 outline-none"
+            className="flex-1 bg-zinc-900 border border-zinc-700/80 rounded px-2 py-1 text-xs text-white font-medium focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
           />
         </div>
-        <div className="flex space-x-2 text-[11px] text-gray-400">
-          <span className="bg-zinc-800 px-1.5 py-0.5 rounded border border-studio-border">Tag: {go.tag}</span>
-          <span className="bg-zinc-800 px-1.5 py-0.5 rounded border border-studio-border">ID: {go.id}</span>
+        <div className="flex items-center space-x-2 text-[10px] text-zinc-400 font-mono">
+          <span className="bg-zinc-850 px-2 py-0.5 rounded border border-zinc-800 text-zinc-300">
+            Tag: {go.tag}
+          </span>
+          <span className="bg-zinc-850 px-2 py-0.5 rounded border border-zinc-800 text-zinc-500 truncate max-w-[120px]">
+            ID: {go.id}
+          </span>
         </div>
       </div>
 
-      <div className="p-3 space-y-4">
-        {/* Transform Component */}
-        <div className="bg-zinc-900/60 border border-studio-border/70 rounded-lg p-3 space-y-2.5">
-          <span className="text-xs font-semibold text-blue-400 uppercase tracking-wider flex items-center space-x-1">
-            <span>Transform</span>
-          </span>
-
+      <div className="p-3 space-y-2.5">
+        {/* 1. Transform Component (Always Present) */}
+        <AccordionCard
+          title="Transform"
+          icon={Compass}
+          colorClass="text-blue-400"
+          isOpen={openCards.transform}
+          onToggle={() => toggleCard('transform')}
+          badge={
+            <span className="font-mono text-[10px] text-zinc-500">
+              ({t.position.x.toFixed(1)}, {t.position.y.toFixed(1)}, {t.position.z.toFixed(1)})
+            </span>
+          }
+        >
           {/* Position */}
           <div className="space-y-1">
-            <span className="text-[11px] text-gray-400">Position</span>
+            <span className="text-[11px] text-zinc-400 font-medium">Position</span>
             <div className="grid grid-cols-3 gap-1.5">
               {(['x', 'y', 'z'] as const).map(axis => (
-                <div key={axis} className="flex items-center bg-zinc-800 rounded border border-studio-border px-1.5 py-0.5">
-                  <span className={`text-[10px] font-bold mr-1 ${axis === 'x' ? 'text-red-400' : axis === 'y' ? 'text-emerald-400' : 'text-blue-400'}`}>
+                <div key={axis} className="flex items-center bg-zinc-950 rounded border border-zinc-800 px-1.5 py-0.5 focus-within:border-blue-500">
+                  <span className={`text-[10px] font-bold mr-1 font-mono ${axis === 'x' ? 'text-red-400' : axis === 'y' ? 'text-emerald-400' : 'text-blue-400'}`}>
                     {axis.toUpperCase()}
                   </span>
                   <input
@@ -120,7 +210,7 @@ export const Inspector: React.FC = () => {
                     step="0.1"
                     value={Math.round(t.position[axis] * 100) / 100}
                     onChange={(e) => updatePos(axis, parseFloat(e.target.value) || 0)}
-                    className="w-full bg-transparent text-xs text-right text-white outline-none"
+                    className="w-full bg-transparent text-xs text-right text-white outline-none font-mono"
                   />
                 </div>
               ))}
@@ -129,11 +219,11 @@ export const Inspector: React.FC = () => {
 
           {/* Rotation */}
           <div className="space-y-1">
-            <span className="text-[11px] text-gray-400">Rotation (Deg)</span>
+            <span className="text-[11px] text-zinc-400 font-medium">Rotation (Deg)</span>
             <div className="grid grid-cols-3 gap-1.5">
               {(['x', 'y', 'z'] as const).map(axis => (
-                <div key={axis} className="flex items-center bg-zinc-800 rounded border border-studio-border px-1.5 py-0.5">
-                  <span className={`text-[10px] font-bold mr-1 ${axis === 'x' ? 'text-red-400' : axis === 'y' ? 'text-emerald-400' : 'text-blue-400'}`}>
+                <div key={axis} className="flex items-center bg-zinc-950 rounded border border-zinc-800 px-1.5 py-0.5 focus-within:border-blue-500">
+                  <span className={`text-[10px] font-bold mr-1 font-mono ${axis === 'x' ? 'text-red-400' : axis === 'y' ? 'text-emerald-400' : 'text-blue-400'}`}>
                     {axis.toUpperCase()}
                   </span>
                   <input
@@ -141,7 +231,7 @@ export const Inspector: React.FC = () => {
                     step="5"
                     value={Math.round((t.rotation[axis] * 180) / Math.PI)}
                     onChange={(e) => updateRot(axis, parseFloat(e.target.value) || 0)}
-                    className="w-full bg-transparent text-xs text-right text-white outline-none"
+                    className="w-full bg-transparent text-xs text-right text-white outline-none font-mono"
                   />
                 </div>
               ))}
@@ -150,11 +240,11 @@ export const Inspector: React.FC = () => {
 
           {/* Scale */}
           <div className="space-y-1">
-            <span className="text-[11px] text-gray-400">Scale</span>
+            <span className="text-[11px] text-zinc-400 font-medium">Scale</span>
             <div className="grid grid-cols-3 gap-1.5">
               {(['x', 'y', 'z'] as const).map(axis => (
-                <div key={axis} className="flex items-center bg-zinc-800 rounded border border-studio-border px-1.5 py-0.5">
-                  <span className={`text-[10px] font-bold mr-1 ${axis === 'x' ? 'text-red-400' : axis === 'y' ? 'text-emerald-400' : 'text-blue-400'}`}>
+                <div key={axis} className="flex items-center bg-zinc-950 rounded border border-zinc-800 px-1.5 py-0.5 focus-within:border-blue-500">
+                  <span className={`text-[10px] font-bold mr-1 font-mono ${axis === 'x' ? 'text-red-400' : axis === 'y' ? 'text-emerald-400' : 'text-blue-400'}`}>
                     {axis.toUpperCase()}
                   </span>
                   <input
@@ -162,55 +252,47 @@ export const Inspector: React.FC = () => {
                     step="0.1"
                     value={Math.round(t.scale[axis] * 100) / 100}
                     onChange={(e) => updateScale(axis, parseFloat(e.target.value) || 1)}
-                    className="w-full bg-transparent text-xs text-right text-white outline-none"
+                    className="w-full bg-transparent text-xs text-right text-white outline-none font-mono"
                   />
                 </div>
               ))}
             </div>
           </div>
-        </div>
+        </AccordionCard>
 
-        {/* Mesh Renderer Component */}
+        {/* 2. Mesh Renderer Component */}
         {meshRenderer && (
-          <div className="bg-zinc-900/60 border border-studio-border/70 rounded-lg p-3 space-y-2.5">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-emerald-400 uppercase tracking-wider flex items-center space-x-1.5">
-                <Box className="w-3.5 h-3.5" />
-                <span>Mesh Renderer</span>
+          <AccordionCard
+            title="Mesh Renderer"
+            icon={Box}
+            colorClass="text-emerald-400"
+            isOpen={openCards.mesh}
+            onToggle={() => toggleCard('mesh')}
+            onRemove={() => { go.removeComponent(meshRenderer); refreshScene(); }}
+            badge={
+              <span className="font-mono text-[10px] uppercase bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-300 border border-zinc-700">
+                {meshRenderer.shape}
               </span>
-              <button
-                onClick={() => { go.removeComponent(meshRenderer); refreshScene(); }}
-                className="text-gray-400 hover:text-red-400"
-              >
-                <Trash2 className="w-3 h-3" />
-              </button>
-            </div>
-
+            }
+          >
             <div className="space-y-2 text-xs">
               <div className="flex items-center justify-between">
-                <span className="text-gray-400">Shape</span>
-                <span className="font-mono text-gray-200 uppercase bg-zinc-800 px-2 py-0.5 rounded border border-studio-border">
-                  {meshRenderer.shape}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <span className="text-gray-400">Color</span>
+                <span className="text-zinc-400">Color Material</span>
                 <div className="flex items-center space-x-1.5">
                   <input
                     type="color"
                     value={meshRenderer.color}
                     onChange={(e) => { meshRenderer.setMaterial(e.target.value); refreshScene(); }}
-                    className="w-6 h-6 rounded cursor-pointer border border-studio-border bg-transparent"
+                    className="w-6 h-6 rounded cursor-pointer border border-zinc-700 bg-transparent"
                   />
-                  <span className="font-mono text-[11px] text-gray-300">{meshRenderer.color}</span>
+                  <span className="font-mono text-[11px] text-zinc-300">{meshRenderer.color}</span>
                 </div>
               </div>
 
               <div className="space-y-1">
-                <div className="flex justify-between text-gray-400">
+                <div className="flex justify-between text-zinc-400">
                   <span>Roughness</span>
-                  <span>{meshRenderer.roughness}</span>
+                  <span className="font-mono text-zinc-200">{meshRenderer.roughness}</span>
                 </div>
                 <input
                   type="range"
@@ -219,14 +301,14 @@ export const Inspector: React.FC = () => {
                   step="0.05"
                   value={meshRenderer.roughness}
                   onChange={(e) => { meshRenderer.setMaterial(undefined, parseFloat(e.target.value)); refreshScene(); }}
-                  className="w-full accent-emerald-500 cursor-pointer"
+                  className="w-full accent-emerald-500 cursor-pointer h-1.5 bg-zinc-800 rounded"
                 />
               </div>
 
               <div className="space-y-1">
-                <div className="flex justify-between text-gray-400">
+                <div className="flex justify-between text-zinc-400">
                   <span>Metalness</span>
-                  <span>{meshRenderer.metalness}</span>
+                  <span className="font-mono text-zinc-200">{meshRenderer.metalness}</span>
                 </div>
                 <input
                   type="range"
@@ -235,40 +317,39 @@ export const Inspector: React.FC = () => {
                   step="0.05"
                   value={meshRenderer.metalness}
                   onChange={(e) => { meshRenderer.setMaterial(undefined, undefined, parseFloat(e.target.value)); refreshScene(); }}
-                  className="w-full accent-emerald-500 cursor-pointer"
+                  className="w-full accent-emerald-500 cursor-pointer h-1.5 bg-zinc-800 rounded"
                 />
               </div>
             </div>
-          </div>
+          </AccordionCard>
         )}
 
-        {/* Light Component */}
+        {/* 3. Light Component */}
         {lightComp && (
-          <div className="bg-zinc-900/60 border border-studio-border/70 rounded-lg p-3 space-y-2.5">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-amber-400 uppercase tracking-wider flex items-center space-x-1.5">
-                <Sun className="w-3.5 h-3.5" />
-                <span>Light</span>
+          <AccordionCard
+            title="Light"
+            icon={Sun}
+            colorClass="text-amber-400"
+            isOpen={openCards.light}
+            onToggle={() => toggleCard('light')}
+            onRemove={() => { go.removeComponent(lightComp); refreshScene(); }}
+            badge={
+              <span className="font-mono text-[10px] text-amber-300 capitalize bg-amber-950/40 px-1.5 py-0.5 rounded border border-amber-800/40">
+                {lightComp.lightType} ({lightComp.intensity})
               </span>
-              <button
-                onClick={() => { go.removeComponent(lightComp); refreshScene(); }}
-                className="text-gray-400 hover:text-red-400"
-              >
-                <Trash2 className="w-3 h-3" />
-              </button>
-            </div>
-
+            }
+          >
             <div className="space-y-2 text-xs">
               <div className="flex items-center justify-between">
-                <span className="text-gray-400">Type</span>
-                <span className="capitalize text-gray-200 bg-zinc-800 px-2 py-0.5 rounded border border-studio-border">
+                <span className="text-zinc-400">Type</span>
+                <span className="capitalize text-zinc-200 bg-zinc-800 px-2 py-0.5 rounded border border-zinc-700">
                   {lightComp.lightType}
                 </span>
               </div>
               <div className="space-y-1">
-                <div className="flex justify-between text-gray-400">
+                <div className="flex justify-between text-zinc-400">
                   <span>Intensity</span>
-                  <span>{lightComp.intensity}</span>
+                  <span className="font-mono text-zinc-200">{lightComp.intensity}</span>
                 </div>
                 <input
                   type="range"
@@ -281,36 +362,35 @@ export const Inspector: React.FC = () => {
                     if (lightComp.threeLight) lightComp.threeLight.intensity = lightComp.intensity;
                     refreshScene();
                   }}
-                  className="w-full accent-amber-500 cursor-pointer"
+                  className="w-full accent-amber-500 cursor-pointer h-1.5 bg-zinc-800 rounded"
                 />
               </div>
             </div>
-          </div>
+          </AccordionCard>
         )}
 
-        {/* RigidBody3D Component */}
+        {/* 4. RigidBody 3D (Rapier Physics) */}
         {rigidBody && (
-          <div className="bg-zinc-900/60 border border-studio-border/70 rounded-lg p-3 space-y-2.5">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-purple-400 uppercase tracking-wider flex items-center space-x-1.5">
-                <Activity className="w-3.5 h-3.5" />
-                <span>RigidBody 3D (Physics)</span>
+          <AccordionCard
+            title="RigidBody 3D"
+            icon={Activity}
+            colorClass="text-purple-400"
+            isOpen={openCards.rigidBody}
+            onToggle={() => toggleCard('rigidBody')}
+            onRemove={() => { go.removeComponent(rigidBody); refreshScene(); }}
+            badge={
+              <span className="font-mono text-[10px] uppercase bg-purple-950/60 text-purple-300 px-1.5 py-0.5 rounded border border-purple-800/40">
+                {rigidBody.bodyType}
               </span>
-              <button
-                onClick={() => { go.removeComponent(rigidBody); refreshScene(); }}
-                className="text-gray-400 hover:text-red-400"
-              >
-                <Trash2 className="w-3 h-3" />
-              </button>
-            </div>
-
+            }
+          >
             <div className="space-y-2 text-xs">
               <div className="flex items-center justify-between">
-                <span className="text-gray-400">Body Type</span>
+                <span className="text-zinc-400">Body Type</span>
                 <select
                   value={rigidBody.bodyType}
                   onChange={(e) => { rigidBody.bodyType = e.target.value as any; refreshScene(); }}
-                  className="bg-zinc-800 text-gray-200 border border-studio-border rounded px-2 py-0.5 outline-none cursor-pointer"
+                  className="bg-zinc-850 text-zinc-200 border border-zinc-700 rounded px-2 py-0.5 outline-none cursor-pointer"
                 >
                   <option value="dynamic">Dynamic (Affected by Gravity)</option>
                   <option value="fixed">Fixed (Static Ground/Wall)</option>
@@ -319,103 +399,81 @@ export const Inspector: React.FC = () => {
               </div>
 
               <div className="flex items-center justify-between">
-                <span className="text-gray-400">Mass (kg)</span>
+                <span className="text-zinc-400">Mass (kg)</span>
                 <input
                   type="number"
                   step="0.5"
                   value={rigidBody.mass}
                   onChange={(e) => { rigidBody.mass = parseFloat(e.target.value) || 1; refreshScene(); }}
-                  className="w-20 bg-zinc-800 border border-studio-border rounded px-2 py-0.5 text-right text-white outline-none"
+                  className="w-20 bg-zinc-950 border border-zinc-700 rounded px-2 py-0.5 text-right text-white outline-none font-mono"
                 />
               </div>
             </div>
-          </div>
+          </AccordionCard>
         )}
 
-        {/* Mobile Controller */}
+        {/* 5. Mobile Controller */}
         {mobileController && (
-          <div className="bg-zinc-900/60 border border-studio-border/70 rounded-lg p-3 space-y-2.5">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-cyan-400 uppercase tracking-wider flex items-center space-x-1.5">
-                <Zap className="w-3.5 h-3.5" />
-                <span>Mobile Joystick Controller</span>
+          <AccordionCard
+            title="Mobile Controller"
+            icon={Zap}
+            colorClass="text-cyan-400"
+            isOpen={openCards.controller}
+            onToggle={() => toggleCard('controller')}
+            onRemove={() => { go.removeComponent(mobileController); refreshScene(); }}
+            badge={
+              <span className="font-mono text-[10px] text-cyan-300">
+                spd: {mobileController.moveSpeed}
               </span>
-              <button
-                onClick={() => { go.removeComponent(mobileController); refreshScene(); }}
-                className="text-gray-400 hover:text-red-400"
-              >
-                <Trash2 className="w-3 h-3" />
-              </button>
-            </div>
-
+            }
+          >
             <div className="space-y-2 text-xs">
               <div className="flex items-center justify-between">
-                <span className="text-gray-400">Move Speed</span>
+                <span className="text-zinc-400">Move Speed</span>
                 <input
                   type="number"
                   step="0.5"
                   value={mobileController.moveSpeed}
                   onChange={(e) => { mobileController.moveSpeed = parseFloat(e.target.value) || 5; refreshScene(); }}
-                  className="w-20 bg-zinc-800 border border-studio-border rounded px-2 py-0.5 text-right text-white outline-none"
+                  className="w-20 bg-zinc-950 border border-zinc-700 rounded px-2 py-0.5 text-right text-white outline-none font-mono"
                 />
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-gray-400">Jump Force</span>
+                <span className="text-zinc-400">Jump Force</span>
                 <input
                   type="number"
                   step="0.5"
                   value={mobileController.jumpForce}
                   onChange={(e) => { mobileController.jumpForce = parseFloat(e.target.value) || 5; refreshScene(); }}
-                  className="w-20 bg-zinc-800 border border-studio-border rounded px-2 py-0.5 text-right text-white outline-none"
+                  className="w-20 bg-zinc-950 border border-zinc-700 rounded px-2 py-0.5 text-right text-white outline-none font-mono"
                 />
               </div>
             </div>
-          </div>
+          </AccordionCard>
         )}
 
-        {/* Elemental Reaction Combat Component */}
+        {/* 6. Elemental Combat Reaction Component */}
         {elementalComp && (
-          <div className="bg-zinc-900/60 border border-studio-border/70 rounded-lg p-3 space-y-2.5">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-rose-400 uppercase tracking-wider flex items-center space-x-1.5">
-                <Flame className="w-3.5 h-3.5 text-rose-400" />
-                <span>Elemental Combat Reaction</span>
-              </span>
-              <button
-                onClick={() => { go.removeComponent(elementalComp); refreshScene(); }}
-                className="text-gray-500 hover:text-red-400 p-0.5 rounded transition-colors"
-                title="Remove Component"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-            </div>
-
+          <AccordionCard
+            title="Elemental Combat"
+            icon={Flame}
+            colorClass="text-rose-400"
+            isOpen={openCards.elemental}
+            onToggle={() => toggleCard('elemental')}
+            onRemove={() => { go.removeComponent(elementalComp); refreshScene(); }}
+            badge={
+              elementalComp.currentAura ? (
+                <span className="font-mono text-[10px] font-bold text-amber-300 bg-amber-950/40 px-1.5 py-0.5 rounded border border-amber-800/40">
+                  {elementalComp.currentAura.element} ({elementalComp.currentAura.gaugeUnits.toFixed(1)}U)
+                </span>
+              ) : (
+                <span className="font-mono text-[10px] text-zinc-500">Clean</span>
+              )
+            }
+          >
             <div className="space-y-2 text-xs">
               <div className="flex items-center justify-between">
-                <span className="text-gray-400">Current Aura</span>
-                {elementalComp.currentAura ? (
-                  <span
-                    className={`px-2 py-0.5 rounded text-[11px] font-bold font-mono ${
-                      elementalComp.currentAura.element === 'Pyro'
-                        ? 'bg-rose-950 text-rose-400 border border-rose-500/40'
-                        : elementalComp.currentAura.element === 'Hydro'
-                        ? 'bg-blue-950 text-blue-400 border border-blue-500/40'
-                        : elementalComp.currentAura.element === 'Cryo'
-                        ? 'bg-cyan-950 text-cyan-400 border border-cyan-500/40'
-                        : elementalComp.currentAura.element === 'Electro'
-                        ? 'bg-purple-950 text-purple-400 border border-purple-500/40'
-                        : 'bg-emerald-950 text-emerald-400 border border-emerald-500/40'
-                    }`}
-                  >
-                    {elementalComp.currentAura.element} ({elementalComp.currentAura.gaugeUnits.toFixed(1)}U)
-                  </span>
-                ) : (
-                  <span className="text-zinc-500 text-[11px] font-mono">None (Clean)</span>
-                )}
-              </div>
-
-              <div className="flex items-center justify-between">
-                <span className="text-gray-400">Status</span>
+                <span className="text-zinc-400">Status</span>
                 <span className={`text-[11px] font-mono font-medium ${elementalComp.isFrozen ? 'text-cyan-300 animate-pulse font-bold' : 'text-emerald-400'}`}>
                   {elementalComp.isFrozen ? `FROZEN (${elementalComp.freezeTimer.toFixed(1)}s)` : 'ACTIVE'}
                 </span>
@@ -459,25 +517,24 @@ export const Inspector: React.FC = () => {
                 </div>
               </div>
             </div>
-          </div>
+          </AccordionCard>
         )}
 
-        {/* Anime Cel Shader Component */}
+        {/* 7. Anime Cel Shader Component */}
         {celShader && (
-          <div className="bg-zinc-900/60 border border-studio-border/70 rounded-lg p-3 space-y-2.5">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-sky-400 uppercase tracking-wider flex items-center space-x-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-sky-400" />
-                <span>Genshin Cel-Shader</span>
+          <AccordionCard
+            title="Anime Cel-Shader"
+            icon={Sparkles}
+            colorClass="text-sky-400"
+            isOpen={openCards.celShader}
+            onToggle={() => toggleCard('celShader')}
+            onRemove={() => { go.removeComponent(celShader); refreshScene(); }}
+            badge={
+              <span className="font-mono text-[10px] text-sky-300">
+                rim: {celShader.rimPower.toFixed(1)}
               </span>
-              <button
-                onClick={() => { go.removeComponent(celShader); refreshScene(); }}
-                className="text-gray-500 hover:text-red-400 p-0.5 rounded transition-colors"
-                title="Remove Component"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-            </div>
+            }
+          >
             <div className="space-y-1 text-xs">
               <div className="flex items-center justify-between text-zinc-400">
                 <span>Rim Power</span>
@@ -490,73 +547,79 @@ export const Inspector: React.FC = () => {
                 step={0.5}
                 value={celShader.rimPower}
                 onChange={(e) => { celShader.rimPower = Number(e.target.value); refreshScene(); }}
-                className="w-full accent-sky-500 h-1 bg-zinc-700 rounded cursor-pointer"
+                className="w-full accent-sky-500 h-1.5 bg-zinc-800 rounded cursor-pointer"
               />
             </div>
-          </div>
+          </AccordionCard>
         )}
 
         {/* Add Component Button */}
         <div className="relative pt-2">
           <button
             onClick={() => setShowAddComponent(!showAddComponent)}
-            className="w-full flex items-center justify-center space-x-1.5 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-gray-200 text-xs font-medium border border-studio-border transition-colors"
+            className="w-full flex items-center justify-center space-x-1.5 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-zinc-200 text-xs font-medium border border-zinc-800 hover:border-zinc-700 transition-colors shadow-sm"
           >
-            <Plus className="w-3.5 h-3.5" />
+            <Plus className="w-3.5 h-3.5 text-blue-400" />
             <span>Add Component</span>
           </button>
 
           {showAddComponent && (
             <div
-              className="absolute left-0 right-0 bottom-11 bg-zinc-800 border border-studio-border rounded-lg shadow-xl p-1 z-50 text-xs space-y-0.5"
+              className="absolute left-0 right-0 bottom-11 bg-zinc-900 border border-zinc-800 rounded-lg shadow-2xl p-1 z-50 text-xs space-y-0.5"
               onMouseLeave={() => setShowAddComponent(false)}
             >
               {!meshRenderer && (
                 <button
                   onClick={() => { go.addComponent(new MeshRenderer({ shape: 'box' })); setShowAddComponent(false); refreshScene(); }}
-                  className="w-full px-3 py-1.5 text-left rounded hover:bg-studio-hover text-gray-200"
+                  className="w-full px-3 py-1.5 text-left rounded hover:bg-zinc-800 text-zinc-200 flex items-center space-x-2"
                 >
-                  + Mesh Renderer
+                  <Box className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Mesh Renderer</span>
                 </button>
               )}
               {!rigidBody && (
                 <button
                   onClick={() => { go.addComponent(new RigidBody3D({ bodyType: 'dynamic' })); setShowAddComponent(false); refreshScene(); }}
-                  className="w-full px-3 py-1.5 text-left rounded hover:bg-studio-hover text-gray-200"
+                  className="w-full px-3 py-1.5 text-left rounded hover:bg-zinc-800 text-zinc-200 flex items-center space-x-2"
                 >
-                  + RigidBody 3D (Physics)
+                  <Activity className="w-3.5 h-3.5 text-purple-400" />
+                  <span>RigidBody 3D (Physics)</span>
                 </button>
               )}
               {!mobileController && (
                 <button
                   onClick={() => { go.addComponent(new MobileController()); setShowAddComponent(false); refreshScene(); }}
-                  className="w-full px-3 py-1.5 text-left rounded hover:bg-studio-hover text-gray-200"
+                  className="w-full px-3 py-1.5 text-left rounded hover:bg-zinc-800 text-zinc-200 flex items-center space-x-2"
                 >
-                  + Mobile Joystick Controller
+                  <Zap className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>Mobile Joystick Controller</span>
                 </button>
               )}
               {!eventSheet && (
                 <button
                   onClick={() => { go.addComponent(new EventSheet()); setShowAddComponent(false); refreshScene(); }}
-                  className="w-full px-3 py-1.5 text-left rounded hover:bg-studio-hover text-gray-200"
+                  className="w-full px-3 py-1.5 text-left rounded hover:bg-zinc-800 text-zinc-200 flex items-center space-x-2"
                 >
-                  + Visual Event Sheet
+                  <Zap className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Visual Event Sheet</span>
                 </button>
               )}
               {!elementalComp && (
                 <button
                   onClick={() => { go.addComponent(new ElementalReactionComponent()); setShowAddComponent(false); refreshScene(); }}
-                  className="w-full px-3 py-1.5 text-left rounded hover:bg-studio-hover text-gray-200"
+                  className="w-full px-3 py-1.5 text-left rounded hover:bg-zinc-800 text-zinc-200 flex items-center space-x-2"
                 >
-                  + Genshin Elemental Combat
+                  <Flame className="w-3.5 h-3.5 text-rose-400" />
+                  <span>Genshin Elemental Combat</span>
                 </button>
               )}
               {!celShader && (
                 <button
                   onClick={() => { go.addComponent(new AnimeCelShader()); setShowAddComponent(false); refreshScene(); }}
-                  className="w-full px-3 py-1.5 text-left rounded hover:bg-studio-hover text-gray-200"
+                  className="w-full px-3 py-1.5 text-left rounded hover:bg-zinc-800 text-zinc-200 flex items-center space-x-2"
                 >
-                  + Anime Cel-Shader
+                  <Sparkles className="w-3.5 h-3.5 text-sky-400" />
+                  <span>Anime Cel-Shader</span>
                 </button>
               )}
             </div>

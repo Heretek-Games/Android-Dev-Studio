@@ -6,6 +6,7 @@ import {
   Bot,
   Zap,
   CheckCircle,
+  XCircle,
   Cpu,
   Layers,
   Wand2,
@@ -26,7 +27,11 @@ export const AIHarnessDock: React.FC = () => {
     text: string;
     reasoning?: string;
     details?: string[];
+    failedDetails?: string[];
     isSelfHealed?: boolean;
+    isFallback?: boolean;
+    outcome?: string;
+    outcomeReason?: string;
   }>>([
     {
       sender: 'ai',
@@ -62,16 +67,32 @@ export const AIHarnessDock: React.FC = () => {
       );
       refreshScene();
 
+      const failedDetails = (result.actionOutcomes || [])
+        .filter(o => o.status !== 'applied')
+        .map(o => `#${o.index} ${o.type}${o.target ? ` -> ${o.target}` : ''}: ${o.status} — ${o.detail}`);
+
       setChatHistory(prev => [
         ...prev,
         {
           sender: 'ai',
           text: result.summary,
           reasoning: result.reasoning || streamingReasoning,
-          details: result.actionsApplied
+          details: result.actionsApplied,
+          failedDetails,
+          isFallback: result.isFallback,
+          outcome: result.outcome,
+          outcomeReason: result.outcomeReason
         }
       ]);
-      addLog('ai', 'AI Harness', `Scene updated: ${result.actionsApplied.join(', ') || 'No scene mutations'}`);
+
+      if (result.isFallback) {
+        addLog('warn', 'AI Harness', `Fallback generator engaged (${result.traceId}): ${result.outcomeReason || 'LLM unreachable'}`);
+      } else if (result.outcome === 'parse-degraded') {
+        addLog('error', 'AI Harness', `Parse degraded (${result.traceId}): ${result.outcomeReason}`);
+      } else if (result.outcome === 'apply-error') {
+        addLog('warn', 'AI Harness', `Apply degraded (${result.traceId}): ${result.outcomeReason}`);
+      }
+      addLog('ai', 'AI Harness', `Scene updated [${result.outcome || 'unknown'} | ${result.traceId}]: ${result.actionsApplied.join(', ') || 'No scene mutations'}`);
     } catch (err: any) {
       addLog('error', 'AI Harness', `Generation failed: ${err.message}`);
       setChatHistory(prev => [
@@ -106,9 +127,15 @@ export const AIHarnessDock: React.FC = () => {
           text: result.summary,
           reasoning: result.reasoning,
           details: result.actionsApplied,
-          isSelfHealed: true
+          isSelfHealed: true,
+          isFallback: result.isFallback,
+          outcome: result.outcome,
+          outcomeReason: result.outcomeReason
         }
       ]);
+      if (result.isFallback) {
+        addLog('warn', 'AI Harness', `Self-heal used heuristic fallback (${result.traceId}): ${result.outcomeReason || ''}`);
+      }
     } catch (err: any) {
       addLog('error', 'AI Harness', `Self-heal failed: ${err.message}`);
     } finally {
@@ -197,6 +224,21 @@ export const AIHarnessDock: React.FC = () => {
                     Self-Healed
                   </span>
                 )}
+                {item.isFallback && (
+                  <span className="text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.2 rounded border border-amber-500/40">
+                    Fallback — LLM Unreachable
+                  </span>
+                )}
+                {item.outcome === 'parse-degraded' && (
+                  <span className="text-[10px] bg-red-500/20 text-red-300 px-1.5 py-0.2 rounded border border-red-500/40">
+                    Parse Degraded
+                  </span>
+                )}
+                {item.outcome === 'apply-error' && (
+                  <span className="text-[10px] bg-red-500/20 text-red-300 px-1.5 py-0.2 rounded border border-red-500/40">
+                    Partial Apply
+                  </span>
+                )}
               </div>
 
               {item.reasoning && (
@@ -219,6 +261,17 @@ export const AIHarnessDock: React.FC = () => {
                     <div key={dIdx} className="flex items-center space-x-1.5 text-[11px] text-emerald-400">
                       <CheckCircle className="w-3 h-3 shrink-0" />
                       <span>{d}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {item.failedDetails && item.failedDetails.length > 0 && (
+                <div className="mt-2 pt-2 border-t border-studio-border/60 space-y-1">
+                  {item.failedDetails.map((d, dIdx) => (
+                    <div key={dIdx} className="flex items-start space-x-1.5 text-[11px] text-red-400">
+                      <XCircle className="w-3 h-3 shrink-0 mt-0.5" />
+                      <span className="whitespace-pre-wrap break-words">{d}</span>
                     </div>
                   ))}
                 </div>
