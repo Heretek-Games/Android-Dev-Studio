@@ -9,10 +9,14 @@ export * from './core/FloatingOrigin.js';
 // Components
 export * from './components/MeshRenderer.js';
 export * from './components/LightComponent.js';
+export * from './components/AudioSource.js';
 export * from './components/CameraComponent.js';
 export * from './components/RigidBody3D.js';
 export * from './components/Collider3D.js';
 export * from './components/MobileController.js';
+export * from './audio/AudioManager.js';
+export * from './audio/AudioBackend.js';
+export * from './audio/WebAudioBackend.js';
 export * from './components/ModelRenderer.js';
 
 // Events & Scripting
