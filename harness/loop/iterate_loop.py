@@ -135,6 +135,26 @@ def parse_actions(text: str) -> Tuple[Optional[str], List[Any], str, Optional[st
 
 
 # --------------------------------------------------------------------------- QA
+def scenario_needs_traversal(spec: Dict[str, Any]) -> bool:
+    """True when the scenario requests a traversal audit.
+
+    Either an explicit `traversal` config block or any rule of type
+    traversal_coverage_min opts the run into the raycast sweep, so briefs can
+    demand traversal coverage purely through the acceptance matrix.
+    """
+    if not isinstance(spec, dict):
+        return False
+    if isinstance(spec.get("traversal"), dict):
+        return True
+    rules = spec.get("rules")
+    if not isinstance(rules, list):
+        return False
+    return any(
+        isinstance(rule, dict) and rule.get("type") == "traversal_coverage_min"
+        for rule in rules
+    )
+
+
 def default_qa_runner(
     scenario_path: Path, frames: int, out_path: Optional[Path]
 ) -> Dict[str, Any]:
@@ -149,6 +169,13 @@ def default_qa_runner(
     ]
     if out_path:
         cmd += ["--out", str(out_path)]
+    try:
+        with open(scenario_path, "r", encoding="utf-8") as f:
+            spec = json.load(f)
+    except (OSError, json.JSONDecodeError):
+        spec = {}
+    if scenario_needs_traversal(spec):
+        cmd.append("--traverse")
     proc = subprocess.run(
         cmd, capture_output=True, text=True, cwd=str(REPO_ROOT), timeout=900
     )

@@ -13,7 +13,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from harness.loop.iterate_loop import IterateLoop, parse_actions  # noqa: E402
+from harness.loop.iterate_loop import (  # noqa: E402
+    IterateLoop,
+    parse_actions,
+    scenario_needs_traversal,
+)
 from harness.loop.llm_client import LlmError, LlmResponse  # noqa: E402
 
 RULES = [
@@ -405,6 +409,26 @@ class LoopTests(unittest.TestCase):
         self.assertEqual(result.verdict, "unresolved")
         self.assertTrue(all(it["qa"]["verdict"] == "error" for it in result.iterations))
         self.assertIn("token budget", result.error or "")
+
+
+class TraversalOptInTests(unittest.TestCase):
+    def test_rule_type_opts_in(self):
+        self.assertTrue(
+            scenario_needs_traversal(
+                {"rules": [{"id": "c", "type": "traversal_coverage_min"}]}
+            )
+        )
+
+    def test_config_block_opts_in(self):
+        self.assertTrue(scenario_needs_traversal({"traversal": {"grid": 5}}))
+
+    def test_other_rules_do_not_opt_in(self):
+        self.assertFalse(
+            scenario_needs_traversal({"rules": [{"id": "c", "type": "fps_min"}]})
+        )
+        self.assertFalse(scenario_needs_traversal({}))
+        self.assertFalse(scenario_needs_traversal(None))
+        self.assertFalse(scenario_needs_traversal({"rules": "not-a-list"}))
 
 
 class ParseTests(unittest.TestCase):
