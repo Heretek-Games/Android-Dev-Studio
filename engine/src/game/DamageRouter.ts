@@ -52,8 +52,20 @@ export function attachDamageRouter(scene: Scene, source: HitSource, options: Dam
     const target = scene.findByName(event.hitObjectName);
     if (!target) return;
 
-    // Elemental path: the reaction component owns health, auras and reactions.
-    const elemental = options.element ? target.getComponent(ElementalReactionComponent) : null;
+    // Elemental entities own their health pool: physical hits apply plain damage,
+    // configured elements additionally drive auras/reactions.
+    const elemental = target.getComponent(ElementalReactionComponent);
+    if (elemental && !options.element) {
+      const wasAlive = elemental.health > 0;
+      const applied = Math.min(elemental.health, event.damage);
+      elemental.health -= applied;
+      if (applied > 0) options.onDamage?.(event.hitObjectName, applied, event);
+      if (wasAlive && elemental.health <= 0) {
+        options.onKill?.(event.hitObjectName, event);
+        if (options.destroyOnElementalDeath ?? true) target.destroy();
+      }
+      return;
+    }
     if (elemental) {
       const wasAlive = elemental.health > 0;
       const reaction = elemental.receiveElementalAttack(

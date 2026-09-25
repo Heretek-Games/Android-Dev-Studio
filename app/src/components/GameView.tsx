@@ -25,19 +25,26 @@ import {
   RigidBody3D,
   Collider3D,
   GameObject,
+  ElementalReactionComponent,
+  DialogueManager,
+  type DialogueTree,
   type Scene as EngineScene
 } from '@heretek/engine';
 import { buildEngineScene } from '../services/HarnessSceneAdapter';
 import type { HarnessScene } from '../services/SceneStore';
 import fpsArenaSpec from '../../../harness/config/scenarios/fps_arena.json';
 import drivingSliceSpec from '../../../harness/config/scenarios/driving_slice.json';
+import dungeonSliceSpec from '../../../harness/config/scenarios/dungeon_slice.json';
 
-/** `?play=driving` boots the driving slice; anything else boots the arena. */
-type GameKind = 'arena' | 'driving';
+/** `?play=driving|dungeon` boots those slices; anything else boots the arena. */
+type GameKind = 'arena' | 'driving' | 'dungeon';
 
 const gameKindFromUrl = (): GameKind => {
   if (typeof window === 'undefined') return 'arena';
-  return new URLSearchParams(window.location.search).get('play') === 'driving' ? 'driving' : 'arena';
+  const play = new URLSearchParams(window.location.search).get('play');
+  if (play === 'driving') return 'driving';
+  if (play === 'dungeon') return 'dungeon';
+  return 'arena';
 };
 
 interface ArenaGameConfig {
@@ -70,7 +77,8 @@ export const GameView: React.FC = () => {
     if (!container) return;
 
     const kind = gameKindFromUrl();
-    const rawSpec = kind === 'driving' ? drivingSliceSpec : fpsArenaSpec;
+    const rawSpec =
+      kind === 'driving' ? drivingSliceSpec : kind === 'dungeon' ? dungeonSliceSpec : fpsArenaSpec;
     const spec = rawSpec as unknown as HarnessScene;
     const gameConfig = (rawSpec as unknown as { game?: ArenaGameConfig }).game ?? {};
     const playerName = gameConfig.playerName ?? (kind === 'driving' ? 'Player Car' : 'Player Hero');
@@ -118,8 +126,9 @@ export const GameView: React.FC = () => {
         spawnRadius: gameConfig.spawnRadius ?? 8,
         scorePerKill: gameConfig.scorePerKill ?? 100,
         interWaveDelaySeconds: gameConfig.interWaveDelaySeconds ?? 1,
-        weapon: kind === 'arena' ? weapon ?? undefined : undefined,
-        buildEnemy: kind === 'arena' ? ({ name, position }) => {
+        weapon: kind === 'driving' ? undefined : weapon ?? undefined,
+        hitElement: (gameConfig as { hitElement?: string }).hitElement as never,
+        buildEnemy: kind === 'driving' ? undefined : ({ name, position }) => {
           const enemy = new GameObject(name);
           enemy.transform.setPosition(position[0], position[1] + (enemySpec.y ?? 0.8), position[2]);
           enemy.addComponent(
@@ -130,11 +139,25 @@ export const GameView: React.FC = () => {
               roughness: 0.5
             })
           );
-          enemy.addComponent(new HealthComponent(enemyHealth));
+          const elementalSpec = (enemySpec as { elemental?: { aura?: string; maxHealth?: number } }).elemental;
+          if (elementalSpec) {
+            const elemental = new ElementalReactionComponent();
+            if (elementalSpec.maxHealth !== undefined) {
+              elemental.maxHealth = elementalSpec.maxHealth;
+              elemental.health = elementalSpec.maxHealth;
+            }
+            enemy.addComponent(elemental);
+            scene.addGameObject(enemy);
+            if (elementalSpec.aura) {
+              elemental.receiveElementalAttack(elementalSpec.aura as never, 0, 1);
+            }
+          } else {
+            enemy.addComponent(new HealthComponent(enemyHealth));
+            scene.addGameObject(enemy);
+          }
           enemy.addComponent(new EnemyAI({ targetName: playerName, ...(enemySpec.ai ?? {}) }));
-          scene.addGameObject(enemy);
           return enemy;
-        } : undefined
+        }
       });
 
       const resetArena = () => {
@@ -156,10 +179,25 @@ export const GameView: React.FC = () => {
       const SAVE_SLOT = 'arena';
       runtime.prepare();
 
+      // Dungeon dialogue: the keeper offers a Hydro blessing (drives hitElement).
+      const dialogue = kind === 'dungeon' ? new DialogueManager() : null;
+      const dialogueTrees = (rawSpec as unknown as { dialogues?: Record<string, DialogueTree> }).dialogues;
+      if (dialogue && dialogueTrees) {
+        for (const tree of Object.values(dialogueTrees)) dialogue.registerTree(tree);
+        dialogue.addEventListener((eventName) => {
+          if (eventName === 'hydro_blessing') runtime!.setHitElement('Hydro');
+        });
+      }
+
       shell = new GameShell({
         flow: runtime.flow,
         session: runtime.session,
-        title: kind === 'driving' ? 'Heretek Drive — Avenue Sprint' : 'Heretek Arena — Wave Defense',
+        title:
+          kind === 'driving'
+            ? 'Heretek Drive — Avenue Sprint'
+            : kind === 'dungeon'
+              ? 'Heretek Dungeon — Slime Hall'
+              : 'Heretek Arena — Wave Defense',
         hud:
           kind === 'driving'
             ? { scoreLabel: 'Distance', scoreSuffix: 'm', showWave: false, showKills: false, showHealth: false }
@@ -169,6 +207,10 @@ export const GameView: React.FC = () => {
         onStart: () => {
           resetArena();
           runtime!.start();
+          if (dialogue && dialogueTrees) {
+            const node = dialogue.startConversation('DungeonKeeper');
+            if (node) showDialogueNode(node);
+          }
         },
         onRestart: () => {
           resetArena();
@@ -195,6 +237,46 @@ export const GameView: React.FC = () => {
       });
       shell.mount();
 
+      // Minimal dialogue overlay driven by the real DialogueManager.
+      const dialoguePanel = document.createElement('div');
+      dialoguePanel.style.cssText =
+        'position:absolute;left:50%;bottom:8%;transform:translateX(-50%);max-width:620px;padding:14px 18px;' +
+        'border-radius:12px;background:rgba(12,10,20,0.92);border:1px solid #4c1d95;color:#ede9fe;' +
+        'font-family:system-ui,sans-serif;display:none;z-index:60;text-align:center;';
+      const dialogueSpeaker = document.createElement('div');
+      dialogueSpeaker.style.cssText = 'font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:#a78bfa;margin-bottom:6px;';
+      const dialogueText = document.createElement('div');
+      dialogueText.style.cssText = 'font-size:14px;line-height:1.5;margin-bottom:10px;';
+      const dialogueChoices = document.createElement('div');
+      dialogueChoices.style.cssText = 'display:flex;gap:8px;justify-content:center;flex-wrap:wrap;';
+      dialoguePanel.append(dialogueSpeaker, dialogueText, dialogueChoices);
+      container.append(dialoguePanel);
+
+      const showDialogueNode = (node: { speaker?: string; text?: string; choices?: Array<{ text: string }> } | null) => {
+        if (!dialogue || !node) {
+          dialoguePanel.style.display = 'none';
+          return;
+        }
+        dialoguePanel.style.display = 'block';
+        dialogueSpeaker.textContent = node.speaker ?? '';
+        dialogueText.textContent = node.text ?? '';
+        dialogueChoices.innerHTML = '';
+        const choices = dialogue.getAvailableChoices();
+        choices.forEach(({ choice, index }) => {
+          const button = document.createElement('button');
+          button.textContent = choice.text;
+          button.style.cssText =
+            'padding:8px 16px;border-radius:8px;border:1px solid #6d28d9;background:#4c1d95;color:#fff;' +
+            'font-size:13px;cursor:pointer;';
+          button.addEventListener('click', () => {
+            const next = dialogue.chooseOption(index);
+            if (next) showDialogueNode(next);
+            else dialoguePanel.style.display = 'none';
+          });
+          dialogueChoices.append(button);
+        });
+      };
+
       // Debug/QA surface (mirrors the studio's __STUDIO_DEBUG__ pattern).
       (window as unknown as Record<string, unknown>).__GAME_DEBUG__ = {
         phase: () => runtime!.flow.getPhase(),
@@ -216,6 +298,10 @@ export const GameView: React.FC = () => {
             const e = scene.findByName(name);
             return e ? { name, x: e.transform.position.x, y: e.transform.position.y, z: e.transform.position.z } : { name, dead: true };
           }),
+        /** Elemental reactions produced so far (dungeon slice). */
+        reactions: () => runtime!.getReactionCount(),
+        /** Active dialogue node id (dungeon slice). */
+        dialogueNode: () => (dialogue?.getCurrentNode()?.id ?? null),
         /** Driving telemetry (vehicle input + solver state). */
         vehicle: () =>
           vehicle

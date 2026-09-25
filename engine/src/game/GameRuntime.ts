@@ -181,17 +181,34 @@ export class GameRuntime {
     this.detachAllWaves = null;
   }
 
-  private wire(): void {
-    if (this.config.weapon) {
-      this.detachRouter = attachDamageRouter(this.scene, this.config.weapon, {
-        onKill: () => this.session.registerKill(),
-        element: this.config.hitElement,
-        gaugeUnits: this.config.hitGauge,
-        onReaction: () => {
-          this.reactionCount += 1;
-        }
-      });
+  /**
+   * Change the element applied by weapon hits at runtime (e.g. a dialogue blessing).
+   * Only the weapon router is re-attached; other listeners stay wired.
+   */
+  public setHitElement(element?: ElementType, gaugeUnits?: number): void {
+    this.config.hitElement = element;
+    if (gaugeUnits !== undefined) this.config.hitGauge = gaugeUnits;
+    if (this.detachRouter) {
+      this.detachRouter();
+      this.detachRouter = null;
     }
+    if (this.running) this.attachWeaponRouter();
+  }
+
+  private attachWeaponRouter(): void {
+    if (!this.config.weapon) return;
+    this.detachRouter = attachDamageRouter(this.scene, this.config.weapon, {
+      onKill: () => this.session.registerKill(),
+      element: this.config.hitElement,
+      gaugeUnits: this.config.hitGauge,
+      onReaction: () => {
+        this.reactionCount += 1;
+      }
+    });
+  }
+
+  private wire(): void {
+    this.attachWeaponRouter();
 
     const playerName = this.config.playerName ?? 'Player Hero';
     const player = this.scene.findByName(playerName);

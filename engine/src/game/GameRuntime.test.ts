@@ -2,6 +2,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert';
 import { GameRuntime } from './GameRuntime.js';
 import { HealthComponent } from '../components/HealthComponent.js';
+import { ElementalReactionComponent } from '../combat/ElementalReactionComponent.js';
 import { GameObject } from '../core/GameObject.js';
 import { Scene } from '../core/Scene.js';
 import type { HitEventLike } from './DamageRouter.js';
@@ -214,5 +215,38 @@ describe('GameRuntime — distance mode (driving slice)', () => {
     assert.strictEqual(runtime.getTraveledDistance(), 0);
     assert.strictEqual(runtime.session.getScore(), 0);
     assert.strictEqual(runtime.flow.getPhase(), 'playing');
+  });
+});
+
+describe('GameRuntime — elemental hits', () => {
+  test('setHitElement re-routes weapon hits through the elemental path', () => {
+    const scene = new Scene('DungeonArena');
+    const player = new GameObject('Adventurer');
+    scene.addGameObject(player);
+    const enemy = new GameObject('Pyro Slime');
+    scene.addGameObject(enemy);
+    const elemental = enemy.addComponent(new ElementalReactionComponent());
+    elemental.maxHealth = 100;
+    elemental.health = 100;
+    elemental.receiveElementalAttack('Pyro', 0, 1);
+
+    const weapon = new FakeWeapon();
+    const runtime = new GameRuntime({
+      scene,
+      playerName: 'Adventurer',
+      totalWaves: 1,
+      weapon,
+      hitElement: undefined // physical until the blessing
+    });
+    runtime.start();
+
+    weapon.fireAt('Pyro Slime', 20);
+    assert.strictEqual(runtime.getReactionCount(), 0, 'physical hits produce no reaction');
+    assert.strictEqual(elemental.health, 80);
+
+    runtime.setHitElement('Hydro');
+    weapon.fireAt('Pyro Slime', 20);
+    assert.strictEqual(runtime.getReactionCount(), 1, 'hydro on pyro vaporises');
+    assert.strictEqual(elemental.health, 40, 'forward vaporise doubles the damage');
   });
 });

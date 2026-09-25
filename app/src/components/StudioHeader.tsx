@@ -212,6 +212,14 @@ export const StudioHeader: React.FC<StudioHeaderProps> = ({
           <Play className="w-3.5 h-3.5 fill-current" />
           <span>Drive</span>
         </button>
+        <button
+          onClick={() => { window.location.search = '?play=dungeon'; }}
+          title="Play the dungeon slice (elemental combat + dialogue)"
+          className="flex items-center space-x-1.5 px-3 py-1 rounded text-xs font-semibold bg-amber-600 hover:bg-amber-500 text-white shadow-sm shadow-amber-600/30 transition-all"
+        >
+          <Play className="w-3.5 h-3.5 fill-current" />
+          <span>Dungeon</span>
+        </button>
         <div className="flex items-center space-x-1 bg-zinc-900/90 px-1.5 py-0.5 rounded-lg border border-zinc-800 shadow-inner">
           <button
             onClick={isPlaying ? stopPlayMode : startPlayMode}
