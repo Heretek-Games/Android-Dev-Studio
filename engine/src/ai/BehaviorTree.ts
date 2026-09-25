@@ -117,6 +117,41 @@ export class MoveTowardsNode extends BTNode {
   }
 }
 
+/**
+ * Attacks the target when within range, rate-limited by a cooldown. The attack
+ * itself is an injected callback, so the node stays decoupled from game systems
+ * (weapons, damage routing, events).
+ */
+export class AttackNode extends BTNode {
+  private cooldownRemaining = 0;
+
+  constructor(
+    public targetName: string,
+    public range: number,
+    public attack: (actor: GameObject, target: GameObject) => void,
+    public intervalSeconds: number = 1.0
+  ) {
+    super();
+  }
+
+  public override tick(actor: GameObject, dt: number): BTStatus {
+    if (this.cooldownRemaining > 0) this.cooldownRemaining = Math.max(0, this.cooldownRemaining - dt);
+    if (!actor.scene) return BTStatus.FAILURE;
+    const target = actor.scene.findByName(this.targetName);
+    if (!target) return BTStatus.FAILURE;
+
+    const p1 = actor.transform.position;
+    const p2 = target.transform.position;
+    const dist = Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2 + (p1.z - p2.z) ** 2);
+    if (dist > this.range) return BTStatus.FAILURE;
+    if (this.cooldownRemaining > 0) return BTStatus.RUNNING;
+
+    this.attack(actor, target);
+    this.cooldownRemaining = this.intervalSeconds;
+    return BTStatus.SUCCESS;
+  }
+}
+
 export class BehaviorTreeComponent extends Component {
   public root: BTNode | null = null;
   public lastStatus: BTStatus = BTStatus.SUCCESS;
