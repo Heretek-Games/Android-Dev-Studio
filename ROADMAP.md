@@ -82,16 +82,18 @@ A phased roadmap tracking progress from foundational 3D engine systems to AAA-ti
   - Hierarchical A* pathfinder (`GridPathfinder.ts`, `NavGrid`) with coarse chunk planning, fine grid refinement, and obstacle routing (Warzone 2100 pattern).
   - Deterministic fixed-step economy and logistics simulation loop (`EconomyTick.ts`) decoupled from visual frame rate (Anno / SS14 pattern).
   - World origin shifting (`FloatingOrigin.ts`) eliminating 32-bit floating-point precision jitter in massive worlds (Daggerfall Unity / OpenMW pattern).
-  - S.T.A.L.K.E.R. OpenXRay inspired dual-tier A-Life simulation (`ALifeSimulator.ts`) with seamless 120m Online 3D bubble vs Offline sector graph simulation.
-  - Branching narrative dialogue trees (`DialogueManager.ts`) supporting visual nodes, choice routing, condition variables, event triggers, and Markdown script DSL (Dialogic & Godot Dialogue Manager pattern).
-  - Comprehensive unit test suite expanded to 46 automated tests across 11 test suites (100% pass rate).
+  - S.T.A.L.K.E.R. OpenXRay inspired dual-tier A-Life simulation (`ALifeSimulator.ts`) with seamless online 3D bubble vs offline sector simulation (horizontal-distance promotion with hysteresis).
+  - Branching narrative dialogue trees (`DialogueManager.ts`) with variable-gated choice selection (`getAvailableChoices` + comparison operators) and Markdown script DSL (Dialogic & Godot Dialogue Manager pattern).
+  - 47 automated unit tests across 11 suites (100% pass).
 - [x] **Battle-Hardened Zero-Mistake AI Harness (`harness/`):**
-  - Deterministic 7-point Scene Invariant Gate (`scene_invariants.py`): validates finite transforms, mobile draw budget (max 100), spawn non-penetration, entity uniqueness, component contracts, event target references, and velocity limits.
-  - Transactional Scene Persistence (`save_active_scene_transactional`): rejects invalid scene mutations before touching disk or project memory, preventing scene corruption.
-  - Multi-agent swarm pipeline (`agent_swarm.py`): orchestrates Systems Architect, Gameplay Coder, Invariant Auditor, Headless Artemis QA, and Code Reviewer with automated self-healing iterations.
-  - Expanded Studio MCP Server (`mcp_server.py`) to 23 production tools, adding `studio_configure_lod`, `studio_configure_spatial_grid`, `studio_configure_pathfinding`, `studio_configure_economy`, `studio_configure_alife`, and `studio_configure_dialogue`.
-- [x] **Desktop Studio IDE Integration (`app/`):**
-  - Added `LargeScaleWorldDock.tsx`: visual monitors and interactive tuners for LOD culling, spatial grid density, hierarchical A* navgrid map, economy tick accumulation, and A-Life online/offline populations.
-  - Added `DialogueEditorDock.tsx`: visual branching node hierarchy, property inspector, live conversation simulator with choice prompts, and script DSL compiler.
-  - Registered in `DockviewWorkspace.tsx` and updated `AgentSwarmDock.tsx` subagent roster bar with Invariant Auditor.
+  - 7-point Scene Invariant Gate (`scene_invariants.py`) rewritten for the canonical flat schema: finite transforms, unbatched draw budget (max 100), spawn non-penetration, entity uniqueness, component contracts, event integrity with cross-entity target existence, and velocity caps. Normalizes engine-exported nested dumps so one gate covers both formats.
+  - **24 unit tests** (`test_scene_invariants.py`) covering the positive scene plus one negative per invariant; input immutability and schema normalization included.
+  - **Rollback proven E2E:** duplicate-name, buried-collider, and invalid-shape mutations rejected with the scene file byte-identical (md5), valid spawn + delete round-trips restore the same checksum.
+  - Multi-agent swarm pipeline (`agent_swarm.py`): real Architect (ADR), Invariant Auditor, headless Artemis QA (regression gate + benchmark recording), and Reviewer; unimplemented coder/designer/shader roles return explicit `skipped` + TODO markers — no fabricated results.
+  - 23 Studio MCP tools; scene-mutating tools persist transactionally to `harness/scenes/active_scene.json` with `project_memory` snapshot sync.
+- [x] **Desktop Studio IDE Integration (`app/`) — functional and chrome-devtools verified:**
+  - `LargeScaleWorldDock.tsx`: LOD tab runs the real `LODManager` against the canonical scene + live viewport camera (culling proven: 3 culled / 1 visible at a 55m threshold), Spatial tab runs a real `SpatialGrid` (query distances 0.00/2.00/5.02m), Pathfinding derives its `NavGrid` from scene bounds/footprints (17 fine / 1 coarse nodes, hierarchical) and can spawn path markers into the scene, Economy uses one persistent `EconomyTick` (deterministic 210/75/430/120 after +30s), A-Life runs the real two-tier `ALifeSimulator` (12 online / 23 offline at a 40m bubble around the live camera).
+  - `DialogueEditorDock.tsx`: trees persist to `scene.dialogues` (MCP-compatible); preview runs the real `DialogueManager` with live gating (gold≥100 choice hidden at gold=50) and narrative event dispatch.
+  - `AgentSwarmDock.tsx`: real pipeline via `POST /api/swarm/run`; renders the real DAG, invariant audit, Artemis QA telemetry/regressions, ADRs and QA benchmarks from SQLite, with explicit TODO badges for skipped roles.
+  - Scene bridge (`/api/scene` + `SceneStore`): read-modify-write against the authoritative file so studio saves never clobber external agent changes (verified: dock save preserves CLI deletions and other config).
 

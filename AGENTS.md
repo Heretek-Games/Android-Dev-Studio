@@ -84,10 +84,12 @@ Live LLM settings are loaded from `.env.prod`:
 The Vite dev server proxies `/api/llm` to `https://llm.heretek.one/v1`, keeping credentials securely managed.
 
 ### Studio MCP Tools (`harness/mcp_server.py`)
-External coding agents can interact with the live studio session via 23 JSON-RPC tools with **zero-mistake transactional invariant verification**.
-Scene-mutating tools run the 7-point Scene Invariant Gate (`harness/validation/scene_invariants.py`), persist to `harness/scenes/active_scene.json` (scenario format),
-and synchronize a snapshot into `project_memory.py` on every change; the QA tool
-boots that exact file headless on the real engine runtime.
+External coding agents can interact with the live studio session via 23 JSON-RPC tools, with every
+scene-mutating tool running the **unit-tested 7-point Scene Invariant Gate**
+(`harness/validation/scene_invariants.py`) transactionally. Mutations persist to
+`harness/scenes/active_scene.json` (canonical scene) and synchronize a snapshot into
+`project_memory.py` on every change; `studio_run_artemis_qa` boots that exact file headless on the
+real engine runtime. The Studio UI writes through the same gate via `POST /api/scene`.
 1. `studio_get_scene_hierarchy`: Inspect active GameObjects, components, and transforms.
 2. `studio_spawn_entity`: Spawn 3D meshes (box, sphere, capsule, etc.) with Rapier3D physics.
 3. `studio_modify_component`: Live-tune materials, velocities, light intensity, or controller speed.
@@ -114,14 +116,46 @@ boots that exact file headless on the real engine runtime.
 
 ### Deterministic Zero-Mistake Guardrails (`harness/validation/`)
 - `scene_invariants.py`: Enforces 7 hard invariants before any mutation is saved:
-  1. Finite Transforms (no NaN, null, or Infinity)
-  2. Mobile Draw Budget (unbatched meshes <= 100)
-  3. Collision Non-Penetration at Spawn (dynamic bodies cannot intersect fixed geometry)
-  4. Entity Identity Uniqueness
-  5. Component Contract Integrity
-  6. Event Target Integrity
-  7. Physics Velocity Caps (<= 200 m/s)
-- `save_active_scene_transactional`: Automatically rolls back scene modifications if any invariant fails, returning structured feedback to the calling agent.
+  1. Finite Transforms (no NaN, Infinity, or invalid vectors in position/rotation/scale)
+  2. Mobile Draw Budget (unbatched mesh/model/terrain draws <= 100; `batched` instances excluded)
+  3. Collision Non-Penetration at Spawn (dynamic colliders cannot intersect fixed geometry)
+  4. Entity Identity Uniqueness (non-empty, unique names)
+  5. Component Contract Integrity (shapes, sizes, physics types, light types, masses)
+  6. Event Integrity (well-formed conditions/actions of supported types + cross-entity target existence)
+  7. Physics Velocity Caps (linear <= 200 m/s, angular <= 100 rad/s)
+- Validates the canonical flat scene-store schema and normalizes engine-exported nested
+  `transform`/`components` dumps before checking, so both formats share one gate.
+- `save_active_scene_transactional`: automatically rolls back any rejected mutation, returning
+  structured feedback to the calling agent. **Rollback is unit-tested and E2E-proven**: duplicate-name,
+  buried-collider, and invalid-shape spawns are rejected with the scene file byte-identical
+  (md5-verified), while valid mutations + delete round-trips restore the same checksum.
+- Tests: `python3 -m unittest harness.validation.test_scene_invariants` (24 cases: positive scene,
+  one negative per invariant, schema normalization, input immutability).
+
+### Studio ↔ Harness Scene Bridge (`/api/scene`)
+- The canonical scene is `harness/scenes/active_scene.json` (source of truth for the studio and agents).
+- `GET /api/scene` reads it; `POST /api/scene` writes through the same transactional invariant gate
+  and memory snapshot as MCP tools (`harness/agents/scene_store_cli.py` backs the route).
+- `app/src/services/SceneStore.ts` performs **read-modify-write against the authoritative file** on
+  every mutation, so a studio save can never clobber external (MCP/CLI/agent) changes; invariant
+  rejections surface as HTTP 409 + a visible error banner in the docks.
+- `app/src/services/HarnessSceneAdapter.ts` builds real engine `Scene` objects from the spec
+  (mirroring `qa_scenario_runner.mjs` semantics) plus draw-call estimates, scene bounds, and
+  tall-fixed-obstacle footprints for in-studio subsystem analysis.
+
+### Functional Studio Docks (verified in chrome-devtools)
+- **Large-Scale World & Sim** (`app/src/components/LargeScaleWorldDock.tsx`): LOD (real `LODManager`
+  with the live viewport camera; save per-entity `lod` configs), Spatial Hash (real `SpatialGrid` with
+  radius queries), Hierarchical A* (real `NavGrid` from scene geometry with node-expansion stats and
+  path-marker spawning), Economy (one persistent deterministic `EconomyTick`), A-Life (real two-tier
+  `ALifeSimulator` promoting agents around the live camera).
+- **Dialogue & Narrative** (`DialogueEditorDock.tsx`): trees persist to `scene.dialogues`
+  (MCP `studio_configure_dialogue` compatible); preview runs the real `DialogueManager` with live
+  variable-gated choices (`getAvailableChoices`, comparison operators) and narrative event dispatch.
+- **Agent Swarm** (`AgentSwarmDock.tsx`): dispatches the real orchestrator via `POST /api/swarm/run`
+  (`harness/agents/swarm_cli.py`); renders the real task DAG, invariant audit, Artemis QA telemetry,
+  and ADRs/benchmarks from SQLite. Unimplemented roles render explicit **TODO** badges — never fake
+  success.
 
 ### Headless QA Pipeline (`harness/agents/`)
 - `qa_scenario_runner.mjs`: Node runner that builds a scenario spec into a real `Scene`, initializes Rapier3D WASM physics, steps the `EngineContext` for N fixed-dt frames, and emits a JSON report (metrics + per-rule pass/fail).
