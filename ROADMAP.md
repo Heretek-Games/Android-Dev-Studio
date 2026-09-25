@@ -150,3 +150,9 @@ A phased roadmap tracking progress from foundational 3D engine systems to AAA-ti
 - [x] **Runtime element swaps** — `GameRuntime.setHitElement` re-attaches only the weapon router; driven by the DungeonKeeper `hydro_blessing` dialogue event.
 - [x] **Genre QA scenario** — `dungeon_slice.json` (11 rules) + `DungeonKeeper` dialogue tree; **11/11 rules SUCCEEDED** (`phase=won`, `kills=2`, `reactions=2`).
 - [x] **Playable mode** — `?play=dungeon` / studio **Dungeon** button: keeper dialogue overlay on Start, elemental enemy factory, reactions/dialogue debug surface. App production build green; in-browser playthrough re-verification pending.
+
+### Milestone 15: Vertical Slice #4 — City Builder ✅ (browser playthrough pending)
+- [x] **Settlement core** — plot-grid placement with validation, fixed-step economy (housing caps, upkeep, surplus growth / starvation), deterministic advance, demolish, snapshot, reset, target-population win (7 tests).
+- [x] **Runtime build mode + score mirror** — `GameRuntime` mode `'build'` with `getSettlement()`; `GameSession.syncScore` mirrors population into the HUD without triggering wins.
+- [x] **Genre QA scenario** — `city_slice.json` (7 rules) with `game_settlement_pop_min` / `game_settlement_gold_min` rules and settlement telemetry; **7/7 rules SUCCEEDED**, Artemis baseline recorded.
+- [x] **Playable mode** — `?play=city` / studio **City** button: found an empty town, click-to-place with grid snapping, build toolbar, treasury overlay, fixed overview camera. App production build green; in-browser playthrough pending.

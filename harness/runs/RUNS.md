@@ -439,3 +439,33 @@ pinpointed it and stays in place for future device debugging.
 | Engine | **278/278 tests green** (`npm test`), app production build green |
 | Genre QA | **11/11 rules SUCCEEDED** — `phase=won`, `kills=2`, `reactions=2`, enemy displacement 1.93 m, 2 draw calls |
 | Playable | Code-complete and building; in-browser playthrough re-verification pending (dev-server/chrome tooling unavailable in this session) |
+
+---
+
+## Run Block 10 — 2026-09-25, Vertical Slice #4: City Builder (Phase 5)
+
+### What shipped
+
+- **Settlement core** (`engine/src/simulation/Settlement.ts`) — plot-grid placement with
+  bounds/occupancy/funds validation, fixed-step simulation (housing caps growth, farms feed
+  mouths, markets earn gold, upkeep drains, surplus grows / shortage starves with deficit
+  clamping), deterministic advance, demolish, snapshot, reset, target-population win.
+- **Runtime build mode** — `GameRuntime` mode `'build'` advances an injected Settlement each
+  frame and wins at its target population; `getSettlement()` exposes it; `restart()` resets it.
+- **`GameSession.syncScore`** — mirrors an external sim value into the HUD score without
+  triggering score wins (the owning runtime decides the phase).
+- **Genre QA scenario** (`city_slice.json`, 7 rules): house + 2 farms + market growing to 6
+  population; new `game_settlement_pop_min` / `game_settlement_gold_min` rules and settlement
+  telemetry in the game report block.
+- **Playable mode** (`?play=city`, studio header **City** button): the player founds an empty
+  town — click-to-place on the ground mesh with grid snapping, build toolbar (house/farm/
+  market with costs), treasury stats overlay, placement error messages, fixed overview
+  camera. Arena snapshots stay out of city mode (the settlement grid is not serialized).
+
+### Verification
+
+| Check | Evidence |
+|-------|----------|
+| Engine | **290/290 tests green** (`npm test`), app production build green |
+| Genre QA | **7/7 rules SUCCEEDED** — `phase=won`, `population=6`, treasury healthy, 1 draw call; Artemis baseline recorded |
+| Playable | Code-complete and building; in-browser playthrough pending (no browser tooling in this session) |
