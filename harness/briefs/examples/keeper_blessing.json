@@ -1,0 +1,107 @@
+{
+  "title": "Keeper Blessing",
+  "fantasy": {
+    "genre": "action dialogue quest",
+    "inspirations": ["dungeon keeper trials", "elemental reaction hunts"],
+    "tone": "earn the keeper's blessing, then clear the cursed hall",
+    "loop": "Talk to the keeper, take the Hydro blessing, and clear two Pyro-slime waves with Vaporize reactions to open the gate."
+  },
+  "experience": {
+    "beats": ["the keeper's offer", "blessing surge", "gate opens on victory"],
+    "feedback": ["dialogue choices", "reaction flashes and kill score", "win phase"],
+    "inputs": ["tap dialogue choice", "touch move stick", "auto-fire weapon"]
+  },
+  "world": {
+    "areaKm2": 0.002,
+    "biomes": ["dungeon"],
+    "poiDensityPerKm2": 500,
+    "traversalSpeedsMps": {"walk": 5},
+    "streamingRadiusM": 60
+  },
+  "systems": {
+    "components": ["RigidBody3D", "Collider3D", "MobileController", "WeaponController", "HealthComponent", "EnemyAI", "ElementalReactionComponent"],
+    "physics": ["dynamic adventurer capsule", "static dungeon floor"],
+    "ai": ["slime chase and melee"],
+    "dialogue": ["keeper blessing branch (take/refuse)", "hydroBlessing flag", "hydro_blessing event"],
+    "inventory": [],
+    "questStates": ["blessing-offered", "blessed", "waves-active", "won"],
+    "saveSchema": {}
+  },
+  "lookdev": {
+    "palette": ["#1c1917", "#f97316", "#3b82f6"],
+    "lighting": "stylized",
+    "silhouette": "dark hall, orange slimes, blue-clad adventurer",
+    "post": ["none (mobile budget)"]
+  },
+  "performance": {
+    "deviceProfile": "android16-snapdragon8elite",
+    "targetFps": 60,
+    "maxDrawCalls": 100,
+    "maxTrisPerChunk": 150000,
+    "maxTrisPerScene": 1200000,
+    "maxTextureMb": 256,
+    "maxPhysicsBodies": 256,
+    "maxApkMb": 200,
+    "maxLoadSeconds": 8.0
+  },
+  "acceptance": [
+    {
+      "id": "keeper-present",
+      "axis": "Functional",
+      "description": "the dungeon keeper NPC exists",
+      "qaRule": {"type": "entity_exists", "target": "Dungeon Keeper"}
+    },
+    {
+      "id": "adventurer-ready",
+      "axis": "Functional",
+      "description": "the adventurer has controls, weapon, and health",
+      "qaRule": {"type": "entity_component", "target": "Adventurer", "component": "WeaponController"}
+    },
+    {
+      "id": "blessing-taken",
+      "axis": "Playable",
+      "description": "auto-play takes the blessing branch and fires its event",
+      "qaRule": {"type": "dialogue_event_fired", "tree": "DungeonKeeper", "event": "hydro_blessing"}
+    },
+    {
+      "id": "blessing-flagged",
+      "axis": "Playable",
+      "description": "the blessing sets the hydroBlessing variable",
+      "qaRule": {"type": "dialogue_sets_variable", "tree": "DungeonKeeper", "variable": "hydroBlessing", "value": true}
+    },
+    {
+      "id": "reactions-fired",
+      "axis": "Playable",
+      "description": "hydro hits on pyro slimes trigger at least 2 vaporize reactions",
+      "qaRule": {"type": "game_reactions_min", "min": 2}
+    },
+    {
+      "id": "hall-cleared",
+      "axis": "Playable",
+      "description": "the run ends in the won phase",
+      "qaRule": {"type": "game_phase", "phase": "won"}
+    },
+    {
+      "id": "draw-budget",
+      "axis": "Performant",
+      "description": "scene stays within the mobile draw-call budget",
+      "qaRule": {"type": "draw_call_budget", "max": 100}
+    },
+    {
+      "id": "sim-fps",
+      "axis": "Performant",
+      "description": "headless simulation holds interactive frame rates",
+      "qaRule": {"type": "fps_min", "min": 30}
+    },
+    {
+      "id": "dungeon-read",
+      "axis": "Visually Coherent",
+      "description": "the hall reads as a cursed dungeon lit by slime glow"
+    },
+    {
+      "id": "brief-faithful",
+      "axis": "Spec-Accurate",
+      "description": "the scene matches this brief: keeper dialogue, hydro blessing, pyro waves, gate victory"
+    }
+  ]
+}
