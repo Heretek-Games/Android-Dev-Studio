@@ -670,3 +670,21 @@ known-good settle probe still SUCCEEDS 7/7 (validator is backward compatible).
 Evidence: `harness/runs/loop_runs/20260925-143909-*.json`. Fourth run queued
 with a wider iteration budget (6) since schema negotiation demonstrably consumes
 rounds.
+
+### Fourth run (2026-09-25 14:41): FAILED 4/6 — feedback fully working, content economy broken
+
+The validation/repair feedback loop now works end to end: `game` configs applied
+in iters 1, 3, 4, 5, 6 with zero schema rejections. But `population-grown` stays
+0/6 through all five QA runs. Final work-scene config shows why: **17 valid
+plots but `startingGold: 12`** — the first house costs 50g, so every placement
+fails and zero buildings exist. The model never raised starting gold because
+nothing tells it *why* pop is 0: the engine's `Settlement.place()` returns
+per-plot reasons (`insufficient gold (need 50, have 12)`) that the runner
+swallows. Treasury passes only vacuously (`12 >= 1`).
+
+Next fix (not started): surface placement outcomes in the runner — report
+placed/attempted counts plus the first `place()` failure reason inside the
+settlement rule details/metrics, turning `population=0` into `0/17 plots
+placed: insufficient gold (need 50, have 12)`.
+
+Evidence: `harness/runs/loop_runs/20260925-144150-*.json`.

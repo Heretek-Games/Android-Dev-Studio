@@ -1,0 +1,615 @@
+{
+  "goal": "Founding Hollow",
+  "rules": [
+    {
+      "type": "entity_exists",
+      "target": "Settlement Ground",
+      "id": "settlement-ground"
+    },
+    {
+      "type": "game_settlement_pop_min",
+      "min": 6,
+      "id": "population-grown"
+    },
+    {
+      "type": "game_settlement_gold_min",
+      "min": 1,
+      "id": "treasury-healthy"
+    },
+    {
+      "type": "game_phase",
+      "phase": "won",
+      "id": "charter-granted"
+    },
+    {
+      "type": "draw_call_budget",
+      "max": 100,
+      "id": "draw-budget"
+    },
+    {
+      "type": "fps_min",
+      "min": 30,
+      "id": "sim-fps"
+    }
+  ],
+  "verdict": "unresolved",
+  "iterations": [
+    {
+      "iteration": 1,
+      "phase": "generate",
+      "visionNotes": [],
+      "llm": {
+        "model": "mimo-v2.6-flash",
+        "promptTokens": 2042,
+        "completionTokens": 1672,
+        "totalTokens": 3714,
+        "latencySeconds": 24.095,
+        "finishReason": "stop",
+        "attempts": 1
+      },
+      "parse": {
+        "strategy": "raw",
+        "actionCount": 12,
+        "summary": "A compact settlement scene with a ground plane, a controllable villager, six placed buildings (houses, farms, market), warm lighting, and a build-mode game config targeting population 6 with a healthy starting treasury to grant the charter.",
+        "error": null
+      },
+      "apply": {
+        "applied": 12,
+        "targetMissing": 0,
+        "invalid": 0,
+        "failed": 0,
+        "outcomes": [
+          {
+            "index": 0,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Settlement Ground (plane) at [0.0, 0.0, 0.0]",
+            "target": "Settlement Ground"
+          },
+          {
+            "index": 1,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Player Hero (capsule) at [0.0, 1.1, 4.0]",
+            "target": "Player Hero"
+          },
+          {
+            "index": 2,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Hearth House One (box) at [-2.0, 1.2, -2.0]",
+            "target": "Hearth House One"
+          },
+          {
+            "index": 3,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Hearth House Two (box) at [2.0, 1.2, -2.0]",
+            "target": "Hearth House Two"
+          },
+          {
+            "index": 4,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Hearth House Three (box) at [-2.0, 1.3, 2.0]",
+            "target": "Hearth House Three"
+          },
+          {
+            "index": 5,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Grain Farm Plot (box) at [3.0, 0.2, 3.0]",
+            "target": "Grain Farm Plot"
+          },
+          {
+            "index": 6,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Root Farm Plot (box) at [-5.0, 0.2, 3.0]",
+            "target": "Root Farm Plot"
+          },
+          {
+            "index": 7,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Founding Market (cylinder) at [3.0, 1.1, -4.0]",
+            "target": "Founding Market"
+          },
+          {
+            "index": 8,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Charter Banner (cylinder) at [0.0, 1.5, -4.5]",
+            "target": "Charter Banner"
+          },
+          {
+            "index": 9,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added directional light 'Hollow Sun' (intensity 1.6)",
+            "target": "Hollow Sun"
+          },
+          {
+            "index": 10,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added ambient light 'Hollow Bounce' (intensity 0.55)",
+            "target": "Hollow Bounce"
+          },
+          {
+            "index": 11,
+            "type": "game",
+            "status": "applied",
+            "detail": "Set build-mode quest config for player 'Player Hero'"
+          }
+        ],
+        "appliedDescriptions": [
+          "Spawned Settlement Ground (plane) at [0.0, 0.0, 0.0]",
+          "Spawned Player Hero (capsule) at [0.0, 1.1, 4.0]",
+          "Spawned Hearth House One (box) at [-2.0, 1.2, -2.0]",
+          "Spawned Hearth House Two (box) at [2.0, 1.2, -2.0]",
+          "Spawned Hearth House Three (box) at [-2.0, 1.3, 2.0]",
+          "Spawned Grain Farm Plot (box) at [3.0, 0.2, 3.0]",
+          "Spawned Root Farm Plot (box) at [-5.0, 0.2, 3.0]",
+          "Spawned Founding Market (cylinder) at [3.0, 1.1, -4.0]",
+          "Spawned Charter Banner (cylinder) at [0.0, 1.5, -4.5]",
+          "Added directional light 'Hollow Sun' (intensity 1.6)",
+          "Added ambient light 'Hollow Bounce' (intensity 0.55)",
+          "Set build-mode quest config for player 'Player Hero'"
+        ]
+      },
+      "gate": {
+        "valid": false,
+        "violations": [
+          {
+            "code": "COLLIDER_PENETRATION_AT_SPAWN",
+            "message": "Dynamic collider 'Player Hero' penetrates fixed collider 'Settlement Ground' at spawn",
+            "entity": "Player Hero"
+          }
+        ]
+      },
+      "qa": {
+        "verdict": "skipped",
+        "reason": "invariant gate violation"
+      }
+    },
+    {
+      "iteration": 2,
+      "phase": "repair",
+      "visionNotes": [],
+      "llm": {
+        "model": "mimo-v2.6-flash",
+        "promptTokens": 3040,
+        "completionTokens": 225,
+        "totalTokens": 3265,
+        "latencySeconds": 5.022,
+        "finishReason": "stop",
+        "attempts": 1
+      },
+      "parse": {
+        "strategy": "raw",
+        "actionCount": 1,
+        "summary": "Raise Player Hero above the thick Settlement Ground slab (its top surface is at y=0.5, so the capsule at y=1.1 was penetrating).",
+        "error": null
+      },
+      "apply": {
+        "applied": 1,
+        "targetMissing": 0,
+        "invalid": 0,
+        "failed": 0,
+        "outcomes": [
+          {
+            "index": 0,
+            "type": "modify",
+            "status": "applied",
+            "detail": "Modified Player Hero: position",
+            "target": "Player Hero"
+          }
+        ],
+        "appliedDescriptions": [
+          "Modified Player Hero: position"
+        ]
+      },
+      "gate": {
+        "valid": true,
+        "violations": []
+      },
+      "qa": {
+        "verdict": "FAILED",
+        "passed": 4,
+        "total": 6,
+        "failedRules": [
+          {
+            "id": "population-grown",
+            "type": "game_settlement_pop_min",
+            "detail": "population=0 (min 6)"
+          },
+          {
+            "id": "charter-granted",
+            "type": "game_phase",
+            "detail": "phase=playing (expected won)"
+          }
+        ],
+        "metrics": {
+          "avgFrameTimeMs": 0.145,
+          "p95FrameTimeMs": 0.235,
+          "maxFrameTimeMs": 30.9324,
+          "simFpsEstimate": 6898.69,
+          "drawCallEstimate": 9,
+          "instancedBatches": 0,
+          "memoryHeapMb": 15.7,
+          "objectCount": 11,
+          "physicsBodyCount": 9,
+          "eventCount": 0
+        }
+      }
+    },
+    {
+      "iteration": 3,
+      "phase": "repair",
+      "visionNotes": [],
+      "llm": {
+        "model": "mimo-v2.6-flash",
+        "promptTokens": 3174,
+        "completionTokens": 406,
+        "totalTokens": 3580,
+        "latencySeconds": 7.267,
+        "finishReason": "stop",
+        "attempts": 1
+      },
+      "parse": {
+        "strategy": "raw",
+        "actionCount": 1,
+        "summary": "Increase settlement placements so the settlement can actually grow to the required population of 6, which also lets the game reach the 'won' phase.",
+        "error": null
+      },
+      "apply": {
+        "applied": 1,
+        "targetMissing": 0,
+        "invalid": 0,
+        "failed": 0,
+        "outcomes": [
+          {
+            "index": 0,
+            "type": "game",
+            "status": "applied",
+            "detail": "Set build-mode quest config for player 'Player Hero'"
+          }
+        ],
+        "appliedDescriptions": [
+          "Set build-mode quest config for player 'Player Hero'"
+        ]
+      },
+      "gate": {
+        "valid": true,
+        "violations": []
+      },
+      "qa": {
+        "verdict": "FAILED",
+        "passed": 4,
+        "total": 6,
+        "failedRules": [
+          {
+            "id": "population-grown",
+            "type": "game_settlement_pop_min",
+            "detail": "population=0 (min 6)"
+          },
+          {
+            "id": "charter-granted",
+            "type": "game_phase",
+            "detail": "phase=playing (expected won)"
+          }
+        ],
+        "metrics": {
+          "avgFrameTimeMs": 0.1524,
+          "p95FrameTimeMs": 0.2791,
+          "maxFrameTimeMs": 35.8304,
+          "simFpsEstimate": 6562.97,
+          "drawCallEstimate": 9,
+          "instancedBatches": 0,
+          "memoryHeapMb": 15.77,
+          "objectCount": 11,
+          "physicsBodyCount": 9,
+          "eventCount": 0
+        }
+      }
+    },
+    {
+      "iteration": 4,
+      "phase": "repair",
+      "visionNotes": [],
+      "llm": {
+        "model": "mimo-v2.6-flash",
+        "promptTokens": 3237,
+        "completionTokens": 470,
+        "totalTokens": 3707,
+        "latencySeconds": 8.711,
+        "finishReason": "stop",
+        "attempts": 1
+      },
+      "parse": {
+        "strategy": "raw",
+        "actionCount": 1,
+        "summary": "Emit the missing GameRuntime 'game' action for the settlement build mode with integer plot placements so population and phase rules can evaluate.",
+        "error": null
+      },
+      "apply": {
+        "applied": 1,
+        "targetMissing": 0,
+        "invalid": 0,
+        "failed": 0,
+        "outcomes": [
+          {
+            "index": 0,
+            "type": "game",
+            "status": "applied",
+            "detail": "Set build-mode quest config for player 'Player Hero'"
+          }
+        ],
+        "appliedDescriptions": [
+          "Set build-mode quest config for player 'Player Hero'"
+        ]
+      },
+      "gate": {
+        "valid": true,
+        "violations": []
+      },
+      "qa": {
+        "verdict": "FAILED",
+        "passed": 4,
+        "total": 6,
+        "failedRules": [
+          {
+            "id": "population-grown",
+            "type": "game_settlement_pop_min",
+            "detail": "population=0 (min 6)"
+          },
+          {
+            "id": "charter-granted",
+            "type": "game_phase",
+            "detail": "phase=playing (expected won)"
+          }
+        ],
+        "metrics": {
+          "avgFrameTimeMs": 0.1948,
+          "p95FrameTimeMs": 0.3468,
+          "maxFrameTimeMs": 39.138,
+          "simFpsEstimate": 5134.15,
+          "drawCallEstimate": 9,
+          "instancedBatches": 0,
+          "memoryHeapMb": 16.47,
+          "objectCount": 11,
+          "physicsBodyCount": 9,
+          "eventCount": 0
+        }
+      }
+    },
+    {
+      "iteration": 5,
+      "phase": "repair",
+      "visionNotes": [],
+      "llm": {
+        "model": "mimo-v2.6-flash",
+        "promptTokens": 3284,
+        "completionTokens": 784,
+        "totalTokens": 4068,
+        "latencySeconds": 13.021,
+        "finishReason": "stop",
+        "attempts": 1
+      },
+      "parse": {
+        "strategy": "salvaged",
+        "actionCount": 1,
+        "summary": "The settlement game config was never emitted as a runtime 'game' action, so population and phase never advanced \u2014 emitting the build/settlement game action with the full placement grid (plus a few extra houses) fixes both failures.",
+        "error": "primary parse failed (raw: Expecting ',' delimiter: line 1 column 1039 (char 1038)); salvaged complete actions"
+      },
+      "apply": {
+        "applied": 1,
+        "targetMissing": 0,
+        "invalid": 0,
+        "failed": 0,
+        "outcomes": [
+          {
+            "index": 0,
+            "type": "game",
+            "status": "applied",
+            "detail": "Set build-mode quest config for player 'Player Hero'"
+          }
+        ],
+        "appliedDescriptions": [
+          "Set build-mode quest config for player 'Player Hero'"
+        ]
+      },
+      "gate": {
+        "valid": true,
+        "violations": []
+      },
+      "qa": {
+        "verdict": "FAILED",
+        "passed": 4,
+        "total": 6,
+        "failedRules": [
+          {
+            "id": "population-grown",
+            "type": "game_settlement_pop_min",
+            "detail": "population=0 (min 6)"
+          },
+          {
+            "id": "charter-granted",
+            "type": "game_phase",
+            "detail": "phase=playing (expected won)"
+          }
+        ],
+        "metrics": {
+          "avgFrameTimeMs": 0.1786,
+          "p95FrameTimeMs": 0.2478,
+          "maxFrameTimeMs": 38.0517,
+          "simFpsEstimate": 5599.18,
+          "drawCallEstimate": 9,
+          "instancedBatches": 0,
+          "memoryHeapMb": 16.32,
+          "objectCount": 11,
+          "physicsBodyCount": 9,
+          "eventCount": 0
+        }
+      }
+    },
+    {
+      "iteration": 6,
+      "phase": "repair",
+      "visionNotes": [],
+      "llm": {
+        "model": "mimo-v2.6-flash",
+        "promptTokens": 3309,
+        "completionTokens": 519,
+        "totalTokens": 3828,
+        "latencySeconds": 9.13,
+        "finishReason": "stop",
+        "attempts": 1
+      },
+      "parse": {
+        "strategy": "salvaged",
+        "actionCount": 1,
+        "summary": "Emit the missing 'game' action carrying the build/settlement config so GameRuntime starts, grows population to the target and reaches the 'won' phase.",
+        "error": "primary parse failed (raw: Expecting ',' delimiter: line 1 column 958 (char 957)); salvaged complete actions"
+      },
+      "apply": {
+        "applied": 1,
+        "targetMissing": 0,
+        "invalid": 0,
+        "failed": 0,
+        "outcomes": [
+          {
+            "index": 0,
+            "type": "game",
+            "status": "applied",
+            "detail": "Set build-mode quest config for player 'Player Hero'"
+          }
+        ],
+        "appliedDescriptions": [
+          "Set build-mode quest config for player 'Player Hero'"
+        ]
+      },
+      "gate": {
+        "valid": true,
+        "violations": []
+      },
+      "qa": {
+        "verdict": "FAILED",
+        "passed": 4,
+        "total": 6,
+        "failedRules": [
+          {
+            "id": "population-grown",
+            "type": "game_settlement_pop_min",
+            "detail": "population=0 (min 6)"
+          },
+          {
+            "id": "charter-granted",
+            "type": "game_phase",
+            "detail": "phase=playing (expected won)"
+          }
+        ],
+        "metrics": {
+          "avgFrameTimeMs": 0.1797,
+          "p95FrameTimeMs": 0.2841,
+          "maxFrameTimeMs": 35.2404,
+          "simFpsEstimate": 5563.75,
+          "drawCallEstimate": 9,
+          "instancedBatches": 0,
+          "memoryHeapMb": 16.36,
+          "objectCount": 11,
+          "physicsBodyCount": 9,
+          "eventCount": 0
+        }
+      }
+    }
+  ],
+  "totalTokens": 22162,
+  "totalLatencySeconds": 67.245,
+  "finalReport": {
+    "schemaVersion": 1,
+    "runner": "qa_scenario_runner.mjs",
+    "scenario": "loop_work_scene.json",
+    "goal": "Founding Hollow",
+    "timestamp": 1790361710.793,
+    "frames": 600,
+    "fixedDeltaSeconds": 0.016666666666666666,
+    "metrics": {
+      "avgFrameTimeMs": 0.1797,
+      "p95FrameTimeMs": 0.2841,
+      "maxFrameTimeMs": 35.2404,
+      "simFpsEstimate": 5563.75,
+      "drawCallEstimate": 9,
+      "instancedBatches": 0,
+      "memoryHeapMb": 16.36,
+      "objectCount": 11,
+      "physicsBodyCount": 9,
+      "eventCount": 0
+    },
+    "game": {
+      "mode": "build",
+      "phase": "playing",
+      "score": 0,
+      "kills": 0,
+      "wave": 0,
+      "traveledDistance": 0,
+      "settlement": {
+        "gold": 12,
+        "food": 20,
+        "population": 0,
+        "housing": 0,
+        "buildings": [],
+        "simTime": 10,
+        "steps": 10
+      },
+      "reactions": 0,
+      "shots": 0,
+      "maxEnemyDisplacement": 0
+    },
+    "rules": [
+      {
+        "id": "settlement-ground",
+        "type": "entity_exists",
+        "pass": true,
+        "detail": "found \"Settlement Ground\""
+      },
+      {
+        "id": "population-grown",
+        "type": "game_settlement_pop_min",
+        "pass": false,
+        "detail": "population=0 (min 6)"
+      },
+      {
+        "id": "treasury-healthy",
+        "type": "game_settlement_gold_min",
+        "pass": true,
+        "detail": "gold=12 (min 1)"
+      },
+      {
+        "id": "charter-granted",
+        "type": "game_phase",
+        "pass": false,
+        "detail": "phase=playing (expected won)"
+      },
+      {
+        "id": "draw-budget",
+        "type": "draw_call_budget",
+        "pass": true,
+        "detail": "drawCallEstimate=9 (budget 100)"
+      },
+      {
+        "id": "sim-fps",
+        "type": "fps_min",
+        "pass": true,
+        "detail": "simFpsEstimate=5563.8 (min 30)"
+      }
+    ],
+    "passed": 4,
+    "total": 6,
+    "verdict": "FAILED",
+    "confidence": 0.667
+  },
+  "error": null,
+  "workScene": "/home/john/Projects/Android-Dev-Studio/harness/scenes/loop_work_scene.json"
+}
