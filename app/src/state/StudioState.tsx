@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import { isNativeContainer, nativeDeviceLabel, readNativeDeviceInfo } from '../services/NativeBridge';
 import {
   Scene,
   GameObject,
@@ -434,6 +435,26 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const refreshDevices = async () => {
+    // Packaged APK: no dev server, so the native bridge is the device context.
+    const nativeInfo = readNativeDeviceInfo();
+    if (nativeInfo) {
+      const device: DeviceInfo = {
+        id: 'native-container',
+        model: nativeDeviceLabel(nativeInfo),
+        status: 'native',
+        isEmulator: nativeInfo.model.toLowerCase().includes('sdk') || nativeInfo.device.toLowerCase().includes('emu'),
+        apiLevel: String(nativeInfo.sdkInt)
+      };
+      setDevices([device]);
+      setSelectedDevice(device.id);
+      addLog(
+        'info',
+        'Native',
+        `Running inside the Android container: ${device.model} · ${nativeInfo.packageName} v${nativeInfo.appVersion}`
+      );
+      addLog('warn', 'Native', 'Dev-server bridges (/api/devices, /api/deploy, /api/qa, /api/swarm) are unavailable in the packaged build.');
+      return;
+    }
     try {
       const res = await fetch('/api/devices');
       if (!res.ok) throw new Error(`device bridge HTTP ${res.status}`);

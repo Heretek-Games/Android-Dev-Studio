@@ -1,6 +1,7 @@
 package com.heretek.gamestudio
 
 import android.annotation.SuppressLint
+import org.json.JSONObject
 import android.content.Context
 import android.net.Uri
 import android.os.Build
@@ -139,6 +140,30 @@ class MainActivity : AppCompatActivity() {
         @JavascriptInterface
         fun log(tag: String, message: String) {
             Log.d("StudioGameLog", "[$tag] $message")
+        }
+
+        /**
+         * Device/build context for the packaged studio: the WebView has no dev-server
+         * bridges, so this is the authoritative device identity inside the APK.
+         */
+        @JavascriptInterface
+        fun deviceInfo(): String {
+            return try {
+                val info = JSONObject()
+                info.put("nativeBridge", true)
+                info.put("model", Build.MODEL)
+                info.put("manufacturer", Build.MANUFACTURER)
+                info.put("device", Build.DEVICE)
+                info.put("sdkInt", Build.VERSION.SDK_INT)
+                info.put("abis", Build.SUPPORTED_ABIS.joinToString(","))
+                info.put("packageName", context.packageName)
+                val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+                info.put("appVersion", packageInfo.versionName ?: "unknown")
+                info.toString()
+            } catch (e: Exception) {
+                Log.e(TAG, "deviceInfo failed: ${e.message}")
+                "{}"
+            }
         }
     }
 }
