@@ -6,6 +6,37 @@ This document is the single source of truth for AI agents (Antigravity, Claude C
 
 ---
 
+## 📊 Project Status (last verified 2026-09-25)
+
+All four genre milestone sets, the autonomous harness, and both Android containers are
+implemented and verified:
+
+- **Engine** — 171 tests / 38 suites green (`npm test`); every logic source file has a companion
+  headless `.test.ts` (Zero Untested Code).
+- **Harness** — 24 MCP tools behind the transactional 7-point invariant gate; Artemis QA with
+  scenario-keyed regression baselines; 50 Python tests (invariants, exporter, apk_builder,
+  cross-tier quadtree parity).
+- **Containers** — both tiers assemble real debug APKs and deploy/launch on an attached device.
+  Tier 2 is validated on an Android target (emulator): real swapchain, 3 instanced cubes +
+  64 terrain LOD leaf draws, `VK_SUCCESS` acquire/submit/present at ~61.5 FPS, rendered output
+  confirmed on-display and via in-renderer frame readback — see
+  [`harness/runs/RUNS.md`](file:///home/john/Projects/Android-Dev-Studio/harness/runs/RUNS.md) (Run Block 2).
+- **Native host checks** — 61 checks (scene loader, culling, terrain meshing/packing, Vulkan projection).
+
+Known gaps and follow-up work are tracked as GitHub issues on
+[`Heretek-Games/Android-Dev-Studio`](https://github.com/Heretek-Games/Android-Dev-Studio/issues):
+
+| Issue | Area | Summary |
+|-------|------|---------|
+| [#1](https://github.com/Heretek-Games/Android-Dev-Studio/issues/1) | Tier 2 | Physical arm64 hardware validation (blocked: no device attached) |
+| [#2](https://github.com/Heretek-Games/Android-Dev-Studio/issues/2) | Tier 2 | Terrain visual polish: LOD seams, biome splatting, native foliage wind |
+| [#3](https://github.com/Heretek-Games/Android-Dev-Studio/issues/3) | Tier 2 | On-device validation of the 50k-instance compute-culling path |
+| [#4](https://github.com/Heretek-Games/Android-Dev-Studio/issues/4) | Tier 1 | In-APK device/QA bridge (packaged studio shows "No device detected") |
+| [#5](https://github.com/Heretek-Games/Android-Dev-Studio/issues/5) | Harness | CI emulator smoke test (build → install → launch → assert) |
+| [#6](https://github.com/Heretek-Games/Android-Dev-Studio/issues/6) | Tier 2 | Renderer hardening: per-frame semaphores, swapchain recreation, validation layers |
+
+---
+
 ## 🏗️ Architectural Overview
 
 The repository is structured as a TypeScript monorepo with dedicated engine, application, template, and harness layers:
@@ -42,9 +73,9 @@ Android-Dev-Studio/
 │   │   │   └── assets/game/          # Bundled webgame container with touch HUD
 │   │   └── build.gradle
 │   └── vulkan-container/             # Tier 2 native Vulkan container (NDK)
-│       ├── app/src/main/cpp/         # scene_loader, culling (host-tested), vulkan_renderer bootstrap, JNI bridge
-│       ├── app/src/main/assets/      # scene.native exported by harness/build/scene_exporter.py
-│       └── app/build.gradle.kts      # externalNativeBuild (arm64-v8a, libheretek_native.so)
+│       ├── app/src/main/cpp/         # scene_loader, culling, terrain_mesh (host-tested), vulkan_renderer/swapchain, JNI bridge
+│       ├── app/src/main/assets/      # scene.native + SPIR-V shaders exported by harness/build/scene_exporter.py
+│       └── app/build.gradle.kts      # externalNativeBuild (arm64-v8a production + x86_64 for emulator validation)
 │
 └── harness/                          # AI Harness, Artemis QA & Studio MCP Server
     ├── agents/artemis_qa_runner.py   # Google Artemis autonomous mobile playtesting runner
@@ -83,6 +114,19 @@ npm test && npm run build
 # 6. Launch Desktop Studio local development server
 npm run dev
 # Server runs at: http://localhost:3000
+
+# 7. Harness Python tests (invariants, scene exporter, packaging, cross-tier parity)
+python3 -m unittest harness.validation.test_scene_invariants harness.validation.test_quadtree_parity \
+  harness.build.test_scene_exporter harness.build.test_apk_builder
+
+# 8. Native host checks (Tier 2 core: loader, culling, terrain meshing, projection)
+cd templates/vulkan-container/app/src/main/cpp && \
+  g++ -std=c++17 -Wall -Wextra scene_loader.cpp culling.cpp terrain_mesh.cpp tests/native_scene_test.cpp \
+  -o /tmp/native_scene_test && /tmp/native_scene_test ../assets/scene.native
+
+# 9. Package a container (real build; installs + launches when a device/emulator is attached)
+python3 harness/build/apk_builder.py            # Tier 1 WebView container
+python3 harness/build/apk_builder.py --tier2    # Tier 2 native Vulkan container
 ```
 
 ---
@@ -158,12 +202,13 @@ All studio↔harness bridges run through the Vite dev server (dev-only, like `/a
   `adb devices -l` result — the DeviceBar shows "No device detected" when nothing is attached
   (no mocked devices).
 - `POST /api/deploy` — real packaging through `harness/build/apk_builder.py` (dry-run by default;
-  both containers now assemble real debug APKs — Tier 1 `app-debug.apk` with the synced web bundle,
+  both containers assemble real debug APKs — Tier 1 `app-debug.apk` with the synced web bundle,
   Tier 2 `app-debug.apk` with `libheretek_native.so` + `scene.native` + SPIR-V shaders;
-  `{real:true}` attempts the Gradle build; `{tier:2}` targets the native Vulkan container and runs a
-  real NDK cross-compile of `libheretek_native.so`); the studio header logs
-  bundle-built/assets-synced/APK-path or scene-exported/native-library/scene.native-counts results
-  and explicitly notes when on-device deployment is skipped (no device attached).
+  `{real:true}` builds and **installs + launches on the attached device/emulator**;
+  `{tier:2}` targets the native Vulkan container and runs a real NDK cross-compile of
+  `libheretek_native.so`); the studio header logs bundle-built/assets-synced/APK-path or
+  scene-exported/native-library/scene.native-counts results and explicitly notes when on-device
+  deployment is skipped (no device attached).
 
 ### Studio ↔ Harness Scene Bridge (`/api/scene`)
 - The canonical scene is `harness/scenes/active_scene.json` (source of truth for the studio and agents).
@@ -181,7 +226,10 @@ All studio↔harness bridges run through the Vite dev server (dev-only, like `/a
   with the live viewport camera; save per-entity `lod` configs), Spatial Hash (real `SpatialGrid` with
   radius queries), Hierarchical A* (real `NavGrid` from scene geometry with node-expansion stats and
   path-marker spawning), Economy (one persistent deterministic `EconomyTick`), A-Life (real two-tier
-  `ALifeSimulator` promoting agents around the live camera).
+  `ALifeSimulator` promoting agents around the live camera), Streaming Cells (real
+  `HierarchicalStreamingCells` with budget-aware level stats), Terrain LOD (real `QuadtreeTerrain`
+  focused on the live camera — depth slider, per-LOD leaf distribution, budgeted async load queue;
+  Save Config persists `scene.quadtree`, shared with the Tier 2 native export).
 - **Dialogue & Narrative** (`DialogueEditorDock.tsx`): trees persist to `scene.dialogues`
   (MCP `studio_configure_dialogue` compatible); preview runs the real `DialogueManager` with live
   variable-gated choices (`getAvailableChoices`, comparison operators) and narrative event dispatch.
