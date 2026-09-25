@@ -47,8 +47,9 @@ export class Settlement {
   private gold: number;
   private food: number;
   private population: number;
-  private buildings = new Map<number, PlacedBuilding>();
-  private occupied = new Set<string>();
+  private readonly startingGold: number;
+  private readonly startingFood: number;
+  private buildings = new Map<number, PlacedBuilding>();  private occupied = new Set<string>();
   private nextId = 1;
   private simTime = 0;
   private steps = 0;
@@ -61,9 +62,24 @@ export class Settlement {
     startingFood: number = 20
   ) {
     if (gridSize < 1) throw new Error('Settlement gridSize must be >= 1');
+    this.startingGold = startingGold;
+    this.startingFood = startingFood;
     this.gold = startingGold;
     this.food = startingFood;
     this.population = 0;
+  }
+
+  /** Restore the initial treasury/stores and clear all buildings (run restart). */
+  public reset(): void {
+    this.gold = this.startingGold;
+    this.food = this.startingFood;
+    this.population = 0;
+    this.buildings.clear();
+    this.occupied.clear();
+    this.nextId = 1;
+    this.simTime = 0;
+    this.steps = 0;
+    this.accumulator = 0;
   }
 
   public getTargetPopulation(): number {

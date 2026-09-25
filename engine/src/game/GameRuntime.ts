@@ -14,16 +14,18 @@ import type { ElementType } from '../combat/ElementalSystem.js';
 import { GameFlow } from './GameFlow.js';
 import { GameSession, type GameSessionConfig } from './GameSession.js';
 import { WaveSpawner, type EnemySpawnContext } from './WaveSpawner.js';
+import { Settlement } from '../simulation/Settlement.js';
 import { HealthComponent } from '../components/HealthComponent.js';
 import type { GameShell } from '../ui/GameShell.js';
 
-export type GameMode = 'waves' | 'distance';
+export type GameMode = 'waves' | 'distance' | 'build';
 
 export interface GameRuntimeConfig {
   scene: Scene;
   /**
    * 'waves' (default): spawn waves and score kills; 'distance': no spawning,
-   * score accumulates travelled metres and the run wins at `targetScore`.
+   * score accumulates travelled metres and the run wins at `targetScore`;
+   * 'build': advance an injected Settlement and win at its target population.
    */
   mode?: GameMode;
   playerName?: string;
@@ -35,8 +37,10 @@ export interface GameRuntimeConfig {
   timeLimitSeconds?: number;
   scorePerKill?: number;
   interWaveDelaySeconds?: number;
-  /** Build an enemy for a wave (already added to the scene); unused in distance mode. */
+  /** Build an enemy for a wave (already added to the scene); unused in distance/build mode. */
   buildEnemy?: (context: EnemySpawnContext) => GameObject | null;
+  /** Settlement to advance in build mode (city-builder slice). */
+  settlement?: Settlement;
   /** Player weapon (or any hit source) whose hits damage enemies. */
   weapon?: HitSource;
   /** Element applied by weapon hits (enables the elemental reaction path). */
@@ -121,6 +125,8 @@ export class GameRuntime {
     if (this.mode === 'waves') {
       this.spawner.stop();
       this.spawner.start();
+    } else if (this.mode === 'build') {
+      this.config.settlement?.reset();
     }
   }
 
@@ -131,11 +137,28 @@ export class GameRuntime {
     if (this.flow.isPlaying()) {
       if (this.mode === 'waves') {
         this.spawner.update(deltaTime);
+      } else if (this.mode === 'build') {
+        this.trackSettlement(deltaTime);
       } else {
         this.trackTravel(deltaTime);
       }
     }
     this.config.shell?.update(deltaTime);
+  }
+
+  /** Build mode: advance the settlement and win at its target population. */
+  private trackSettlement(deltaTime: number): void {
+    const settlement = this.config.settlement;
+    if (!settlement) return;
+    settlement.advance(deltaTime);
+    if (settlement.hasWon()) {
+      this.flow.transition('win');
+    }
+  }
+
+  /** The injected settlement (build mode), or null. */
+  public getSettlement(): Settlement | null {
+    return this.config.settlement ?? null;
   }
 
   /** Distance mode: accumulate travelled metres into the session score. */

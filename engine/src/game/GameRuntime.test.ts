@@ -3,6 +3,7 @@ import assert from 'node:assert';
 import { GameRuntime } from './GameRuntime.js';
 import { HealthComponent } from '../components/HealthComponent.js';
 import { ElementalReactionComponent } from '../combat/ElementalReactionComponent.js';
+import { Settlement } from '../simulation/Settlement.js';
 import { GameObject } from '../core/GameObject.js';
 import { Scene } from '../core/Scene.js';
 import type { HitEventLike } from './DamageRouter.js';
@@ -248,5 +249,46 @@ describe('GameRuntime — elemental hits', () => {
     weapon.fireAt('Pyro Slime', 20);
     assert.strictEqual(runtime.getReactionCount(), 1, 'hydro on pyro vaporises');
     assert.strictEqual(elemental.health, 40, 'forward vaporise doubles the damage');
+  });
+});
+
+function makeBuildRuntime() {
+  const scene = new Scene('BuildArena');
+  const settlement = new Settlement(8, 6, 500, 20);
+  settlement.place('house', 0, 0);
+  settlement.place('farm', 1, 0);
+  settlement.place('farm', 2, 0);
+  settlement.place('market', 3, 0);
+  const runtime = new GameRuntime({ scene, mode: 'build', settlement });
+  return { scene, settlement, runtime };
+}
+
+describe('GameRuntime — build mode (city slice)', () => {
+  test('start enters playing without spawning enemies', () => {
+    const { runtime } = makeBuildRuntime();
+    runtime.start();
+    assert.strictEqual(runtime.flow.getPhase(), 'playing');
+    assert.strictEqual(runtime.spawner.getAliveCount(), 0);
+    assert.strictEqual(runtime.getSettlement()?.snapshot().population, 0);
+  });
+
+  test('advancing grows the settlement and wins at the target', () => {
+    const { runtime } = makeBuildRuntime();
+    runtime.start();
+    for (let i = 0; i < 600 && runtime.flow.getPhase() === 'playing'; i++) {
+      runtime.update(1 / 60);
+    }
+    assert.strictEqual(runtime.flow.getPhase(), 'won');
+    assert.ok((runtime.getSettlement()?.snapshot().population ?? 0) >= 6);
+  });
+
+  test('restart resets the settlement', () => {
+    const { runtime } = makeBuildRuntime();
+    runtime.start();
+    runtime.update(5);
+    assert.ok((runtime.getSettlement()?.snapshot().steps ?? 0) > 0);
+    runtime.restart();
+    assert.strictEqual(runtime.getSettlement()?.snapshot().steps, 0);
+    assert.strictEqual(runtime.flow.getPhase(), 'playing');
   });
 });

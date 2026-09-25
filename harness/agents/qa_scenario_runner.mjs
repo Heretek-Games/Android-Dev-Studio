@@ -173,9 +173,24 @@ function setupGame(spec, scene, engine) {
     }
   };
 
+  let settlement = null;
+  if (mode === 'build') {
+    const settlementSpec = config.settlement || {};
+    settlement = new engine.Settlement(
+      settlementSpec.gridSize ?? 8,
+      settlementSpec.targetPopulation ?? 6,
+      settlementSpec.startingGold ?? 500,
+      settlementSpec.startingFood ?? 20
+    );
+    for (const placement of settlementSpec.placements || []) {
+      settlement.place(placement.type, placement.x, placement.z);
+    }
+  }
+
   const runtime = new engine.GameRuntime({
     mode,
     scene,
+    settlement,
     playerName: config.playerName || 'Player Hero',
     targetScore: config.targetScore,
     timeLimitSeconds: config.timeLimitSeconds,
@@ -427,6 +442,24 @@ function evaluateRules(spec, ctxData) {
         detail = `max enemy displacement=${moved.toFixed(2)}m (min ${rule.min ?? 1})`;
         break;
       }
+      case 'game_settlement_pop_min': {
+        if (!game) { pass = false; detail = 'no game config in scenario'; break; }
+        const settlement = game.runtime.getSettlement();
+        if (!settlement) { pass = false; detail = 'no settlement in build-mode game'; break; }
+        const population = settlement.snapshot().population;
+        pass = population >= (rule.min ?? 1);
+        detail = `population=${population} (min ${rule.min ?? 1})`;
+        break;
+      }
+      case 'game_settlement_gold_min': {
+        if (!game) { pass = false; detail = 'no game config in scenario'; break; }
+        const settlement = game.runtime.getSettlement();
+        if (!settlement) { pass = false; detail = 'no settlement in build-mode game'; break; }
+        const gold = Math.floor(settlement.snapshot().gold);
+        pass = gold >= (rule.min ?? 1);
+        detail = `gold=${gold} (min ${rule.min ?? 1})`;
+        break;
+      }
       default: {
         pass = false;
         detail = `unknown rule type "${rule.type}"`;
@@ -545,6 +578,7 @@ async function main() {
             kills: game.runtime.session.getKills(),
             wave: game.runtime.spawner.getWave(),
             traveledDistance: Number(game.runtime.getTraveledDistance().toFixed(2)),
+            settlement: game.runtime.getSettlement()?.snapshot() ?? null,
             reactions: game.runtime.getReactionCount(),
             shots: game.fireCount,
             maxEnemyDisplacement: Number(game.maxEnemyDisplacement().toFixed(3))

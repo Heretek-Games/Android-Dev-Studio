@@ -1,0 +1,46 @@
+{
+  "name": "city_slice",
+  "goal": "City slice: found a settlement with a house, two farms and a market, and grow it to 6 population",
+  "game": {
+    "mode": "build",
+    "settlement": {
+      "gridSize": 8,
+      "targetPopulation": 6,
+      "startingGold": 500,
+      "startingFood": 20,
+      "placements": [
+        { "type": "house", "x": 0, "z": 0 },
+        { "type": "farm", "x": 1, "z": 0 },
+        { "type": "farm", "x": 2, "z": 0 },
+        { "type": "market", "x": 3, "z": 0 }
+      ]
+    }
+  },
+  "gameObjects": [
+    {
+      "name": "Settlement Ground",
+      "shape": "box",
+      "size": [36, 1, 36],
+      "position": [0, -0.5, 0],
+      "color": "#2a3325",
+      "physics": "fixed"
+    },
+    {
+      "name": "City Sun",
+      "kind": "light",
+      "lightType": "directional",
+      "color": "#fff2d9",
+      "intensity": 2.4,
+      "position": [20, 30, 10]
+    }
+  ],
+  "rules": [
+    { "id": "ground_exists", "type": "entity_exists", "target": "Settlement Ground" },
+    { "id": "population_grown", "type": "game_settlement_pop_min", "min": 6 },
+    { "id": "treasury_healthy", "type": "game_settlement_gold_min", "min": 1 },
+    { "id": "run_won", "type": "game_phase", "phase": "won" },
+    { "id": "finite_transforms", "type": "no_nan_transforms" },
+    { "id": "mobile_draw_budget", "type": "draw_call_budget", "max": 100 },
+    { "id": "sim_performance", "type": "fps_min", "min": 30 }
+  ]
+}

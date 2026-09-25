@@ -78,3 +78,22 @@ describe('Settlement — placement, economy, growth', () => {
     assert.strictEqual(settlement.snapshot().steps, 0);
   });
 });
+
+describe('Settlement — reset', () => {
+  test('reset restores the initial treasury and clears buildings', () => {
+    const settlement = new Settlement(8, 6, 500, 20);
+    settlement.place('house', 0, 0);
+    settlement.place('farm', 1, 0);
+    settlement.advance(10);
+    assert.ok(settlement.snapshot().steps > 0);
+
+    settlement.reset();
+    const snapshot = settlement.snapshot();
+    assert.strictEqual(snapshot.gold, 500);
+    assert.strictEqual(snapshot.food, 20);
+    assert.strictEqual(snapshot.population, 0);
+    assert.deepStrictEqual(snapshot.buildings, []);
+    assert.strictEqual(snapshot.steps, 0);
+    assert.strictEqual(settlement.hasWon(), false);
+  });
+});
