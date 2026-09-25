@@ -1,324 +1,14 @@
 {
   "id": "loop_work_scene",
   "name": "Loop Work Scene",
-  "goal": "Drivable Collection Island",
+  "goal": "Streaming Valley",
   "gameObjects": [
     {
-      "name": "Island Ground",
-      "shape": "plane",
-      "size": [
-        80.0,
-        1.0,
-        80.0
-      ],
-      "position": [
-        0.0,
-        0.0,
-        0.0
-      ],
-      "color": "#e0c48a",
-      "physics": "fixed"
-    },
-    {
-      "name": "Ocean",
-      "shape": "plane",
-      "size": [
-        400.0,
-        1.0,
-        400.0
-      ],
-      "position": [
-        0.0,
-        -1.2,
-        0.0
-      ],
-      "color": "#2e7fbf",
-      "physics": "fixed"
-    },
-    {
-      "name": "Player Car",
-      "shape": "box",
-      "size": [
-        1.7,
-        0.9,
-        3.4
-      ],
-      "position": [
-        0.0,
-        1.6,
-        0.0
-      ],
-      "color": "#d93b3b",
-      "physics": "dynamic",
-      "mass": 900.0,
-      "vehicle": {
-        "wheels": [
-          {
-            "offset": [
-              -0.85,
-              -0.35,
-              1.15
-            ]
-          },
-          {
-            "offset": [
-              0.85,
-              -0.35,
-              1.15
-            ]
-          },
-          {
-            "offset": [
-              -0.85,
-              -0.35,
-              -1.15
-            ]
-          },
-          {
-            "offset": [
-              0.85,
-              -0.35,
-              -1.15
-            ]
-          }
-        ],
-        "throttle": 1.0
-      },
-      "events": [
-        {
-          "name": "CarKick",
-          "conditions": [
-            {
-              "type": "OnStart",
-              "params": {
-                "interval": 1.0
-              }
-            }
-          ],
-          "actions": [
-            {
-              "type": "ApplyImpulse",
-              "params": {
-                "x": 0,
-                "y": 0,
-                "z": 0
-              }
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "name": "Buoy 1",
-      "shape": "cylinder",
-      "size": [
-        1.2,
-        2.4,
-        1.2
-      ],
-      "position": [
-        14.0,
-        1.2,
-        -14.0
-      ],
-      "color": "#ff7f2a",
-      "physics": "fixed",
-      "events": [
-        {
-          "name": "BuoySpin",
-          "conditions": [
-            {
-              "type": "EveryFrame",
-              "params": {
-                "interval": 0.016
-              }
-            }
-          ],
-          "actions": [
-            {
-              "type": "RotateY",
-              "params": {
-                "speed": 90
-              }
-            }
-          ]
-        },
-        {
-          "name": "BuoyPulse",
-          "conditions": [
-            {
-              "type": "Timer",
-              "params": {
-                "interval": 1.5
-              }
-            }
-          ],
-          "actions": [
-            {
-              "type": "SetColor",
-              "params": {
-                "color": "#ff3b3b"
-              }
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "name": "Palm Trunk",
-      "shape": "cylinder",
-      "size": [
-        0.7,
-        6.0,
-        0.7
-      ],
-      "position": [
-        -18.0,
-        3.0,
-        -16.0
-      ],
-      "color": "#7a5230",
-      "physics": "fixed"
-    },
-    {
-      "name": "Palm Leaves",
-      "shape": "sphere",
-      "size": [
-        5.0,
-        2.0,
-        5.0
-      ],
-      "position": [
-        -18.0,
-        6.5,
-        -16.0
-      ],
-      "color": "#3f9b4f",
-      "physics": "none"
-    },
-    {
-      "name": "Rock 1",
-      "shape": "sphere",
-      "size": [
-        3.0,
-        2.5,
-        3.0
-      ],
-      "position": [
-        -24.0,
-        1.2,
-        20.0
-      ],
-      "color": "#8d8d8d",
-      "physics": "fixed"
-    },
-    {
-      "name": "Rock 2",
-      "shape": "sphere",
-      "size": [
-        2.5,
-        2.0,
-        2.5
-      ],
-      "position": [
-        26.0,
-        1.0,
-        22.0
-      ],
-      "color": "#9a9a9a",
-      "physics": "fixed"
-    },
-    {
-      "name": "Rock 3",
-      "shape": "sphere",
-      "size": [
-        2.0,
-        1.6,
-        2.0
-      ],
-      "position": [
-        24.0,
-        0.9,
-        -24.0
-      ],
-      "color": "#7f7f7f",
-      "physics": "fixed"
-    },
-    {
-      "name": "Drive Ramp",
-      "shape": "box",
-      "size": [
-        6.0,
-        0.6,
-        8.0
-      ],
-      "position": [
-        -10.0,
-        0.4,
-        -4.0
-      ],
-      "color": "#b08040",
-      "physics": "fixed"
-    },
-    {
-      "name": "Finish Marker",
-      "shape": "torus",
-      "size": [
-        6.0,
-        6.0,
-        1.0
-      ],
-      "position": [
-        0.0,
-        3.0,
-        -28.0
-      ],
-      "color": "#ffd23f",
-      "physics": "none",
-      "events": [
-        {
-          "name": "MarkerSpin",
-          "conditions": [
-            {
-              "type": "EveryFrame",
-              "params": {
-                "interval": 0.016
-              }
-            }
-          ],
-          "actions": [
-            {
-              "type": "RotateY",
-              "params": {
-                "speed": 45
-              }
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "name": "Start Pad",
-      "shape": "cylinder",
-      "size": [
-        8.0,
-        0.2,
-        8.0
-      ],
-      "position": [
-        0.0,
-        0.15,
-        0.0
-      ],
-      "color": "#444444",
-      "physics": "fixed"
-    },
-    {
       "kind": "light",
-      "name": "Sun",
+      "name": "Sun Light",
       "lightType": "directional",
-      "color": "#fff3d6",
-      "intensity": 2.0,
+      "color": "#fff4e0",
+      "intensity": 2.2,
       "position": [
         40.0,
         60.0,
@@ -327,22 +17,247 @@
     },
     {
       "kind": "light",
-      "name": "Fill Ambient",
+      "name": "Valley Ambient",
       "lightType": "ambient",
-      "color": "#a8c4e0",
-      "intensity": 0.7,
+      "color": "#8fb7de",
+      "intensity": 0.6,
       "position": [
         0.0,
-        10.0,
+        20.0,
         0.0
+      ]
+    },
+    {
+      "name": "Valley Ground",
+      "shape": "plane",
+      "size": [
+        240.0,
+        1.0,
+        240.0
+      ],
+      "position": [
+        0.0,
+        -0.5,
+        0.0
+      ],
+      "color": "#4e8f4a",
+      "physics": "fixed",
+      "streamer": {
+        "chunkSize": 16.0,
+        "renderDistance": 3.0,
+        "resolution": 8.0
+      }
+    },
+    {
+      "name": "Player Car",
+      "shape": "box",
+      "size": [
+        2.0,
+        1.2,
+        4.2
+      ],
+      "position": [
+        0.0,
+        1.4,
+        0.0
+      ],
+      "color": "#d83a2f",
+      "physics": "dynamic",
+      "mass": 1200.0,
+      "vehicle": {
+        "wheels": [
+          {
+            "offset": [
+              -1.0,
+              -0.3,
+              1.4
+            ]
+          },
+          {
+            "offset": [
+              1.0,
+              -0.3,
+              1.4
+            ]
+          },
+          {
+            "offset": [
+              -1.0,
+              -0.3,
+              -1.4
+            ]
+          },
+          {
+            "offset": [
+              1.0,
+              -0.3,
+              -1.4
+            ]
+          }
+        ],
+        "throttle": 1.0
+      }
+    },
+    {
+      "name": "Valley Rock A",
+      "shape": "sphere",
+      "size": [
+        3.0,
+        3.0,
+        3.0
+      ],
+      "position": [
+        -18.0,
+        1.5,
+        -14.0
+      ],
+      "color": "#7d7d78",
+      "physics": "fixed"
+    },
+    {
+      "name": "Valley Rock B",
+      "shape": "sphere",
+      "size": [
+        2.4,
+        2.4,
+        2.4
+      ],
+      "position": [
+        22.0,
+        1.2,
+        16.0
+      ],
+      "color": "#8a8a84",
+      "physics": "fixed"
+    },
+    {
+      "name": "Valley Rock C",
+      "shape": "box",
+      "size": [
+        4.0,
+        3.0,
+        3.0
+      ],
+      "position": [
+        -25.0,
+        1.5,
+        20.0
+      ],
+      "color": "#6f6f6a",
+      "physics": "fixed"
+    },
+    {
+      "name": "Trail Cabin",
+      "shape": "box",
+      "size": [
+        6.0,
+        4.0,
+        5.0
+      ],
+      "position": [
+        30.0,
+        2.0,
+        -24.0
+      ],
+      "color": "#8a5a32",
+      "physics": "fixed"
+    },
+    {
+      "name": "Cabin Roof",
+      "shape": "box",
+      "size": [
+        7.0,
+        1.2,
+        6.0
+      ],
+      "position": [
+        30.0,
+        4.6,
+        -24.0
+      ],
+      "color": "#5c3a20",
+      "physics": "fixed"
+    },
+    {
+      "name": "Gate Marker",
+      "shape": "cylinder",
+      "size": [
+        1.0,
+        6.0,
+        1.0
+      ],
+      "position": [
+        -6.0,
+        3.0,
+        -40.0
+      ],
+      "color": "#f2c14e",
+      "physics": "fixed",
+      "events": [
+        {
+          "name": "MarkerPulse",
+          "conditions": [
+            {
+              "type": "Timer",
+              "params": {
+                "interval": 1.0
+              }
+            }
+          ],
+          "actions": [
+            {
+              "type": "RotateY",
+              "params": {
+                "degrees": 30
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Gate Marker Far",
+      "shape": "cylinder",
+      "size": [
+        1.0,
+        6.0,
+        1.0
+      ],
+      "position": [
+        6.0,
+        3.0,
+        45.0
+      ],
+      "color": "#f2c14e",
+      "physics": "fixed",
+      "events": [
+        {
+          "name": "MarkerPulseFar",
+          "conditions": [
+            {
+              "type": "Timer",
+              "params": {
+                "interval": 1.0
+              }
+            }
+          ],
+          "actions": [
+            {
+              "type": "RotateY",
+              "params": {
+                "degrees": -30
+              }
+            }
+          ]
+        }
       ]
     }
   ],
   "rules": [
     {
       "type": "entity_exists",
-      "target": "Island Ground",
-      "id": "island-ground"
+      "target": "Valley Ground",
+      "id": "valley-ground"
     },
     {
       "type": "entity_component",
@@ -351,21 +266,14 @@
       "id": "player-car"
     },
     {
-      "type": "object_count",
-      "min": 8,
-      "max": 40,
-      "id": "buoy-field"
-    },
-    {
-      "type": "event_attached",
-      "target": "Buoy 1",
-      "action": "RotateY",
-      "id": "buoys-spin"
-    },
-    {
       "type": "traversal_coverage_min",
       "min": 0.8,
-      "id": "island-traversable"
+      "id": "valley-traversable"
+    },
+    {
+      "type": "streaming_coherence_min",
+      "min": 1.0,
+      "id": "streaming-seamless"
     },
     {
       "type": "draw_call_budget",

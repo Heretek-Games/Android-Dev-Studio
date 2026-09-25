@@ -515,3 +515,21 @@ recursive loop — **PASSED**.
 | Suites | 80 loop + 112 harness Python tests green |
 
 Evidence: `harness/runs/loop_runs/20260925-133811-*.json` + `harness/scenes/loop_work_scene.json`.
+
+---
+
+## Run Block 12 — 2026-09-25, Phase 2 Rung 1: Streaming Valley ✅
+
+**Valley brief** (`harness/briefs/examples/valley_streaming.json`: 8 criteria, 6 automatable
+incl. `valley-traversable` + `streaming-seamless`) through the full production loop — **GREEN**.
+
+### Verification
+
+| Check | Evidence |
+|-------|----------|
+| Milestone run | **GREEN** — 6/6 automatable (`valley-ground`, `player-car`, `valley-traversable`, `streaming-seamless`, `draw-budget`, `sim-fps`); 2 critic-owned (`valley-read`, `brief-faithful`) listed, not passed |
+| Loop trace | generate (13 actions incl. streamer config) → gate clean → QA **SUCCEEDED 6/6** in 1 iteration, 2,293 tokens |
+| Gates | traversal sweep coverage=1.0 (0 holes); streaming transect coverage=1, 0 gaps, 0 thrash reloads |
+| DAG + memory | 16 tasks in the ledger, all completed; brief persisted and retrievable |
+
+Evidence: `harness/runs/loop_runs/20260925-140409-*.json`.

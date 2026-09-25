@@ -1,0 +1,492 @@
+{
+  "goal": "Streaming Valley",
+  "rules": [
+    {
+      "type": "entity_exists",
+      "target": "Valley Ground",
+      "id": "valley-ground"
+    },
+    {
+      "type": "entity_component",
+      "target": "Player Car",
+      "component": "VehicleController",
+      "id": "player-car"
+    },
+    {
+      "type": "traversal_coverage_min",
+      "min": 0.8,
+      "id": "valley-traversable"
+    },
+    {
+      "type": "streaming_coherence_min",
+      "min": 1.0,
+      "id": "streaming-seamless"
+    },
+    {
+      "type": "draw_call_budget",
+      "max": 100,
+      "id": "draw-budget"
+    },
+    {
+      "type": "fps_min",
+      "min": 30,
+      "id": "sim-fps"
+    }
+  ],
+  "verdict": "green",
+  "iterations": [
+    {
+      "iteration": 1,
+      "phase": "generate",
+      "visionNotes": [],
+      "llm": {
+        "model": "mimo-v2.6-flash",
+        "promptTokens": 1132,
+        "completionTokens": 1161,
+        "totalTokens": 2293,
+        "latencySeconds": 16.257,
+        "finishReason": "stop",
+        "attempts": 1
+      },
+      "parse": {
+        "strategy": "raw",
+        "actionCount": 13,
+        "summary": "A streaming valley with a chunked 'Valley Ground' terrain plane, a VehicleController-driven 'Player Car', scattered rock and cabin props, and full lighting for a drivable open scene within the mobile budget.",
+        "error": null
+      },
+      "apply": {
+        "applied": 13,
+        "targetMissing": 0,
+        "invalid": 0,
+        "failed": 0,
+        "outcomes": [
+          {
+            "index": 0,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added directional light 'Sun Light' (intensity 2.2)",
+            "target": "Sun Light"
+          },
+          {
+            "index": 1,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added ambient light 'Valley Ambient' (intensity 0.6)",
+            "target": "Valley Ambient"
+          },
+          {
+            "index": 2,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Valley Ground (plane) at [0.0, -0.5, 0.0]",
+            "target": "Valley Ground"
+          },
+          {
+            "index": 3,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Player Car (box) at [0.0, 1.4, 0.0]",
+            "target": "Player Car"
+          },
+          {
+            "index": 4,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Valley Rock A (sphere) at [-18.0, 1.5, -14.0]",
+            "target": "Valley Rock A"
+          },
+          {
+            "index": 5,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Valley Rock B (sphere) at [22.0, 1.2, 16.0]",
+            "target": "Valley Rock B"
+          },
+          {
+            "index": 6,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Valley Rock C (box) at [-25.0, 1.5, 20.0]",
+            "target": "Valley Rock C"
+          },
+          {
+            "index": 7,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Trail Cabin (box) at [30.0, 2.0, -24.0]",
+            "target": "Trail Cabin"
+          },
+          {
+            "index": 8,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Cabin Roof (box) at [30.0, 4.6, -24.0]",
+            "target": "Cabin Roof"
+          },
+          {
+            "index": 9,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Gate Marker (cylinder) at [-6.0, 3.0, -40.0]",
+            "target": "Gate Marker"
+          },
+          {
+            "index": 10,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Gate Marker Far (cylinder) at [6.0, 3.0, 45.0]",
+            "target": "Gate Marker Far"
+          },
+          {
+            "index": 11,
+            "type": "event",
+            "status": "applied",
+            "detail": "Wired Timer -> RotateY on Gate Marker",
+            "target": "Gate Marker"
+          },
+          {
+            "index": 12,
+            "type": "event",
+            "status": "applied",
+            "detail": "Wired Timer -> RotateY on Gate Marker Far",
+            "target": "Gate Marker Far"
+          }
+        ],
+        "appliedDescriptions": [
+          "Added directional light 'Sun Light' (intensity 2.2)",
+          "Added ambient light 'Valley Ambient' (intensity 0.6)",
+          "Spawned Valley Ground (plane) at [0.0, -0.5, 0.0]",
+          "Spawned Player Car (box) at [0.0, 1.4, 0.0]",
+          "Spawned Valley Rock A (sphere) at [-18.0, 1.5, -14.0]",
+          "Spawned Valley Rock B (sphere) at [22.0, 1.2, 16.0]",
+          "Spawned Valley Rock C (box) at [-25.0, 1.5, 20.0]",
+          "Spawned Trail Cabin (box) at [30.0, 2.0, -24.0]",
+          "Spawned Cabin Roof (box) at [30.0, 4.6, -24.0]",
+          "Spawned Gate Marker (cylinder) at [-6.0, 3.0, -40.0]",
+          "Spawned Gate Marker Far (cylinder) at [6.0, 3.0, 45.0]",
+          "Wired Timer -> RotateY on Gate Marker",
+          "Wired Timer -> RotateY on Gate Marker Far"
+        ]
+      },
+      "gate": {
+        "valid": true,
+        "violations": []
+      },
+      "qa": {
+        "verdict": "SUCCEEDED",
+        "passed": 6,
+        "total": 6,
+        "failedRules": [],
+        "metrics": {
+          "avgFrameTimeMs": 0.2575,
+          "p95FrameTimeMs": 0.4679,
+          "maxFrameTimeMs": 33.0552,
+          "simFpsEstimate": 3883.49,
+          "drawCallEstimate": 9,
+          "instancedBatches": 0,
+          "memoryHeapMb": 14.86,
+          "objectCount": 60,
+          "physicsBodyCount": 9,
+          "eventCount": 2,
+          "traversal": {
+            "grid": 9,
+            "cells": 81,
+            "hits": 81,
+            "coverage": 1,
+            "holes": [],
+            "steep": [],
+            "stepHazards": [
+              {
+                "from": {
+                  "x": -26.667,
+                  "z": 0
+                },
+                "to": {
+                  "x": 0,
+                  "z": 0
+                },
+                "drop": 1.569
+              },
+              {
+                "from": {
+                  "x": 0,
+                  "z": -26.667
+                },
+                "to": {
+                  "x": 26.667,
+                  "z": -26.667
+                },
+                "drop": 5.2
+              },
+              {
+                "from": {
+                  "x": 0,
+                  "z": -26.667
+                },
+                "to": {
+                  "x": 0,
+                  "z": 0
+                },
+                "drop": 1.569
+              },
+              {
+                "from": {
+                  "x": 0,
+                  "z": 0
+                },
+                "to": {
+                  "x": 26.667,
+                  "z": 0
+                },
+                "drop": 1.569
+              },
+              {
+                "from": {
+                  "x": 0,
+                  "z": 0
+                },
+                "to": {
+                  "x": 0,
+                  "z": 26.667
+                },
+                "drop": 1.569
+              },
+              {
+                "from": {
+                  "x": 26.667,
+                  "z": -53.333
+                },
+                "to": {
+                  "x": 26.667,
+                  "z": -26.667
+                },
+                "drop": 5.2
+              },
+              {
+                "from": {
+                  "x": 26.667,
+                  "z": -26.667
+                },
+                "to": {
+                  "x": 53.333,
+                  "z": -26.667
+                },
+                "drop": 5.2
+              },
+              {
+                "from": {
+                  "x": 26.667,
+                  "z": -26.667
+                },
+                "to": {
+                  "x": 26.667,
+                  "z": 0
+                },
+                "drop": 5.2
+              }
+            ],
+            "bounds": {
+              "minX": -120,
+              "maxX": 120,
+              "minZ": -120,
+              "maxZ": 120
+            }
+          },
+          "streaming": {
+            "samples": 5,
+            "settleFrames": 51,
+            "coverage": 1,
+            "gaps": [],
+            "thrashReloads": 0,
+            "maxActiveChunks": 49,
+            "uniqueChunks": 154,
+            "chunkSize": 16,
+            "renderDistance": 3
+          }
+        }
+      }
+    }
+  ],
+  "totalTokens": 2293,
+  "totalLatencySeconds": 16.257,
+  "finalReport": {
+    "schemaVersion": 1,
+    "runner": "qa_scenario_runner.mjs",
+    "scenario": "loop_work_scene.json",
+    "goal": "Streaming Valley",
+    "timestamp": 1790359449.29,
+    "frames": 300,
+    "fixedDeltaSeconds": 0.016666666666666666,
+    "metrics": {
+      "avgFrameTimeMs": 0.2575,
+      "p95FrameTimeMs": 0.4679,
+      "maxFrameTimeMs": 33.0552,
+      "simFpsEstimate": 3883.49,
+      "drawCallEstimate": 9,
+      "instancedBatches": 0,
+      "memoryHeapMb": 14.86,
+      "objectCount": 60,
+      "physicsBodyCount": 9,
+      "eventCount": 2,
+      "traversal": {
+        "grid": 9,
+        "cells": 81,
+        "hits": 81,
+        "coverage": 1,
+        "holes": [],
+        "steep": [],
+        "stepHazards": [
+          {
+            "from": {
+              "x": -26.667,
+              "z": 0
+            },
+            "to": {
+              "x": 0,
+              "z": 0
+            },
+            "drop": 1.569
+          },
+          {
+            "from": {
+              "x": 0,
+              "z": -26.667
+            },
+            "to": {
+              "x": 26.667,
+              "z": -26.667
+            },
+            "drop": 5.2
+          },
+          {
+            "from": {
+              "x": 0,
+              "z": -26.667
+            },
+            "to": {
+              "x": 0,
+              "z": 0
+            },
+            "drop": 1.569
+          },
+          {
+            "from": {
+              "x": 0,
+              "z": 0
+            },
+            "to": {
+              "x": 26.667,
+              "z": 0
+            },
+            "drop": 1.569
+          },
+          {
+            "from": {
+              "x": 0,
+              "z": 0
+            },
+            "to": {
+              "x": 0,
+              "z": 26.667
+            },
+            "drop": 1.569
+          },
+          {
+            "from": {
+              "x": 26.667,
+              "z": -53.333
+            },
+            "to": {
+              "x": 26.667,
+              "z": -26.667
+            },
+            "drop": 5.2
+          },
+          {
+            "from": {
+              "x": 26.667,
+              "z": -26.667
+            },
+            "to": {
+              "x": 53.333,
+              "z": -26.667
+            },
+            "drop": 5.2
+          },
+          {
+            "from": {
+              "x": 26.667,
+              "z": -26.667
+            },
+            "to": {
+              "x": 26.667,
+              "z": 0
+            },
+            "drop": 5.2
+          }
+        ],
+        "bounds": {
+          "minX": -120,
+          "maxX": 120,
+          "minZ": -120,
+          "maxZ": 120
+        }
+      },
+      "streaming": {
+        "samples": 5,
+        "settleFrames": 51,
+        "coverage": 1,
+        "gaps": [],
+        "thrashReloads": 0,
+        "maxActiveChunks": 49,
+        "uniqueChunks": 154,
+        "chunkSize": 16,
+        "renderDistance": 3
+      }
+    },
+    "rules": [
+      {
+        "id": "valley-ground",
+        "type": "entity_exists",
+        "pass": true,
+        "detail": "found \"Valley Ground\""
+      },
+      {
+        "id": "player-car",
+        "type": "entity_component",
+        "pass": true,
+        "detail": "Player Car components: [MeshRenderer, RigidBody3D, Collider3D, VehicleController]"
+      },
+      {
+        "id": "valley-traversable",
+        "type": "traversal_coverage_min",
+        "pass": true,
+        "detail": "coverage=1 (min 0.8), holes=0, steep=0, stepHazards=8"
+      },
+      {
+        "id": "streaming-seamless",
+        "type": "streaming_coherence_min",
+        "pass": true,
+        "detail": "coverage=1 (min 1), gaps=0, thrashReloads=0, maxActive=49"
+      },
+      {
+        "id": "draw-budget",
+        "type": "draw_call_budget",
+        "pass": true,
+        "detail": "drawCallEstimate=9 (budget 100)"
+      },
+      {
+        "id": "sim-fps",
+        "type": "fps_min",
+        "pass": true,
+        "detail": "simFpsEstimate=3883.5 (min 30)"
+      }
+    ],
+    "passed": 6,
+    "total": 6,
+    "verdict": "SUCCEEDED",
+    "confidence": 1
+  },
+  "error": null,
+  "workScene": "/home/john/Projects/Android-Dev-Studio/harness/scenes/loop_work_scene.json"
+}
