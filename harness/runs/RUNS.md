@@ -509,6 +509,7 @@ recursive loop — **PASSED**.
 | Check | Evidence |
 |-------|----------|
 | Milestone run | **GREEN** — 6/6 automatable criteria verified (`island-ground`, `player-car`, `buoy-field`, `buoys-spin`, `draw-budget`, `sim-fps`); 2 critic-owned (`island-read`, `brief-faithful`) listed as scope candidates, not silently passed |
+| Traversal milestone (follow-up run) | **GREEN** — 7/7 with new `island-traversable` criterion: generate (18 actions) → gate clean → QA **SUCCEEDED 7/7** in 1 iteration, 3,016 tokens; sweep reports coverage=1.0, 0 holes, 0 steep, 4 step hazards (reported in telemetry) |
 | Loop trace | generate (10 actions incl. 4-wheel vehicle with offsets) → gate rejected spawn penetration → repair (3 actions) → QA **SUCCEEDED 6/6** in 2 iterations, 7,897 tokens |
 | DAG + memory | 16 tasks (8 criteria × build + critique) in the ledger, states reflect the outcome; brief persisted and retrievable |
 | Suites | 80 loop + 112 harness Python tests green |
