@@ -776,3 +776,27 @@ production loop — **GREEN**. First milestone driven by the Tech-Artist vocabul
 | DAG + memory | brief persisted and retrievable; tasks reflect the outcome |
 
 Evidence: `harness/runs/loop_runs/20260925-152130-*.json`.
+
+---
+
+## Run Block 21 — 2026-09-25, Track 0 Experiment 1: Delta-Loop Spike ❌ (Kill Criterion Failed, Transport Exonerated)
+
+**Question:** can a batched TS→native delta bridge hold p95 ≤ 20 ms frames on the emulator?
+**Setup:** `VulkanRenderer::syncInstances` (in-place mapped-slot rewrite) + `nativeSyncInstances`
+JNI (critical arrays) + hidden-WebView fixed-dt 3-waypoint stepper + per-frame pacing/sync
+timing (`SYNC_STATS` at frame 600). Commits `1c87bca` (transport) + `7b8c4f1` (rAF-throttle fix).
+
+### Verdict
+
+| Check | Evidence |
+|-------|----------|
+| Kill criterion p95 ≤ 20 ms | **FAILED** — `frames=599 p50=29.62ms p95=33.49ms max=445.25ms` (emulator-5554, logcat `HeretekTier2`) |
+| Transport cost | **EXONERATED** — `syncBatches=597 meanSync=33.1us`; 33 µs cannot explain 33 ms frames |
+| Attribution | lavapipe software rasterization at 2400×1080 + per-frame `evaluateJavascript` round-trip + `postDelayed(16)` UI-thread pacing |
+| Motion proof | **INCONCLUSIVE** — dual PPM captures byte-identical; concurrent anomaly: `sceneVisible` telemetry flipped 3→0 mid-run, suggesting unsynchronized host-visible writes racing the compute cull dispatch (barrier/fence or double-buffering needed) and/or a stale capture path |
+| Collateral finding | Hidden WebViews throttle `requestAnimationFrame` to zero — any WebView-driven gameplay must tick JS explicitly |
+
+### Prescription (per spike contract — revisit, not abandon)
+Option A stands: isolate render cost on physical hardware (blocked: #1) and design explicit
+host↔device synchronization; input round-trip probe (experiment 2) proceeds against this
+baseline. ADR-1790368134523.
