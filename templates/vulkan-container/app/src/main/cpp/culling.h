@@ -27,8 +27,15 @@ struct AABB {
   Vec3 max;
 };
 
-/** Right-handed perspective projection (fovY radians). */
+/** Right-handed perspective projection (fovY radians, OpenGL depth range). */
 Mat4 perspective(float fovY, float aspect, float nearZ, float farZ);
+
+/**
+ * Right-handed perspective projection with Vulkan clip conventions:
+ * NDC Y points down and depth maps to [0, 1]. Using the OpenGL variant in
+ * Vulkan flips the image vertically and clips the near half of the depth range.
+ */
+Mat4 perspectiveVulkan(float fovY, float aspect, float nearZ, float farZ);
 
 /** Right-handed look-at view matrix. */
 Mat4 lookAt(Vec3 eye, Vec3 center, Vec3 up);

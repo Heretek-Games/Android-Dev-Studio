@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      AppCompatActivity requires a Theme.AppCompat descendant. The container is a
+      fullscreen game shell, so this theme is AppCompat with the system bars hidden
+      by default (MainActivity also re-applies immersive mode after setContentView).
+    -->
+    <style name="Theme.HeretekGame" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowBackground">@android:color/black</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+    </style>
+</resources>

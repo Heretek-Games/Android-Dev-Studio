@@ -6,6 +6,7 @@
 
 #include <cassert>
 #include <cmath>
+#include <array>
 #include <cstdio>
 #include <string>
 
@@ -132,6 +133,29 @@ int main(int argc, char** argv) {
   CHECK(scene.meshes[0].physics == PhysicsType::Fixed, "ground is fixed physics");
   CHECK(scene.meshes[1].physics == PhysicsType::Dynamic, "player is dynamic physics");
   CHECK(std::fabs(scene.meshes[0].sx - 24.0f) < 1e-3f, "ground size preserved");
+
+  // ---- Vulkan projection conventions (Y down, depth 0..1) ----
+  {
+    const Mat4 vk = perspectiveVulkan(1.0472f, 16.0f / 9.0f, 0.1f, 500.0f);
+    const float nearPoint[4] = {0.0f, 0.0f, -0.1f, 1.0f};
+    const float farPoint[4] = {0.0f, 0.0f, -500.0f, 1.0f};
+    const float upPoint[4] = {0.0f, 10.0f, -10.0f, 1.0f};
+    auto clip = [&](const float* p) {
+      // Mat4 is column-major: element (row r, col c) = m[c * 4 + r].
+      float out[4];
+      for (int r = 0; r < 4; r++) {
+        out[r] = vk.m[0 * 4 + r] * p[0] + vk.m[1 * 4 + r] * p[1] + vk.m[2 * 4 + r] * p[2] +
+                 vk.m[3 * 4 + r] * p[3];
+      }
+      return std::array<float, 4>{out[0], out[1], out[2], out[3]};
+    };
+    const auto nearClip = clip(nearPoint);
+    const auto farClip = clip(farPoint);
+    const auto upClip = clip(upPoint);
+    CHECK(std::fabs(nearClip[2] / nearClip[3]) < 1e-4f, "Vulkan projection: near plane maps to z=0");
+    CHECK(std::fabs(farClip[2] / farClip[3] - 1.0f) < 1e-4f, "Vulkan projection: far plane maps to z=1");
+    CHECK(upClip[1] / upClip[3] < 0.0f, "Vulkan projection: +Y world maps to -Y NDC (Y-down clip space)");
+  }
 
   // ---- Frustum culling ----
   const Mat4 proj = perspective(1.0472f /*60°*/, 16.0f / 9.0f, 0.1f, 500.0f);

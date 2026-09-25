@@ -17,6 +17,18 @@ Mat4 perspective(float fovY, float aspect, float nearZ, float farZ) {
   return out;
 }
 
+Mat4 perspectiveVulkan(float fovY, float aspect, float nearZ, float farZ) {
+  Mat4 out;
+  const float f = 1.0f / std::tan(fovY * 0.5f);
+  for (float& v : out.m) v = 0;
+  out.m[0] = f / aspect;
+  out.m[5] = -f;                              // Vulkan NDC Y points down
+  out.m[10] = farZ / (nearZ - farZ);          // depth maps to [0, 1]
+  out.m[11] = -1.0f;
+  out.m[14] = (farZ * nearZ) / (nearZ - farZ);
+  return out;
+}
+
 Mat4 lookAt(Vec3 eye, Vec3 center, Vec3 up) {
   Vec3 f{center.x - eye.x, center.y - eye.y, center.z - eye.z};
   const float fLen = std::sqrt(f.x * f.x + f.y * f.y + f.z * f.z);

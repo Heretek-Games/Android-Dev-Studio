@@ -222,7 +222,33 @@ When testing frontend UI modifications:
    - `click` to test play mode buttons, tab switches, and entity selection.
    - `take_screenshot` to visually inspect rendered 3D meshes and gizmos.
 
-### 3. Autonomous Game QA (real headless engine runs)
+### 3. On-Device Tier 2 Validation (Android emulator or hardware)
+
+Both containers assemble real debug APKs (`python3 harness/build/apk_builder.py [--tier2]`).
+Without attached hardware, an emulator works as the validation target:
+
+```bash
+# Headless emulator (KVM host). lavapipe gives the guest a working software Vulkan WSI.
+Xvfb :99 -screen 0 1920x1080x24 &                # only needed for -gpu host
+emulator -avd <name> -no-window -no-audio -no-snapshot -gpu lavapipe &
+adb wait-for-device
+python3 harness/build/apk_builder.py --tier2      # export scene -> NDK build -> APK -> install + launch
+adb logcat -s HeretekTier2                        # scene/draw telemetry + frame counter
+```
+
+- The native renderer logs `Scene ready — draws=… terrainLeaves=… terrainVertices=…`,
+  `Surface ready (WxH) — swapchain + pipelines created`, a one-shot draw-state line
+  (`instances/indirectCmds/terrainDraws`), a frame counter every 300 frames, and any
+  Vulkan failure (acquire/submit/present/createSurface).
+- `MainActivity` requests a one-shot in-renderer frame readback 2 s after surface
+  creation (`nativeCaptureFrame` → `files/native_frame.ppm`); pull it with
+  `adb exec-out run-as com.heretek.gamestudio.tier2 cat files/native_frame.ppm`.
+  This proves rendered pixels independently of the emulator's display path.
+- Verified 2026-09-25: 3 instanced cubes + 64 terrain LOD leaf draws, acquire/submit/
+  present `VK_SUCCESS`, steady ~61.5 FPS; full `POST /api/deploy {real:true}` installs
+  and launches on the emulator. Run log: `harness/runs/RUNS.md` (Run Block 2).
+
+### 4. Autonomous Game QA (real headless engine runs)
 Boot a scenario on the real engine runtime (Rapier3D + EventSheet + fixed-dt frame
 stepping) and get real telemetry plus rule evaluation:
 ```bash
@@ -241,7 +267,7 @@ python3 harness/agents/artemis_qa_runner.py --goal "Mini arena QA" --scenario ha
 - On-device touch automation still follows the **Dynamic-First, Coordinate-Fallback** locator
   pattern documented in [`harness/config/artemis_game_rules.md`](file:///home/john/Projects/Android-Dev-Studio/harness/config/artemis_game_rules.md).
 
-### 4. OpenCode Delegation for Token Savings
+### 5. OpenCode Delegation for Token Savings
 To conserve subscription credits, Antigravity should delegate file generation, repetitive refactoring, and boilerplate implementation to OpenCode via `opencode-mcp` tools (`opencode_run`, `opencode_fire`, `opencode_review_changes`). Antigravity acts as the architect and reviewer.
 
 ---

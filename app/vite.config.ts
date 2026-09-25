@@ -246,6 +246,9 @@ function qaBridgePlugin(): Plugin {
 }
 
 export default defineConfig({
+  // Relative asset paths so the built bundle also works when mounted under a
+  // sub-path (the Android WebView container serves it at /assets/game/).
+  base: './',
   plugins: [react(), sceneBridgePlugin(), qaBridgePlugin(), swarmBridgePlugin(), deviceBridgePlugin()],
   define: {
     __LLM_MODEL__: JSON.stringify(llmModel)

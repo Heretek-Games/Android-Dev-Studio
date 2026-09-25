@@ -25,6 +25,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
     private external fun nativeInstanceCount(): Int
     private external fun nativeTerrainLeaves(): Int
     private external fun nativeTerrainVertices(): Int
+    private external fun nativeCaptureFrame(path: String): Boolean
     private external fun nativeFrame()
     private external fun nativeShutdown()
 
@@ -81,8 +82,21 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
     override fun surfaceCreated(holder: SurfaceHolder) {
         surfaceReady = initialized &&
             nativeSurfaceCreated(holder.surface, surfaceView.width, surfaceView.height)
+        android.util.Log.i(
+            "HeretekTier2",
+            "surfaceCreated ${surfaceView.width}x${surfaceView.height} — frame loop: $surfaceReady"
+        )
         if (surfaceReady) {
             surfaceView.post(frameLoop)
+            // One-shot renderer readback for on-device verification (pulled via run-as).
+            surfaceView.postDelayed({
+                val frameFile = File(filesDir, "native_frame.ppm")
+                val requested = nativeCaptureFrame(frameFile.absolutePath)
+                android.util.Log.i(
+                    "HeretekTier2",
+                    "frame capture requested=$requested -> ${frameFile.absolutePath}"
+                )
+            }, 2000)
         }
     }
 

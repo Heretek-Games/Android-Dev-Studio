@@ -20,6 +20,7 @@ class VulkanSwapchain {
   void destroy(VkDevice device);
 
   VkSwapchainKHR handle() const { return swapchain_; }
+  VkImage image(uint32_t index) const { return images_[index]; }
   VkRenderPass renderPass() const { return renderPass_; }
   VkExtent2D extent() const { return extent_; }
   uint32_t imageCount() const { return static_cast<uint32_t>(images_.size()); }
@@ -28,6 +29,18 @@ class VulkanSwapchain {
   const char* lastError() const { return lastError_; }
 
  private:
+  // Device/instance-level extension functions must be resolved through
+  // vkGetDeviceProcAddr / vkGetInstanceProcAddr on Android: the loader does not
+  // dispatch extension entry points from its exported symbols (calling the
+  // exported stubs returns VK_SUCCESS while doing nothing).
+  PFN_vkCreateAndroidSurfaceKHR createAndroidSurface_ = nullptr;
+  PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR getSurfaceCaps_ = nullptr;
+  PFN_vkGetPhysicalDeviceSurfaceFormatsKHR getSurfaceFormats_ = nullptr;
+  PFN_vkCreateSwapchainKHR createSwapchain_ = nullptr;
+  PFN_vkGetSwapchainImagesKHR getSwapchainImages_ = nullptr;
+  PFN_vkDestroySwapchainKHR destroySwapchain_ = nullptr;
+  PFN_vkDestroySurfaceKHR destroySurface_ = nullptr;
+
   VkInstance instance_ = VK_NULL_HANDLE;
   VkSurfaceKHR surface_ = VK_NULL_HANDLE;
   VkSwapchainKHR swapchain_ = VK_NULL_HANDLE;

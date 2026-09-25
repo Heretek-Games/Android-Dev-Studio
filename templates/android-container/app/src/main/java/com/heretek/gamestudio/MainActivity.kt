@@ -32,10 +32,12 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        hideSystemUI()
-
         webView = WebView(this)
         setContentView(webView)
+
+        // Must run after setContentView: window.insetsController dereferences the
+        // decor view, which does not exist during the earliest part of onCreate.
+        hideSystemUI()
 
         val assetLoader = WebViewAssetLoader.Builder()
             .addPathHandler("/assets/", WebViewAssetLoader.AssetsPathHandler(this))

@@ -6,13 +6,16 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
 #include <cstring>
 #include <fstream>
+#include <vector>
 
 #include "culling.h"
 #include "terrain_mesh.h"
 
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, "HeretekTier2", __VA_ARGS__)
+#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "HeretekTier2", __VA_ARGS__)
 
 namespace heretek {
 
@@ -122,6 +125,26 @@ bool VulkanRenderer::pickPhysicalDevice() {
 }
 
 bool VulkanRenderer::createDevice() {
+  // VK_KHR_swapchain is mandatory for presenting to a surface. Without it the
+  // device-level entry points (vkCreateSwapchainKHR, vkAcquireNextImageKHR,
+  // vkQueuePresentKHR) resolve to null and surface setup silently no-ops.
+  uint32_t extensionCount = 0;
+  vkEnumerateDeviceExtensionProperties(physicalDevice_, nullptr, &extensionCount, nullptr);
+  std::vector<VkExtensionProperties> extensions(extensionCount);
+  vkEnumerateDeviceExtensionProperties(physicalDevice_, nullptr, &extensionCount, extensions.data());
+  bool hasSwapchain = false;
+  for (const auto& extension : extensions) {
+    if (std::strcmp(extension.extensionName, VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0) {
+      hasSwapchain = true;
+      break;
+    }
+  }
+  if (!hasSwapchain) {
+    lastError_ = "VK_KHR_swapchain is not supported by the selected device";
+    return false;
+  }
+  const char* enabledExtensions[] = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
+
   const float priority = 1.0f;
   VkDeviceQueueCreateInfo queueInfo{};
   queueInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
@@ -136,6 +159,8 @@ bool VulkanRenderer::createDevice() {
   createInfo.queueCreateInfoCount = 1;
   createInfo.pQueueCreateInfos = &queueInfo;
   createInfo.pEnabledFeatures = &features;
+  createInfo.enabledExtensionCount = 1;
+  createInfo.ppEnabledExtensionNames = enabledExtensions;
 
   if (vkCreateDevice(physicalDevice_, &createInfo, nullptr, &device_) != VK_SUCCESS) {
     lastError_ = "vkCreateDevice failed";
@@ -243,6 +268,17 @@ bool VulkanRenderer::createBuffers() {
   vkMapMemory(device_, indexMemory_, 0, sizeof(uint16_t) * kIndicesPerCube, 0, &indexMapped);
   writeCubeIndices(static_cast<uint16_t*>(indexMapped));
   vkUnmapMemory(device_, indexMemory_);
+
+  // Frame-readback staging buffer (debug verification path)
+  const VkExtent2D extent = swapchain_.extent();
+  if (extent.width > 0 && extent.height > 0) {
+    const VkDeviceSize captureBytes =
+        static_cast<VkDeviceSize>(extent.width) * extent.height * 4;
+    if (!createBuffer(captureBytes, VK_BUFFER_USAGE_TRANSFER_DST_BIT, &captureBuffer_,
+                      &captureMemory_, &captureMapped_)) {
+      return false;
+    }
+  }
   return true;
 }
 
@@ -561,6 +597,18 @@ bool VulkanRenderer::initialize(const std::string& shaderDir) {
   if (!createInstance()) return false;
   if (!pickPhysicalDevice()) return false;
   if (!createDevice()) return false;
+  const auto getDeviceProc = reinterpret_cast<PFN_vkGetDeviceProcAddr>(
+      vkGetInstanceProcAddr(instance_, "vkGetDeviceProcAddr"));
+  if (getDeviceProc != nullptr) {
+    acquireImage_ =
+        reinterpret_cast<PFN_vkAcquireNextImageKHR>(getDeviceProc(device_, "vkAcquireNextImageKHR"));
+    queuePresent_ =
+        reinterpret_cast<PFN_vkQueuePresentKHR>(getDeviceProc(device_, "vkQueuePresentKHR"));
+  }
+  if (acquireImage_ == nullptr || queuePresent_ == nullptr) {
+    lastError_ = "VK_KHR_swapchain device entry points unavailable";
+    return false;
+  }
   return createCommandPool();
 }
 
@@ -593,6 +641,8 @@ bool VulkanRenderer::createSurface(ANativeWindow* window, int width, int height)
   for (auto& fence : inFlightFences_) {
     vkCreateFence(device_, &fenceInfo, nullptr, &fence);
   }
+  LOGI("createSurface complete: swapchain=%p images=%u commandBuffers=%zu", (void*)swapchain_.handle(),
+       swapchain_.imageCount(), commandBuffers_.size());
 
   VkSemaphoreCreateInfo semaphoreInfo{};
   semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -666,13 +716,21 @@ void VulkanRenderer::uploadScene(const NativeScene& scene) {
   }
 }
 
-void VulkanRenderer::recordFrame(VkCommandBuffer cmd, uint32_t imageIndex) {
+void VulkanRenderer::recordFrame(VkCommandBuffer cmd, uint32_t imageIndex, bool capture) {
   VkCommandBufferBeginInfo beginInfo{};
   beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
   vkBeginCommandBuffer(cmd, &beginInfo);
 
   // ---- Compute culling pass ----
-  const Mat4 proj = perspective(1.0472f, 16.0f / 9.0f, 0.1f, 500.0f);
+  static bool loggedDrawState = false;
+  if (!loggedDrawState) {
+    LOGI("frame draw state: instances=%u indirectCmds=%u terrainDraws=%u terrainPipeline=%p "
+         "scenePipeline=%p",
+         instanceCount_, indirectCommandCount_, terrainDrawCount_,
+         reinterpret_cast<void*>(terrainPipeline_), reinterpret_cast<void*>(scenePipeline_));
+    loggedDrawState = true;
+  }
+  const Mat4 proj = perspectiveVulkan(1.0472f, 16.0f / 9.0f, 0.1f, 500.0f);
   const Mat4 view = lookAt({12.0f, 14.0f, 24.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f});
   const Mat4 viewProj = multiply(proj, view);
 
@@ -751,17 +809,71 @@ void VulkanRenderer::recordFrame(VkCommandBuffer cmd, uint32_t imageIndex) {
   }
 
   vkCmdEndRenderPass(cmd);
+
+  // ---- Optional one-shot readback (debug verification) --------------------
+  if (capture && captureBuffer_ != VK_NULL_HANDLE) {
+    VkImageMemoryBarrier toSrc{};
+    toSrc.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    toSrc.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    toSrc.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+    toSrc.oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    toSrc.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+    toSrc.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    toSrc.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    toSrc.image = swapchain_.image(imageIndex);
+    toSrc.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+    vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                         VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &toSrc);
+
+    const VkExtent2D extent = swapchain_.extent();
+    VkBufferImageCopy region{};
+    region.bufferOffset = 0;
+    region.bufferRowLength = 0;
+    region.bufferImageHeight = 0;
+    region.imageSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
+    region.imageOffset = {0, 0, 0};
+    region.imageExtent = {extent.width, extent.height, 1};
+    vkCmdCopyImageToBuffer(cmd, swapchain_.image(imageIndex),
+                           VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, captureBuffer_, 1, &region);
+
+    VkImageMemoryBarrier toPresent = toSrc;
+    toPresent.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+    toPresent.dstAccessMask = 0;
+    toPresent.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+    toPresent.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                         VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1,
+                         &toPresent);
+  }
+
   vkEndCommandBuffer(cmd);
 }
 
 void VulkanRenderer::renderFrame() {
-  if (swapchain_.handle() == VK_NULL_HANDLE || commandBuffers_.empty()) return;
+  static uint64_t calls = 0;
+  static VkResult lastAcquire = VK_SUCCESS, lastSubmit = VK_SUCCESS, lastPresent = VK_SUCCESS;
+  calls++;
+  if (swapchain_.handle() == VK_NULL_HANDLE || commandBuffers_.empty()) {
+    static bool loggedGuard = false;
+    if (!loggedGuard) {
+      LOGI("renderFrame guard hit: swapchain=%p commandBuffers=%zu", (void*)swapchain_.handle(),
+           commandBuffers_.size());
+      loggedGuard = true;
+    }
+    return;
+  }
 
   uint32_t imageIndex = 0;
   const VkResult acquire =
-      vkAcquireNextImageKHR(device_, swapchain_.handle(), UINT64_MAX, imageAvailable_,
-                            VK_NULL_HANDLE, &imageIndex);
+      acquireImage_(device_, swapchain_.handle(), UINT64_MAX, imageAvailable_,
+                    VK_NULL_HANDLE, &imageIndex);
+  lastAcquire = acquire;
   if (acquire != VK_SUCCESS) {
+    static bool loggedAcquire = false;
+    if (!loggedAcquire) {
+      LOGE("vkAcquireNextImageKHR failed: %d (swapchain out of date)", static_cast<int>(acquire));
+      loggedAcquire = true;
+    }
     lastError_ = "vkAcquireNextImageKHR failed (swapchain out of date)";
     return;
   }
@@ -771,7 +883,7 @@ void VulkanRenderer::renderFrame() {
 
   VkCommandBuffer cmd = commandBuffers_[imageIndex];
   vkResetCommandBuffer(cmd, 0);
-  recordFrame(cmd, imageIndex);
+  recordFrame(cmd, imageIndex, captureRequested_);
 
   VkSubmitInfo submit{};
   submit.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -786,7 +898,9 @@ void VulkanRenderer::renderFrame() {
   submit.signalSemaphoreCount = 1;
   submit.pSignalSemaphores = signalSemaphores;
 
-  if (vkQueueSubmit(queue_, 1, &submit, inFlightFences_[imageIndex]) != VK_SUCCESS) {
+  const VkResult submitResult = vkQueueSubmit(queue_, 1, &submit, inFlightFences_[imageIndex]);
+  lastSubmit = submitResult;
+  if (submitResult != VK_SUCCESS) {
     lastError_ = "vkQueueSubmit failed";
     return;
   }
@@ -799,12 +913,75 @@ void VulkanRenderer::renderFrame() {
   VkSwapchainKHR swapchains[] = {swapchain_.handle()};
   present.pSwapchains = swapchains;
   present.pImageIndices = &imageIndex;
-  vkQueuePresentKHR(queue_, &present);
+  const VkResult presented = queuePresent_(queue_, &present);
+  lastPresent = presented;
+  if (presented != VK_SUCCESS) {
+    LOGE("vkQueuePresentKHR failed: %d", static_cast<int>(presented));
+    lastError_ = "vkQueuePresentKHR failed";
+  }
+
+  if (calls % 300 == 0) {
+    LOGI("renderFrame status: acquire=%d submit=%d present=%d capture=%d", static_cast<int>(lastAcquire),
+         static_cast<int>(lastSubmit), static_cast<int>(lastPresent),
+         captureRequested_ ? 1 : 0);
+  }
+
+  // One-shot readback: the copy was recorded into this frame's command buffer,
+  // so waiting on its fence guarantees the staging buffer holds the frame.
+  if (captureRequested_) {
+    vkWaitForFences(device_, 1, &inFlightFences_[imageIndex], VK_TRUE, UINT64_MAX);
+    const bool written = writeCapturePpm();
+    LOGI("frame capture %s: %s", written ? "written" : "FAILED", capturePath_.c_str());
+    captureRequested_ = false;
+  }
+}
+
+bool VulkanRenderer::captureNextFrame(const std::string& path) {
+  if (captureBuffer_ == VK_NULL_HANDLE || captureMapped_ == nullptr) return false;
+  capturePath_ = path;
+  captureRequested_ = true;
+  return true;
+}
+
+bool VulkanRenderer::writeCapturePpm() {
+  if (captureMapped_ == nullptr || capturePath_.empty()) return false;
+  const VkExtent2D extent = swapchain_.extent();
+  if (extent.width == 0 || extent.height == 0) return false;
+
+  FILE* file = std::fopen(capturePath_.c_str(), "wb");
+  if (file == nullptr) return false;
+
+  std::fprintf(file, "P6\n%u %u\n255\n", extent.width, extent.height);
+  const auto* pixels = static_cast<const uint8_t*>(captureMapped_);
+  const bool bgra = swapchain_.format().format == VK_FORMAT_B8G8R8A8_UNORM ||
+                    swapchain_.format().format == VK_FORMAT_B8G8R8A8_SRGB;
+  std::vector<uint8_t> row(static_cast<size_t>(extent.width) * 3);
+  for (uint32_t y = 0; y < extent.height; y++) {
+    const uint8_t* src = pixels + static_cast<size_t>(y) * extent.width * 4;
+    for (uint32_t x = 0; x < extent.width; x++) {
+      const uint8_t b0 = src[x * 4 + 0];
+      const uint8_t b1 = src[x * 4 + 1];
+      const uint8_t b2 = src[x * 4 + 2];
+      row[x * 3 + 0] = bgra ? b2 : b0;
+      row[x * 3 + 1] = b1;
+      row[x * 3 + 2] = bgra ? b0 : b2;
+    }
+    std::fwrite(row.data(), 1, row.size(), file);
+  }
+  std::fclose(file);
+  return true;
 }
 
 void VulkanRenderer::destroySurface() {
   if (device_ == VK_NULL_HANDLE) return;
   vkDeviceWaitIdle(device_);
+
+  if (captureBuffer_ != VK_NULL_HANDLE) vkDestroyBuffer(device_, captureBuffer_, nullptr);
+  captureBuffer_ = VK_NULL_HANDLE;
+  if (captureMemory_ != VK_NULL_HANDLE) vkFreeMemory(device_, captureMemory_, nullptr);
+  captureMemory_ = VK_NULL_HANDLE;
+  captureMapped_ = nullptr;
+  captureRequested_ = false;
 
   for (auto fence : inFlightFences_) vkDestroyFence(device_, fence, nullptr);
   inFlightFences_.clear();

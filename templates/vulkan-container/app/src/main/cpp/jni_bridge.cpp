@@ -3,6 +3,7 @@
 
 #ifdef __ANDROID__
 
+#include <android/log.h>
 #include <android/native_window_jni.h>
 #include <jni.h>
 
@@ -11,6 +12,9 @@
 #include "scene_loader.h"
 #include "vulkan_renderer.h"
 
+#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "HeretekTier2", __VA_ARGS__)
+#define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, "HeretekTier2", __VA_ARGS__)
+
 namespace {
 heretek::NativeScene gScene;
 heretek::VulkanRenderer gRenderer;
@@ -18,7 +22,7 @@ bool gSceneReady = false;
 }  // namespace
 
 extern "C" JNIEXPORT jboolean JNICALL
-Java_com_heretek_gamestudio_native_MainActivity_nativeInit(JNIEnv* env, jobject /*this*/,
+Java_com_heretek_gamestudio_tier2_MainActivity_nativeInit(JNIEnv* env, jobject /*this*/,
                                                            jstring scenePath, jstring shaderDir) {
   const char* path = env->GetStringUTFChars(scenePath, nullptr);
   std::string error;
@@ -31,57 +35,86 @@ Java_com_heretek_gamestudio_native_MainActivity_nativeInit(JNIEnv* env, jobject 
 
   if (gSceneReady) {
     gRenderer.uploadScene(gScene);
+  } else {
+    LOGE("Scene load failed: %s", error.c_str());
+  }
+  if (!rendererReady) {
+    LOGE("Renderer init failed: %s", gRenderer.lastError().c_str());
   }
   return (gSceneReady && rendererReady) ? JNI_TRUE : JNI_FALSE;
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
-Java_com_heretek_gamestudio_native_MainActivity_nativeSurfaceCreated(JNIEnv* env, jobject /*this*/,
+Java_com_heretek_gamestudio_tier2_MainActivity_nativeSurfaceCreated(JNIEnv* env, jobject /*this*/,
                                                                      jobject surface, jint width,
                                                                      jint height) {
   ANativeWindow* window = ANativeWindow_fromSurface(env, surface);
   if (window == nullptr) return JNI_FALSE;
   const bool ok = gRenderer.createSurface(window, width, height);
   ANativeWindow_release(window);
+  if (!ok) {
+    LOGE("createSurface failed (%dx%d): %s", width, height, gRenderer.lastError().c_str());
+  } else {
+    // The GPU buffers only exist after createSurface; nativeInit runs before any
+    // surface is available, so the scene upload happens here.
+    if (gSceneReady) {
+      gRenderer.uploadScene(gScene);
+    }
+    LOGI("Surface ready (%dx%d) — swapchain + pipelines created", width, height);
+  }
   return ok ? JNI_TRUE : JNI_FALSE;
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_heretek_gamestudio_native_MainActivity_nativeSurfaceDestroyed(JNIEnv* /*env*/,
+Java_com_heretek_gamestudio_tier2_MainActivity_nativeSurfaceDestroyed(JNIEnv* /*env*/,
                                                                        jobject /*this*/) {
   gRenderer.destroySurface();
 }
 
 extern "C" JNIEXPORT jint JNICALL
-Java_com_heretek_gamestudio_native_MainActivity_nativeDrawCalls(JNIEnv* /*env*/, jobject /*this*/) {
+Java_com_heretek_gamestudio_tier2_MainActivity_nativeDrawCalls(JNIEnv* /*env*/, jobject /*this*/) {
   return gSceneReady ? gRenderer.drawCallEstimate() : -1;
 }
 
 extern "C" JNIEXPORT jint JNICALL
-Java_com_heretek_gamestudio_native_MainActivity_nativeInstanceCount(JNIEnv* /*env*/,
+Java_com_heretek_gamestudio_tier2_MainActivity_nativeInstanceCount(JNIEnv* /*env*/,
                                                                     jobject /*this*/) {
   return gSceneReady ? gRenderer.instanceCount() : -1;
 }
 
 extern "C" JNIEXPORT jint JNICALL
-Java_com_heretek_gamestudio_native_MainActivity_nativeTerrainLeaves(JNIEnv* /*env*/,
+Java_com_heretek_gamestudio_tier2_MainActivity_nativeTerrainLeaves(JNIEnv* /*env*/,
                                                                     jobject /*this*/) {
   return gSceneReady ? gRenderer.terrainLeaves() : -1;
 }
 
 extern "C" JNIEXPORT jint JNICALL
-Java_com_heretek_gamestudio_native_MainActivity_nativeTerrainVertices(JNIEnv* /*env*/,
+Java_com_heretek_gamestudio_tier2_MainActivity_nativeTerrainVertices(JNIEnv* /*env*/,
                                                                       jobject /*this*/) {
   return gSceneReady ? gRenderer.terrainVertices() : -1;
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_heretek_gamestudio_native_MainActivity_nativeFrame(JNIEnv* /*env*/, jobject /*this*/) {
+Java_com_heretek_gamestudio_tier2_MainActivity_nativeFrame(JNIEnv* /*env*/, jobject /*this*/) {
+  static uint64_t frameCount = 0;
   gRenderer.renderFrame();
+  if (frameCount == 0 || frameCount % 300 == 0) {
+    LOGI("frame %llu presented", static_cast<unsigned long long>(frameCount));
+  }
+  frameCount++;
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_heretek_gamestudio_tier2_MainActivity_nativeCaptureFrame(JNIEnv* env, jobject /*this*/,
+                                                                   jstring path) {
+  const char* cpath = env->GetStringUTFChars(path, nullptr);
+  const bool ok = gRenderer.captureNextFrame(cpath);
+  env->ReleaseStringUTFChars(path, cpath);
+  return ok ? JNI_TRUE : JNI_FALSE;
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_heretek_gamestudio_native_MainActivity_nativeShutdown(JNIEnv* /*env*/, jobject /*this*/) {
+Java_com_heretek_gamestudio_tier2_MainActivity_nativeShutdown(JNIEnv* /*env*/, jobject /*this*/) {
   gRenderer.shutdown();
   gSceneReady = false;
 }

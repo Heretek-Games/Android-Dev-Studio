@@ -101,3 +101,71 @@ explicitly flagged in UI and trace).
   `__STUDIO_DEBUG__` DOM assertions + uid element captures for pixel-level checks.
 - Upstream latency variance is large (16s–370s). If stalls repeat, raise the 90s
   abort or add retry-with-backoff and record attempts in the trace.
+
+---
+
+## Run Block 2 — 2026-09-25, On-Device Tier 2 Validation (Android emulator)
+
+First real runtime validation of both containers on an Android target
+(`xune-test` AVD: android-36, x86_64, 1080x2400, booted headless with
+`-gpu lavapipe` on a KVM host; SwiftShader/SwANGLE/host-GPU modes were also
+tried). Method: `apk_builder.py --tier2` → `adb install` → `am start` →
+logcat + `screencap` + in-renderer frame readback (`nativeCaptureFrame` → PPM).
+
+### Verdict
+
+| Check | Result |
+|-------|--------|
+| Tier 1 APK launch + WebGL studio render | ✅ after fixes (screenshot: studio UI with 3D viewport) |
+| `POST /api/deploy {real:true}` full path | ✅ "Successfully installed and launched on emulator-5554" |
+| Tier 2 native init (scene parse + upload) | ✅ `draws=67 terrainLeaves=64 terrainVertices=69696` |
+| Tier 2 Vulkan swapchain + pipelines | ✅ real handle, 4 images, 4 command buffers |
+| Tier 2 frame loop | ✅ acquire/submit/present = `VK_SUCCESS`, steady ~61.5 FPS (300 frames / 4.88s) |
+| Tier 2 rendered output | ✅ live display + readback PPM (terrain + blue player + orange crate, correct orientation) |
+| Native host checks | ✅ 61 checks (3 new Vulkan-projection checks) |
+
+### Real bugs found only by running on-device (all fixed)
+
+1. **`VK_KHR_swapchain` never enabled at device creation (Tier 2).** The device was
+   created without the extension, so `vkCreateSwapchainKHR` resolved to a loader
+   stub that returned `VK_SUCCESS` and wrote nothing: null swapchain, 0 images,
+   black screen, while the app logged "Surface ready". Fix: enumerate device
+   extensions, require `VK_KHR_swapchain`, enable it, and fail loudly if missing.
+2. **Extension entry points must be resolved via `vkGet*ProcAddr` (Tier 2).**
+   Direct calls to `vkCreateSwapchainKHR` / `vkAcquireNextImageKHR` /
+   `vkQueuePresentKHR` link but do not dispatch on Android. Fix: resolve all
+   VK_KHR_swapchain functions through `vkGetInstanceProcAddr`/`vkGetDeviceProcAddr`.
+3. **Scene uploaded before the surface existed (Tier 2).** `nativeInit` ran
+   `uploadScene` while the GPU buffers were still null, so instance/terrain
+   buffers were never filled (`terrainDraws=0`). Fix: re-upload after
+   `createSurface`.
+4. **OpenGL-convention projection used in Vulkan (Tier 2).** Y-up clip space +
+   depth −1..1 flipped the image vertically and clipped the near half of the
+   depth range. Fix: `perspectiveVulkan()` (Y-down, depth 0..1) + host checks.
+5. **JNI symbols left on the old package (Tier 2).** Renaming the namespace from
+   `...gamestudio.native` (invalid: `native` is a Java keyword) to
+   `...gamestudio.tier2` broke all `Java_..._native*` symbols →
+   `UnsatisfiedLinkError`. Fix: renamed the 9 JNI entry points.
+6. **Tier 1 crashed in `onCreate`.** `hideSystemUI()` dereferenced the decor view
+   before `setContentView`. Fix: call it after the content view exists.
+7. **Tier 1 crashed on launch.** `AppCompatActivity` with a platform theme
+   (`Theme.NoTitleBar.Fullscreen`) → "You need to use a Theme.AppCompat theme".
+   Fix: `Theme.HeretekGame` (AppCompat parent + fullscreen attrs).
+8. **Tier 1 white screen.** Vite emitted absolute `/assets/...` URLs; the WebView
+   asset loader maps `/assets/` to the APK asset root, so `index-*.js` 404'd
+   (`FileNotFoundException: index-*.js`). Fix: `base: './'` in `vite.config.ts`.
+9. **Tier 2 manifest resolved to a doubled suffix.** `android:name=".native.MainActivity"`
+   under namespace `...native` → `...native.native.MainActivity`. Fix:
+   `.MainActivity` under the `...tier2` namespace.
+10. **Tier 2 `setContentView(view, w, h)`** does not exist (3-arg form) → Kotlin
+    compile error. Fix: `setContentView(view, ViewGroup.LayoutParams(...))`.
+
+### Environment notes
+
+- The emulator's Vulkan WSI with software backends silently no-ops device-level
+  extension calls; after fix #1/#2 the WSI delivers buffers normally (verified via
+  `dumpsys SurfaceFlinger --latency` frame timestamps).
+- `screencap` shows black for the native SurfaceView before the swapchain fix;
+  after it, both `screencap` and the in-renderer readback agree.
+- Gradle 8.11.1 requires JDK 17–23; the builder auto-detects one and reports
+  honestly when only an incompatible runtime is present.

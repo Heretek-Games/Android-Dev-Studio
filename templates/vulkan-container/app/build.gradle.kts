@@ -16,8 +16,10 @@ android {
         versionName = "1.0"
 
         ndk {
-            // Tier 2 targets modern Vulkan-capable devices
-            abiFilters += listOf("arm64-v8a")
+            // Production target: modern Vulkan-capable arm64 devices.
+            // x86_64 is included so the debug APK can also run on the Android
+            // emulator (the only always-available validation target).
+            abiFilters += listOf("arm64-v8a", "x86_64")
         }
 
         externalNativeBuild {

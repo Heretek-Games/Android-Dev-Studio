@@ -77,11 +77,33 @@ cmake --build /tmp/tier2-build
 | CPU frustum culling + dispatch planning + indirect draw packing | ✅ done, host-tested (50k-scale checks) |
 | GLSL compute/render shaders compiled to SPIR-V (`glslc`) | ✅ 4 shaders (cull + scene vert/frag + terrain), committed .spv |
 | Vulkan swapchain + render pass + framebuffers | ✅ compiles (NDK) |
-| Compute culling dispatch + instanced indirect draws | ✅ implemented, compiles; on-device runtime validation pending |
-| JNI bridge + SurfaceView frame loop + surface lifecycle | ✅ implemented, compiles |
+| Compute culling dispatch + instanced indirect draws | ✅ **on-device validated** (emulator, android-36 x86_64): 3 instanced cubes + 64 terrain LOD leaf draws, `VK_SUCCESS` acquire/submit/present, ~61.5 FPS; rendered output confirmed on-display and via PPM readback |
+| JNI bridge + SurfaceView frame loop + surface lifecycle | ✅ on-device validated (scene parse/upload, surface create/destroy, 60 Hz frame loop) |
 | Quadtree terrain LOD export + native parsing | ✅ focus-driven leaves exported (`--quadtree`), parsed into `TerrainLodRecord` (with `terrain_meta` depth), host-tested |
 | Native terrain mesh generation + GPU upload | ✅ heightmap-displaced grid meshes packed into shared vertex/index buffers with per-leaf indirect draw commands; one `vkCmdDrawIndexedIndirect` renders every LOD leaf (terrain pipeline from `terrain.vert`), host-tested packing |
-| Gradle APK assembly | ✅ vendored wrapper builds `app-debug.apk` (arm64-v8a `.so` + `scene.native` + 4 SPIR-V shaders); on-device runtime validation pending |
+| Gradle APK assembly | ✅ vendored wrapper builds `app-debug.apk` (arm64-v8a + x86_64 `.so`, `scene.native`, 4 SPIR-V shaders); installed + launched on an emulator |
+
+### Runtime telemetry & frame readback
+
+The native renderer logs to logcat under the `HeretekTier2` tag:
+
+```
+Scene ready — draws=67 instances=0 terrainLeaves=64 terrainVertices=69696
+swapchain.create: ...  /  surface caps: extent=2400x1080 minImages=3 formats=5
+swapchain created: 0x...  /  createSurface complete: swapchain=0x... images=4 commandBuffers=4
+frame draw state: instances=3 indirectCmds=1 terrainDraws=64
+renderFrame status: acquire=0 submit=0 present=0 capture=0   (every 300 frames)
+```
+
+`MainActivity` requests a one-shot readback of the rendered swapchain image two
+seconds after surface creation (`nativeCaptureFrame` → PPM). Pull it with:
+
+```bash
+adb exec-out run-as com.heretek.gamestudio.tier2 cat files/native_frame.ppm > frame.ppm
+```
+
+This verifies rasterized pixels independently of the display/compositor path —
+useful on emulators whose Vulkan WSI does not deliver buffers to SurfaceFlinger.
 
 Shaders are compiled with the NDK's bundled glslc:
 

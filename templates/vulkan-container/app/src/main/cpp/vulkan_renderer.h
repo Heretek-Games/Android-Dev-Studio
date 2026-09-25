@@ -29,6 +29,8 @@ class VulkanRenderer {
   bool createSurface(ANativeWindow* window, int width, int height);
   void destroySurface();
   void renderFrame();
+  /** Requests a one-shot readback of the next rendered frame (writes a PPM P6 file). */
+  bool captureNextFrame(const std::string& path);
   void uploadScene(const NativeScene& scene);
   void shutdown();
 
@@ -49,7 +51,7 @@ class VulkanRenderer {
   bool createDescriptors();
   bool createPipelines();
   VkShaderModule loadShader(const std::string& path);
-  void recordFrame(VkCommandBuffer cmd, uint32_t imageIndex);
+  void recordFrame(VkCommandBuffer cmd, uint32_t imageIndex, bool capture);
   bool createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkBuffer* buffer, VkDeviceMemory* memory, void** mapped);
 
   VkInstance instance_ = VK_NULL_HANDLE;
@@ -103,6 +105,19 @@ class VulkanRenderer {
 
   bool createTerrainBuffers(size_t vertexBytes, size_t indexBytes, size_t commandBytes);
 
+  // Extension entry points resolved via vkGetDeviceProcAddr (Android loader
+  // does not dispatch device-level extension symbols).
+  PFN_vkAcquireNextImageKHR acquireImage_ = nullptr;
+  PFN_vkQueuePresentKHR queuePresent_ = nullptr;
+
+  // One-shot frame readback (debug/verification): render -> copy to host-visible buffer
+  bool captureRequested_ = false;
+  std::string capturePath_;
+  VkBuffer captureBuffer_ = VK_NULL_HANDLE;
+  VkDeviceMemory captureMemory_ = VK_NULL_HANDLE;
+  void* captureMapped_ = nullptr;
+  bool writeCapturePpm();
+
   uint32_t instanceCount_ = 0;
   uint32_t indirectCommandCount_ = 0;
   int drawCallEstimate_ = 0;
@@ -128,6 +143,7 @@ class VulkanRenderer {
   bool createSurface(void* /*window*/, int /*width*/, int /*height*/) { return false; }
   void destroySurface() {}
   void renderFrame() {}
+  bool captureNextFrame(const std::string& /*path*/) { return false; }
   void uploadScene(const NativeScene& scene) {
     drawCallEstimate_ = scene.drawCallEstimate();
     instanceCount_ = static_cast<int>(scene.instances.size());

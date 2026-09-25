@@ -12,7 +12,7 @@
         android:label="Heretek 3D Game"
         android:roundIcon="@android:drawable/sym_def_app_icon"
         android:supportsRtl="true"
-        android:theme="@android:style/Theme.NoTitleBar.Fullscreen">
+        android:theme="@style/Theme.HeretekGame">
 
         <activity
             android:name=".MainActivity"
