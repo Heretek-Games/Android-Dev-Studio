@@ -5,6 +5,8 @@ export interface DialogueChoice {
   text: string;
   nextNodeId: string;
   conditionVariable?: string;
+  /** Comparison operator applied to conditionVariable vs conditionValue. Default: '=='. */
+  conditionOperator?: '==' | '!=' | '>' | '<' | '>=' | '<=';
   conditionValue?: unknown;
 }
 
@@ -139,8 +141,54 @@ export class DialogueManager {
     if (!choice) {
       throw new Error(`Invalid choice index ${choiceIndex}`);
     }
+    if (!this.isChoiceAvailable(choice)) {
+      throw new Error(`Choice "${choice.id}" is not available under the current variables`);
+    }
 
     return this.stepToNode(choice.nextNodeId);
+  }
+
+  /**
+   * Returns the currently selectable choices (with their original indices in
+   * the node's `choices` array) filtered by each choice's conditionVariable /
+   * conditionValue against the live variable table.
+   */
+  public getAvailableChoices(): Array<{ index: number; choice: DialogueChoice }> {
+    const current = this.getCurrentNode();
+    if (!current || current.type !== 'choice' || !current.choices) return [];
+    return current.choices
+      .map((choice, index) => ({ index, choice }))
+      .filter(({ choice }) => this.isChoiceAvailable(choice));
+  }
+
+  private isChoiceAvailable(choice: DialogueChoice): boolean {
+    if (!choice.conditionVariable) return true;
+    const value = this.variables.get(choice.conditionVariable);
+    const target = choice.conditionValue;
+    if (target === undefined) return value !== undefined;
+
+    const op = choice.conditionOperator || '==';
+    const a = Number(value);
+    const b = Number(target);
+    const numeric = Number.isFinite(a) && Number.isFinite(b);
+    const looseEqual = value === target || String(value) === String(target);
+
+    switch (op) {
+      case '==':
+        return looseEqual;
+      case '!=':
+        return !looseEqual;
+      case '>':
+        return numeric && a > b;
+      case '<':
+        return numeric && a < b;
+      case '>=':
+        return numeric && a >= b;
+      case '<=':
+        return numeric && a <= b;
+      default:
+        return false;
+    }
   }
 
   public endConversation(): void {

@@ -153,4 +153,54 @@ describe('DialogueManager (Dialogic & Godot Dialogue Architecture)', () => {
     assert.strictEqual(next?.id, 'RoomNode');
     assert.strictEqual(next?.text, 'That will be 5 copper coins.');
   });
+
+  it('filters choices by conditionVariable and blocks unavailable picks', () => {
+    const dm = new DialogueManager();
+    dm.registerTree({
+      id: 'gated',
+      title: 'Gated Choices',
+      startNodeId: 'choice_node',
+      nodes: {
+        choice_node: {
+          id: 'choice_node',
+          type: 'choice',
+          text: 'What will it be?',
+          choices: [
+            { id: 'buy', text: 'Buy the artifact', nextNodeId: 'bought', conditionVariable: 'gold', conditionOperator: '>=', conditionValue: 100 },
+            { id: 'chat', text: 'Ask about the weather', nextNodeId: 'chatted' },
+            { id: 'brag', text: 'Show off wealth', nextNodeId: 'bragged', conditionVariable: 'gold', conditionOperator: '>=', conditionValue: 500 }
+          ]
+        },
+        bought: { id: 'bought', type: 'text', text: 'A fine purchase.', nextNodeId: 'end' },
+        chatted: { id: 'chatted', type: 'text', text: 'Lovely day, isn\'t it?', nextNodeId: 'end' },
+        bragged: { id: 'bragged', type: 'text', text: 'Impressive!', nextNodeId: 'end' },
+        end: { id: 'end', type: 'end' }
+      }
+    });
+
+    dm.setVariable('gold', 50);
+    dm.startConversation('gated');
+    let available = dm.getAvailableChoices();
+    assert.deepStrictEqual(available.map(a => a.index), [1]);
+
+    // Choice 0 (needs 100 gold) is unavailable at 50 gold; choice 1 is fine.
+    assert.throws(() => dm.chooseOption(0), /not available/);
+    assert.throws(() => dm.chooseOption(2), /not available/);
+    const chatNext = dm.chooseOption(1);
+    assert.strictEqual(chatNext?.id, 'chatted');
+
+    // With 100 gold the purchase unlocks.
+    dm.setVariable('gold', 100);
+    dm.startConversation('gated');
+    available = dm.getAvailableChoices();
+    assert.deepStrictEqual(available.map(a => a.index), [0, 1]);
+    const buyNext = dm.chooseOption(0);
+    assert.strictEqual(buyNext?.id, 'bought');
+
+    // At 750 gold every choice is selectable.
+    dm.setVariable('gold', 750);
+    dm.startConversation('gated');
+    available = dm.getAvailableChoices();
+    assert.deepStrictEqual(available.map(a => a.index), [0, 1, 2]);
+  });
 });

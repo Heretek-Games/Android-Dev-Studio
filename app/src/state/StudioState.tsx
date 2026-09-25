@@ -41,6 +41,9 @@ interface StudioStateContextType {
   selectedGameObject: GameObject | null;
   isPlaying: boolean;
   isPaused: boolean;
+  /** Live viewport camera position (world units), used by LOD/A-Life analysis. */
+  cameraPosition: { x: number; y: number; z: number };
+  setCameraPosition: (x: number, y: number, z: number) => void;
   startPlayMode: () => void;
   pausePlayMode: () => void;
   stopPlayMode: () => void;
@@ -73,6 +76,15 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [isPaused, setIsPaused] = useState<boolean>(false);
+  const [cameraPosition, setCameraPositionState] = useState<{ x: number; y: number; z: number }>({ x: 0, y: 10, z: 15 });
+
+  const setCameraPosition = (x: number, y: number, z: number) => {
+    setCameraPositionState(prev =>
+      Math.abs(prev.x - x) > 0.2 || Math.abs(prev.y - y) > 0.2 || Math.abs(prev.z - z) > 0.2
+        ? { x, y, z }
+        : prev
+    );
+  };
   const [tick, setTick] = useState<number>(0);
   const [devices, setDevices] = useState<DeviceInfo[]>([]);
   const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
@@ -509,6 +521,8 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         selectedGameObject,
         isPlaying,
         isPaused,
+        cameraPosition,
+        setCameraPosition,
         startPlayMode,
         pausePlayMode,
         stopPlayMode,

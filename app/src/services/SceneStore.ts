@@ -87,9 +87,13 @@ class SceneStoreService {
     return result;
   }
 
-  /** Mutate + save in one call: the mutator receives a deep copy to edit. */
+  /**
+   * Mutate + save in one call. Always performs a READ-MODIFY-WRITE against the
+   * authoritative file so external (MCP/CLI/agent) changes are never clobbered
+   * by a stale client cache.
+   */
   public async mutate(mutator: (scene: HarnessScene) => void): Promise<SceneSaveResult> {
-    const scene = this.cached ?? (await this.fetchScene());
+    const scene = await this.fetchScene();
     const draft: HarnessScene = JSON.parse(JSON.stringify(scene));
     mutator(draft);
     return this.saveScene(draft);

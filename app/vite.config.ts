@@ -72,6 +72,50 @@ function sceneBridgePlugin(): Plugin {
   };
 }
 
+// Dev-server bridge to the real multi-agent swarm orchestrator:
+// POST /api/swarm/run { goal } -> runs the pipeline (architect -> invariant
+// audit -> headless QA -> review) and returns the real task log + ADRs.
+function swarmBridgePlugin(): Plugin {
+  return {
+    name: 'heretek-swarm-bridge',
+    configureServer(server) {
+      server.middlewares.use('/api/swarm/run', (req, res) => {
+        res.setHeader('Content-Type', 'application/json');
+        if (req.method !== 'POST') {
+          res.statusCode = 405;
+          res.end(JSON.stringify({ ok: false, error: 'POST required' }));
+          return;
+        }
+        let body = '';
+        req.on('data', chunk => { body += chunk; });
+        req.on('end', () => {
+          let goal = '';
+          try {
+            goal = String(JSON.parse(body || '{}').goal || '');
+          } catch {
+            // fall through to the empty-goal error
+          }
+          if (!goal.trim()) {
+            res.statusCode = 400;
+            res.end(JSON.stringify({ ok: false, error: 'goal is required' }));
+            return;
+          }
+          const repoRoot = path.resolve(__dirname, '..');
+          const proc = spawn('python3', ['harness/agents/swarm_cli.py', goal], { cwd: repoRoot });
+          let out = '';
+          let err = '';
+          proc.stdout.on('data', d => { out += d; });
+          proc.stderr.on('data', d => { err += d; });
+          proc.on('close', code => {
+            res.statusCode = code === 0 ? 200 : 502;
+            res.end(out || JSON.stringify({ ok: false, error: err || 'swarm unavailable' }));
+          });
+        });
+      });
+    }
+  };
+}
+
 // Dev-server bridge to the real headless Artemis QA pipeline:
 // POST /api/qa/run { goal, scenario?, frames? } -> spawns artemis_qa_runner.py
 // and returns its JSON report (real engine metrics + rule evaluation).
@@ -129,7 +173,7 @@ function qaBridgePlugin(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [react(), sceneBridgePlugin(), qaBridgePlugin()],
+  plugins: [react(), sceneBridgePlugin(), qaBridgePlugin(), swarmBridgePlugin()],
   define: {
     __LLM_MODEL__: JSON.stringify(llmModel)
   },

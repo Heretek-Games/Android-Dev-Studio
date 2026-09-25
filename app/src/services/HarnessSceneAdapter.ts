@@ -117,12 +117,19 @@ export function sceneBounds(spec: HarnessScene): SceneBounds {
   return { minX, minZ, maxX, maxZ };
 }
 
-/** Obstacle footprints in world space (fixed physics objects only). */
+/**
+ * Obstacle footprints in world space: fixed physics objects that are TALL
+ * enough to block movement (walls, pillars). Thin slabs (floors/ground planes,
+ * height < 2m) are walkable and excluded so navigation grids stay passable.
+ */
 export function obstacleFootprints(
   spec: HarnessScene
 ): Array<{ name: string; x: number; z: number; halfX: number; halfZ: number }> {
   return (spec.gameObjects || [])
-    .filter((obj: HarnessSceneObject) => obj.physics === 'fixed' && Array.isArray(obj.size))
+    .filter(
+      (obj: HarnessSceneObject) =>
+        obj.physics === 'fixed' && Array.isArray(obj.size) && (obj.size[1] ?? 1) >= 2
+    )
     .map((obj: HarnessSceneObject) => ({
       name: obj.name,
       x: obj.position?.[0] ?? 0,

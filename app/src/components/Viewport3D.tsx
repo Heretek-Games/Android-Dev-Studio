@@ -27,7 +27,8 @@ export const Viewport3D: React.FC = () => {
     refreshScene,
     gizmoMode,
     setGizmoMode,
-    snapping
+    snapping,
+    setCameraPosition
   } = useStudio();
   const [showDeviceFrame, setShowDeviceFrame] = useState(false);
   const [joystickActive, setJoystickActive] = useState(false);
@@ -313,8 +314,20 @@ export const Viewport3D: React.FC = () => {
     // Animation Loop
     let animId: number;
     let lastCoordUpdate = 0;
+    let lastCamReport = { x: 0, y: 0, z: 0 };
     const animate = (timestamp: number) => {
       animId = requestAnimationFrame(animate);
+
+      // Report camera position to studio state (throttled) for LOD/A-Life analysis
+      const cam = camera.position;
+      if (
+        Math.abs(cam.x - lastCamReport.x) > 0.5 ||
+        Math.abs(cam.y - lastCamReport.y) > 0.5 ||
+        Math.abs(cam.z - lastCamReport.z) > 0.5
+      ) {
+        lastCamReport = { x: cam.x, y: cam.y, z: cam.z };
+        setCameraPosition(cam.x, cam.y, cam.z);
+      }
 
       if (isPlaying) {
         updateCamera();

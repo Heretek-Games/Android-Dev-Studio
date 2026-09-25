@@ -17,7 +17,14 @@
         0
       ],
       "color": "#27272a",
-      "physics": "fixed"
+      "physics": "fixed",
+      "lod": {
+        "distances": [
+          20,
+          50,
+          90
+        ]
+      }
     },
     {
       "name": "Player Hero",
@@ -34,8 +41,15 @@
       ],
       "color": "#3b82f6",
       "physics": "dynamic",
-      "mass": 1.0,
-      "controller": true
+      "mass": 1,
+      "controller": true,
+      "lod": {
+        "distances": [
+          20,
+          50,
+          90
+        ]
+      }
     },
     {
       "name": "Bonus Crate",
@@ -60,7 +74,7 @@
               "type": "Timer",
               "params": {
                 "name": "crate",
-                "interval": 1.0
+                "interval": 1
               }
             }
           ],
@@ -73,7 +87,14 @@
             }
           ]
         }
-      ]
+      ],
+      "lod": {
+        "distances": [
+          20,
+          50,
+          90
+        ]
+      }
     },
     {
       "kind": "light",
@@ -114,5 +135,115 @@
       "type": "fps_min",
       "min": 30
     }
-  ]
+  ],
+  "dialogues": {
+    "GatedMerchant": {
+      "id": "GatedMerchant",
+      "title": "Gated Merchant",
+      "startNodeId": "welcome",
+      "nodes": {
+        "welcome": {
+          "id": "welcome",
+          "type": "choice",
+          "speaker": "Merchant",
+          "text": "What will it be, traveler?",
+          "choices": [
+            {
+              "id": "buy",
+              "text": "Buy the rare artifact",
+              "nextNodeId": "bought",
+              "conditionVariable": "gold",
+              "conditionOperator": ">=",
+              "conditionValue": 100
+            },
+            {
+              "id": "browse",
+              "text": "Just browsing",
+              "nextNodeId": "farewell"
+            }
+          ]
+        },
+        "bought": {
+          "id": "bought",
+          "type": "text",
+          "speaker": "Merchant",
+          "text": "A fine purchase, friend.",
+          "nextNodeId": "farewell"
+        },
+        "farewell": {
+          "id": "farewell",
+          "type": "end"
+        }
+      }
+    }
+  },
+  "lodDefaults": [
+    20,
+    50,
+    90
+  ],
+  "spatialGrid": {
+    "cellSize": 30,
+    "indexedObjects": 4
+  },
+  "economy": {
+    "resources": {
+      "gold": 210,
+      "iron": 75,
+      "food": 430,
+      "energy": 120
+    },
+    "simTime": 30,
+    "rules": [
+      {
+        "id": "gold_mine",
+        "intervalSeconds": 2,
+        "effects": [
+          {
+            "resource": "gold",
+            "delta": 4
+          }
+        ]
+      },
+      {
+        "id": "iron_smelter",
+        "intervalSeconds": 2,
+        "effects": [
+          {
+            "resource": "iron",
+            "delta": 2
+          }
+        ]
+      },
+      {
+        "id": "farm",
+        "intervalSeconds": 1,
+        "effects": [
+          {
+            "resource": "food",
+            "delta": 5
+          }
+        ]
+      },
+      {
+        "id": "reactor",
+        "intervalSeconds": 3,
+        "effects": [
+          {
+            "resource": "energy",
+            "delta": 3
+          }
+        ]
+      }
+    ]
+  },
+  "alife": {
+    "population": 35,
+    "onlineRadius": 40,
+    "factions": {
+      "loner": 12,
+      "bandit": 12,
+      "military": 11
+    }
+  }
 }
