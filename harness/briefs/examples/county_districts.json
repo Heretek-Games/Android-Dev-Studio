@@ -1,0 +1,128 @@
+{
+  "title": "Open County",
+  "fantasy": {
+    "genre": "driving exploration",
+    "inspirations": ["open test counties", "rural trial routes"],
+    "tone": "county survey: town, farmland, and wilds in one drive",
+    "loop": "Drive the county transect, confirm town, farms, and wilds are populated, traversable, and streaming."
+  },
+  "experience": {
+    "beats": ["leaving town for open country", "full transect with no stuck zones"],
+    "feedback": ["steady cruising", "district props marking each region"],
+    "inputs": ["touch steering slider", "throttle and brake pedals"]
+  },
+  "world": {
+    "areaKm2": 0.16,
+    "biomes": ["town", "farmland", "wilds"],
+    "poiDensityPerKm2": 120,
+    "traversalSpeedsMps": {"drive": 12},
+    "streamingRadiusM": 160
+  },
+  "systems": {
+    "components": ["RigidBody3D", "Collider3D", "VehicleController", "MobileController", "WorldStreamer"],
+    "physics": ["raycast vehicle suspension", "static ground collider"],
+    "ai": [],
+    "dialogue": [],
+    "inventory": [],
+    "questStates": [],
+    "saveSchema": {}
+  },
+  "lookdev": {
+    "palette": ["#c9a86a", "#4d8b3a", "#6b7f59"],
+    "lighting": "stylized",
+    "silhouette": "town rooftops west, field rows center, rock outcrops east",
+    "post": ["none (mobile budget)"]
+  },
+  "performance": {
+    "deviceProfile": "android16-snapdragon8elite",
+    "targetFps": 60,
+    "maxDrawCalls": 100,
+    "maxTrisPerChunk": 150000,
+    "maxTrisPerScene": 1200000,
+    "maxTextureMb": 256,
+    "maxPhysicsBodies": 256,
+    "maxApkMb": 200,
+    "maxLoadSeconds": 8.0
+  },
+  "acceptance": [
+    {
+      "id": "county-ground",
+      "axis": "Functional",
+      "description": "a drivable county ground plane exists",
+      "qaRule": {"type": "entity_exists", "target": "County Ground"}
+    },
+    {
+      "id": "player-car",
+      "axis": "Functional",
+      "description": "a player car with vehicle physics and streaming focus exists",
+      "qaRule": {"type": "entity_component", "target": "Player Car", "component": "VehicleController"}
+    },
+    {
+      "id": "town-held",
+      "axis": "Playable",
+      "description": "the west town district holds at least 3 live town buildings",
+      "qaRule": {
+        "type": "biome_coverage_min",
+        "biome": "town",
+        "min": 3,
+        "region": {"minX": -60, "maxX": -10, "minZ": -20, "maxZ": 20}
+      }
+    },
+    {
+      "id": "farms-held",
+      "axis": "Playable",
+      "description": "the central farmland holds at least 2 live farm plots",
+      "qaRule": {
+        "type": "biome_coverage_min",
+        "biome": "farm",
+        "min": 2,
+        "region": {"minX": -10, "maxX": 20, "minZ": -20, "maxZ": 20}
+      }
+    },
+    {
+      "id": "wilds-held",
+      "axis": "Playable",
+      "description": "the east wilds hold at least 2 live wilds props",
+      "qaRule": {
+        "type": "biome_coverage_min",
+        "biome": "wilds",
+        "min": 2,
+        "region": {"minX": 20, "maxX": 60, "minZ": -20, "maxZ": 20}
+      }
+    },
+    {
+      "id": "county-traversable",
+      "axis": "Playable",
+      "description": "the county floor has no void holes under the play area",
+      "qaRule": {"type": "traversal_coverage_min", "min": 0.8}
+    },
+    {
+      "id": "streaming-seamless",
+      "axis": "Playable",
+      "description": "terrain chunks stream seamlessly around the player with no gaps",
+      "qaRule": {"type": "streaming_coherence_min", "min": 1.0}
+    },
+    {
+      "id": "draw-budget",
+      "axis": "Performant",
+      "description": "scene stays within the mobile draw-call budget",
+      "qaRule": {"type": "draw_call_budget", "max": 100}
+    },
+    {
+      "id": "sim-fps",
+      "axis": "Performant",
+      "description": "headless simulation holds interactive frame rates",
+      "qaRule": {"type": "fps_min", "min": 30}
+    },
+    {
+      "id": "county-read",
+      "axis": "Visually Coherent",
+      "description": "the county reads as town west, farmland center, wilds east"
+    },
+    {
+      "id": "brief-faithful",
+      "axis": "Spec-Accurate",
+      "description": "the scene matches this brief: open county, three districts, drivable, sunset light"
+    }
+  ]
+}
