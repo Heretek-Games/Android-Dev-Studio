@@ -191,6 +191,11 @@ export function instantiatePrefab(
 
   const go = new GameObject(name);
   applyPrefabFields(go, fields);
+  // Stamp linkage AFTER field application so template fields can never
+  // clobber it (and plain constructed objects stay prefabId === null).
+  go.prefabId = prefabId;
+  const def = store.get(prefabId);
+  go.prefabBase = def?.base ?? null;
   scene.addGameObject(go);
   return go;
 }

@@ -12,7 +12,9 @@ import {
   MobileController,
   EventSheet,
   EngineContext,
-  PhysicsWorld
+  PhysicsWorld,
+  instantiatePrefab,
+  type PrefabStore
 } from '@heretek/engine';
 
 export interface DeviceInfo {
@@ -52,6 +54,8 @@ interface StudioStateContextType {
   refreshScene: () => void;
   addPrimitive: (shape: 'box' | 'sphere' | 'cylinder' | 'plane' | 'light' | 'camera') => GameObject;
   deleteSelected: () => void;
+  /** Clears prefab linkage on the selected object (baked components stay). */
+  detachPrefab: () => void;
   undo: () => boolean;
   redo: () => boolean;
   canUndo: boolean;
@@ -144,6 +148,31 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         return go
           ? go.components.map((c: any) => c.toJSON?.().type ?? c.constructor.name)
           : null;
+      },
+      getPrefabLink: (name: string) => {
+        const go: any = scene.findByName(name);
+        if (!go) return null;
+        return { prefabId: go.prefabId ?? null, prefabBase: go.prefabBase ?? null };
+      },
+      spawnPrefabProbe: () => {
+        const store: PrefabStore = new Map([
+          ['probe-crate', {
+            id: 'probe-crate',
+            template: { shape: 'box', size: [1, 1, 1], color: '#8b5cf6', physics: 'none' }
+          }],
+          ['probe-crate-heavy', {
+            id: 'probe-crate-heavy',
+            base: 'probe-crate',
+            overrides: { color: '#ef4444' }
+          }]
+        ]);
+        undoService.checkpoint(scene);
+        const a = instantiatePrefab(scene, store, 'probe-crate', 'Probe Crate A');
+        const b = instantiatePrefab(scene, store, 'probe-crate-heavy', 'Probe Crate B');
+        setSelectedId(a.id);
+        refreshScene();
+        addLog('info', 'Scene', 'Spawned prefab probe instances.');
+        return [a.name, b.name];
       },
       getLogs: () => logs.map((l: any) => `${l.level}|${l.source}|${l.message}`)
     };
@@ -414,6 +443,19 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   };
 
+  const detachPrefab = () => {
+    if (!selectedId) return;
+    const go = scene.findById(selectedId);
+    if (go && go.prefabId) {
+      undoService.checkpoint(scene);
+      const source = go.prefabId;
+      go.prefabId = null;
+      go.prefabBase = null;
+      refreshScene();
+      addLog('info', 'Scene', `Detached ${go.name} from prefab '${source}' (components kept).`);
+    }
+  };
+
   const undo = () => {
     const ok = undoService.undo(scene);
     if (ok) {
@@ -635,6 +677,7 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         refreshScene,
         addPrimitive,
         deleteSelected,
+        detachPrefab,
         undo,
         redo,
         canUndo: undoService.canUndo,

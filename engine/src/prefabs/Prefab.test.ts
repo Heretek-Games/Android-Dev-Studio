@@ -13,6 +13,7 @@ import {
   type PrefabStore
 } from './Prefab.js';
 import { GameObject } from '../core/GameObject.js';
+import '../core/BuiltinComponents.js';
 
 function goblin(): PrefabDef {
   return {
@@ -105,5 +106,38 @@ describe('Prefab — templates, variants, runtime instantiation', () => {
 
     assert.ok(go.getComponent(AnimeCelShader));
     assert.strictEqual(go.getComponent(EventSheet)?.events.length, 1);
+    // Field application alone never stamps linkage.
+    assert.strictEqual(go.prefabId, null);
+  });
+
+  test('instantiation stamps linkage; detach + scene round-trip preserve it', () => {
+    const scene = new Scene('Test');
+    const store: PrefabStore = new Map([
+      ['goblin', goblin()],
+      ['goblin-brute', { id: 'goblin-brute', base: 'goblin', overrides: { color: '#ff0000' } }]
+    ]);
+    const brute = instantiatePrefab(scene, store, 'goblin-brute', 'Brute');
+    assert.strictEqual(brute.prefabId, 'goblin-brute');
+    assert.strictEqual(brute.prefabBase, 'goblin');
+
+    const plain = instantiatePrefab(scene, store, 'goblin', 'Grunt');
+    assert.strictEqual(plain.prefabId, 'goblin');
+    assert.strictEqual(plain.prefabBase, null);
+
+    // Detach drops linkage without touching the baked components.
+    brute.prefabId = null;
+    brute.prefabBase = null;
+    assert.strictEqual(brute.getComponent(HealthComponent)?.maxHealth, 50);
+    const detachedJson = brute.toJSON();
+    assert.ok(!('prefabId' in detachedJson), 'detached objects stay snapshot-identical');
+
+    // Attached linkage survives a full scene JSON round-trip (undo path).
+    const json = JSON.stringify(scene.toJSON());
+    const restored = new Scene('Restored');
+    restored.fromJSON(JSON.parse(json));
+    const restoredGrunt = restored.findByName('Grunt');
+    assert.strictEqual(restoredGrunt?.prefabId, 'goblin');
+    assert.strictEqual(restoredGrunt?.prefabBase, null);
+    assert.strictEqual(restored.findByName('Brute')?.prefabId, null);
   });
 });

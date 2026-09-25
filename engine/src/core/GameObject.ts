@@ -13,6 +13,10 @@ export class GameObject {
   public transform: Transform;
   public scene: Scene | null = null;
   public components: Component[] = [];
+  /** Prefab linkage (Track 1.1/1.3): stamped by instantiatePrefab; null = plain object. */
+  public prefabId: string | null = null;
+  /** Direct base prefab of the variant this instance was stamped from (if any). */
+  public prefabBase: string | null = null;
 
   constructor(name = 'GameObject', id?: string) {
     this.name = name;
@@ -79,7 +83,7 @@ export class GameObject {
   }
 
   public toJSON(): Record<string, any> {
-    return {
+    const json: Record<string, any> = {
       id: this.id,
       name: this.name,
       tag: this.tag,
@@ -88,6 +92,10 @@ export class GameObject {
       transform: this.transform.toJSON(),
       components: this.components.map(c => c.toJSON())
     };
+    // Linkage omitted when null so plain-object snapshots are byte-identical.
+    if (this.prefabId !== null) json['prefabId'] = this.prefabId;
+    if (this.prefabBase !== null) json['prefabBase'] = this.prefabBase;
+    return json;
   }
 
   public fromJSON(data: Record<string, any>): void {
@@ -95,6 +103,8 @@ export class GameObject {
     if (typeof data.tag === 'string') this.tag = data.tag;
     if (typeof data.layer === 'string') this.layer = data.layer;
     if (typeof data.active === 'boolean') this.active = data.active;
+    this.prefabId = typeof data.prefabId === 'string' ? data.prefabId : null;
+    this.prefabBase = typeof data.prefabBase === 'string' ? data.prefabBase : null;
     if (data.transform && typeof data.transform === 'object') {
       this.transform.fromJSON(data.transform as { position?: number[]; rotation?: number[]; scale?: number[] });
     }

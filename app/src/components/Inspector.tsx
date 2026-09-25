@@ -94,10 +94,11 @@ const AccordionCard: React.FC<AccordionCardProps> = ({
 };
 
 export const Inspector: React.FC = () => {
-  const { selectedGameObject, refreshScene } = useStudio();
+  const { selectedGameObject, refreshScene, detachPrefab, undo, canUndo } = useStudio();
   const [showAddComponent, setShowAddComponent] = useState(false);
   const [openCards, setOpenCards] = useState<Record<string, boolean>>({
     transform: true,
+    prefab: true,
     mesh: true,
     rigidBody: false,
     controller: false,
@@ -183,6 +184,56 @@ export const Inspector: React.FC = () => {
       </div>
 
       <div className="p-3 space-y-2.5">
+        {/* 0. Prefab Linkage (only for prefab instances) */}
+        {go.prefabId && (
+          <AccordionCard
+            title="Prefab Instance"
+            icon={Layers}
+            colorClass="text-violet-300"
+            isOpen={openCards.prefab}
+            onToggle={() => toggleCard('prefab')}
+            badge={
+              <span className="font-mono text-[10px] text-violet-300 bg-violet-950/40 px-1.5 py-0.5 rounded border border-violet-800/40">
+                {go.prefabId}
+              </span>
+            }
+          >
+            <div className="space-y-2 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-zinc-400">Source prefab</span>
+                <span className="font-mono text-[11px] text-violet-200">{go.prefabId}</span>
+              </div>
+              {go.prefabBase && (
+                <div className="flex items-center justify-between">
+                  <span className="text-zinc-400">Variant of</span>
+                  <span className="font-mono text-[11px] text-zinc-300">{go.prefabBase}</span>
+                </div>
+              )}
+              <p className="text-[11px] text-zinc-500 leading-snug">
+                Edits here apply to this instance only. Detaching keeps the baked
+                components and drops the source link.
+              </p>
+              <div className="flex items-center space-x-1.5">
+                <button
+                  onClick={detachPrefab}
+                  className="flex-1 py-1.5 rounded bg-violet-900/40 hover:bg-violet-800/50 border border-violet-700/50 text-violet-200 text-[11px] font-medium transition-colors"
+                >
+                  Detach from prefab
+                </button>
+                {canUndo && (
+                  <button
+                    onClick={undo}
+                    title="Undo detach"
+                    className="px-2 py-1.5 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-300 text-[11px] transition-colors"
+                  >
+                    Undo
+                  </button>
+                )}
+              </div>
+            </div>
+          </AccordionCard>
+        )}
+
         {/* 1. Transform Component (Always Present) */}
         <AccordionCard
           title="Transform"

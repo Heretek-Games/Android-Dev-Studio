@@ -73,7 +73,12 @@ export const Hierarchy: React.FC = () => {
   };
 
   const getComponentBadges = (go: any) => {
-    const badges: { label: string; color: string }[] = [];
+    const badges: { label: string; color: string; title?: string }[] = [];
+    if (go.prefabId) badges.push({
+      label: 'PREFAB',
+      color: 'text-violet-300 bg-violet-950/50 border-violet-700/50',
+      title: `Prefab instance of '${go.prefabId}'${go.prefabBase ? ` (variant of '${go.prefabBase}')` : ''}`
+    });
     if (go.getComponent(RigidBody3D)) badges.push({ label: 'RB', color: 'text-purple-400 bg-purple-950/50 border-purple-800/40' });
     if (go.getComponent(ElementalReactionComponent)) badges.push({ label: 'FX', color: 'text-rose-400 bg-rose-950/50 border-rose-800/40' });
     if (go.getComponent(MobileController)) badges.push({ label: 'CTRL', color: 'text-cyan-400 bg-cyan-950/50 border-cyan-800/40' });
@@ -233,10 +238,21 @@ export const Hierarchy: React.FC = () => {
                 </div>
 
                 <div className="flex items-center space-x-1.5 shrink-0">
+                  {/* Prefab linkage badge (identity — always visible) */}
+                  {badges.filter(b => b.label === 'PREFAB').map((b, idx) => (
+                    <span
+                      key={`prefab-${idx}`}
+                      title={b.title}
+                      className={`text-[9px] px-1 py-0.2 rounded border font-mono font-medium ${b.color}`}
+                    >
+                      {b.label}
+                    </span>
+                  ))}
                   {/* Component Badges */}
-                  {!isSelected && badges.map((b, idx) => (
+                  {!isSelected && badges.filter(b => b.label !== 'PREFAB').map((b, idx) => (
                     <span
                       key={idx}
+                      title={b.title}
                       className={`text-[9px] px-1 py-0.2 rounded border font-mono font-medium ${b.color}`}
                     >
                       {b.label}
