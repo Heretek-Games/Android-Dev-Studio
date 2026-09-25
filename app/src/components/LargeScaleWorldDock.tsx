@@ -29,7 +29,9 @@ import {
   NavGrid,
   GridPathfinder,
   EconomyTick,
-  ALifeSimulator
+  ALifeSimulator,
+  HierarchicalStreamingCells,
+  type StreamingStats
 } from '@heretek/engine';
 
 const DRAW_BUDGET = 100;
@@ -49,7 +51,7 @@ const HOSTILES: Record<string, string[]> = {
 
 export const LargeScaleWorldDock: React.FC = () => {
   const { cameraPosition, addLog } = useStudio();
-  const [activeTab, setActiveTab] = useState<'lod' | 'spatial' | 'pathfinding' | 'economy' | 'alife'>('lod');
+  const [activeTab, setActiveTab] = useState<'lod' | 'spatial' | 'pathfinding' | 'economy' | 'alife' | 'streaming'>('lod');
 
   // ---- Canonical harness scene -------------------------------------------
   const [harnessScene, setHarnessScene] = useState<HarnessScene | null>(null);
@@ -476,6 +478,45 @@ export const LargeScaleWorldDock: React.FC = () => {
       };
     }, `A-Life config saved (${alifePopulation} agents, ${onlineRadius}m bubble)`);
 
+  // =========================================================================
+  // Streaming Cells — hierarchical urban clustering + budget-aware draw distance
+  // =========================================================================
+  const [streamingBudget, setStreamingBudget] = useState<number>(
+    () => (harnessScene as any)?.streaming?.drawBudget ?? 100
+  );
+  const [streamingStats, setStreamingStats] = useState<StreamingStats | null>(null);
+  const streamingRef = useRef<HierarchicalStreamingCells | null>(null);
+
+  useEffect(() => {
+    if (!harnessScene || !engineScene) return;
+    const cells = new HierarchicalStreamingCells({ drawBudget: streamingBudget, scene: engineScene });
+    for (const obj of harnessScene.gameObjects || []) {
+      if (obj.kind === 'light') continue;
+      const go = engineScene.findByName(obj.name);
+      const [x, y, z] = obj.position || [0, 0, 0];
+      cells.registerAsset({ id: obj.name, x, y, z, gameObjectId: go?.id });
+    }
+    cells.setFocus(cameraPosition.x, cameraPosition.y, cameraPosition.z);
+    streamingRef.current = cells;
+    setStreamingStats(cells.update());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [harnessScene, engineScene, streamingBudget]);
+
+  useEffect(() => {
+    const cells = streamingRef.current;
+    if (!cells) return;
+    cells.setFocus(cameraPosition.x, cameraPosition.y, cameraPosition.z);
+    setStreamingStats(cells.update());
+  }, [cameraPosition]);
+
+  const saveStreamingConfig = () =>
+    saveToScene(scene => {
+      scene.streaming = {
+        drawBudget: streamingBudget,
+        levels: streamingRef.current?.levels ?? []
+      };
+    }, `Streaming config saved (budget ${streamingBudget} draws)`);
+
   const meshObjects = (harnessScene?.gameObjects || []).filter(o => o.kind !== 'light');
 
   // =========================================================================
@@ -493,7 +534,8 @@ export const LargeScaleWorldDock: React.FC = () => {
             ['spatial', 'Spatial Hash', Globe, 'text-purple-400'],
             ['pathfinding', 'Hierarchical A*', Compass, 'text-cyan-400'],
             ['economy', 'Economy Ticks', Coins, 'text-amber-400'],
-            ['alife', 'A-Life Simulation', Radio, 'text-rose-400']
+            ['alife', 'A-Life Simulation', Radio, 'text-rose-400'],
+            ['streaming', 'Streaming Cells', Globe, 'text-sky-400']
           ] as const
         ).map(([id, label, Icon, color]) => (
           <button
@@ -1019,6 +1061,94 @@ export const LargeScaleWorldDock: React.FC = () => {
               <div className="text-[10px] text-zinc-500">
                 Player position = live viewport camera. Move the camera near agents and run the sim to watch
                 promotions/demotions happen in the derived scene.
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ============ STREAMING CELLS ============ */}
+        {activeTab === 'streaming' && (
+          <div className="space-y-4">
+            <div className="bg-[#202023] border border-zinc-800 rounded-lg p-3 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-zinc-100 flex items-center gap-2">
+                  <Globe className="w-4 h-4 text-sky-400" />
+                  Hierarchical Streaming Cells (district → block → chunk)
+                </span>
+                <div className="flex items-center gap-2">
+                  {streamingStats?.budgetTrimmed && (
+                    <span className="px-2 py-0.5 rounded text-[11px] font-mono bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                      Budget trimmed — outer rings culled
+                    </span>
+                  )}
+                  <span
+                    className={`px-2 py-0.5 rounded text-[11px] font-mono ${
+                      (streamingStats?.estimatedDrawCalls ?? 0) > streamingBudget
+                        ? 'bg-red-500/20 text-red-300'
+                        : 'bg-emerald-500/20 text-emerald-300'
+                    }`}
+                  >
+                    {streamingStats?.estimatedDrawCalls ?? 0} / {streamingBudget} draws
+                  </span>
+                  <button
+                    onClick={saveStreamingConfig}
+                    className="flex items-center gap-1 px-2 py-1 rounded bg-sky-600 hover:bg-sky-500 text-white text-[11px] font-medium"
+                  >
+                    <Save className="w-3 h-3" /> Save Config
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2 text-center">
+                {(streamingRef.current?.levels ?? []).slice(0, 3).map((level, idx) => (
+                  <div key={level.name} className="bg-[#18181b] p-2 rounded border border-zinc-800">
+                    <div className="text-zinc-400 text-[10px] capitalize">{level.name} ({level.cellSize}m)</div>
+                    <div className="text-sky-300 font-bold text-sm">
+                      {streamingStats?.activeCellsByLevel?.[idx] ?? 0} active
+                    </div>
+                    <div className="text-zinc-500 text-[9px]">
+                      ring {level.ringRadius}m · {level.drawsPerCell} draws/cell
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-3 gap-2 text-center text-[10px]">
+                <div className="bg-[#18181b] p-2 rounded border border-zinc-800">
+                  <div className="text-zinc-400">Active Assets</div>
+                  <div className="text-emerald-400 font-bold text-sm">{streamingStats?.activeAssets ?? 0}</div>
+                </div>
+                <div className="bg-[#18181b] p-2 rounded border border-zinc-800">
+                  <div className="text-zinc-400">Culled Assets</div>
+                  <div className="text-rose-400 font-bold text-sm">{streamingStats?.culledAssets ?? 0}</div>
+                </div>
+                <div className="bg-[#18181b] p-2 rounded border border-zinc-800">
+                  <div className="text-zinc-400">Total Cells</div>
+                  <div className="text-zinc-200 font-bold text-sm">{streamingStats?.totalCells ?? 0}</div>
+                </div>
+              </div>
+
+              <div className="space-y-2 pt-2">
+                <div className="flex justify-between items-center text-zinc-400">
+                  <span>Draw-Call Budget</span>
+                  <span className="font-mono text-zinc-200">{streamingBudget} draws</span>
+                </div>
+                <input
+                  type="range"
+                  min={20}
+                  max={200}
+                  value={streamingBudget}
+                  onChange={e => setStreamingBudget(Number(e.target.value))}
+                  className="w-full h-1 bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-sky-500"
+                />
+              </div>
+
+              <div className="text-[10px] text-zinc-500">
+                Focus = live viewport camera ({cameraPosition.x.toFixed(1)}, {cameraPosition.y.toFixed(1)},{' '}
+                {cameraPosition.z.toFixed(1)}). Ring radii shrink automatically when the active set would exceed
+                the budget (persistent trim scale — no boundary thrash) and recover with headroom. Scene-bound
+                assets toggle their GameObject visibility on stream in/out in the derived scene; config persists
+                to the canonical scene for agents and QA.
               </div>
             </div>
           </div>

@@ -245,5 +245,28 @@
       "bandit": 12,
       "military": 11
     }
+  },
+  "streaming": {
+    "drawBudget": 100,
+    "levels": [
+      {
+        "name": "district",
+        "cellSize": 256,
+        "ringRadius": 900,
+        "drawsPerCell": 1
+      },
+      {
+        "name": "block",
+        "cellSize": 64,
+        "ringRadius": 300,
+        "drawsPerCell": 4
+      },
+      {
+        "name": "chunk",
+        "cellSize": 16,
+        "ringRadius": 96,
+        "drawsPerCell": 8
+      }
+    ]
   }
 }
