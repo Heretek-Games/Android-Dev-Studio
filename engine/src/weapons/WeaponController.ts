@@ -16,7 +16,18 @@ export interface HitResult {
   hit: boolean;
   distance: number;
   point?: [number, number, number];
+  normal?: [number, number, number];
   hitObjectName?: string;
+}
+
+/** Emitted to hit listeners whenever a shot connects with geometry. */
+export interface WeaponHitEvent {
+  point: [number, number, number];
+  normal: [number, number, number] | null;
+  distance: number;
+  hitObjectName: string;
+  damage: number;
+  timestamp: number;
 }
 
 /**
@@ -44,6 +55,18 @@ export class WeaponController extends Component {
   private readonly raycaster: THREE.Raycaster = new THREE.Raycaster();
   private readonly originVec: THREE.Vector3 = new THREE.Vector3();
   private readonly forwardVec: THREE.Vector3 = new THREE.Vector3();
+  private readonly normalMatrix: THREE.Matrix3 = new THREE.Matrix3();
+  private readonly hitListeners: Set<(hit: WeaponHitEvent) => void> = new Set();
+
+  /** Subscribe to weapon hit events (used by impact decal dispatchers, AI, etc.). */
+  public onHit(listener: (hit: WeaponHitEvent) => void): () => void {
+    this.hitListeners.add(listener);
+    return () => this.hitListeners.delete(listener);
+  }
+
+  public offHit(listener: (hit: WeaponHitEvent) => void): void {
+    this.hitListeners.delete(listener);
+  }
 
   constructor(config?: WeaponConfig) {
     super();
@@ -113,12 +136,36 @@ export class WeaponController extends Component {
       });
 
       if (validHit) {
-        return {
+        // World-space surface normal for impact orientation (decals, sparks)
+        let normal: [number, number, number] | null = null;
+        if (validHit.face?.normal) {
+          this.normalMatrix.getNormalMatrix(validHit.object.matrixWorld);
+          const worldNormal = validHit.face.normal.clone().applyMatrix3(this.normalMatrix).normalize();
+          normal = [worldNormal.x, worldNormal.y, worldNormal.z];
+        }
+        const result: HitResult = {
           hit: true,
           distance: validHit.distance,
           point: [validHit.point.x, validHit.point.y, validHit.point.z],
+          normal: normal ?? undefined,
           hitObjectName: validHit.object.name || 'Environment'
         };
+        const event: WeaponHitEvent = {
+          point: result.point!,
+          normal,
+          distance: result.distance,
+          hitObjectName: result.hitObjectName!,
+          damage: this.damage,
+          timestamp: Date.now()
+        };
+        for (const listener of this.hitListeners) {
+          try {
+            listener(event);
+          } catch {
+            // listener errors must never break the firing path
+          }
+        }
+        return result;
       }
     }
 

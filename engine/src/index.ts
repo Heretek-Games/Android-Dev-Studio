@@ -33,10 +33,18 @@ export * from './weapons/WeaponController.js';
 export * from './rendering/InstancedMeshBatcher.js';
 export * from './rendering/FoliageInstancer.js';
 export * from './rendering/LODManager.js';
+export * from './rendering/DecalDispatcher.js';
+export * from './rendering/LODManager.js';
 export * from './terrain/TerrainChunk.js';
 export * from './terrain/WorldStreamer.js';
 export * from './combat/ElementalSystem.js';
 export * from './combat/ElementalReactionComponent.js';
+export * from './vehicles/VehicleController.js';
+export * from './ai/TrafficSystem.js';
+export * from './spatial/SpatialGrid.js';
+export * from './rendering/LODManager.js';
+export * from './navigation/GridPathfinder.js';
+export * from './simulation/EconomyTick.js';
 
 // Large-Scale Simulation & Spatial Subsystems (Anno, Veloren, SS14, Warzone scope)
 export * from './spatial/SpatialGrid.js';

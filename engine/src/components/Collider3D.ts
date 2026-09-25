@@ -19,6 +19,8 @@ export class Collider3D extends Component {
   public isTrigger: boolean = false;
   public friction: number = 0.5;
   public restitution: number = 0.0;
+  /** Explicit collider mass override (null = derive from density × volume). */
+  public massOverride: number | null = null;
 
   public rapierCollider: RAPIER.Collider | null = null;
   private physicsWorld: PhysicsWorld | null = null;
@@ -75,7 +77,21 @@ export class Collider3D extends Component {
       });
       this.rapierCollider = physics.world.createCollider(colliderDesc);
     }
+    if (this.massOverride !== null && this.rapierCollider) {
+      this.rapierCollider.setMass(this.massOverride);
+    }
     (this.rapierCollider as any).userData = this.gameObject;
+  }
+
+  /**
+   * Overrides the collider-derived mass (density × volume). Used by RigidBody3D
+   * to distribute its configured body mass across the object's colliders.
+   */
+  public setMass(mass: number): void {
+    this.massOverride = mass;
+    if (this.rapierCollider) {
+      this.rapierCollider.setMass(mass);
+    }
   }
 
   public override onDestroy(): void {

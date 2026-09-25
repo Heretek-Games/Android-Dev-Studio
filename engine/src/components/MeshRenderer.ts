@@ -73,6 +73,9 @@ export class MeshRenderer extends Component {
       this.threeMesh.rotation.copy(t.rotation);
       this.threeMesh.scale.copy(t.scale);
     }
+    // Keep world matrices current so raycasts (weapons, queries) are correct
+    // even without an active render loop (headless QA, tests).
+    this.threeMesh.updateMatrixWorld();
   }
 
   public override onDestroy(): void {

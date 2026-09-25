@@ -1,5 +1,6 @@
 import RAPIER from '@dimforge/rapier3d-compat';
 import { Component } from '../core/Component.js';
+import { Collider3D } from './Collider3D.js';
 import type { PhysicsWorld } from '../physics/PhysicsWorld.js';
 
 export type BodyType = 'dynamic' | 'fixed' | 'kinematic';
@@ -24,6 +25,11 @@ export class RigidBody3D extends Component {
 
   public rapierBody: RAPIER.RigidBody | null = null;
   private physicsWorld: PhysicsWorld | null = null;
+
+  /** The physics world this body was initialized against (null before initPhysics). */
+  public get world(): PhysicsWorld | null {
+    return this.physicsWorld;
+  }
 
   constructor(options?: RigidBodyOptions) {
     super();
@@ -75,6 +81,20 @@ export class RigidBody3D extends Component {
 
     this.rapierBody = physics.world.createRigidBody(bodyDesc);
     this.rapierBody.userData = this.gameObject;
+
+    // Distribute the configured body mass across this object's colliders so
+    // dynamic bodies honor `mass` (Rapier otherwise derives mass from collider
+    // density × volume). Works regardless of init order: Collider3D stores the
+    // override and applies it when it initializes later.
+    if (this.bodyType === 'dynamic') {
+      const colliders = this.gameObject.getComponents(Collider3D);
+      if (colliders.length > 0) {
+        const perCollider = this.mass / colliders.length;
+        for (const collider of colliders) {
+          collider.setMass(perCollider);
+        }
+      }
+    }
   }
 
   public override update(_deltaTime: number): void {

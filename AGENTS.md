@@ -16,8 +16,16 @@ Android-Dev-Studio/
 │   ├── src/core/                     # Transform, Component, GameObject, Scene, EngineContext
 │   ├── src/components/               # MeshRenderer, LightComponent, CameraComponent, RigidBody3D, Collider3D, MobileController
 │   ├── src/events/                   # EventSheet visual condition-action interpreter (GDevelop style)
-│   ├── src/physics/                  # Rapier3D WASM physics world integration
-│   └── src/input/                    # Mobile touch joysticks, buttons, and desktop WASD mapping
+│   ├── src/physics/                  # Rapier3D WASM physics world integration (raycasts w/ normals)
+│   ├── src/input/                    # Mobile touch joysticks, buttons, and desktop WASD mapping
+│   ├── src/vehicles/                 # VehicleController (Rapier raycast vehicle: suspension, steering, brake)
+│   ├── src/ai/                       # BehaviorTree, ALifeSimulator (two-tier), TrafficSystem (ambient traffic/pedestrians)
+│   ├── src/spatial/                  # SpatialGrid 3D hash (proximity/radius/AABB queries)
+│   ├── src/navigation/               # GridPathfinder + NavGrid (hierarchical A*)
+│   ├── src/simulation/               # EconomyTick (fixed-step, frame-rate independent)
+│   ├── src/rendering/                # InstancedMeshBatcher, FoliageInstancer, LODManager, DecalDispatcher
+│   ├── src/dialogue/                 # DialogueManager (visual nodes, gated choices, script DSL)
+│   └── src/combat/, src/weapons/     # Elemental matrix + ballistic WeaponController (hit events)
 │
 ├── app/                              # Desktop Studio UI (Vite + React 18 + TailwindCSS)
 │   ├── src/components/               # Viewport3D, Hierarchy, Inspector, EventSheetEditor, AssetBrowser, AIHarnessDock, ArtemisQADock, DeviceBar
