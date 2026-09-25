@@ -596,3 +596,23 @@ runtime, every run committed with its loop trace as evidence.
 | DAG + memory | brief persisted and retrievable; tasks reflect the outcome |
 
 Evidence: `harness/runs/loop_runs/20260925-142522-*.json`.
+
+---
+
+## Run Block 16 — 2026-09-25, Phase 3 Rung 1: Arena Defense (Combat Quest) ✅
+
+**Arena brief** (`harness/briefs/examples/arena_defense.json`: 13 criteria, 11 automatable
+incl. five `game_*` quest rules: chase/kills/score/wave/phase) through the full production
+loop — **GREEN**. First campaign-structure milestone: the loop now authors quest content
+(`game` action + `weapon`/`health` fields, committed the prior turn), not just terrain.
+
+### Verification
+
+| Check | Evidence |
+|-------|----------|
+| Milestone run | **GREEN** — 11/11 automatable (`arena-ground`, `player-hero`, `hero-armed`, `hero-tough`, `enemies-chase`, `kills-scored`, `score-awarded`, `wave-advanced`, `run-won`, `draw-budget`, `sim-fps`); 2 critic-owned (`arena-read`, `brief-faithful`) listed, not passed |
+| Loop trace | generate (18 actions: arena, hero, 4 hand-placed NPC enemies, covers, lights, waves config) → gate rejected capsule/ground spawn penetrations → repair (5 actions: raise heights above slab) → QA **SUCCEEDED 11/11** in 2 iterations, 7,009 tokens |
+| Quest proof | real GameRuntime: enemies chased (0.75 m displacement), 2 kills, score 200, wave 2, phase=`won` |
+| DAG + memory | brief persisted and retrievable; tasks reflect the outcome |
+
+Evidence: `harness/runs/loop_runs/20260925-143005-*.json`.

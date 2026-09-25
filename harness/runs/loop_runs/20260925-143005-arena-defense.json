@@ -1,0 +1,474 @@
+{
+  "goal": "Arena Defense",
+  "rules": [
+    {
+      "type": "entity_exists",
+      "target": "Ground Arena",
+      "id": "arena-ground"
+    },
+    {
+      "type": "entity_component",
+      "target": "Player Hero",
+      "component": "MobileController",
+      "id": "player-hero"
+    },
+    {
+      "type": "entity_component",
+      "target": "Player Hero",
+      "component": "WeaponController",
+      "id": "hero-armed"
+    },
+    {
+      "type": "entity_component",
+      "target": "Player Hero",
+      "component": "HealthComponent",
+      "id": "hero-tough"
+    },
+    {
+      "type": "game_enemy_chase_min",
+      "min": 0.5,
+      "id": "enemies-chase"
+    },
+    {
+      "type": "game_kills_min",
+      "min": 2,
+      "id": "kills-scored"
+    },
+    {
+      "type": "game_score_min",
+      "min": 200,
+      "id": "score-awarded"
+    },
+    {
+      "type": "game_wave_reached",
+      "wave": 2,
+      "id": "wave-advanced"
+    },
+    {
+      "type": "game_phase",
+      "phase": "won",
+      "id": "run-won"
+    },
+    {
+      "type": "draw_call_budget",
+      "max": 100,
+      "id": "draw-budget"
+    },
+    {
+      "type": "fps_min",
+      "min": 30,
+      "id": "sim-fps"
+    }
+  ],
+  "verdict": "green",
+  "iterations": [
+    {
+      "iteration": 1,
+      "phase": "generate",
+      "visionNotes": [],
+      "llm": {
+        "model": "mimo-v2.6-flash",
+        "promptTokens": 1882,
+        "completionTokens": 1115,
+        "totalTokens": 2997,
+        "latencySeconds": 12.162,
+        "finishReason": "stop",
+        "attempts": 1
+      },
+      "parse": {
+        "strategy": "raw",
+        "actionCount": 18,
+        "summary": "A compact arena defense scene with a named ground arena, an armed and armored Player Hero on a MobileController, four chaser enemies, lighting, cover props, and a wave-defense game config that runs two waves of two enemies so kills, score, and victory are reachable.",
+        "error": null
+      },
+      "apply": {
+        "applied": 18,
+        "targetMissing": 0,
+        "invalid": 0,
+        "failed": 0,
+        "outcomes": [
+          {
+            "index": 0,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Ground Arena (plane) at [0.0, 0.0, 0.0]",
+            "target": "Ground Arena"
+          },
+          {
+            "index": 1,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added directional light 'Sun' (intensity 2.2)",
+            "target": "Sun"
+          },
+          {
+            "index": 2,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added ambient light 'Fill' (intensity 0.7)",
+            "target": "Fill"
+          },
+          {
+            "index": 3,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Player Hero (capsule) at [0.0, 1.2, 6.0]",
+            "target": "Player Hero"
+          },
+          {
+            "index": 4,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Enemy Alpha (capsule) at [-6.0, 1.2, -8.0]",
+            "target": "Enemy Alpha"
+          },
+          {
+            "index": 5,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Enemy Beta (capsule) at [6.0, 1.2, -8.0]",
+            "target": "Enemy Beta"
+          },
+          {
+            "index": 6,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Enemy Gamma (capsule) at [-8.0, 1.2, -2.0]",
+            "target": "Enemy Gamma"
+          },
+          {
+            "index": 7,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Enemy Delta (capsule) at [8.0, 1.2, -2.0]",
+            "target": "Enemy Delta"
+          },
+          {
+            "index": 8,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Cover Left (box) at [-7.0, 1.0, 3.0]",
+            "target": "Cover Left"
+          },
+          {
+            "index": 9,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Cover Right (box) at [7.0, 1.0, 3.0]",
+            "target": "Cover Right"
+          },
+          {
+            "index": 10,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Cover Center (box) at [0.0, 0.8, -3.0]",
+            "target": "Cover Center"
+          },
+          {
+            "index": 11,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Pillar North (cylinder) at [-12.0, 2.0, -10.0]",
+            "target": "Pillar North"
+          },
+          {
+            "index": 12,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Pillar South (cylinder) at [12.0, 2.0, -10.0]",
+            "target": "Pillar South"
+          },
+          {
+            "index": 13,
+            "type": "event",
+            "status": "applied",
+            "detail": "Wired EveryFrame -> Translate on Enemy Alpha",
+            "target": "Enemy Alpha"
+          },
+          {
+            "index": 14,
+            "type": "event",
+            "status": "applied",
+            "detail": "Wired EveryFrame -> Translate on Enemy Beta",
+            "target": "Enemy Beta"
+          },
+          {
+            "index": 15,
+            "type": "event",
+            "status": "applied",
+            "detail": "Wired EveryFrame -> Translate on Enemy Gamma",
+            "target": "Enemy Gamma"
+          },
+          {
+            "index": 16,
+            "type": "event",
+            "status": "applied",
+            "detail": "Wired EveryFrame -> Translate on Enemy Delta",
+            "target": "Enemy Delta"
+          },
+          {
+            "index": 17,
+            "type": "game",
+            "status": "applied",
+            "detail": "Set waves-mode quest config for player 'Player Hero'"
+          }
+        ],
+        "appliedDescriptions": [
+          "Spawned Ground Arena (plane) at [0.0, 0.0, 0.0]",
+          "Added directional light 'Sun' (intensity 2.2)",
+          "Added ambient light 'Fill' (intensity 0.7)",
+          "Spawned Player Hero (capsule) at [0.0, 1.2, 6.0]",
+          "Spawned Enemy Alpha (capsule) at [-6.0, 1.2, -8.0]",
+          "Spawned Enemy Beta (capsule) at [6.0, 1.2, -8.0]",
+          "Spawned Enemy Gamma (capsule) at [-8.0, 1.2, -2.0]",
+          "Spawned Enemy Delta (capsule) at [8.0, 1.2, -2.0]",
+          "Spawned Cover Left (box) at [-7.0, 1.0, 3.0]",
+          "Spawned Cover Right (box) at [7.0, 1.0, 3.0]",
+          "Spawned Cover Center (box) at [0.0, 0.8, -3.0]",
+          "Spawned Pillar North (cylinder) at [-12.0, 2.0, -10.0]",
+          "Spawned Pillar South (cylinder) at [12.0, 2.0, -10.0]",
+          "Wired EveryFrame -> Translate on Enemy Alpha",
+          "Wired EveryFrame -> Translate on Enemy Beta",
+          "Wired EveryFrame -> Translate on Enemy Gamma",
+          "Wired EveryFrame -> Translate on Enemy Delta",
+          "Set waves-mode quest config for player 'Player Hero'"
+        ]
+      },
+      "gate": {
+        "valid": false,
+        "violations": [
+          {
+            "code": "COLLIDER_PENETRATION_AT_SPAWN",
+            "message": "Dynamic collider 'Player Hero' penetrates fixed collider 'Ground Arena' at spawn",
+            "entity": "Player Hero"
+          },
+          {
+            "code": "COLLIDER_PENETRATION_AT_SPAWN",
+            "message": "Dynamic collider 'Enemy Alpha' penetrates fixed collider 'Ground Arena' at spawn",
+            "entity": "Enemy Alpha"
+          },
+          {
+            "code": "COLLIDER_PENETRATION_AT_SPAWN",
+            "message": "Dynamic collider 'Enemy Beta' penetrates fixed collider 'Ground Arena' at spawn",
+            "entity": "Enemy Beta"
+          },
+          {
+            "code": "COLLIDER_PENETRATION_AT_SPAWN",
+            "message": "Dynamic collider 'Enemy Gamma' penetrates fixed collider 'Ground Arena' at spawn",
+            "entity": "Enemy Gamma"
+          },
+          {
+            "code": "COLLIDER_PENETRATION_AT_SPAWN",
+            "message": "Dynamic collider 'Enemy Delta' penetrates fixed collider 'Ground Arena' at spawn",
+            "entity": "Enemy Delta"
+          }
+        ]
+      },
+      "qa": {
+        "verdict": "skipped",
+        "reason": "invariant gate violation"
+      }
+    },
+    {
+      "iteration": 2,
+      "phase": "repair",
+      "visionNotes": [],
+      "llm": {
+        "model": "mimo-v2.6-flash",
+        "promptTokens": 3604,
+        "completionTokens": 408,
+        "totalTokens": 4012,
+        "latencySeconds": 7.717,
+        "finishReason": "stop",
+        "attempts": 1
+      },
+      "parse": {
+        "strategy": "raw",
+        "actionCount": 5,
+        "summary": "Raise the dynamic capsules above the ground slab top (y=0.5) by modifying their spawn heights so no dynamic collider penetrates the fixed Ground Arena.",
+        "error": null
+      },
+      "apply": {
+        "applied": 5,
+        "targetMissing": 0,
+        "invalid": 0,
+        "failed": 0,
+        "outcomes": [
+          {
+            "index": 0,
+            "type": "modify",
+            "status": "applied",
+            "detail": "Modified Player Hero: position",
+            "target": "Player Hero"
+          },
+          {
+            "index": 1,
+            "type": "modify",
+            "status": "applied",
+            "detail": "Modified Enemy Alpha: position",
+            "target": "Enemy Alpha"
+          },
+          {
+            "index": 2,
+            "type": "modify",
+            "status": "applied",
+            "detail": "Modified Enemy Beta: position",
+            "target": "Enemy Beta"
+          },
+          {
+            "index": 3,
+            "type": "modify",
+            "status": "applied",
+            "detail": "Modified Enemy Gamma: position",
+            "target": "Enemy Gamma"
+          },
+          {
+            "index": 4,
+            "type": "modify",
+            "status": "applied",
+            "detail": "Modified Enemy Delta: position",
+            "target": "Enemy Delta"
+          }
+        ],
+        "appliedDescriptions": [
+          "Modified Player Hero: position",
+          "Modified Enemy Alpha: position",
+          "Modified Enemy Beta: position",
+          "Modified Enemy Gamma: position",
+          "Modified Enemy Delta: position"
+        ]
+      },
+      "gate": {
+        "valid": true,
+        "violations": []
+      },
+      "qa": {
+        "verdict": "SUCCEEDED",
+        "passed": 11,
+        "total": 11,
+        "failedRules": [],
+        "metrics": {
+          "avgFrameTimeMs": 0.2456,
+          "p95FrameTimeMs": 0.4728,
+          "maxFrameTimeMs": 40.0198,
+          "simFpsEstimate": 4071.38,
+          "drawCallEstimate": 11,
+          "instancedBatches": 0,
+          "memoryHeapMb": 17.58,
+          "objectCount": 13,
+          "physicsBodyCount": 11,
+          "eventCount": 4
+        }
+      }
+    }
+  ],
+  "totalTokens": 7009,
+  "totalLatencySeconds": 19.879,
+  "finalReport": {
+    "schemaVersion": 1,
+    "runner": "qa_scenario_runner.mjs",
+    "scenario": "loop_work_scene.json",
+    "goal": "Arena Defense",
+    "timestamp": 1790361005.309,
+    "frames": 600,
+    "fixedDeltaSeconds": 0.016666666666666666,
+    "metrics": {
+      "avgFrameTimeMs": 0.2456,
+      "p95FrameTimeMs": 0.4728,
+      "maxFrameTimeMs": 40.0198,
+      "simFpsEstimate": 4071.38,
+      "drawCallEstimate": 11,
+      "instancedBatches": 0,
+      "memoryHeapMb": 17.58,
+      "objectCount": 13,
+      "physicsBodyCount": 11,
+      "eventCount": 4
+    },
+    "game": {
+      "mode": "waves",
+      "phase": "won",
+      "score": 400,
+      "kills": 4,
+      "wave": 2,
+      "traveledDistance": 0,
+      "settlement": null,
+      "reactions": 0,
+      "shots": 8,
+      "maxEnemyDisplacement": 3.25
+    },
+    "rules": [
+      {
+        "id": "arena-ground",
+        "type": "entity_exists",
+        "pass": true,
+        "detail": "found \"Ground Arena\""
+      },
+      {
+        "id": "player-hero",
+        "type": "entity_component",
+        "pass": true,
+        "detail": "Player Hero components: [MeshRenderer, RigidBody3D, Collider3D, MobileController, WeaponController, HealthComponent]"
+      },
+      {
+        "id": "hero-armed",
+        "type": "entity_component",
+        "pass": true,
+        "detail": "Player Hero components: [MeshRenderer, RigidBody3D, Collider3D, MobileController, WeaponController, HealthComponent]"
+      },
+      {
+        "id": "hero-tough",
+        "type": "entity_component",
+        "pass": true,
+        "detail": "Player Hero components: [MeshRenderer, RigidBody3D, Collider3D, MobileController, WeaponController, HealthComponent]"
+      },
+      {
+        "id": "enemies-chase",
+        "type": "game_enemy_chase_min",
+        "pass": true,
+        "detail": "max enemy displacement=3.25m (min 0.5)"
+      },
+      {
+        "id": "kills-scored",
+        "type": "game_kills_min",
+        "pass": true,
+        "detail": "kills=4 (min 2)"
+      },
+      {
+        "id": "score-awarded",
+        "type": "game_score_min",
+        "pass": true,
+        "detail": "score=400 (min 200)"
+      },
+      {
+        "id": "wave-advanced",
+        "type": "game_wave_reached",
+        "pass": true,
+        "detail": "wave=2 (min 2)"
+      },
+      {
+        "id": "run-won",
+        "type": "game_phase",
+        "pass": true,
+        "detail": "phase=won (expected won)"
+      },
+      {
+        "id": "draw-budget",
+        "type": "draw_call_budget",
+        "pass": true,
+        "detail": "drawCallEstimate=11 (budget 100)"
+      },
+      {
+        "id": "sim-fps",
+        "type": "fps_min",
+        "pass": true,
+        "detail": "simFpsEstimate=4071.4 (min 30)"
+      }
+    ],
+    "passed": 11,
+    "total": 11,
+    "verdict": "SUCCEEDED",
+    "confidence": 1
+  },
+  "error": null,
+  "workScene": "/home/john/Projects/Android-Dev-Studio/harness/scenes/loop_work_scene.json"
+}
