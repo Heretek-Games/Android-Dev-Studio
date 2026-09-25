@@ -128,3 +128,26 @@ describe('GameSession — counters, win/lose conditions, snapshots', () => {
     assert.strictEqual(updates, before);
   });
 });
+
+describe('GameSession — syncScore mirror', () => {
+  test('mirrors external values both directions without triggering a score win', () => {
+    const { flow, session } = started({ targetScore: 10 });
+    session.syncScore(4);
+    assert.strictEqual(session.getScore(), 4);
+    session.syncScore(2);
+    assert.strictEqual(session.getScore(), 2);
+    assert.strictEqual(flow.getPhase(), 'playing');
+
+    session.syncScore(100);
+    assert.strictEqual(session.getScore(), 100);
+    assert.strictEqual(flow.getPhase(), 'playing', 'syncScore never wins on its own');
+  });
+
+  test('clamps negatives and ignores non-finite values', () => {
+    const { session } = started();
+    session.syncScore(-5);
+    assert.strictEqual(session.getScore(), 0);
+    session.syncScore(Number.NaN);
+    assert.strictEqual(session.getScore(), 0);
+  });
+});

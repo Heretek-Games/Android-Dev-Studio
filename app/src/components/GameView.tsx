@@ -27,6 +27,9 @@ import {
   GameObject,
   ElementalReactionComponent,
   DialogueManager,
+  Settlement,
+  BUILDINGS,
+  type BuildingType,
   type DialogueTree,
   type Scene as EngineScene
 } from '@heretek/engine';
@@ -35,21 +38,29 @@ import type { HarnessScene } from '../services/SceneStore';
 import fpsArenaSpec from '../../../harness/config/scenarios/fps_arena.json';
 import drivingSliceSpec from '../../../harness/config/scenarios/driving_slice.json';
 import dungeonSliceSpec from '../../../harness/config/scenarios/dungeon_slice.json';
+import citySliceSpec from '../../../harness/config/scenarios/city_slice.json';
 
-/** `?play=driving|dungeon` boots those slices; anything else boots the arena. */
-type GameKind = 'arena' | 'driving' | 'dungeon';
+/** `?play=driving|dungeon|city` boots those slices; anything else boots the arena. */
+type GameKind = 'arena' | 'driving' | 'dungeon' | 'city';
 
 const gameKindFromUrl = (): GameKind => {
   if (typeof window === 'undefined') return 'arena';
   const play = new URLSearchParams(window.location.search).get('play');
   if (play === 'driving') return 'driving';
   if (play === 'dungeon') return 'dungeon';
+  if (play === 'city') return 'city';
   return 'arena';
 };
 
 interface ArenaGameConfig {
-  mode?: 'waves' | 'distance';
+  mode?: 'waves' | 'distance' | 'build';
   playerName?: string;
+  settlement?: {
+    gridSize?: number;
+    targetPopulation?: number;
+    startingGold?: number;
+    startingFood?: number;
+  };
   targetScore?: number;
   timeLimitSeconds?: number;
   totalWaves?: number;
@@ -78,10 +89,17 @@ export const GameView: React.FC = () => {
 
     const kind = gameKindFromUrl();
     const rawSpec =
-      kind === 'driving' ? drivingSliceSpec : kind === 'dungeon' ? dungeonSliceSpec : fpsArenaSpec;
+      kind === 'driving'
+        ? drivingSliceSpec
+        : kind === 'dungeon'
+          ? dungeonSliceSpec
+          : kind === 'city'
+            ? citySliceSpec
+            : fpsArenaSpec;
     const spec = rawSpec as unknown as HarnessScene;
     const gameConfig = (rawSpec as unknown as { game?: ArenaGameConfig }).game ?? {};
     const playerName = gameConfig.playerName ?? (kind === 'driving' ? 'Player Car' : 'Player Hero');
+    const isCity = kind === 'city';
 
     let disposed = false;
     let renderer: THREE.WebGLRenderer | null = null;
@@ -92,11 +110,11 @@ export const GameView: React.FC = () => {
     const boot = async () => {
       const scene = buildEngineScene(spec) as EngineScene;
       const player = scene.findByName(playerName);
-      if (!player) throw new Error(`GameView: player "${playerName}" missing from the scenario spec`);
-      const health = player.getComponent(HealthComponent);
-      const weapon = player.getComponent(WeaponController);
-      const vehicle = player.getComponent(VehicleController);
-      const playerBody = player.getComponent(RigidBody3D);
+      if (!player && !isCity) throw new Error(`GameView: player "${playerName}" missing from the scenario spec`);
+      const health = player?.getComponent(HealthComponent) ?? null;
+      const weapon = player?.getComponent(WeaponController) ?? null;
+      const vehicle = player?.getComponent(VehicleController) ?? null;
+      const playerBody = player?.getComponent(RigidBody3D) ?? null;
 
       const physicsWorld = new PhysicsWorld();
       await physicsWorld.initialize();
@@ -115,10 +133,24 @@ export const GameView: React.FC = () => {
       const enemySpec = gameConfig.enemy ?? {};
       const enemyHealth = enemySpec.health ?? { maxHealth: 50, destroyOnDeath: true };
 
+      // City mode starts with an empty settlement: the player founds the town.
+      // (The QA scenario ships scripted placements so the headless run is
+      // deterministic; the playable run lets the player place every building.)
+      const settlementSpec = gameConfig.settlement ?? {};
+      const settlement = isCity
+        ? new Settlement(
+            settlementSpec.gridSize ?? 8,
+            settlementSpec.targetPopulation ?? 6,
+            settlementSpec.startingGold ?? 500,
+            settlementSpec.startingFood ?? 20
+          )
+        : null;
+
       runtime = new GameRuntime({
         scene,
-        mode: kind === 'driving' ? 'distance' : 'waves',
+        mode: kind === 'driving' ? 'distance' : isCity ? 'build' : 'waves',
         playerName,
+        settlement: settlement ?? undefined,
         targetScore: gameConfig.targetScore,
         timeLimitSeconds: gameConfig.timeLimitSeconds,
         totalWaves: gameConfig.totalWaves ?? 2,
@@ -160,12 +192,19 @@ export const GameView: React.FC = () => {
         }
       });
 
+      const buildingMeshes = new Map<number, GameObject>();
       const resetArena = () => {
         for (const name of runtime!.spawner.getSpawnedNames()) {
           scene.findByName(name)?.destroy();
         }
-        player.transform.setPosition(PLAYER_START[0], PLAYER_START[1], PLAYER_START[2]);
-        player.transform.setRotation(0, 0, 0);
+        if (isCity) {
+          settlement?.reset();
+          for (const mesh of buildingMeshes.values()) mesh.destroy();
+          buildingMeshes.clear();
+          return;
+        }
+        player!.transform.setPosition(PLAYER_START[0], PLAYER_START[1], PLAYER_START[2]);
+        player!.transform.setRotation(0, 0, 0);
         playerBody?.setPosition(PLAYER_START[0], PLAYER_START[1], PLAYER_START[2]);
         health?.heal(health.maxHealth);
         if (vehicle) {
@@ -197,11 +236,15 @@ export const GameView: React.FC = () => {
             ? 'Heretek Drive — Avenue Sprint'
             : kind === 'dungeon'
               ? 'Heretek Dungeon — Slime Hall'
-              : 'Heretek Arena — Wave Defense',
+              : isCity
+                ? 'Heretek City — Founding'
+                : 'Heretek Arena — Wave Defense',
         hud:
           kind === 'driving'
             ? { scoreLabel: 'Distance', scoreSuffix: 'm', showWave: false, showKills: false, showHealth: false }
-            : undefined,
+            : isCity
+              ? { scoreLabel: 'Pop', showWave: false, showKills: false, showHealth: false }
+              : undefined,
         root: container,
         getHealthFraction: () => (health ? health.healthFraction : 1),
         onStart: () => {
@@ -220,11 +263,15 @@ export const GameView: React.FC = () => {
           runtime!.stop();
           resetArena();
         },
-        hasSave: () => saveSystem.load(SAVE_SLOT) !== null,
+        // Saves capture the session snapshot only; the settlement grid is not
+        // serialized, so save slots stay an arena/dungeon feature.
+        hasSave: () => !isCity && saveSystem.load(SAVE_SLOT) !== null,
         onSave: () => {
+          if (isCity) return;
           saveSystem.save(SAVE_SLOT, runtime!.session.snapshot());
         },
         onLoad: () => {
+          if (isCity) return;
           const envelope = saveSystem.load(SAVE_SLOT);
           if (!envelope) return;
           resetArena();
@@ -236,6 +283,81 @@ export const GameView: React.FC = () => {
         }
       });
       shell.mount();
+
+      // City builder UI: build toolbar, treasury stats, and placement messages.
+      const cityBar = document.createElement('div');
+      cityBar.style.cssText =
+        'position:absolute;left:12px;top:12px;display:flex;flex-direction:column;gap:6px;z-index:60;';
+      const cityStats = document.createElement('div');
+      cityStats.style.cssText =
+        'padding:8px 12px;border-radius:8px;background:rgba(9,9,12,0.85);border:1px solid #3f3f46;' +
+        'color:#e4e4e7;font-size:12px;font-family:system-ui,sans-serif;white-space:pre-line;';
+      const cityMessage = document.createElement('div');
+      cityMessage.style.cssText =
+        'padding:8px 12px;border-radius:8px;background:rgba(127,29,29,0.92);color:#fecaca;' +
+        'font-size:12px;font-family:system-ui,sans-serif;display:none;max-width:240px;';
+      cityBar.append(cityStats, cityMessage);
+      const buildButtons: Record<string, HTMLButtonElement> = {};
+      let selectedBuilding: BuildingType = 'house';
+      if (isCity && settlement) {
+        for (const type of ['house', 'farm', 'market'] as BuildingType[]) {
+          const button = document.createElement('button');
+          const spec = BUILDINGS[type];
+          button.textContent = `${type[0].toUpperCase() + type.slice(1)} (${spec.costGold}g)`;
+          button.style.cssText =
+            'padding:8px 14px;border-radius:8px;border:1px solid #3f3f46;background:rgba(24,24,27,0.9);' +
+            'color:#e4e4e7;font-size:13px;cursor:pointer;font-family:system-ui,sans-serif;text-align:left;';
+          button.addEventListener('click', (event) => {
+            event.stopPropagation();
+            selectedBuilding = type;
+            for (const [key, other] of Object.entries(buildButtons)) {
+              other.style.borderColor = key === type ? '#22c55e' : '#3f3f46';
+              other.style.background = key === type ? 'rgba(20,40,25,0.95)' : 'rgba(24,24,27,0.9)';
+            }
+          });
+          buildButtons[type] = button;
+          cityBar.append(button);
+        }
+        buildButtons.house.style.borderColor = '#22c55e';
+        container.append(cityBar);
+      }
+
+      let messageTimer: ReturnType<typeof setTimeout> | null = null;
+      const showCityMessage = (message: string) => {
+        cityMessage.textContent = message;
+        cityMessage.style.display = 'block';
+        if (messageTimer) clearTimeout(messageTimer);
+        messageTimer = setTimeout(() => {
+          cityMessage.style.display = 'none';
+        }, 2500);
+      };
+
+      const BUILDING_STYLE: Record<BuildingType, { color: string; size: [number, number, number]; y: number }> = {
+        house: { color: '#f59e0b', size: [1.2, 1.2, 1.2], y: 0.6 },
+        farm: { color: '#4ade80', size: [1.4, 0.3, 1.4], y: 0.15 },
+        market: { color: '#38bdf8', size: [1.4, 1.6, 1.4], y: 0.8 }
+      };
+
+      const gridSize = settlementSpec.gridSize ?? 8;
+      const worldOf = (gx: number, gz: number): [number, number] => [gx - gridSize / 2 + 0.5, gz - gridSize / 2 + 0.5];
+
+      const placeBuildingAt = (gx: number, gz: number): void => {
+        if (!settlement || runtime!.flow.getPhase() !== 'playing') return;
+        const result = settlement.place(selectedBuilding, gx, gz);
+        if (result.id === null) {
+          showCityMessage(result.reason ?? 'Cannot build here.');
+          return;
+        }
+        const style = BUILDING_STYLE[selectedBuilding];
+        const [wx, wz] = worldOf(gx, gz);
+        const mesh = new GameObject(`${selectedBuilding} ${result.id}`);
+        mesh.transform.setPosition(wx, style.y, wz);
+        mesh.addComponent(
+          new MeshRenderer({ shape: 'box', size: style.size, color: style.color, roughness: 0.6 })
+        );
+        scene.addGameObject(mesh);
+        buildingMeshes.set(result.id, mesh);
+      };
 
       // Minimal dialogue overlay driven by the real DialogueManager.
       const dialoguePanel = document.createElement('div');
@@ -289,10 +411,12 @@ export const GameView: React.FC = () => {
             ? { ammo: weapon.currentAmmo, reloading: weapon.isReloading, damage: weapon.damage, canFire: weapon.canFire() }
             : null,
         player: () => {
+          if (!player) return null;
           const p = player.transform.position;
           const r = player.transform.rotation;
           return { x: p.x, y: p.y, z: p.z, pitch: r.x, yaw: r.y };
         },
+        settlement: () => settlement?.snapshot() ?? null,
         enemies: () =>
           runtime!.spawner.getSpawnedNames().map((name) => {
             const e = scene.findByName(name);
@@ -349,6 +473,28 @@ export const GameView: React.FC = () => {
 
       const camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 300);
       const cameraTarget = new THREE.Vector3();
+      if (isCity) {
+        // Fixed high overview of the build grid; the player founds the town by clicking plots.
+        camera.position.set(0, 26, 30);
+        cameraTarget.set(0, 0, 0);
+        camera.lookAt(cameraTarget);
+        const groundMesh =
+          scene.findByName('Settlement Ground')?.getComponent(MeshRenderer)?.threeMesh ?? null;
+        const raycaster = new THREE.Raycaster();
+        renderer!.domElement.addEventListener('pointerdown', (event: PointerEvent) => {
+          if (!settlement || runtime!.flow.getPhase() !== 'playing' || !groundMesh) return;
+          const rect = renderer!.domElement.getBoundingClientRect();
+          const ndc = new THREE.Vector2(
+            ((event.clientX - rect.left) / rect.width) * 2 - 1,
+            -((event.clientY - rect.top) / rect.height) * 2 + 1
+          );
+          raycaster.setFromCamera(ndc, camera);
+          const hits = raycaster.intersectObject(groundMesh, false);
+          if (!hits.length) return;
+          const point = hits[0].point;
+          placeBuildingAt(Math.floor(point.x + gridSize / 2), Math.floor(point.z + gridSize / 2));
+        });
+      }
 
       context = new EngineContext();
       context.setScene(scene);
@@ -389,7 +535,7 @@ export const GameView: React.FC = () => {
       };
 
       const aimAndFire = () => {
-        if (!weapon || !runtime) return;
+        if (!weapon || !runtime || !player) return;
         let nearest: GameObject | null = null;
         let best = Number.POSITIVE_INFINITY;
         for (const name of runtime.spawner.getSpawnedNames()) {
@@ -425,12 +571,19 @@ export const GameView: React.FC = () => {
         if (runtime.flow.isPlaying()) {
           if (kind === 'driving') {
             updateDrivingInput();
-          } else {
+          } else if (!isCity) {
             aimAndFire();
           }
           context.step(dt);
         }
         runtime.update(dt);
+        if (isCity && settlement) {
+          const snapshot = settlement.snapshot();
+          runtime.session.syncScore(snapshot.population);
+          cityStats.textContent =
+            `Pop ${snapshot.population}/${settlement.getTargetPopulation()}\n` +
+            `Gold ${Math.floor(snapshot.gold)} · Food ${Math.floor(snapshot.food)}`;
+        }
         shell.update(dt);
 
         if (nativeBridge?.log && kind === 'driving') {
@@ -454,13 +607,18 @@ export const GameView: React.FC = () => {
           }
         }
 
-        const p = player.transform.position;
-        if (kind === 'driving') {
-          camera.position.lerp(new THREE.Vector3(p.x, p.y + 4.5, p.z + 9), 0.18);
-          cameraTarget.lerp(new THREE.Vector3(p.x, p.y + 0.8, p.z - 4), 0.25);
-        } else {
-          camera.position.lerp(new THREE.Vector3(p.x, p.y + 7, p.z + 11), 0.12);
-          cameraTarget.lerp(new THREE.Vector3(p.x, p.y + 1, p.z), 0.2);
+        if (isCity) {
+          camera.position.lerp(new THREE.Vector3(0, 26, 30), 0.08);
+          cameraTarget.lerp(new THREE.Vector3(0, 0, 0), 0.1);
+        } else if (player) {
+          const p = player.transform.position;
+          if (kind === 'driving') {
+            camera.position.lerp(new THREE.Vector3(p.x, p.y + 4.5, p.z + 9), 0.18);
+            cameraTarget.lerp(new THREE.Vector3(p.x, p.y + 0.8, p.z - 4), 0.25);
+          } else {
+            camera.position.lerp(new THREE.Vector3(p.x, p.y + 7, p.z + 11), 0.12);
+            cameraTarget.lerp(new THREE.Vector3(p.x, p.y + 1, p.z), 0.2);
+          }
         }
         camera.lookAt(cameraTarget);
         renderer.render(scene.threeScene, camera);

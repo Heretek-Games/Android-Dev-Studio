@@ -102,6 +102,17 @@ export class GameSession {
     this.notify();
   }
 
+  /**
+   * Mirror an external simulation value into the score display (e.g. settlement
+   * population in build mode). Unlike addScore it can move both directions and
+   * never triggers a score win — the owning runtime decides the phase.
+   */
+  public syncScore(value: number): void {
+    if (!Number.isFinite(value)) return;
+    this.score = Math.max(0, value);
+    this.notify();
+  }
+
   /** Register an enemy kill: increments kills and awards scorePerKill. */
   public registerKill(): void {
     if (!this.flow.isPlaying()) return;
