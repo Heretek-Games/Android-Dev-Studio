@@ -44,6 +44,9 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
     private val syncCostsNs = ArrayList<Long>(1024)
     private var lastFrameNs: Long = 0
     private var syncFrames = 0
+    private var syncPushes = 0
+    private var probeView: WebView? = null
+    private var probeWarned = false
 
     private inner class SyncBridge {
         @JavascriptInterface
@@ -62,6 +65,10 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
                 }
                 pendingSlots = slots
                 pendingXyz = xyz
+                if (syncPushes == 0) {
+                    android.util.Log.i("HeretekTier2", "sync probe: first push received (${slots.size} movers)")
+                }
+                syncPushes++
             } catch (e: Exception) {
                 android.util.Log.w("HeretekTier2", "sync payload parse failed: ${e.message}")
             }
@@ -107,14 +114,14 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         )
 
         // Experiment 1: hidden WebView driving the fixed-dt waypoint stepper.
-        // Zero-size keeps it off-screen; JS runs on the WebView thread while
-        // the frame loop below consumes staged batches on the UI thread.
+        // Driven explicitly via evaluateJavascript (rAF throttles in hidden views).
         val probeView = WebView(this)
         probeView.layoutParams = ViewGroup.LayoutParams(1, 1)
         probeView.settings.javaScriptEnabled = true
         probeView.addJavascriptInterface(SyncBridge(), "Sync")
         (surfaceView.parent as ViewGroup).addView(probeView)
         probeView.loadUrl("file:///android_asset/sync_probe.html")
+        this.probeView = probeView
     }
 
     private fun copyAsset(assetPath: String, target: File): File {
@@ -166,7 +173,20 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
                     frameDeltasNs.add(nowNs - lastFrameNs)
                 }
                 lastFrameNs = nowNs
-                // Experiment 1: apply the latest staged sync batch, timed.
+                // Experiment 1: tick the JS stepper explicitly (hidden views
+                // throttle rAF), then apply the latest staged sync batch, timed.
+                try {
+                    probeView?.evaluateJavascript(
+                        "window.__probeTick ? window.__probeTick(Date.now()) : 'no-probe'"
+                    ) { value ->
+                        if (!probeWarned && value != null && (value.contains("no-probe") || value.contains("undefined"))) {
+                            probeWarned = true
+                            android.util.Log.w("HeretekTier2", "sync probe page not ready: $value")
+                        }
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.w("HeretekTier2", "probe tick failed: ${e.message}")
+                }
                 val slots = pendingSlots
                 val xyz = pendingXyz
                 if (slots != null && xyz != null) {
