@@ -44,6 +44,7 @@ export class AnimeCelShader extends Component {
   }
 
   public applyShader(): void {
+    if (!this.gameObject) return; // safe to call before attachment
     const mr = this.gameObject.components.find((c: any) => c.threeMesh) as any;
     if (!mr || !mr.threeMesh) return;
 

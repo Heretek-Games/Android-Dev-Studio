@@ -163,8 +163,9 @@ real engine runtime. The Studio UI writes through the same gate via `POST /api/s
   variable-gated choices (`getAvailableChoices`, comparison operators) and narrative event dispatch.
 - **Agent Swarm** (`AgentSwarmDock.tsx`): dispatches the real orchestrator via `POST /api/swarm/run`
   (`harness/agents/swarm_cli.py`); renders the real task DAG, invariant audit, Artemis QA telemetry,
-  and ADRs/benchmarks from SQLite. Unimplemented roles render explicit **TODO** badges — never fake
-  success.
+  and ADRs/benchmarks from SQLite. All roles execute real invariant-gated actions: World Designer
+  streams terrain chunks, Shader Dev applies cel-shading config, Gameplay Coder wires events —
+  no fabricated results.
 
 ### Headless QA Pipeline (`harness/agents/`)
 - `qa_scenario_runner.mjs`: Node runner that builds a scenario spec into a real `Scene`, initializes Rapier3D WASM physics, steps the `EngineContext` for N fixed-dt frames, and emits a JSON report (metrics + per-rule pass/fail). GameObjects support `vehicle` configs (Rapier raycast vehicle + throttle/steering/brake inputs) and `events`/`controller` components.

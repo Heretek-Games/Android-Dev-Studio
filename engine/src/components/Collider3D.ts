@@ -77,8 +77,9 @@ export class Collider3D extends Component {
       });
       this.rapierCollider = physics.world.createCollider(colliderDesc);
     }
-    if (this.massOverride !== null && this.rapierCollider) {
-      this.rapierCollider.setMass(this.massOverride);
+    if (this.massOverride !== null) {
+      // Route through setMass so the parent body's mass properties recompute
+      this.setMass(this.massOverride);
     }
     (this.rapierCollider as any).userData = this.gameObject;
   }
@@ -86,11 +87,15 @@ export class Collider3D extends Component {
   /**
    * Overrides the collider-derived mass (density × volume). Used by RigidBody3D
    * to distribute its configured body mass across the object's colliders.
+   * Recomputes the parent body's mass properties immediately so forces and
+   * impulses applied before the first physics step use the correct mass.
    */
   public setMass(mass: number): void {
     this.massOverride = mass;
     if (this.rapierCollider) {
       this.rapierCollider.setMass(mass);
+      const rb = this.gameObject.getComponent(RigidBody3D);
+      rb?.rapierBody?.recomputeMassPropertiesFromColliders();
     }
   }
 

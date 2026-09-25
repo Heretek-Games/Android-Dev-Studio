@@ -93,6 +93,8 @@ export class RigidBody3D extends Component {
         for (const collider of colliders) {
           collider.setMass(perCollider);
         }
+        // Make the new mass effective immediately (not only after the next step)
+        this.rapierBody.recomputeMassPropertiesFromColliders();
       }
     }
   }
