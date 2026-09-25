@@ -95,7 +95,7 @@ python3 harness/agents/emulator_smoke.py --reuse --skip-build
 The native renderer logs to logcat under the `HeretekTier2` tag:
 
 ```
-Scene ready — draws=67 instances=0 terrainLeaves=64 terrainVertices=69696
+Scene ready — draws=67 instances=0 terrainLeaves=64 terrainVertices=77888
 swapchain.create: ...  /  surface caps: extent=2400x1080 minImages=3 formats=5
 swapchain created: 0x...  /  createSurface complete: swapchain=0x... images=4 commandBuffers=4
 frame draw state: instances=3 indirectCmds=1 terrainDraws=64

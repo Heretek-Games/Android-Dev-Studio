@@ -575,7 +575,7 @@ bool VulkanRenderer::createPipelines() {
 
   // ---- Terrain pipeline (no descriptor sets; push-constant viewProj) ------
   VkShaderModule terrainVertexModule = loadShader(shaderDir_ + "/terrain.vert.spv");
-  VkShaderModule terrainFragmentModule = loadShader(shaderDir_ + "/scene.frag.spv");
+  VkShaderModule terrainFragmentModule = loadShader(shaderDir_ + "/terrain.frag.spv");
   if (terrainVertexModule == VK_NULL_HANDLE || terrainFragmentModule == VK_NULL_HANDLE) return false;
 
   VkPipelineShaderStageCreateInfo terrainStages[2]{};

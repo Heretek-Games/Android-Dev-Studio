@@ -118,7 +118,7 @@ logcat + `screencap` + in-renderer frame readback (`nativeCaptureFrame` → PPM)
 |-------|--------|
 | Tier 1 APK launch + WebGL studio render | ✅ after fixes (screenshot: studio UI with 3D viewport) |
 | `POST /api/deploy {real:true}` full path | ✅ "Successfully installed and launched on emulator-5554" |
-| Tier 2 native init (scene parse + upload) | ✅ `draws=67 terrainLeaves=64 terrainVertices=69696` |
+| Tier 2 native init (scene parse + upload) | ✅ `draws=67 terrainLeaves=64 terrainVertices=77888` (grid + LOD skirts) |
 | Tier 2 Vulkan swapchain + pipelines | ✅ real handle, 4 images, 4 command buffers |
 | Tier 2 frame loop | ✅ acquire/submit/present = `VK_SUCCESS`, steady ~61.5 FPS (300 frames / 4.88s) |
 | Tier 2 rendered output | ✅ live display + readback PPM (terrain + blue player + orange crate, correct orientation) |

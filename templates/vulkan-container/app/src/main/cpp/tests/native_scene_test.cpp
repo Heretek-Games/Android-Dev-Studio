@@ -81,14 +81,22 @@ int main(int argc, char** argv) {
   sampleLeaf.maxZ = 16;
   sampleLeaf.lod = 3;
   const TerrainMeshData sampleMesh = generateTerrainMesh(sampleLeaf, 9, 42, 10.0f);
-  CHECK(sampleMesh.vertexCount() == 81, "9x9 grid -> 81 vertices");
-  CHECK(sampleMesh.indexCount() == 8 * 8 * 6, "8x8 cells -> 384 indices");
+  const uint32_t samplePerimeter = 4 * 9 - 4;
+  CHECK(sampleMesh.vertexCount() == 81 + samplePerimeter, "9x9 grid + perimeter skirt vertices");
+  CHECK(sampleMesh.indexCount() == 8 * 8 * 6 + samplePerimeter * 6, "grid quads + skirt quads");
+  CHECK(sampleMesh.indices[sampleMesh.indexCount() - 1] < sampleMesh.vertexCount(),
+        "local indices stay inside the leaf vertex range");
+  bool skirtBelowSurface = false;
+  for (uint32_t i = 81; i < sampleMesh.vertexCount(); i++) {
+    if (sampleMesh.vertices[i * 6 + 1] < 0.0f) skirtBelowSurface = true;
+  }
+  CHECK(skirtBelowSurface, "skirt vertices hang below the surface (crack cover)");
   CHECK(sampleMesh.vertices[0] == -16.0f && sampleMesh.vertices[2] == -16.0f,
         "grid starts at the leaf origin");
   CHECK(sampleMesh.vertices[80 * 6] == 16.0f, "grid ends at the leaf max X");
   bool heightsInRange = true;
   bool normalsUnit = true;
-  for (uint32_t i = 0; i < sampleMesh.vertexCount(); i++) {
+  for (uint32_t i = 0; i < 81; i++) {  // surface grid only; the skirt hangs below
     const float y = sampleMesh.vertices[i * 6 + 1];
     if (y < 0.0f || y > 10.0f) heightsInRange = false;
     const float nx = sampleMesh.vertices[i * 6 + 3];
@@ -102,9 +110,11 @@ int main(int argc, char** argv) {
 
   const TerrainMeshPlan plan = planTerrainMeshes(scene.terrainLod, 3, 1337, 12.0f);
   CHECK(plan.leaves == 64, "mesh plan covers every LOD leaf");
-  CHECK(plan.maxVerticesPerLeaf == 33 * 33, "finest leaf uses 33x33 vertices");
-  CHECK(plan.totalVertices == 64u * 33u * 33u, "total vertex budget is deterministic (69,696)");
-  CHECK(plan.totalIndices == 64u * 32u * 32u * 6u, "total index budget is deterministic (393,216)");
+  const uint32_t finestVertices = 33 * 33 + (4 * 33 - 4);  // grid + skirt
+  const uint32_t finestIndices = 32 * 32 * 6 + (4 * 33 - 4) * 6;
+  CHECK(plan.maxVerticesPerLeaf == finestVertices, "finest leaf uses 33x33 grid + skirt vertices");
+  CHECK(plan.totalVertices == 64u * finestVertices, "total vertex budget is deterministic (77,888)");
+  CHECK(plan.totalIndices == 64u * finestIndices, "total index budget is deterministic (458,496)");
 
   // ---- GPU packing: single buffers + per-leaf indirect draw commands ----
   const TerrainGpuData packed = packTerrainGpuData(scene.terrainLod, 3, 1337, 12.0f);
@@ -114,18 +124,21 @@ int main(int argc, char** argv) {
   CHECK(packed.commands.size() == 64, "one indirect draw command per leaf");
   CHECK(packed.commands[0].firstIndex == 0 && packed.commands[0].vertexOffset == 0,
         "first command starts at the buffer origins");
-  CHECK(packed.commands[1].firstIndex == 32u * 32u * 6u, "second command offsets past the first index range");
-  CHECK(packed.commands[1].vertexOffset == static_cast<int32_t>(33 * 33),
+  CHECK(packed.commands[1].firstIndex == finestIndices, "second command offsets past the first index range");
+  CHECK(packed.commands[1].vertexOffset == static_cast<int32_t>(finestVertices),
         "second command offsets past the first vertex range");
   CHECK(packed.commands[63].firstIndex + packed.commands[63].indexCount == plan.totalIndices,
         "last command covers the buffer tail");
   CHECK(packed.commands[0].instanceCount == 1, "terrain draws are non-instanced");
 
+  // Local indices must stay inside a single leaf's vertex range (the draw's
+  // vertexOffset rebases them). A global bound would hide the uint16 overflow
+  // that absolute indices hit once the shared buffer passes 65,535 vertices.
   uint16_t maxIndex = 0;
   for (const uint16_t index : packed.indices) {
     if (index > maxIndex) maxIndex = index;
   }
-  CHECK(maxIndex < plan.totalVertices, "rebased indices stay inside the vertex buffer");
+  CHECK(maxIndex < finestVertices, "indices are leaf-local (no shared-buffer uint16 overflow)");
 
   const TerrainGpuData packedAgain = packTerrainGpuData(scene.terrainLod, 3, 1337, 12.0f);
   CHECK(packed.vertices == packedAgain.vertices && packed.indices == packedAgain.indices,

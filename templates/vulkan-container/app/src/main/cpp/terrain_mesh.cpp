@@ -65,6 +65,12 @@ TerrainMeshData generateTerrainMesh(const TerrainLodRecord& leaf, uint32_t resol
   TerrainMeshData mesh;
   if (resolution < 2) resolution = 2;
 
+  // Skirt depth scales with the leaf size: neighbours at a coarser LOD sample the
+  // same heightmap, so their shared-edge mismatch is bounded by the local height
+  // variation — cover the full amplitude with a small margin.
+  const float leafSize = std::max(leaf.maxX - leaf.minX, leaf.maxZ - leaf.minZ);
+  const float skirtDepth = std::max(maxHeight * 1.05f, leafSize * 0.05f);
+
   const float stepX = (leaf.maxX - leaf.minX) / static_cast<float>(resolution - 1);
   const float stepZ = (leaf.maxZ - leaf.minZ) / static_cast<float>(resolution - 1);
 
@@ -119,6 +125,54 @@ TerrainMeshData generateTerrainMesh(const TerrainLodRecord& leaf, uint32_t resol
       mesh.indices.push_back(i3);
     }
   }
+
+  // ---- Skirt ---------------------------------------------------------------
+  // Duplicate the perimeter ring lowered by `skirtDepth` and stitch it to the
+  // surface ring, so visible cracks between adjacent LOD leaves are covered.
+  const uint32_t surfaceVerts = resolution * resolution;
+  for (uint32_t zi = 0; zi < resolution; zi++) {
+    for (uint32_t xi = 0; xi < resolution; xi++) {
+      const bool onPerimeter = xi == 0 || zi == 0 || xi == resolution - 1 || zi == resolution - 1;
+      if (!onPerimeter) continue;
+      const size_t base = (static_cast<size_t>(zi) * resolution + xi) * 6;
+      mesh.vertices.push_back(mesh.vertices[base + 0]);
+      mesh.vertices.push_back(mesh.vertices[base + 1] - skirtDepth);
+      mesh.vertices.push_back(mesh.vertices[base + 2]);
+      mesh.vertices.push_back(mesh.vertices[base + 3]);
+      mesh.vertices.push_back(mesh.vertices[base + 4]);
+      mesh.vertices.push_back(mesh.vertices[base + 5]);
+    }
+  }
+  // Map surface ring vertex -> skirt vertex index.
+  const uint32_t skirtBase = surfaceVerts;
+  std::vector<int32_t> skirtIndex(surfaceVerts, -1);
+  uint32_t skirtCount = 0;
+  for (uint32_t zi = 0; zi < resolution; zi++) {
+    for (uint32_t xi = 0; xi < resolution; xi++) {
+      const bool onPerimeter = xi == 0 || zi == 0 || xi == resolution - 1 || zi == resolution - 1;
+      if (onPerimeter) skirtIndex[zi * resolution + xi] = static_cast<int32_t>(skirtBase + skirtCount++);
+    }
+  }
+  auto quad = [&](uint32_t aTop, uint32_t bTop) {
+    const int32_t aBottom = skirtIndex[aTop];
+    const int32_t bBottom = skirtIndex[bTop];
+    if (aBottom < 0 || bBottom < 0) return;
+    mesh.indices.push_back(static_cast<uint16_t>(aTop));
+    mesh.indices.push_back(static_cast<uint16_t>(bTop));
+    mesh.indices.push_back(static_cast<uint16_t>(aBottom));
+    mesh.indices.push_back(static_cast<uint16_t>(bTop));
+    mesh.indices.push_back(static_cast<uint16_t>(bBottom));
+    mesh.indices.push_back(static_cast<uint16_t>(aBottom));
+  };
+  for (uint32_t xi = 0; xi + 1 < resolution; xi++) {
+    quad(xi, xi + 1);                                             // north edge (zi = 0)
+    quad((resolution - 1) * resolution + xi, (resolution - 1) * resolution + xi + 1); // south
+  }
+  for (uint32_t zi = 0; zi + 1 < resolution; zi++) {
+    quad(zi * resolution, (zi + 1) * resolution);                 // west edge (xi = 0)
+    quad(zi * resolution + resolution - 1, (zi + 1) * resolution + resolution - 1);   // east
+  }
+
   return mesh;
 }
 
@@ -157,8 +211,11 @@ TerrainGpuData packTerrainGpuData(const std::vector<TerrainLodRecord>& leaves, u
     command.vertexOffset = static_cast<int32_t>(vertexOffset);
 
     data.vertices.insert(data.vertices.end(), mesh.vertices.begin(), mesh.vertices.end());
+    // Indices stay local to the leaf; the indirect command's vertexOffset rebases
+    // them. Absolute uint16 indices overflow once the shared buffer passes 65,535
+    // vertices (the 64-leaf sample alone has 69,696).
     for (const uint16_t index : mesh.indices) {
-      data.indices.push_back(static_cast<uint16_t>(index + vertexOffset));
+      data.indices.push_back(index);
     }
     data.commands.push_back(command);
 
