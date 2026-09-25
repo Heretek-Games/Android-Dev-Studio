@@ -20,6 +20,58 @@ if (fs.existsSync(envProdPath)) {
   }
 }
 
+// Dev-server bridge to the harness scene store:
+// GET  /api/scene -> harness/scenes/active_scene.json (source of truth)
+// POST /api/scene -> validates through the transactional invariant gate,
+//                    persists, and syncs a project_memory snapshot.
+function sceneBridgePlugin(): Plugin {
+  return {
+    name: 'heretek-scene-bridge',
+    configureServer(server) {
+      server.middlewares.use('/api/scene', (req, res) => {
+        const repoRoot = path.resolve(__dirname, '..');
+        const cli = ['harness/agents/scene_store_cli.py'];
+        res.setHeader('Content-Type', 'application/json');
+
+        if (req.method === 'GET') {
+          const proc = spawn('python3', [...cli, 'get'], { cwd: repoRoot });
+          let out = '';
+          let err = '';
+          proc.stdout.on('data', d => { out += d; });
+          proc.stderr.on('data', d => { err += d; });
+          proc.on('close', () => {
+            res.statusCode = out ? 200 : 502;
+            res.end(out || JSON.stringify({ error: err || 'scene store unavailable' }));
+          });
+          return;
+        }
+
+        if (req.method === 'POST') {
+          let body = '';
+          req.on('data', chunk => { body += chunk; });
+          req.on('end', () => {
+            const proc = spawn('python3', [...cli, 'save'], { cwd: repoRoot });
+            let out = '';
+            let err = '';
+            proc.stdout.on('data', d => { out += d; });
+            proc.stderr.on('data', d => { err += d; });
+            proc.on('close', code => {
+              res.statusCode = code === 0 ? 200 : 409; // 409 = invariant rejection
+              res.end(out || JSON.stringify({ ok: false, error: err || 'save failed' }));
+            });
+            proc.stdin.write(body);
+            proc.stdin.end();
+          });
+          return;
+        }
+
+        res.statusCode = 405;
+        res.end(JSON.stringify({ error: 'GET or POST required' }));
+      });
+    }
+  };
+}
+
 // Dev-server bridge to the real headless Artemis QA pipeline:
 // POST /api/qa/run { goal, scenario?, frames? } -> spawns artemis_qa_runner.py
 // and returns its JSON report (real engine metrics + rule evaluation).
@@ -77,7 +129,7 @@ function qaBridgePlugin(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [react(), qaBridgePlugin()],
+  plugins: [react(), sceneBridgePlugin(), qaBridgePlugin()],
   define: {
     __LLM_MODEL__: JSON.stringify(llmModel)
   },
