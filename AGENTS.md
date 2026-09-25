@@ -249,8 +249,38 @@ python3 -m harness.loop.regression_bisect --good <rev> --bad <rev> \
   multimodal route (`auto/best-vision`); `critique_frame()` also accepts real rendered frames.
 - `regression_bisect.py` — binary search over `(good, bad]` with per-step worktrees.
 - `report.py` — dashboard (verdicts, tokens, latency, iterations-to-green).
-- Tests: `python3 -m unittest discover -s harness/loop -p "test_*.py"` (63 tests, hermetic:
+- `production_run.py` — brief-to-verdict recursive pass: mandatory memory retrieval,
+  builder-critic DAG planning, injected build loop, gate judgment (green requires loop
+  convergence AND zero failed criteria; otherwise FAILED with defects), scope-reduction
+  candidates for unautomatable criteria, DAG task-state ingestion.
+- Tests: `python3 -m unittest discover -s harness/loop -p "test_*.py"` (hermetic:
   injected LLM transport / fake QA).
+
+### Game Production Briefs (`harness/briefs/`)
+
+Every prompt compiles into a validated `game_brief.json` before builder work starts:
+fantasy, experience, world scope, required systems, look-dev, the Snapdragon 8 Elite /
+Android 16 performance contract (60 FPS, ≤100 draw calls, tri/texture/physics/APK
+budgets), and a binary acceptance matrix across the five axes. Criteria with `qaRule`
+attachments compile to headless-QA runner rules; the rest are critic-owned.
+
+```bash
+# Brief-driven production run (records the brief, plans the DAG, runs the loop)
+python3 -m harness.loop.production_run --brief harness/briefs/examples/island_collection_quest.json \
+  --max-iterations 3 --max-tokens 30000 --frames 300
+
+# Opt-in vision critique inside the Artemis QA runner (advisory; never changes verdicts)
+python3 harness/agents/artemis_qa_runner.py --goal "..." --scenario ... --vision
+```
+
+- `harness/memory/project_memory.py` — `production_briefs` table: `record_brief`,
+  `get_brief`, `list_briefs`, plus `query_production_context()` (brief + ADRs +
+  failed tasks + latest QA), the bundle no agent may build without consulting.
+- `harness/orchestrator/agent_swarm.py` — `plan_from_brief()` builds one builder task
+  plus one dependent critic task per acceptance criterion; `get_ready_tasks()`
+  schedules dependency-free pending tasks. Builders never grade their own work.
+- Example: `harness/briefs/examples/island_collection_quest.json` (drivable island +
+  collection quest; 6 automatable rules, 2 critic-owned).
 
 First live run (2026-09-25): generate (41 actions) → gate rejected a spawn penetration →
 repair (1 action: raise the player above the collider) → **QA SUCCEEDED 10/10** in 2

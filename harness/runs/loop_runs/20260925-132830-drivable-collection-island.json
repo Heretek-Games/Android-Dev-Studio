@@ -1,0 +1,164 @@
+{
+  "goal": "Drivable Collection Island",
+  "rules": [
+    {
+      "type": "entity_exists",
+      "target": "Island Ground",
+      "id": "island-ground"
+    },
+    {
+      "type": "entity_component",
+      "target": "Player Car",
+      "component": "VehicleController",
+      "id": "player-car"
+    },
+    {
+      "type": "object_count",
+      "min": 8,
+      "max": 40,
+      "id": "buoy-field"
+    },
+    {
+      "type": "event_attached",
+      "target": "Buoy 1",
+      "action": "RotateY",
+      "id": "buoys-spin"
+    },
+    {
+      "type": "draw_call_budget",
+      "max": 100,
+      "id": "draw-budget"
+    },
+    {
+      "type": "fps_min",
+      "min": 30,
+      "id": "sim-fps"
+    }
+  ],
+  "verdict": "error",
+  "iterations": [
+    {
+      "iteration": 1,
+      "phase": "generate",
+      "visionNotes": [],
+      "llm": {
+        "model": "mimo-v2.6-flash",
+        "promptTokens": 875,
+        "completionTokens": 928,
+        "totalTokens": 1803,
+        "latencySeconds": 12.9,
+        "finishReason": "stop",
+        "attempts": 1
+      },
+      "parse": {
+        "strategy": "raw",
+        "actionCount": 10,
+        "summary": "A compact island driving scene with a fixed ground island, a VehicleController-driven Player Car, and spinning marker buoys including an event-driven Buoy 1, kept well under the draw budget.",
+        "error": null
+      },
+      "apply": {
+        "applied": 10,
+        "targetMissing": 0,
+        "invalid": 0,
+        "failed": 0,
+        "outcomes": [
+          {
+            "index": 0,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Island Ground (plane) at [0.0, 0.0, 0.0]",
+            "target": "Island Ground"
+          },
+          {
+            "index": 1,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Player Car (box) at [0.0, 1.0, 0.0]",
+            "target": "Player Car"
+          },
+          {
+            "index": 2,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Buoy 1 (cylinder) at [12.0, 1.0, 8.0]",
+            "target": "Buoy 1"
+          },
+          {
+            "index": 3,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Buoy 2 (cylinder) at [-14.0, 1.0, -6.0]",
+            "target": "Buoy 2"
+          },
+          {
+            "index": 4,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Buoy 3 (cylinder) at [4.0, 1.0, -16.0]",
+            "target": "Buoy 3"
+          },
+          {
+            "index": 5,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Island Rock (box) at [-10.0, 1.25, 12.0]",
+            "target": "Island Rock"
+          },
+          {
+            "index": 6,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Finish Arch (box) at [0.0, 2.5, -22.0]",
+            "target": "Finish Arch"
+          },
+          {
+            "index": 7,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added directional light 'Sun' (intensity 2.0)",
+            "target": "Sun"
+          },
+          {
+            "index": 8,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added ambient light 'Fill Ambient' (intensity 0.6)",
+            "target": "Fill Ambient"
+          },
+          {
+            "index": 9,
+            "type": "event",
+            "status": "applied",
+            "detail": "Wired EveryFrame -> RotateY on Buoy 1",
+            "target": "Buoy 1"
+          }
+        ],
+        "appliedDescriptions": [
+          "Spawned Island Ground (plane) at [0.0, 0.0, 0.0]",
+          "Spawned Player Car (box) at [0.0, 1.0, 0.0]",
+          "Spawned Buoy 1 (cylinder) at [12.0, 1.0, 8.0]",
+          "Spawned Buoy 2 (cylinder) at [-14.0, 1.0, -6.0]",
+          "Spawned Buoy 3 (cylinder) at [4.0, 1.0, -16.0]",
+          "Spawned Island Rock (box) at [-10.0, 1.25, 12.0]",
+          "Spawned Finish Arch (box) at [0.0, 2.5, -22.0]",
+          "Added directional light 'Sun' (intensity 2.0)",
+          "Added ambient light 'Fill Ambient' (intensity 0.6)",
+          "Wired EveryFrame -> RotateY on Buoy 1"
+        ]
+      },
+      "gate": {
+        "valid": true,
+        "violations": []
+      },
+      "qa": {
+        "verdict": "error",
+        "error": "QA runner failed (exit 3): {\"error\":\"Error: VehicleController requires at least one wheel\\n    at new VehicleController (file:///home/john/Projects/Android-Dev-Studio/engine/dist/vehicles/VehicleController.js:27:19)\\n    at buildScene (file:///home/john/Projects/Android-Dev-Studio/harness/agents/qa_scenario_runner.mjs:113:25)\\n    at main (file:///home/john/Projects/Android-Dev-Studio/harness/agents/qa_scenario_runner.mjs:4"
+      }
+    }
+  ],
+  "totalTokens": 1803,
+  "totalLatencySeconds": 12.9,
+  "finalReport": null,
+  "error": "QA runner failed: QA runner failed (exit 3): {\"error\":\"Error: VehicleController requires at least one wheel\\n    at new VehicleController (file:///home/john/Projects/Android-Dev-Studio/engine/dist/vehicles/VehicleController.js:27:19)\\n    at buildScene (file:///home/john/Projects/Android-Dev-Studio/harness/agents/qa_scenario_runner.mjs:113:25)\\n    at main (file:///home/john/Projects/Android-Dev-Studio/harness/agents/qa_scenario_runner.mjs:4",
+  "workScene": "/home/john/Projects/Android-Dev-Studio/harness/scenes/loop_work_scene.json"
+}

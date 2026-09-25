@@ -362,6 +362,50 @@ class LoopTests(unittest.TestCase):
             result.iterations[1]["visionNotes"], ["Issue: ground is missing"]
         )
 
+    def test_qa_runner_crash_feeds_repair_instead_of_aborting(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            client = FakeClient(
+                [
+                    llm_response({"summary": "base", "actions": []}),
+                    llm_response({"summary": "fixed", "actions": []}),
+                ]
+            )
+
+            calls = {"n": 0}
+
+            def crashing_qa(scenario_path, frames, out_path):
+                calls["n"] += 1
+                if calls["n"] == 1:
+                    raise RuntimeError("boom in the runner")
+                return qa_report(True)
+
+            loop = self._loop(tmp, client, crashing_qa, max_iterations=3)
+            result = loop.run()
+
+        self.assertEqual(result.verdict, "green")
+        self.assertEqual(len(result.iterations), 2)
+        self.assertEqual(result.iterations[0]["qa"]["verdict"], "error")
+        # The crash detail reaches the repair prompt as a synthetic failure.
+        repair_user = client.calls[1][1]["content"]
+        self.assertIn("qa_runner", repair_user)
+        self.assertIn("boom in the runner", repair_user)
+
+    def test_repeated_qa_crashes_still_respect_budgets(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            client = FakeClient([llm_response({"summary": "x", "actions": []})] * 5)
+
+            def always_crashes(scenario_path, frames, out_path):
+                raise RuntimeError("persistent boom")
+
+            loop = self._loop(
+                tmp, client, always_crashes, max_iterations=5, max_total_tokens=100
+            )
+            result = loop.run()
+
+        self.assertEqual(result.verdict, "unresolved")
+        self.assertTrue(all(it["qa"]["verdict"] == "error" for it in result.iterations))
+        self.assertIn("token budget", result.error or "")
+
 
 class ParseTests(unittest.TestCase):
     def test_codeblock(self):

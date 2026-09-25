@@ -146,13 +146,17 @@ class VehicleTests(unittest.TestCase):
                     "name": "Player Car",
                     "shape": "box",
                     "physics": "dynamic",
-                    "vehicle": {"throttle": 1.0, "steering": 0.0},
+                    "vehicle": {"throttle": 1.0, "wheels": [{"offset": [-0.8, 0, 1.2]}, {"offset": [0.8, 0, -1.2]}]},
                 }
             ],
         )
         self.assertEqual(result.applied, 1)
         self.assertEqual(
-            scene["gameObjects"][1]["vehicle"], {"throttle": 1.0, "steering": 0.0}
+            scene["gameObjects"][1]["vehicle"],
+            {
+                "throttle": 1.0,
+                "wheels": [{"offset": [-0.8, 0.0, 1.2]}, {"offset": [0.8, 0.0, -1.2]}],
+            },
         )
 
     def test_spawn_vehicle_rejects_non_dict(self):
@@ -166,6 +170,20 @@ class VehicleTests(unittest.TestCase):
             base_scene(), [{"type": "spawn", "name": "Car", "vehicle": {"warp": 9}}]
         )
         self.assertEqual(result.invalid, 1)
+    def test_spawn_vehicle_requires_wheels(self):
+        _, result = apply_actions(
+            base_scene(), [{"type": "spawn", "name": "Car", "vehicle": {"throttle": 1.0}}]
+        )
+        self.assertEqual(result.invalid, 1)
+        _, result = apply_actions(
+            base_scene(), [{"type": "spawn", "name": "Car", "vehicle": {"throttle": 1.0, "wheels": []}}]
+        )
+        self.assertEqual(result.invalid, 1)
+        _, result = apply_actions(
+            base_scene(),
+            [{"type": "spawn", "name": "Car", "vehicle": {"throttle": 1.0, "wheels": [{"offset": [0, "high", 0]}]}}],
+        )
+        self.assertEqual(result.invalid, 1)
         _, result = apply_actions(
             base_scene(),
             [{"type": "spawn", "name": "Car", "vehicle": {"throttle": "full"}}],
@@ -177,11 +195,14 @@ class VehicleTests(unittest.TestCase):
             base_scene(),
             [
                 {"type": "spawn", "name": "Car", "physics": "dynamic"},
-                {"type": "modify", "target": "Car", "vehicle": {"throttle": 0.5}},
+                {"type": "modify", "target": "Car", "vehicle": {"throttle": 0.5, "wheels": [{"offset": [0, 0, 0]}]}},
             ],
         )
         self.assertEqual(result.applied, 2)
-        self.assertEqual(scene["gameObjects"][1]["vehicle"], {"throttle": 0.5})
+        self.assertEqual(
+            scene["gameObjects"][1]["vehicle"],
+            {"throttle": 0.5, "wheels": [{"offset": [0.0, 0.0, 0.0]}]},
+        )
 
     def test_modify_vehicle_rejects_malformed(self):
         scene, result = apply_actions(

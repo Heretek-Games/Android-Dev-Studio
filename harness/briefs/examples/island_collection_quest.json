@@ -1,0 +1,95 @@
+{
+  "title": "Drivable Collection Island",
+  "fantasy": {
+    "genre": "driving exploration",
+    "inspirations": ["island test tracks", "collectathon hubs"],
+    "tone": "bright, relaxed trial course",
+    "loop": "Drive around the island, collect every buoy, beat the course."
+  },
+  "experience": {
+    "beats": ["first successful lap", "final buoy collected"],
+    "feedback": ["engine hum rises with throttle", "pickup chime per buoy"],
+    "inputs": ["touch steering slider", "throttle and brake pedals"]
+  },
+  "world": {
+    "areaKm2": 0.04,
+    "biomes": ["sand rim", "grass infield"],
+    "poiDensityPerKm2": 150,
+    "traversalSpeedsMps": {"drive": 12},
+    "streamingRadiusM": 120
+  },
+  "systems": {
+    "components": ["RigidBody3D", "Collider3D", "VehicleController", "MobileController", "EventSheet"],
+    "physics": ["raycast vehicle suspension", "static ground collider"],
+    "ai": [],
+    "dialogue": [],
+    "inventory": ["buoy counter"],
+    "questStates": ["not-started", "collecting", "complete"],
+    "saveSchema": {"buoysCollected": "integer", "bestLapSeconds": "number"}
+  },
+  "lookdev": {
+    "palette": ["#3fb6ff", "#f5e6a3", "#4caf50"],
+    "lighting": "stylized",
+    "silhouette": "buoys tall and high-contrast against the ground",
+    "post": ["none (mobile budget)"]
+  },
+  "performance": {
+    "deviceProfile": "android16-snapdragon8elite",
+    "targetFps": 60,
+    "maxDrawCalls": 100,
+    "maxTrisPerChunk": 150000,
+    "maxTrisPerScene": 1200000,
+    "maxTextureMb": 256,
+    "maxPhysicsBodies": 256,
+    "maxApkMb": 200,
+    "maxLoadSeconds": 8.0
+  },
+  "acceptance": [
+    {
+      "id": "island-ground",
+      "axis": "Functional",
+      "description": "a drivable island ground plane exists",
+      "qaRule": {"type": "entity_exists", "target": "Island Ground"}
+    },
+    {
+      "id": "player-car",
+      "axis": "Functional",
+      "description": "a player car with vehicle physics exists",
+      "qaRule": {"type": "entity_component", "target": "Player Car", "component": "VehicleController"}
+    },
+    {
+      "id": "buoy-field",
+      "axis": "Playable",
+      "description": "at least 6 collectible buoys are scattered on the island",
+      "qaRule": {"type": "object_count", "min": 8, "max": 40}
+    },
+    {
+      "id": "buoys-spin",
+      "axis": "Playable",
+      "description": "buoys carry spin events so they read as pickups",
+      "qaRule": {"type": "event_attached", "target": "Buoy 1", "action": "RotateY"}
+    },
+    {
+      "id": "draw-budget",
+      "axis": "Performant",
+      "description": "scene stays within the mobile draw-call budget",
+      "qaRule": {"type": "draw_call_budget", "max": 100}
+    },
+    {
+      "id": "sim-fps",
+      "axis": "Performant",
+      "description": "headless simulation holds interactive frame rates",
+      "qaRule": {"type": "fps_min", "min": 30}
+    },
+    {
+      "id": "island-read",
+      "axis": "Visually Coherent",
+      "description": "the island reads as sand rim plus grass infield at a glance"
+    },
+    {
+      "id": "brief-faithful",
+      "axis": "Spec-Accurate",
+      "description": "the scene matches this brief: drivable island, 1 collection quest, sunset light"
+    }
+  ]
+}

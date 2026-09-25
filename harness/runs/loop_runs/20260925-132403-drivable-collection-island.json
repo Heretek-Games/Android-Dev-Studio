@@ -1,0 +1,370 @@
+{
+  "goal": "Drivable Collection Island",
+  "rules": [
+    {
+      "type": "entity_exists",
+      "target": "Island Ground",
+      "id": "island-ground"
+    },
+    {
+      "type": "entity_component",
+      "target": "Player Car",
+      "component": "VehicleController",
+      "id": "player-car"
+    },
+    {
+      "type": "object_count",
+      "min": 8,
+      "max": 40,
+      "id": "buoy-field"
+    },
+    {
+      "type": "event_attached",
+      "target": "Buoy 1",
+      "action": "RotateY",
+      "id": "buoys-spin"
+    },
+    {
+      "type": "draw_call_budget",
+      "max": 100,
+      "id": "draw-budget"
+    },
+    {
+      "type": "fps_min",
+      "min": 30,
+      "id": "sim-fps"
+    }
+  ],
+  "verdict": "unresolved",
+  "iterations": [
+    {
+      "iteration": 1,
+      "phase": "generate",
+      "visionNotes": [],
+      "llm": {
+        "model": "mimo-v2.6-flash",
+        "promptTokens": 793,
+        "completionTokens": 619,
+        "totalTokens": 1412,
+        "latencySeconds": 9.872,
+        "finishReason": "stop",
+        "attempts": 1
+      },
+      "parse": {
+        "strategy": "raw",
+        "actionCount": 9,
+        "summary": "A compact drivable island scene with a fixed ground plane, a VehicleController-driven Player Car, three buoys with Buoy 1 spinning via an EventSheet event, and minimal lighting to stay well under the draw-call and FPS budgets.",
+        "error": null
+      },
+      "apply": {
+        "applied": 9,
+        "targetMissing": 0,
+        "invalid": 0,
+        "failed": 0,
+        "outcomes": [
+          {
+            "index": 0,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Island Ground (plane) at [0.0, 0.0, 0.0]",
+            "target": "Island Ground"
+          },
+          {
+            "index": 1,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Player Car (box) at [0.0, 1.0, 0.0]",
+            "target": "Player Car"
+          },
+          {
+            "index": 2,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Buoy 1 (cylinder) at [8.0, 1.0, 8.0]",
+            "target": "Buoy 1"
+          },
+          {
+            "index": 3,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Buoy 2 (cylinder) at [-8.0, 1.0, 8.0]",
+            "target": "Buoy 2"
+          },
+          {
+            "index": 4,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Buoy 3 (cylinder) at [0.0, 1.0, -10.0]",
+            "target": "Buoy 3"
+          },
+          {
+            "index": 5,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Center Rock (sphere) at [0.0, 2.0, -4.0]",
+            "target": "Center Rock"
+          },
+          {
+            "index": 6,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added directional light 'Sun Light' (intensity 1.5)",
+            "target": "Sun Light"
+          },
+          {
+            "index": 7,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added ambient light 'Fill Light' (intensity 0.5)",
+            "target": "Fill Light"
+          },
+          {
+            "index": 8,
+            "type": "event",
+            "status": "applied",
+            "detail": "Wired EveryFrame -> RotateY on Buoy 1",
+            "target": "Buoy 1"
+          }
+        ],
+        "appliedDescriptions": [
+          "Spawned Island Ground (plane) at [0.0, 0.0, 0.0]",
+          "Spawned Player Car (box) at [0.0, 1.0, 0.0]",
+          "Spawned Buoy 1 (cylinder) at [8.0, 1.0, 8.0]",
+          "Spawned Buoy 2 (cylinder) at [-8.0, 1.0, 8.0]",
+          "Spawned Buoy 3 (cylinder) at [0.0, 1.0, -10.0]",
+          "Spawned Center Rock (sphere) at [0.0, 2.0, -4.0]",
+          "Added directional light 'Sun Light' (intensity 1.5)",
+          "Added ambient light 'Fill Light' (intensity 0.5)",
+          "Wired EveryFrame -> RotateY on Buoy 1"
+        ]
+      },
+      "gate": {
+        "valid": true,
+        "violations": []
+      },
+      "qa": {
+        "verdict": "FAILED",
+        "passed": 5,
+        "total": 6,
+        "failedRules": [
+          {
+            "id": "player-car",
+            "type": "entity_component",
+            "detail": "Player Car components: [MeshRenderer, RigidBody3D, Collider3D, MobileController]"
+          }
+        ],
+        "metrics": {
+          "avgFrameTimeMs": 0.209,
+          "p95FrameTimeMs": 0.2609,
+          "maxFrameTimeMs": 33.1417,
+          "simFpsEstimate": 4784.45,
+          "drawCallEstimate": 6,
+          "instancedBatches": 0,
+          "memoryHeapMb": 16.19,
+          "objectCount": 8,
+          "physicsBodyCount": 6,
+          "eventCount": 1
+        }
+      }
+    },
+    {
+      "iteration": 2,
+      "phase": "repair",
+      "visionNotes": [],
+      "llm": {
+        "model": "mimo-v2.6-flash",
+        "promptTokens": 1550,
+        "completionTokens": 285,
+        "totalTokens": 1835,
+        "latencySeconds": 8.452,
+        "finishReason": "stop",
+        "attempts": 1
+      },
+      "parse": {
+        "strategy": "raw",
+        "actionCount": 1,
+        "summary": "Re-assert the VehicleController/mobile controller binding on the existing Player Car via a modify action, leaving all other passing objects and rules untouched.",
+        "error": null
+      },
+      "apply": {
+        "applied": 1,
+        "targetMissing": 0,
+        "invalid": 0,
+        "failed": 0,
+        "outcomes": [
+          {
+            "index": 0,
+            "type": "modify",
+            "status": "applied",
+            "detail": "Modified Player Car: physics, mass, controller",
+            "target": "Player Car"
+          }
+        ],
+        "appliedDescriptions": [
+          "Modified Player Car: physics, mass, controller"
+        ]
+      },
+      "gate": {
+        "valid": true,
+        "violations": []
+      },
+      "qa": {
+        "verdict": "FAILED",
+        "passed": 5,
+        "total": 6,
+        "failedRules": [
+          {
+            "id": "player-car",
+            "type": "entity_component",
+            "detail": "Player Car components: [MeshRenderer, RigidBody3D, Collider3D, MobileController]"
+          }
+        ],
+        "metrics": {
+          "avgFrameTimeMs": 0.1907,
+          "p95FrameTimeMs": 0.2682,
+          "maxFrameTimeMs": 23.9334,
+          "simFpsEstimate": 5245.16,
+          "drawCallEstimate": 6,
+          "instancedBatches": 0,
+          "memoryHeapMb": 16.34,
+          "objectCount": 8,
+          "physicsBodyCount": 6,
+          "eventCount": 1
+        }
+      }
+    },
+    {
+      "iteration": 3,
+      "phase": "repair",
+      "visionNotes": [],
+      "llm": {
+        "model": "mimo-v2.6-flash",
+        "promptTokens": 1551,
+        "completionTokens": 273,
+        "totalTokens": 1824,
+        "latencySeconds": 6.128,
+        "finishReason": "stop",
+        "attempts": 1
+      },
+      "parse": {
+        "strategy": "raw",
+        "actionCount": 1,
+        "summary": "Attach the VehicleController component to the existing Player Car via a modify action while leaving all other objects and rules untouched.",
+        "error": null
+      },
+      "apply": {
+        "applied": 1,
+        "targetMissing": 0,
+        "invalid": 0,
+        "failed": 0,
+        "outcomes": [
+          {
+            "index": 0,
+            "type": "modify",
+            "status": "applied",
+            "detail": "Modified Player Car: physics, mass, controller",
+            "target": "Player Car"
+          }
+        ],
+        "appliedDescriptions": [
+          "Modified Player Car: physics, mass, controller"
+        ]
+      },
+      "gate": {
+        "valid": true,
+        "violations": []
+      },
+      "qa": {
+        "verdict": "FAILED",
+        "passed": 5,
+        "total": 6,
+        "failedRules": [
+          {
+            "id": "player-car",
+            "type": "entity_component",
+            "detail": "Player Car components: [MeshRenderer, RigidBody3D, Collider3D, MobileController]"
+          }
+        ],
+        "metrics": {
+          "avgFrameTimeMs": 0.1891,
+          "p95FrameTimeMs": 0.1826,
+          "maxFrameTimeMs": 27.2975,
+          "simFpsEstimate": 5287.93,
+          "drawCallEstimate": 6,
+          "instancedBatches": 0,
+          "memoryHeapMb": 13.79,
+          "objectCount": 8,
+          "physicsBodyCount": 6,
+          "eventCount": 1
+        }
+      }
+    }
+  ],
+  "totalTokens": 5071,
+  "totalLatencySeconds": 24.453,
+  "finalReport": {
+    "schemaVersion": 1,
+    "runner": "qa_scenario_runner.mjs",
+    "scenario": "loop_work_scene.json",
+    "goal": "Drivable Collection Island",
+    "timestamp": 1790357043.519,
+    "frames": 300,
+    "fixedDeltaSeconds": 0.016666666666666666,
+    "metrics": {
+      "avgFrameTimeMs": 0.1891,
+      "p95FrameTimeMs": 0.1826,
+      "maxFrameTimeMs": 27.2975,
+      "simFpsEstimate": 5287.93,
+      "drawCallEstimate": 6,
+      "instancedBatches": 0,
+      "memoryHeapMb": 13.79,
+      "objectCount": 8,
+      "physicsBodyCount": 6,
+      "eventCount": 1
+    },
+    "rules": [
+      {
+        "id": "island-ground",
+        "type": "entity_exists",
+        "pass": true,
+        "detail": "found \"Island Ground\""
+      },
+      {
+        "id": "player-car",
+        "type": "entity_component",
+        "pass": false,
+        "detail": "Player Car components: [MeshRenderer, RigidBody3D, Collider3D, MobileController]"
+      },
+      {
+        "id": "buoy-field",
+        "type": "object_count",
+        "pass": true,
+        "detail": "objectCount=8 (min=8 max=40)"
+      },
+      {
+        "id": "buoys-spin",
+        "type": "event_attached",
+        "pass": true,
+        "detail": "actions: [RotateY]"
+      },
+      {
+        "id": "draw-budget",
+        "type": "draw_call_budget",
+        "pass": true,
+        "detail": "drawCallEstimate=6 (budget 100)"
+      },
+      {
+        "id": "sim-fps",
+        "type": "fps_min",
+        "pass": true,
+        "detail": "simFpsEstimate=5287.9 (min 30)"
+      }
+    ],
+    "passed": 5,
+    "total": 6,
+    "verdict": "FAILED",
+    "confidence": 0.833
+  },
+  "error": null,
+  "workScene": "/home/john/Projects/Android-Dev-Studio/harness/scenes/loop_work_scene.json"
+}

@@ -389,37 +389,47 @@ class IterateLoop:
                 try:
                     report = self.qa_runner(self.work_scene_path, self.frames, None)
                 except Exception as error:
+                    # QA-runner crash: repairable, not terminal. Feed the crash
+                    # detail back as a synthetic failure so the next repair
+                    # iteration can fix the scene (still bounded by budgets below).
                     record["qa"] = {"verdict": "error", "error": str(error)}
-                    result.iterations.append(record)
-                    result.verdict = "error"
-                    result.error = f"QA runner failed: {error}"
-                    break
-
-                final_report = report
-                record["qa"] = {
-                    "verdict": report.get("verdict"),
-                    "passed": report.get("passed"),
-                    "total": report.get("total"),
-                    "failedRules": [
+                    failed_rules = [
                         {
-                            "id": r.get("id"),
-                            "type": r.get("type"),
-                            "detail": r.get("detail"),
+                            "id": "qa_runner",
+                            "type": "error",
+                            "detail": f"QA runner crashed: {error}"[:500],
                         }
-                        for r in report.get("rules", [])
-                        if not r.get("pass")
-                    ],
-                    "metrics": report.get("metrics", {}),
-                }
-                failed_rules = [r for r in report.get("rules", []) if not r.get("pass")]
-                metrics = report.get("metrics", {})
+                    ]
+                    metrics = {}
+                else:
+                    final_report = report
+                    record["qa"] = {
+                        "verdict": report.get("verdict"),
+                        "passed": report.get("passed"),
+                        "total": report.get("total"),
+                        "failedRules": [
+                            {
+                                "id": r.get("id"),
+                                "type": r.get("type"),
+                                "detail": r.get("detail"),
+                            }
+                            for r in report.get("rules", [])
+                            if not r.get("pass")
+                        ],
+                        "metrics": report.get("metrics", {}),
+                    }
+                    failed_rules = [
+                        r for r in report.get("rules", []) if not r.get("pass")
+                    ]
+                    metrics = report.get("metrics", {})
 
-                if report.get("verdict") in ("SUCCEEDED",) or (
-                    report.get("total") and report.get("passed") == report.get("total")
-                ):
-                    result.iterations.append(record)
-                    result.verdict = "green"
-                    break
+                    if report.get("verdict") in ("SUCCEEDED",) or (
+                        report.get("total")
+                        and report.get("passed") == report.get("total")
+                    ):
+                        result.iterations.append(record)
+                        result.verdict = "green"
+                        break
             else:
                 # Gate violation: skip QA, feed the violations back as failures.
                 failed_rules = [

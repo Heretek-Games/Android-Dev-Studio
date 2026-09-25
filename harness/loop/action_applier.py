@@ -47,18 +47,55 @@ MODIFY_FIELDS = (
 )
 
 
+def _validate_wheel(value: Any) -> Optional[Dict[str, Any]]:
+    """One wheel spec: offset is required, everything else has engine defaults."""
+    if not isinstance(value, dict):
+        return None
+    offset = _vec3(value.get("offset"))
+    if offset is None:
+        return None
+    wheel: Dict[str, Any] = {"offset": offset}
+    if "radius" in value:
+        if not _is_finite_number(value["radius"]) or value["radius"] <= 0:
+            return None
+        wheel["radius"] = float(value["radius"])
+    for flag in ("driven", "steered"):
+        if flag in value:
+            if not isinstance(value[flag], bool):
+                return None
+            wheel[flag] = value[flag]
+    for nested in ("suspension", "friction"):
+        if nested in value:
+            if not isinstance(value[nested], dict):
+                return None
+            wheel[nested] = dict(value[nested])
+    return wheel
+
+
 def _validate_vehicle(value: Any) -> Optional[Dict[str, Any]]:
     """Vehicle configs pass straight to the QA runner's VehicleController.
 
-    Returns the normalized config, or None when malformed. Numeric drive
-    inputs are validated when present; unknown keys are rejected so typos
+    Returns the normalized config, or None when malformed. The engine requires
+    a non-empty wheels array (each wheel needs an offset); numeric drive
+    inputs are validated when present. Unknown keys are rejected so typos
     surface as repair input instead of silent no-ops.
     """
     if not isinstance(value, dict):
         return None
+    wheels = value.get("wheels")
+    if not isinstance(wheels, list) or not wheels:
+        return None
+    normalized_wheels = []
+    for wheel in wheels:
+        validated = _validate_wheel(wheel)
+        if validated is None:
+            return None
+        normalized_wheels.append(validated)
+    normalized: Dict[str, Any] = {"wheels": normalized_wheels}
     allowed = {"throttle", "steering", "brake", "engineForce", "maxSteerAngle"}
-    normalized: Dict[str, Any] = {}
     for key, item in value.items():
+        if key == "wheels":
+            continue
         if key not in allowed or not _is_finite_number(item):
             return None
         normalized[key] = float(item)
@@ -218,8 +255,9 @@ def _apply_spawn(
                 index,
                 "spawn",
                 "invalid",
-                "spawn 'vehicle' must be an object of finite numbers "
-                "(allowed: throttle, steering, brake, engineForce, maxSteerAngle)",
+                "spawn 'vehicle' must be an object with a non-empty 'wheels' array "
+                "(each wheel needs an 'offset' [x,y,z]; optional numerics: throttle, "
+                "steering, brake, engineForce, maxSteerAngle)",
             )
         obj["vehicle"] = vehicle
 
@@ -404,8 +442,8 @@ def _apply_modify(
                     index,
                     "modify",
                     "invalid",
-                    "modify 'vehicle' must be an object of finite numbers "
-                    "(allowed: throttle, steering, brake, engineForce, maxSteerAngle)",
+                    "modify 'vehicle' must be an object with a non-empty 'wheels' array "
+                    "(each wheel needs an 'offset' [x,y,z])",
                 )
             obj["vehicle"] = vehicle
         changed.append(field_name)

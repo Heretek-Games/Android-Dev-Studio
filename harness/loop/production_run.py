@@ -25,6 +25,83 @@ from typing import Any, Callable, Dict, List, Optional
 LoopFactory = Callable[[str, List[Dict[str, Any]]], Any]
 
 
+def main() -> int:
+    import argparse
+    import json as json_module
+    import sys as sys_module
+
+    parser = argparse.ArgumentParser(
+        description="Autonomous brief-to-verdict production run"
+    )
+    source = parser.add_mutually_exclusive_group(required=True)
+    source.add_argument(
+        "--brief", help="Game Production Brief JSON file to record and run"
+    )
+    source.add_argument("--brief-id", help="Already-recorded brief_id to run")
+    parser.add_argument("--db", default=None, help="Project memory SQLite path")
+    parser.add_argument("--max-iterations", type=int, default=4)
+    parser.add_argument("--frames", type=int, default=600)
+    parser.add_argument("--model", default=None, help="Override the chat model")
+    parser.add_argument("--max-tokens", type=int, default=None)
+    parser.add_argument("--max-seconds", type=float, default=None)
+    parser.add_argument(
+        "--vision", action="store_true", help="Enable layout-preview vision critique"
+    )
+    parser.add_argument("--vision-model", default=None)
+    parser.add_argument("--json", action="store_true", help="Emit the verdict as JSON")
+    args = parser.parse_args()
+
+    from harness.briefs.game_brief import GameProductionBrief
+    from harness.loop.iterate_loop import IterateLoop
+    from harness.loop.llm_client import LlmClient
+    from harness.memory.project_memory import ProjectMemory
+    from harness.orchestrator.agent_swarm import AgentSwarmOrchestrator
+
+    memory = ProjectMemory(db_path=args.db) if args.db else ProjectMemory()
+    swarm = AgentSwarmOrchestrator(memory=memory)
+    if args.brief:
+        brief_id = memory.record_brief(GameProductionBrief.load(args.brief).to_dict())
+    else:
+        brief_id = args.brief_id
+
+    client = LlmClient()
+    vision = None
+    if args.vision:
+        from harness.loop.vision import make_layout_critique
+
+        vision = make_layout_critique(client, model=args.vision_model)
+
+    def factory(goal, rules):
+        return IterateLoop(
+            goal,
+            rules,
+            client,
+            max_iterations=args.max_iterations,
+            frames=args.frames,
+            model=args.model,
+            vision_critique=vision,
+            max_total_tokens=args.max_tokens,
+            max_wall_seconds=args.max_seconds,
+        )
+
+    verdict = ProductionRun(memory, swarm, factory).run(brief_id)
+    if args.json:
+        print(json_module.dumps(verdict.as_dict(), indent=2))
+    else:
+        print(f"verdict: {verdict.verdict.upper()} — {verdict.brief_title}")
+        for criterion in verdict.criteria:
+            print(f"  [{criterion['state']}] {criterion['id']} ({criterion['axis']})")
+        for defect in verdict.defect_report:
+            print(f"  defect: {defect}")
+        if verdict.scope_reduction_candidates:
+            print(
+                "  scope-reduction candidates: "
+                + ", ".join(verdict.scope_reduction_candidates)
+            )
+        print(f"  tokens: {verdict.total_tokens}")
+    return 0 if verdict.verdict == "green" else 1
+
+
 @dataclass
 class ProductionVerdict:
     verdict: str  # green | failed | error
@@ -168,3 +245,9 @@ class ProductionRun:
     ) -> None:
         for task in tasks:
             self.memory.update_task_state(task["id"], state, result)
+
+
+if __name__ == "__main__":
+    import sys as _sys
+
+    _sys.exit(main())
