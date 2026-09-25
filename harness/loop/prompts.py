@@ -59,7 +59,8 @@ ACTION_SCHEMA = """Action vocabulary (a JSON array named "actions"):
      "biome": "sand rim" (optional: tags the object for the biome_coverage_min composition audit),
      "weapon": {"damage": 50, "fireRate": 8, "range": 100, "maxAmmo": 30} (optional: adds a WeaponController for combat quests),
      "health": {"maxHealth": 100} (optional: adds a HealthComponent; destroyOnDeath defaults true),
-     "ai": {"targetName": "Player Hero", "moveSpeed": 2.5} (optional: adds an EnemyAI NPC routine that chases/attacks the named target)}
+     "ai": {"targetName": "Player Hero", "moveSpeed": 2.5} (optional: adds an EnemyAI NPC routine that chases/attacks the named target),
+     "elemental": {"aura": "Pyro", "maxHealth": 80} (optional: seeds an elemental aura for reaction quests; aura is one of Pyro|Hydro|Cryo|Electro|Anemo|Geo|Dendro)}
   - {"type": "light", "name": "...", "lightType": "directional"|"point"|"ambient",
      "color": "#rrggbb", "intensity": 2.0, "position": [x,y,z]}
   - {"type": "modify", "target": "...", "position": [x,y,z], "color": "#rrggbb",
@@ -108,6 +109,12 @@ How acceptance rules map onto the schema (the QA runner checks these exact compo
     directly, while dynamic bodies are physics-owned (Rapier overwrites the transform every
     step, so an "ai" + "physics": "dynamic" NPC stands still). Give the NPC "health" too if
     anything should damage it.
+  - game_reactions_min rules -> BOTH sides of the reaction, or nothing fires: (1) the "game"
+    config carries "hitElement" + "hitGauge", e.g. {"mode": "waves", "hitElement": "Hydro",
+    "hitGauge": 1, ...}, AND (2) the enemies carry the opposing aura, either hand-placed via
+    spawn "elemental": {"aura": "Pyro", "maxHealth": 80} or GameRuntime-spawned via the game
+    config "enemy": {"elemental": {"aura": "Pyro", ...}}. Hydro hits on Pyro auras =
+    Vaporize; without both halves the reaction count stays 0.
   - game_* rules (game_phase, game_score_min, game_kills_min, game_wave_reached, ...) ->
     ALL of these: (1) spawn the named player object (physics dynamic + controller, plus weapon/health
     for combat quests), AND (2) emit one "game" action whose config names that player, e.g.

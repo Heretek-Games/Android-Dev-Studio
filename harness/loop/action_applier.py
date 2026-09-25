@@ -51,6 +51,7 @@ MODIFY_FIELDS = (
     "weapon",
     "health",
     "ai",
+    "elemental",
 )
 
 
@@ -375,7 +376,9 @@ GAME_NUMERICS = {
     "interWaveDelaySeconds",
     "hitEveryFrames",
     "hitDamage",
+    "hitGauge",
 }
+GAME_ELEMENTS = {"Pyro", "Hydro", "Cryo", "Electro", "Anemo", "Geo", "Dendro"}
 
 
 def _validate_game(
@@ -421,6 +424,13 @@ def _validate_game(
                 fail(f"game '{key}' must be a positive finite number (got {item!r})")
                 return None
             normalized[key] = float(item)
+        elif key == "hitElement":
+            if item not in GAME_ELEMENTS:
+                fail(
+                    f"game 'hitElement' must be one of {sorted(GAME_ELEMENTS)} (got {item!r})"
+                )
+                return None
+            normalized[key] = item
         elif key == "enemy":
             enemy = _validate_game_enemy(item, errors)
             if enemy is None:
@@ -438,7 +448,7 @@ def _validate_game(
         else:
             fail(
                 f"unknown game key '{key}' (allowed: mode, playerName, "
-                f"{sorted(GAME_NUMERICS)}, enemy, settlement)"
+                f"{sorted(GAME_NUMERICS)}, hitElement, enemy, settlement)"
             )
             return None
     return normalized
@@ -511,11 +521,53 @@ def _validate_game_enemy(
                 fail("game 'enemy.ai' must be an object")
                 return None
             normalized[key] = dict(item)
+        elif key == "elemental":
+            elemental = _validate_elemental(item, errors, "game enemy elemental")
+            if elemental is None:
+                return None
+            normalized[key] = elemental
         else:
             fail(
                 f"unknown game enemy key '{key}' "
-                "(allowed: shape, color, size, y, health, ai)"
+                "(allowed: shape, color, size, y, health, ai, elemental)"
             )
+            return None
+    return normalized
+
+
+def _validate_elemental(
+    value: Any, errors: Optional[List[str]], where: str
+) -> Optional[Dict[str, Any]]:
+    """Elemental aura configs pass to the QA runner's ElementalReactionComponent.
+
+    `aura` must be a Genshin-style element type; `maxHealth` a positive finite
+    number. Unknown keys are rejected so typos surface as repair input.
+    """
+
+    def fail(reason: str) -> None:
+        if errors is not None:
+            errors.append(reason)
+        return None
+
+    if not isinstance(value, dict):
+        fail(f"{where} must be an object")
+        return None
+    normalized: Dict[str, Any] = {}
+    for key, item in value.items():
+        if key == "aura":
+            if item not in GAME_ELEMENTS:
+                fail(
+                    f"{where} 'aura' must be one of {sorted(GAME_ELEMENTS)} (got {item!r})"
+                )
+                return None
+            normalized[key] = item
+        elif key == "maxHealth":
+            if not _is_finite_number(item) or item <= 0:
+                fail(f"{where} 'maxHealth' must be positive (got {item!r})")
+                return None
+            normalized[key] = float(item)
+        else:
+            fail(f"unknown {where} key '{key}' (allowed: aura, maxHealth)")
             return None
     return normalized
 
@@ -839,6 +891,21 @@ def _apply_spawn(
                 "attackDamage, attackIntervalSeconds)",
             )
         obj["ai"] = ai
+    if action.get("elemental") is not None:
+        # Maps to an ElementalReactionComponent in the QA runner (objSpec.elemental).
+        elemental_reasons: List[str] = []
+        elemental = _validate_elemental(
+            action.get("elemental"), elemental_reasons, "spawn 'elemental'"
+        )
+        if elemental is None:
+            return _outcome(
+                result,
+                index,
+                "spawn",
+                "invalid",
+                f"spawn elemental rejected — {elemental_reasons[0] if elemental_reasons else 'malformed'}",
+            )
+        obj["elemental"] = elemental
 
     scene.setdefault("gameObjects", []).append(obj)
     _outcome(
@@ -1086,6 +1153,20 @@ def _apply_modify(
                     "and optional non-negative behavior tunables",
                 )
             obj["ai"] = ai
+        elif field_name == "elemental":
+            elemental_reasons: List[str] = []
+            elemental = _validate_elemental(
+                value, elemental_reasons, "modify 'elemental'"
+            )
+            if elemental is None:
+                return _outcome(
+                    result,
+                    index,
+                    "modify",
+                    "invalid",
+                    f"modify elemental rejected — {elemental_reasons[0] if elemental_reasons else 'malformed'}",
+                )
+            obj["elemental"] = elemental
         changed.append(field_name)
 
     if not changed:

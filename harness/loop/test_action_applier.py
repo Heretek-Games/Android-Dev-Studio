@@ -619,6 +619,73 @@ class NpcRoutineTests(unittest.TestCase):
         self.assertTrue(valid, f"gate rejected NPC scene: {violations}")
 
 
+class ElementalTests(unittest.TestCase):
+    def test_spawn_elemental_applies(self):
+        scene, result = apply_actions(
+            base_scene(),
+            [
+                {
+                    "type": "spawn",
+                    "name": "Slime",
+                    "shape": "sphere",
+                    "physics": "none",
+                    "elemental": {"aura": "Pyro", "maxHealth": 80},
+                }
+            ],
+        )
+        self.assertEqual(result.applied, 1)
+        self.assertEqual(
+            scene["gameObjects"][1]["elemental"],
+            {"aura": "Pyro", "maxHealth": 80.0},
+        )
+
+    def test_spawn_elemental_rejects_malformed(self):
+        for bad in (True, "Pyro"):
+            _, result = apply_actions(
+                base_scene(), [{"type": "spawn", "name": "Slime", "elemental": bad}]
+            )
+            self.assertEqual(result.invalid, 1, f"should reject {bad!r}")
+        for bad, hint in (
+            ({"aura": "Fire"}, "aura"),
+            ({"aura": "Pyro", "maxHealth": 0}, "maxHealth"),
+            ({"aura": "Pyro", "color": "orange"}, "color"),
+        ):
+            _, result = apply_actions(
+                base_scene(), [{"type": "spawn", "name": "Slime", "elemental": bad}]
+            )
+            self.assertEqual(result.invalid, 1, f"should reject {bad!r}")
+            self.assertIn(hint, result.outcomes[0]["detail"])
+
+    def test_game_hitelement_and_enemy_elemental_apply(self):
+        scene, result = apply_actions(
+            base_scene(),
+            [
+                {
+                    "type": "game",
+                    "config": {
+                        "mode": "waves",
+                        "playerName": "Hero",
+                        "hitElement": "Hydro",
+                        "hitGauge": 1,
+                        "enemy": {"elemental": {"aura": "Pyro"}},
+                    },
+                }
+            ],
+        )
+        self.assertEqual(result.applied, 1)
+        game = scene["game"]
+        self.assertEqual(game["hitElement"], "Hydro")
+        self.assertEqual(game["enemy"]["elemental"], {"aura": "Pyro"})
+
+    def test_game_rejects_bad_element(self):
+        _, result = apply_actions(
+            base_scene(),
+            [{"type": "game", "config": {"mode": "waves", "hitElement": "Fire"}}],
+        )
+        self.assertEqual(result.invalid, 1)
+        self.assertIn("hitElement", result.outcomes[0]["detail"])
+
+
 def keeper_tree():
     return {
         "id": "DungeonKeeper",
