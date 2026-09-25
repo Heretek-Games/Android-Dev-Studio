@@ -38,6 +38,7 @@ export * from './rendering/LODManager.js';
 export * from './terrain/TerrainChunk.js';
 export * from './terrain/WorldStreamer.js';
 export * from './terrain/StreamingCells.js';
+export * from './terrain/QuadtreeTerrain.js';
 export * from './combat/ElementalSystem.js';
 export * from './combat/ElementalReactionComponent.js';
 export * from './vehicles/VehicleController.js';

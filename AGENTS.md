@@ -23,7 +23,7 @@ Android-Dev-Studio/
 │   ├── src/spatial/                  # SpatialGrid 3D hash (proximity/radius/AABB queries)
 │   ├── src/navigation/               # GridPathfinder + NavGrid (hierarchical A*)
 │   ├── src/simulation/               # EconomyTick (fixed-step, frame-rate independent)
-│   ├── src/terrain/                  # TerrainChunk, WorldStreamer, HierarchicalStreamingCells (urban clustering + budget-aware draw distance)
+│   ├── src/terrain/                  # TerrainChunk, WorldStreamer, HierarchicalStreamingCells, QuadtreeTerrain (LOD blend + async loading)
 │   ├── src/rendering/                # InstancedMeshBatcher, FoliageInstancer, LODManager, DecalDispatcher
 │   ├── src/dialogue/                 # DialogueManager (visual nodes, gated choices, script DSL)
 │   └── src/combat/, src/weapons/     # Elemental matrix + ballistic WeaponController (hit events)
