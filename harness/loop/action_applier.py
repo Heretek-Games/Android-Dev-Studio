@@ -261,6 +261,8 @@ BEHAVIOR_TYPES = {
     "Platform",
     "Pathfollow",
     "Timer",
+    "Spawner",
+    "SaveSlot",
 }
 
 
@@ -375,6 +377,16 @@ def _validate_behaviors(
             normalized.append({"type": btype, "options": checked})
         elif btype == "Timer":
             checked = _validate_timer_options(options, i, errors)
+            if checked is None:
+                return None
+            normalized.append({"type": btype, "options": checked})
+        elif btype == "Spawner":
+            checked = _validate_spawner_options(options, i, errors)
+            if checked is None:
+                return None
+            normalized.append({"type": btype, "options": checked})
+        elif btype == "SaveSlot":
+            checked = _validate_saveslot_options(options, i, errors)
             if checked is None:
                 return None
             normalized.append({"type": btype, "options": checked})
@@ -668,6 +680,159 @@ def _validate_timer_options(
             fail(
                 f"behaviors[{index}] unknown Timer option '{key}' "
                 "(allowed: duration, repeat, autostart)"
+            )
+            return None
+    return normalized
+
+
+def _validate_spawner_options(
+    options: Dict[str, Any], index: int, errors: Optional[List[str]]
+) -> Optional[Dict[str, Any]]:
+    def fail(reason: str) -> None:
+        if errors is not None:
+            errors.append(reason)
+        return None
+
+    normalized: Dict[str, Any] = {}
+    for key, item in options.items():
+        if key == "template":
+            template = _validate_spawn_template(item, index, errors)
+            if template is None:
+                return None
+            normalized[key] = template
+        elif key == "interval":
+            if not _is_finite_number(item) or item <= 0:
+                fail(
+                    f"behaviors[{index}] Spawner 'interval' must be a "
+                    f"positive finite number (got {item!r})"
+                )
+                return None
+            normalized[key] = float(item)
+        elif key == "maxSpawns":
+            if (
+                isinstance(item, bool)
+                or not isinstance(item, (int, float))
+                or int(item) != item
+                or item < 0
+            ):
+                fail(
+                    f"behaviors[{index}] Spawner 'maxSpawns' must be "
+                    f"an integer >= 0 (got {item!r})"
+                )
+                return None
+            normalized[key] = int(item)
+        elif key == "spawnRadius":
+            if not _is_finite_number(item) or item < 0:
+                fail(
+                    f"behaviors[{index}] Spawner 'spawnRadius' must be a "
+                    f"non-negative finite number (got {item!r})"
+                )
+                return None
+            normalized[key] = float(item)
+        elif key == "spawnOffset":
+            vec = _vec3(item)
+            if vec is None:
+                fail(
+                    f"behaviors[{index}] Spawner 'spawnOffset' must be "
+                    f"3 finite numbers (got {item!r})"
+                )
+                return None
+            normalized[key] = vec
+        elif key == "autostart":
+            if not isinstance(item, bool):
+                fail(
+                    f"behaviors[{index}] Spawner 'autostart' must be "
+                    f"true/false (got {item!r})"
+                )
+                return None
+            normalized[key] = item
+        else:
+            fail(
+                f"behaviors[{index}] unknown Spawner option '{key}' "
+                "(allowed: template, interval, maxSpawns, spawnRadius, "
+                "spawnOffset, autostart)"
+            )
+            return None
+    return normalized
+
+
+def _validate_spawn_template(
+    value: Any, index: int, errors: Optional[List[str]]
+) -> Optional[Dict[str, Any]]:
+    def fail(reason: str) -> None:
+        if errors is not None:
+            errors.append(reason)
+        return None
+
+    if not isinstance(value, dict):
+        fail(f"behaviors[{index}] Spawner 'template' must be an object")
+        return None
+    normalized: Dict[str, Any] = {}
+    for key, item in value.items():
+        if key == "shape":
+            if item not in SUPPORTED_SHAPES:
+                fail(
+                    f"behaviors[{index}] Spawner template 'shape' must be one of "
+                    f"{sorted(SUPPORTED_SHAPES)} (got {item!r})"
+                )
+                return None
+            normalized[key] = item
+        elif key == "size":
+            vec = _vec3(item)
+            if vec is None:
+                fail(
+                    f"behaviors[{index}] Spawner template 'size' must be "
+                    f"3 finite numbers (got {item!r})"
+                )
+                return None
+            normalized[key] = vec
+        elif key == "color":
+            if not _is_color(item):
+                fail(
+                    f"behaviors[{index}] Spawner template 'color' must be "
+                    f"#rgb or #rrggbb (got {item!r})"
+                )
+                return None
+            normalized[key] = item
+        else:
+            fail(
+                f"behaviors[{index}] unknown Spawner template key '{key}' "
+                "(allowed: shape, size, color)"
+            )
+            return None
+    return normalized
+
+
+def _validate_saveslot_options(
+    options: Dict[str, Any], index: int, errors: Optional[List[str]]
+) -> Optional[Dict[str, Any]]:
+    def fail(reason: str) -> None:
+        if errors is not None:
+            errors.append(reason)
+        return None
+
+    normalized: Dict[str, Any] = {}
+    for key, item in options.items():
+        if key == "slotName":
+            if not isinstance(item, str) or not item.strip() or len(item) > 40:
+                fail(
+                    f"behaviors[{index}] SaveSlot 'slotName' must be a "
+                    f"non-empty string (max 40 chars) (got {item!r})"
+                )
+                return None
+            normalized[key] = item.strip()
+        elif key == "autosaveInterval":
+            if not _is_finite_number(item) or item < 0:
+                fail(
+                    f"behaviors[{index}] SaveSlot 'autosaveInterval' must be a "
+                    f"non-negative finite number (got {item!r})"
+                )
+                return None
+            normalized[key] = float(item)
+        else:
+            fail(
+                f"behaviors[{index}] unknown SaveSlot option '{key}' "
+                "(allowed: slotName, autosaveInterval)"
             )
             return None
     return normalized

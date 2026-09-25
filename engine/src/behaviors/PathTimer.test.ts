@@ -68,7 +68,7 @@ describe('Pathfollow + Timer behaviors', () => {
     assert.strictEqual(once.progress, 1);
 
     const loop = new GameObject('Loop').addComponent(new Timer({ duration: 0.5, repeat: true }));
-    for (let i = 0; i < 200; i++) loop.update(1 / 60);
+    for (let i = 0; i < 180; i++) loop.update(1 / 60);
     assert.strictEqual(loop.expiredCount, 6);
     assert.strictEqual(loop.running, true);
   });
@@ -78,7 +78,7 @@ describe('Pathfollow + Timer behaviors', () => {
     const timer = go.addComponent(new Timer({ duration: 1, autostart: false }));
     timer.update(1);
     assert.strictEqual(timer.expiredCount, 0);
-    timer.start();
+    timer.play();
     timer.update(1);
     assert.strictEqual(timer.expiredCount, 1);
     timer.reset();

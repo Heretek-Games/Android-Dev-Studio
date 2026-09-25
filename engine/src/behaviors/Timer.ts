@@ -9,6 +9,9 @@ export interface TimerOptions {
   autostart?: boolean;
 }
 
+/** Boundary tolerance for IEEE754 accumulation (see update). */
+const EPSILON = 1e-9;
+
 /**
  * Timer behavior (Track 1.3 behavior library, GDevelop-informed).
  *
@@ -33,11 +36,16 @@ export class Timer extends Component {
     }
   }
 
-  public start(): void {
+  /**
+   * Resumes counting. Named play()/pause() (not start()/stop()) because
+   * Component.start() is the engine attach-lifecycle hook — overriding it
+   * would let Scene.addGameObject force autostart:false timers back on.
+   */
+  public play(): void {
     this.running = true;
   }
 
-  public stop(): void {
+  public pause(): void {
     this.running = false;
   }
 
@@ -48,16 +56,22 @@ export class Timer extends Component {
   }
 
   public get progress(): number {
-    return Math.min(1, this.elapsed / this.duration);
+    return Math.min(1, Math.max(0, this.elapsed / this.duration));
   }
 
   public override update(deltaTime: number): void {
     if (!this.running) return;
     this.elapsed += deltaTime;
-    if (this.elapsed >= this.duration) {
+    // EPSILON keeps exact-multiple boundaries deterministic: 30 x (1/60)
+    // sums to 0.49999999999999994 in IEEE754, which must still trip a 0.5
+    // duration rather than slipping a frame depending on accumulation order.
+    if (this.elapsed + EPSILON >= this.duration) {
       this.expiredCount++;
       if (this.repeat) {
-        this.elapsed = this.elapsed % this.duration;
+        // Subtract (never modulo): when EPSILON trips a boundary from just
+        // below, modulo would return elapsed unchanged and double-fire next
+        // frame; subtraction keeps the cadence exact.
+        this.elapsed -= this.duration;
       } else {
         this.elapsed = this.duration;
         this.running = false;

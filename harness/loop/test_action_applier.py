@@ -947,6 +947,64 @@ class BehaviorArrayTests(unittest.TestCase):
             self.assertEqual(result.invalid, 1, f"should reject {bad!r}")
             self.assertIn(hint, result.outcomes[0]["detail"])
 
+    def test_spawner_and_saveslot_validate(self):
+        scene, result = apply_actions(
+            base_scene(),
+            [
+                {
+                    "type": "spawn",
+                    "name": "Nest",
+                    "physics": "none",
+                    "behaviors": [
+                        {
+                            "type": "Spawner",
+                            "options": {
+                                "interval": 2,
+                                "maxSpawns": 5,
+                                "template": {"shape": "sphere", "color": "#ff0000"},
+                            },
+                        },
+                        {
+                            "type": "SaveSlot",
+                            "options": {
+                                "slotName": "checkpoint1",
+                                "autosaveInterval": 10,
+                            },
+                        },
+                    ],
+                }
+            ],
+        )
+        self.assertEqual(result.applied, 1)
+        behaviors = scene["gameObjects"][1]["behaviors"]
+        self.assertEqual(behaviors[0]["options"]["maxSpawns"], 5)
+        self.assertEqual(behaviors[0]["options"]["template"]["shape"], "sphere")
+        self.assertEqual(behaviors[1]["options"]["slotName"], "checkpoint1")
+
+        for bad, hint in (
+            ([{"type": "Spawner", "options": {"interval": 0}}], "interval"),
+            ([{"type": "Spawner", "options": {"maxSpawns": -1}}], "maxSpawns"),
+            ([{"type": "Spawner", "options": {"maxSpawns": 1.5}}], "maxSpawns"),
+            ([{"type": "Spawner", "options": {"spawnRadius": -2}}], "spawnRadius"),
+            ([{"type": "Spawner", "options": {"spawnOffset": [1, 2]}}], "spawnOffset"),
+            (
+                [{"type": "Spawner", "options": {"template": {"shape": "dragon"}}}],
+                "shape",
+            ),
+            ([{"type": "Spawner", "options": {"template": {"color": "red"}}}], "color"),
+            ([{"type": "SaveSlot", "options": {"slotName": ""}}], "slotName"),
+            (
+                [{"type": "SaveSlot", "options": {"autosaveInterval": -1}}],
+                "autosaveInterval",
+            ),
+            ([{"type": "SaveSlot", "options": {"slot": "a"}}], "slot"),
+        ):
+            _, result = apply_actions(
+                base_scene(), [{"type": "spawn", "name": "W", "behaviors": bad}]
+            )
+            self.assertEqual(result.invalid, 1, f"should reject {bad!r}")
+            self.assertIn(hint, result.outcomes[0]["detail"])
+
 
 def keeper_tree():
     return {

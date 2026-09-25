@@ -313,6 +313,10 @@ function buildScene(spec, engine) {
             go.addComponent(new engine.Pathfollow(spec.options || {}));
           } else if (name === 'Timer' && engine.Timer) {
             go.addComponent(new engine.Timer(spec.options || {}));
+          } else if (name === 'Spawner' && engine.Spawner) {
+            go.addComponent(new engine.Spawner(spec.options || {}));
+          } else if (name === 'SaveSlot' && engine.SaveSlot) {
+            go.addComponent(new engine.SaveSlot(spec.options || {}));
           }
         }
       }

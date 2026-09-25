@@ -157,7 +157,9 @@ How acceptance rules map onto the schema (the QA runner checks these exact compo
     PlatformerCharacter takes moveSpeed/jumpForce/gravity/coyoteTime/maxJumps/simulate;
     Platform takes platformType solid|jumpthru|ladder; Pathfollow takes
     waypoints[{x,z}], moveSpeed, mode loop|pingpong|once, arrivalRadius, groundOffset;
-    Timer takes duration, repeat, autostart.
+    Timer takes duration, repeat, autostart; Spawner takes template{shape,size,color},
+    interval, maxSpawns, spawnRadius, spawnOffset[x,y,z], autostart; SaveSlot takes
+    slotName, autosaveInterval.
   - "EventSheet" / event_attached rules -> emit an "event" action targeting that object
   - "LightComponent" -> emit a "light" action
   - object_count rules count every entry in gameObjects (lights included)
