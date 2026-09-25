@@ -139,6 +139,7 @@ function buildScene(spec, engine) {
 function setupGame(spec, scene, engine) {
   const config = spec.game;
   if (!config) return null;
+  const mode = config.mode || 'waves';
 
   const enemySpec = config.enemy || {};
   const enemyHealth = enemySpec.health || { maxHealth: 50, destroyOnDeath: true };
@@ -156,15 +157,18 @@ function setupGame(spec, scene, engine) {
   };
 
   const runtime = new engine.GameRuntime({
+    mode,
     scene,
     playerName: config.playerName || 'Player Hero',
+    targetScore: config.targetScore,
+    timeLimitSeconds: config.timeLimitSeconds,
     totalWaves: config.totalWaves ?? 2,
     enemiesPerWave: config.enemiesPerWave ? () => config.enemiesPerWave : undefined,
     spawnRadius: config.spawnRadius ?? 8,
     scorePerKill: config.scorePerKill ?? 100,
     interWaveDelaySeconds: config.interWaveDelaySeconds ?? 1,
-    weapon: hitSource,
-    buildEnemy: ({ name, position }) => {
+    weapon: mode === 'waves' ? hitSource : undefined,
+    buildEnemy: mode === 'waves' ? ({ name, position }) => {
       const enemy = new engine.GameObject(name);
       enemy.transform.setPosition(position[0], position[1] + (enemySpec.y ?? 0.8), position[2]);
       enemy.addComponent(
@@ -179,7 +183,7 @@ function setupGame(spec, scene, engine) {
       enemy.addComponent(new engine.EnemyAI(enemyAi));
       scene.addGameObject(enemy);
       return enemy;
-    }
+    } : undefined
   });
 
   const firstSeen = new Map();
@@ -187,11 +191,13 @@ function setupGame(spec, scene, engine) {
   runtime.start();
 
   return {
+    mode,
     runtime,
     hitEveryFrames: config.hitEveryFrames ?? 20,
     hitDamage: config.hitDamage ?? enemyHealth.maxHealth ?? 50,
     fireCount: 0,
     maybeFire(frame) {
+      if (mode !== 'waves') return;
       if (frame % this.hitEveryFrames !== 0) return;
       const alive = runtime.spawner
         .getSpawnedNames()
@@ -504,10 +510,12 @@ async function main() {
     ...(game
       ? {
           game: {
+            mode: game.mode,
             phase: game.runtime.flow.getPhase(),
             score: game.runtime.session.getScore(),
             kills: game.runtime.session.getKills(),
             wave: game.runtime.spawner.getWave(),
+            traveledDistance: Number(game.runtime.getTraveledDistance().toFixed(2)),
             shots: game.fireCount,
             maxEnemyDisplacement: Number(game.maxEnemyDisplacement().toFixed(3))
           }
