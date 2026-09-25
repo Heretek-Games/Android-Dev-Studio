@@ -75,12 +75,17 @@ export class GameRuntime {
     return this.running;
   }
 
-  /** Wire listeners, start the flow, and spawn wave 1. */
-  public start(): void {
+  /** Wire listeners (damage routing, player death, wave completion) without starting. */
+  public prepare(): void {
     if (!this.running) {
       this.running = true;
       this.wire();
     }
+  }
+
+  /** Wire listeners, start the flow, and spawn wave 1. */
+  public start(): void {
+    this.prepare();
     this.session.start();
     this.spawner.start();
   }

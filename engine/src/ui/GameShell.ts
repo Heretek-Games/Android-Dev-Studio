@@ -130,12 +130,14 @@ export class GameShell {
   }
 
   // ------------------------------------------------------------------ buttons
-  public handleButton(action: 'start' | 'resume' | 'restart' | 'quit' | 'save' | 'load'): boolean {
+  public handleButton(action: 'start' | 'pause' | 'resume' | 'restart' | 'quit' | 'save' | 'load'): boolean {
     if (this.destroyed) return false;
     switch (action) {
       case 'start':
         this.options.onStart?.();
         return this.flow.transition('start');
+      case 'pause':
+        return this.flow.transition('pause');
       case 'resume':
         this.options.onResume?.();
         return this.flow.transition('resume');
@@ -207,9 +209,10 @@ function buildDom(doc: Document, root: HTMLElement, shell: GameShell): Record<st
   const startButton = makeButton('Start', 'start');
   const continueButton = makeButton('Continue', 'load');
   const resumeButton = makeButton('Resume', 'resume');
+  const saveButton = makeButton('Save', 'save');
   const restartButton = makeButton('Restart', 'restart');
   const quitButton = makeButton('Menu', 'quit');
-  buttons.append(startButton, continueButton, resumeButton, restartButton, quitButton);
+  buttons.append(startButton, continueButton, resumeButton, saveButton, restartButton, quitButton);
   overlay.append(title, status, stats, buttons);
 
   const hud = doc.createElement('div');
@@ -220,7 +223,12 @@ function buildDom(doc: Document, root: HTMLElement, shell: GameShell): Record<st
   const hudWave = doc.createElement('span');
   const hudKills = doc.createElement('span');
   const hudTime = doc.createElement('span');
-  hud.append(hudScore, hudWave, hudKills, hudTime);
+  const pauseButton = doc.createElement('button');
+  pauseButton.textContent = '⏸ Pause';
+  pauseButton.style.cssText =
+    'pointer-events:auto;position:absolute;right:14px;top:-4px;padding:6px 14px;border-radius:8px;border:1px solid #3f3f46;background:rgba(24,24,27,0.85);color:#e4e4e7;font-size:13px;cursor:pointer;';
+  pauseButton.addEventListener('click', () => shell.handleButton('pause'));
+  hud.append(hudScore, hudWave, hudKills, hudTime, pauseButton);
 
   const healthBar = doc.createElement('div');
   healthBar.style.cssText =
@@ -242,6 +250,7 @@ function buildDom(doc: Document, root: HTMLElement, shell: GameShell): Record<st
     startButton,
     continueButton,
     resumeButton,
+    saveButton,
     restartButton,
     quitButton,
     hud,
@@ -249,6 +258,7 @@ function buildDom(doc: Document, root: HTMLElement, shell: GameShell): Record<st
     hudWave,
     hudKills,
     hudTime,
+    pauseButton,
     healthBar,
     healthFill
   };
@@ -274,9 +284,11 @@ function applyView(doc: Document, elements: Record<string, HTMLElement>, view: S
   show(elements.startButton, view.overlay === 'menu');
   show(elements.continueButton, view.overlay === 'menu' && view.hasSave);
   show(elements.resumeButton, view.overlay === 'paused');
+  show(elements.saveButton, view.overlay === 'paused');
   show(elements.restartButton, view.overlay === 'won' || view.overlay === 'lost');
   show(elements.quitButton, view.overlay !== 'menu');
 
+  show(elements.pauseButton, view.overlay === 'hud');
   elements.hudScore.textContent = `Score ${view.score}`;
   elements.hudWave.textContent = `Wave ${view.wave}`;
   elements.hudKills.textContent = `Kills ${view.kills}`;

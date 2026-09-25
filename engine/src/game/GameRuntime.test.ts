@@ -117,6 +117,21 @@ describe('GameRuntime — full run wiring', () => {
     assert.strictEqual(runtime.spawner.getWave(), before, 'paused: no wave progression');
   });
 
+  test('prepare wires without starting; start works afterwards', () => {
+    const { scene, weapon, runtime } = makeRuntime({ totalWaves: 1, perWave: 1 });
+    runtime.prepare();
+    assert.strictEqual(runtime.flow.getPhase(), 'menu', 'prepare must not start the run');
+    assert.strictEqual(runtime.spawner.getAliveCount(), 0, 'no enemies before start');
+
+    runtime.start();
+    assert.strictEqual(runtime.flow.getPhase(), 'playing');
+    assert.strictEqual(runtime.spawner.getAliveCount(), 1);
+
+    const [name] = runtime.spawner.getSpawnedNames();
+    weapon.fireAt(name, 50);
+    assert.strictEqual(runtime.session.getKills(), 1, 'routing wired by prepare is active after start');
+  });
+
   test('stop detaches routing and spawning', () => {
     const { weapon, runtime } = makeRuntime({ totalWaves: 2, perWave: 1 });
     runtime.start();

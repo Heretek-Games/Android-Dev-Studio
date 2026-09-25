@@ -16,6 +16,7 @@ import {
   PhysicsWorld,
   GameRuntime,
   GameShell,
+  SaveSystem,
   WeaponController,
   HealthComponent,
   MeshRenderer,
@@ -121,6 +122,10 @@ export const GameView: React.FC = () => {
         health?.heal(health.maxHealth);
       };
 
+      const saveSystem = new SaveSystem();
+      const SAVE_SLOT = 'arena';
+      runtime.prepare();
+
       shell = new GameShell({
         flow: runtime.flow,
         session: runtime.session,
@@ -138,6 +143,20 @@ export const GameView: React.FC = () => {
         onQuit: () => {
           runtime!.stop();
           resetArena();
+        },
+        hasSave: () => saveSystem.load(SAVE_SLOT) !== null,
+        onSave: () => {
+          saveSystem.save(SAVE_SLOT, runtime!.session.snapshot());
+        },
+        onLoad: () => {
+          const envelope = saveSystem.load(SAVE_SLOT);
+          if (!envelope) return;
+          resetArena();
+          runtime!.session.restore(envelope.session);
+          if (runtime!.flow.getPhase() === 'menu') {
+            runtime!.flow.transition('start');
+          }
+          runtime!.spawner.start();
         }
       });
       shell.mount();
@@ -239,6 +258,13 @@ export const GameView: React.FC = () => {
         renderer.render(scene.threeScene, camera);
       });
 
+      const onKeyDown = (event: KeyboardEvent) => {
+        if (event.key !== 'Escape') return;
+        if (runtime!.flow.isPlaying()) runtime!.flow.transition('pause');
+        else if (runtime!.flow.getPhase() === 'paused') runtime!.flow.transition('resume');
+      };
+      window.addEventListener('keydown', onKeyDown);
+
       const onResize = () => {
         if (!renderer) return;
         const width = container.clientWidth;
@@ -248,7 +274,10 @@ export const GameView: React.FC = () => {
         camera.updateProjectionMatrix();
       };
       window.addEventListener('resize', onResize);
-      return () => window.removeEventListener('resize', onResize);
+      return () => {
+        window.removeEventListener('resize', onResize);
+        window.removeEventListener('keydown', onKeyDown);
+      };
     };
 
     const teardown = () => {
