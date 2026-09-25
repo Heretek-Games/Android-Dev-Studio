@@ -293,6 +293,17 @@ function buildScene(spec, engine) {
       if (objSpec.cel) {
         go.addComponent(new engine.AnimeCelShader(objSpec.cel));
       }
+      if (Array.isArray(objSpec.behaviors)) {
+        for (const spec of objSpec.behaviors) {
+          if (!spec || typeof spec.type !== 'string' || !spec.type.trim()) continue;
+          const name = spec.type.trim();
+          if (name === 'Tween' && engine.Tween) {
+            go.addComponent(new engine.Tween());
+          } else if (name === 'TopDownMovement' && engine.TopDownMovement) {
+            go.addComponent(new engine.TopDownMovement(spec.options || {}));
+          }
+        }
+      }
       if (objSpec.health) {
         go.addComponent(new engine.HealthComponent(objSpec.health));
       }

@@ -61,7 +61,8 @@ ACTION_SCHEMA = """Action vocabulary (a JSON array named "actions"):
      "health": {"maxHealth": 100} (optional: adds a HealthComponent; destroyOnDeath defaults true),
      "ai": {"targetName": "Player Hero", "moveSpeed": 2.5} (optional: adds an EnemyAI NPC routine that chases/attacks the named target),
      "elemental": {"aura": "Pyro", "maxHealth": 80} (optional: seeds an elemental aura for reaction quests; aura is one of Pyro|Hydro|Cryo|Electro|Anemo|Geo|Dendro),
-     "cel": {"baseColor": "#38bdf8", "shadowColor": "#1e3a8a", "rimPower": 3.5} (optional: calibrates an AnimeCelShader look-dev pass; colors #rgb/#rrggbb, outlineThickness/rimPower non-negative numbers)}
+     "cel": {"baseColor": "#38bdf8", "shadowColor": "#1e3a8a", "rimPower": 3.5} (optional: calibrates an AnimeCelShader look-dev pass; colors #rgb/#rrggbb, outlineThickness/rimPower non-negative numbers),
+     "behaviors": [{"type": "TopDownMovement", "options": {"moveSpeed": 5}}] (optional: attaches behavior components; Tween takes play-spec options, TopDownMovement takes moveSpeed/allowDiagonals/rotateToHeading/simulate)}
   - {"type": "light", "name": "...", "lightType": "directional"|"point"|"ambient",
      "color": "#rrggbb", "intensity": 2.0, "position": [x,y,z]}
   - {"type": "modify", "target": "...", "position": [x,y,z], "color": "#rrggbb",
@@ -148,6 +149,10 @@ How acceptance rules map onto the schema (the QA runner checks these exact compo
     "cel", e.g. "cel": {"baseColor": "#38bdf8", "shadowColor": "#1e3a8a", "rimPower": 3.5}.
     Headless QA verifies calibration presence + budget, never taste — true aesthetics
     stay critic-owned.
+  - "Tween"/"TopDownMovement" behavior components -> the spawn (or a "modify") has
+    "behaviors", e.g. "behaviors": [{"type": "TopDownMovement", "options": {"moveSpeed": 5,
+    "simulate": {"x": 1, "y": 0}}}] for scripted headless movement, or [{"type": "Tween"}]
+    for animation specs driven by play() calls.
   - "EventSheet" / event_attached rules -> emit an "event" action targeting that object
   - "LightComponent" -> emit a "light" action
   - object_count rules count every entry in gameObjects (lights included)

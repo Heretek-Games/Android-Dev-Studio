@@ -56,6 +56,7 @@ MODIFY_FIELDS = (
     "ai",
     "elemental",
     "cel",
+    "behaviors",
 )
 
 
@@ -248,6 +249,11 @@ def _validate_ai(value: Any) -> Optional[Dict[str, Any]]:
 CEL_COLORS = {"baseColor", "shadowColor", "rimColor", "outlineColor"}
 CEL_NUMERICS = {"outlineThickness", "rimPower"}
 
+#: Behaviors the loop may attach via the `behaviors` array (mirrors the engine
+#: BuiltinComponents registry; Tween options pass through unvalidated since
+#: every key is a valid tween spec field trio).
+BEHAVIOR_TYPES = {"Tween", "TopDownMovement"}
+
 
 def _validate_cel(
     value: Any, errors: Optional[List[str]] = None
@@ -283,6 +289,103 @@ def _validate_cel(
         else:
             fail(
                 f"unknown cel key '{key}' (allowed: {sorted(CEL_COLORS | CEL_NUMERICS)})"
+            )
+            return None
+    return normalized
+
+
+TOPDOWN_NUMERICS = {"moveSpeed"}
+TOPDOWN_FLAGS = {"allowDiagonals", "rotateToHeading"}
+
+
+def _validate_behaviors(
+    value: Any, errors: Optional[List[str]] = None
+) -> Optional[List[Dict[str, Any]]]:
+    """Behavior attachments pass straight to the QA runner (objSpec.behaviors).
+
+    Returns the normalized [{type, options}] list, or None when malformed.
+    Each entry needs a registered type; Tween options pass through (every
+    play() field is optional with engine defaults); TopDownMovement options
+    are validated (moveSpeed non-negative finite, flags boolean, simulate an
+    {x, y} finite pair). Unknown types/keys are rejected with indexed reasons.
+    """
+
+    def fail(reason: str) -> None:
+        if errors is not None:
+            errors.append(reason)
+        return None
+
+    if not isinstance(value, list) or not value:
+        fail("behaviors must be a non-empty array of {type, options} entries")
+        return None
+    normalized: List[Dict[str, Any]] = []
+    for i, entry in enumerate(value):
+        if not isinstance(entry, dict):
+            fail(f"behaviors[{i}] must be an object")
+            return None
+        btype = entry.get("type")
+        if btype not in BEHAVIOR_TYPES:
+            fail(
+                f"behaviors[{i}].type must be one of {sorted(BEHAVIOR_TYPES)} "
+                f"(got {btype!r})"
+            )
+            return None
+        options = entry.get("options", {})
+        if not isinstance(options, dict):
+            fail(f"behaviors[{i}].options must be an object")
+            return None
+        if btype == "TopDownMovement":
+            checked = _validate_topdown_options(options, i, errors)
+            if checked is None:
+                return None
+            normalized.append({"type": btype, "options": checked})
+        else:
+            normalized.append({"type": btype, "options": dict(options)})
+    return normalized
+
+
+def _validate_topdown_options(
+    options: Dict[str, Any], index: int, errors: Optional[List[str]]
+) -> Optional[Dict[str, Any]]:
+    def fail(reason: str) -> None:
+        if errors is not None:
+            errors.append(reason)
+        return None
+
+    normalized: Dict[str, Any] = {}
+    for key, item in options.items():
+        if key in TOPDOWN_NUMERICS:
+            if not _is_finite_number(item) or item < 0:
+                fail(
+                    f"behaviors[{index}] TopDownMovement '{key}' must be a "
+                    f"non-negative finite number (got {item!r})"
+                )
+                return None
+            normalized[key] = float(item)
+        elif key in TOPDOWN_FLAGS:
+            if not isinstance(item, bool):
+                fail(
+                    f"behaviors[{index}] TopDownMovement '{key}' must be "
+                    f"true/false (got {item!r})"
+                )
+                return None
+            normalized[key] = item
+        elif key == "simulate":
+            if (
+                not isinstance(item, dict)
+                or not _is_finite_number(item.get("x"))
+                or not _is_finite_number(item.get("y"))
+            ):
+                fail(
+                    f"behaviors[{index}] TopDownMovement 'simulate' must be "
+                    f"an {{x, y}} finite pair (got {item!r})"
+                )
+                return None
+            normalized[key] = {"x": float(item["x"]), "y": float(item["y"])}
+        else:
+            fail(
+                f"behaviors[{index}] unknown TopDownMovement option '{key}' "
+                "(allowed: moveSpeed, allowDiagonals, rotateToHeading, simulate)"
             )
             return None
     return normalized
@@ -1040,6 +1143,19 @@ def _apply_spawn(
                 f"spawn cel-shading rejected — {cel_reasons[0] if cel_reasons else 'malformed'}",
             )
         obj["cel"] = cel
+    if action.get("behaviors") is not None:
+        # Maps to behavior components in the QA runner (objSpec.behaviors).
+        behavior_reasons: List[str] = []
+        behaviors = _validate_behaviors(action.get("behaviors"), behavior_reasons)
+        if behaviors is None:
+            return _outcome(
+                result,
+                index,
+                "spawn",
+                "invalid",
+                f"spawn behaviors rejected — {behavior_reasons[0] if behavior_reasons else 'malformed'}",
+            )
+        obj["behaviors"] = behaviors
 
     scene.setdefault("gameObjects", []).append(obj)
     _outcome(
@@ -1313,6 +1429,18 @@ def _apply_modify(
                     f"modify cel-shading rejected — {cel_reasons[0] if cel_reasons else 'malformed'}",
                 )
             obj["cel"] = cel
+        elif field_name == "behaviors":
+            behavior_reasons: List[str] = []
+            behaviors = _validate_behaviors(value, behavior_reasons)
+            if behaviors is None:
+                return _outcome(
+                    result,
+                    index,
+                    "modify",
+                    "invalid",
+                    f"modify behaviors rejected — {behavior_reasons[0] if behavior_reasons else 'malformed'}",
+                )
+            obj["behaviors"] = behaviors
         changed.append(field_name)
 
     if not changed:

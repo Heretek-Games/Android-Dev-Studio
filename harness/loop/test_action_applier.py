@@ -743,6 +743,76 @@ class CelShadingTests(unittest.TestCase):
         self.assertTrue(valid, f"gate rejected cel scene: {violations}")
 
 
+class BehaviorArrayTests(unittest.TestCase):
+    def test_spawn_behaviors_attach(self):
+        scene, result = apply_actions(
+            base_scene(),
+            [
+                {
+                    "type": "spawn",
+                    "name": "Walker",
+                    "physics": "none",
+                    "behaviors": [
+                        {
+                            "type": "TopDownMovement",
+                            "options": {"moveSpeed": 5, "simulate": {"x": 1, "y": 0}},
+                        },
+                        {"type": "Tween", "options": {}},
+                    ],
+                }
+            ],
+        )
+        self.assertEqual(result.applied, 1)
+        self.assertEqual(
+            scene["gameObjects"][1]["behaviors"],
+            [
+                {
+                    "type": "TopDownMovement",
+                    "options": {"moveSpeed": 5.0, "simulate": {"x": 1.0, "y": 0.0}},
+                },
+                {"type": "Tween", "options": {}},
+            ],
+        )
+
+    def test_spawn_behaviors_reject_malformed(self):
+        for bad, hint in (
+            (True, "array"),
+            ([], "non-empty"),
+            ([{"options": {}}], "TopDownMovement"),
+            ([{"type": "Fly", "options": {}}], "Fly"),
+            ([{"type": "TopDownMovement", "options": {"moveSpeed": -1}}], "moveSpeed"),
+            (
+                [{"type": "TopDownMovement", "options": {"allowDiagonals": "yes"}}],
+                "allowDiagonals",
+            ),
+            (
+                [{"type": "TopDownMovement", "options": {"simulate": {"x": 1}}}],
+                "simulate",
+            ),
+        ):
+            _, result = apply_actions(
+                base_scene(), [{"type": "spawn", "name": "W", "behaviors": bad}]
+            )
+            self.assertEqual(result.invalid, 1, f"should reject {bad!r}")
+            self.assertIn(hint, result.outcomes[0]["detail"])
+
+    def test_behavior_scene_passes_the_invariant_gate(self):
+        scene, result = apply_actions(
+            base_scene(),
+            [
+                {
+                    "type": "spawn",
+                    "name": "Walker",
+                    "physics": "none",
+                    "behaviors": [{"type": "Tween", "options": {}}],
+                }
+            ],
+        )
+        self.assertEqual(result.failures, 0)
+        valid, violations = validate_scene_invariants(scene)
+        self.assertTrue(valid, f"gate rejected behavior scene: {violations}")
+
+
 def keeper_tree():
     return {
         "id": "DungeonKeeper",

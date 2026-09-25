@@ -58,6 +58,8 @@ export * from './terrain/StreamingCells.js';
 export * from './terrain/QuadtreeTerrain.js';
 export * from './combat/ElementalSystem.js';
 export * from './prefabs/Prefab.js';
+export * from './behaviors/Tween.js';
+export * from './behaviors/TopDownMovement.js';
 export * from './combat/ElementalReactionComponent.js';
 export * from './vehicles/VehicleController.js';
 export * from './ai/TrafficSystem.js';
