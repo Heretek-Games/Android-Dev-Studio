@@ -42,6 +42,11 @@ RULE_DESCRIPTIONS = {
         f"mixer bus '{r.get('bus')}' must stay at gain <= {r.get('max', 0.5)}"
     ),
     "nav_arrived": lambda r: f"'{r.get('target')}' must navigate to its destination",
+    "probe_coverage_min": lambda r: (
+        f"probe coverage must reach {r.get('min', 0.8)} over scene meshes"
+    ),
+    "probe_budget_max": lambda r: "probe count must stay within budget",
+    "lut_present": lambda r: "a valid grading LUT must be registered",
     "object_count": lambda r: (
         f"the scene must contain exactly {r.get('count')} objects"
     ),
@@ -152,6 +157,9 @@ ACTION_SCHEMA = """Action vocabulary (a JSON array named "actions"):
   - {"type": "navgrid", "config": {"width": 16, "height": 16, "cellSize": 1, "obstacles": [{"x": 7.5, "z": 7.5, "hx": 4, "hz": 0.5}]}}}
     (registers the walkability grid for the nav_arrived audit; obstacles are world-space
     {x, z, hx, hz} footprints baked with agent-radius erosion)
+  - {"type": "lightrig", "config": {"probes": [{"position": [0, 3, 0], "radius": 10}], "lut": {"preset": "sunset", "amount": 0.6}}}}
+    (registers the stylized lighting rig for the probe/lut audits; LUT data arrays must
+    hold size^3*3 numbers when given instead of a preset)
 
 How acceptance rules map onto the schema (the QA runner checks these exact components):
   - "RigidBody3D"/"Collider3D" component -> the spawn has "physics": "dynamic" (or "fixed")

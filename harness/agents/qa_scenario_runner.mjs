@@ -519,6 +519,63 @@ function setupNav(spec, scene, engine) {
   return { grid: baked.grid, agents };
 }
 /**
+ * Stylized lighting rig (Track 2.1): builds the SH probe volume from
+ * spec.lightrig, bakes analytic irradiance from scene lights, optionally
+ * pushes sampled bounce into AnimeCelShader ambient, and builds the LUT.
+ */
+function setupLighting(spec, scene, engine) {
+  if (!spec.lightrig || typeof spec.lightrig !== 'object') return null;
+  const cfg = spec.lightrig;
+  const volume = new engine.LightProbeVolume({ probes: cfg.probes || [] });
+  const toLinear = (hex) => {
+    const m = /^#([0-9a-f]{6})$/i.exec(hex || '');
+    if (!m) return [1, 1, 1];
+    const v = parseInt(m[1], 16);
+    return [((v >> 16) & 255) / 255, ((v >> 8) & 255) / 255, (v & 255) / 255];
+  };
+  const lights = [];
+  for (const go of scene.gameObjects) {
+    for (const comp of go.components) {
+      if (comp.constructor.name !== 'LightComponent') continue;
+      const color = toLinear(comp.color);
+      const intensity = comp.intensity ?? 1;
+      if (comp.lightType === 'ambient') {
+        lights.push({ kind: 'ambient', color, intensity });
+      } else if (comp.lightType === 'directional') {
+        const p = go.transform.position;
+        const len = Math.hypot(p.x, p.y, p.z) || 1;
+        lights.push({
+          kind: 'directional', color, intensity,
+          direction: len > 1e-6 && Math.hypot(p.x, p.y, p.z) > 1e-6 ? [p.x / len, p.y / len, p.z / len] : [0, 1, 0]
+        });
+      } else {
+        const p = go.transform.position;
+        lights.push({ kind: 'point', color, intensity, position: [p.x, p.y, p.z] });
+      }
+    }
+  }
+  volume.bake(lights);
+  let grade = null;
+  if (cfg.lut && typeof cfg.lut === 'object') {
+    grade = new engine.ColorGrade({
+      size: cfg.lut.size, amount: cfg.lut.amount,
+      preset: cfg.lut.preset, data: cfg.lut.data
+    });
+  }
+  if (cfg.bakeAmbient !== false) {
+    for (const go of scene.gameObjects) {
+      for (const comp of go.components) {
+        if (comp.constructor.name !== 'AnimeCelShader') continue;
+        const p = go.transform.position;
+        const sampled = volume.sample(p.x, p.y, p.z);
+        // Uniform object shares the material uniform reference: live update.
+        comp.ambient.setRGB(sampled.color[0], sampled.color[1], sampled.color[2]);
+      }
+    }
+  }
+  return { volume, grade, lightCount: lights.length };
+}
+/**
  * Dialogue auto-play: register every spec.dialogues tree and walk each one
  * deterministically (first available choice, bounded steps), recording stable
  * node visits plus emitted events. Action/condition nodes self-resolve inside
@@ -767,7 +824,7 @@ function placementNote(game) {
 }
 
 function evaluateRules(spec, ctxData) {
-  const { scene, samples, firstSamples, metrics, dt, game, dialogue, input, audio, nav } = ctxData;
+  const { scene, samples, firstSamples, metrics, dt, game, dialogue, input, audio, nav, lighting } = ctxData;
   const results = [];
 
   for (const rule of spec.rules || []) {
@@ -888,6 +945,36 @@ function evaluateRules(spec, ctxData) {
         if (!agent) { pass = false; detail = `no NavAgent on "${rule.target}"`; break; }
         pass = agent.arrived === true;
         detail = `"${rule.target}" arrived=${agent.arrived} (distToGoal=${agent.distanceToGoal().toFixed(2)})`;
+        break;
+      }
+      case 'probe_coverage_min': {
+        if (!lighting) { pass = false; detail = 'no spec.lightrig present'; break; }
+        const points = [];
+        for (const go of scene.gameObjects) {
+          const hasMesh = go.components.some(c => c.constructor.name === 'MeshRenderer' || c.constructor.name === 'ModelRenderer');
+          if (!hasMesh) continue;
+          const p = go.transform.position;
+          points.push([p.x, p.y, p.z]);
+        }
+        const coverage = lighting.volume.coverage(points);
+        pass = coverage >= (rule.min ?? 0.8);
+        detail = `probe coverage=${coverage.toFixed(2)} over ${points.length} mesh(es) (min=${rule.min ?? 0.8}, probes=${lighting.volume.probes.length}, lights=${lighting.lightCount})`;
+        break;
+      }
+      case 'probe_budget_max': {
+        if (!lighting) { pass = false; detail = 'no spec.lightrig present'; break; }
+        const n = lighting.volume.probes.length;
+        pass = n <= (rule.max ?? 64) && n >= (rule.min ?? 1);
+        detail = `probes=${n} (range ${rule.min ?? 1}..${rule.max ?? 64})`;
+        break;
+      }
+      case 'lut_present': {
+        if (!lighting || !lighting.grade) { pass = false; detail = 'no spec.lightrig.lut present'; break; }
+        const grade = lighting.grade;
+        const valid = grade.size >= 2 && grade.amount >= 0 && grade.amount <= 1 &&
+          grade.data.length === grade.size ** 3 * 3;
+        pass = valid;
+        detail = `lut size=${grade.size} amount=${grade.amount} entries=${grade.data.length}`;
         break;
       }
       case 'object_count': {
@@ -1185,6 +1272,7 @@ async function main() {
   const input = setupInput(spec, engine);
   const audio = setupAudio(spec, scene, engine);
   const nav = setupNav(spec, scene, engine);
+  const lighting = setupLighting(spec, scene, engine);
 
   const eventCount = scene.gameObjects.reduce(
     (n, go) => n + go.components.filter(c => c.constructor.name === 'EventSheet').reduce((m, es) => m + es.events.length, 0), 0
@@ -1284,7 +1372,7 @@ async function main() {
     }
   }
 
-  const ruleResults = evaluateRules(spec, { scene, samples, firstSamples, metrics, dt: args.dt, game, dialogue, input, audio, nav });
+  const ruleResults = evaluateRules(spec, { scene, samples, firstSamples, metrics, dt: args.dt, game, dialogue, input, audio, nav, lighting });
   const passed = ruleResults.filter(r => r.pass).length;
   const total = ruleResults.length;
   const allPass = total > 0 && passed === total;

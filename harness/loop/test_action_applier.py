@@ -1606,6 +1606,57 @@ class NavGridActionTests(unittest.TestCase):
             self.assertIn(hint, result.outcomes[0]["detail"])
 
 
+class LightRigActionTests(unittest.TestCase):
+    def test_lightrig_action_registers_probes_and_lut(self):
+        scene, result = apply_actions(
+            base_scene(),
+            [
+                {
+                    "type": "lightrig",
+                    "config": {
+                        "probes": [
+                            {"position": [0, 3, 0], "radius": 10},
+                            {"position": [8, 3, 8]},
+                        ],
+                        "lut": {"preset": "sunset", "amount": 0.6},
+                        "bakeAmbient": True,
+                    },
+                }
+            ],
+        )
+        self.assertEqual(result.applied, 1)
+        self.assertEqual(len(scene["lightrig"]["probes"]), 2)
+        self.assertEqual(scene["lightrig"]["lut"]["preset"], "sunset")
+
+    def test_lightrig_rejects_malformed(self):
+        for action, hint in (
+            (
+                {"type": "lightrig", "config": {"probes": [{"position": [0, 1]}]}},
+                "3 finite",
+            ),
+            (
+                {
+                    "type": "lightrig",
+                    "config": {"probes": [{"position": [0, 1, 2], "radius": 0}]},
+                },
+                "positive",
+            ),
+            (
+                {"type": "lightrig", "config": {"lut": {"preset": "film"}}},
+                "neutral|sunset",
+            ),
+            (
+                {"type": "lightrig", "config": {"lut": {"size": 4, "data": [0]}}},
+                "size^3",
+            ),
+            ({"type": "lightrig", "config": {"lut": {"amount": 2}}}, "0..1"),
+            ({"type": "lightrig", "config": {"nope": 1}}, "nope"),
+        ):
+            _, result = apply_actions(base_scene(), [action])
+            self.assertEqual(result.invalid, 1, f"should reject {action!r}")
+            self.assertIn(hint, result.outcomes[0]["detail"])
+
+
 class PrefabActionTests(unittest.TestCase):
     def test_prefab_define_registers_template(self):
         scene, result = apply_actions(

@@ -2550,6 +2550,139 @@ def _validate_audio(
     return normalized
 
 
+def _validate_lightrig(
+    value: Any, errors: Optional[List[str]] = None
+) -> Optional[Dict[str, Any]]:
+    """Lighting rig specs pass straight to the QA runner (spec.lightrig).
+
+    Returns the normalized spec, or None when malformed. Probes need
+    positions (radius optional); LUT needs a valid size/amount with
+    preset or matching data; bakeAmbient is a flag.
+    """
+
+    def fail(reason: str) -> None:
+        if errors is not None:
+            errors.append(reason)
+        return None
+
+    if not isinstance(value, dict):
+        fail("lightrig 'config' must be an object")
+        return None
+    normalized: Dict[str, Any] = {}
+    raw_probes = value.get("probes", [])
+    if not isinstance(raw_probes, list):
+        fail("lightrig config 'probes' must be an array")
+        return None
+    probes: List[Dict[str, Any]] = []
+    for i, probe in enumerate(raw_probes):
+        if not isinstance(probe, dict):
+            fail(f"lightrig probes[{i}] must be an object")
+            return None
+        position = probe.get("position")
+        if (
+            not isinstance(position, (list, tuple))
+            or len(position) != 3
+            or not all(_is_finite_number(v) for v in position)
+        ):
+            fail(f"lightrig probes[{i}].position must be 3 finite numbers")
+            return None
+        entry: Dict[str, Any] = {"position": [float(v) for v in position]}
+        if "radius" in probe:
+            if not _is_finite_number(probe["radius"]) or probe["radius"] <= 0:
+                fail(f"lightrig probes[{i}].radius must be positive")
+                return None
+            entry["radius"] = float(probe["radius"])
+        for key in probe:
+            if key not in ("position", "radius"):
+                fail(f"lightrig probes[{i}] unknown key '{key}'")
+                return None
+        probes.append(entry)
+    normalized["probes"] = probes
+    if "lut" in value:
+        lut = _validate_lut(value["lut"], errors)
+        if lut is None:
+            return None
+        normalized["lut"] = lut
+    if "bakeAmbient" in value:
+        if not isinstance(value["bakeAmbient"], bool):
+            fail("lightrig config 'bakeAmbient' must be true/false")
+            return None
+        normalized["bakeAmbient"] = value["bakeAmbient"]
+    for key in value:
+        if key not in ("probes", "lut", "bakeAmbient"):
+            fail(f"unknown lightrig config key '{key}'")
+            return None
+    return normalized
+
+
+def _validate_lut(value: Any, errors: Optional[List[str]]) -> Optional[Dict[str, Any]]:
+    def fail(reason: str) -> None:
+        if errors is not None:
+            errors.append(reason)
+        return None
+
+    if not isinstance(value, dict):
+        fail("lightrig 'lut' must be an object")
+        return None
+    normalized: Dict[str, Any] = {}
+    size = value.get("size", 32)
+    if (
+        isinstance(size, bool)
+        or not isinstance(size, (int, float))
+        or int(size) != size
+        or size < 2
+    ):
+        fail("lightrig lut 'size' must be an integer >= 2")
+        return None
+    normalized["size"] = int(size)
+    amount = value.get("amount", 1.0)
+    if not _is_finite_number(amount) or not 0 <= amount <= 1:
+        fail("lightrig lut 'amount' must be 0..1")
+        return None
+    normalized["amount"] = float(amount)
+    if "preset" in value:
+        if value["preset"] not in ("neutral", "sunset"):
+            fail("lightrig lut 'preset' must be neutral|sunset")
+            return None
+        normalized["preset"] = value["preset"]
+    if "data" in value:
+        data = value["data"]
+        if not isinstance(data, list) or len(data) != normalized["size"] ** 3 * 3:
+            fail(
+                f"lightrig lut 'data' must hold size^3*3 numbers "
+                f"({normalized['size'] ** 3 * 3} for size {normalized['size']})"
+            )
+            return None
+        normalized["data"] = [float(v) for v in data]
+    for key in value:
+        if key not in ("size", "amount", "preset", "data"):
+            fail(f"unknown lightrig lut key '{key}'")
+            return None
+    return normalized
+
+
+def _apply_lightrig(
+    scene: Dict[str, Any], action: Dict[str, Any], result: ApplyResult, index: int
+) -> None:
+    reasons: List[str] = []
+    config = _validate_lightrig(action.get("config"), reasons)
+    if config is None:
+        detail = reasons[0] if reasons else "malformed config"
+        return _outcome(
+            result, index, "lightrig", "invalid", f"lightrig config rejected — {detail}"
+        )
+    scene["lightrig"] = config
+    _outcome(
+        result,
+        index,
+        "lightrig",
+        "applied",
+        f"Registered lightrig ({len(config['probes'])} probe(s)"
+        + (" + LUT" if "lut" in config else "")
+        + ")",
+    )
+
+
 def _validate_navgrid(
     value: Any, errors: Optional[List[str]] = None
 ) -> Optional[Dict[str, Any]]:
@@ -3253,6 +3386,7 @@ _HANDLERS = {
     "input": _apply_input,
     "mixer": _apply_mixer,
     "navgrid": _apply_navgrid,
+    "lightrig": _apply_lightrig,
 }
 
 

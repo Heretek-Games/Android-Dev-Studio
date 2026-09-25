@@ -9,6 +9,8 @@ export interface AnimeCelShaderOptions {
   outlineThickness?: number;
   rimPower?: number;
   lightDirection?: THREE.Vector3;
+  /** Probe-baked bounce tint added to the diffuse (Track 2.1). Default black. */
+  ambient?: [number, number, number];
 }
 
 /**
@@ -24,6 +26,7 @@ export class AnimeCelShader extends Component {
   public outlineThickness: number;
   public rimPower: number;
   public lightDirection: THREE.Vector3;
+  public ambient: THREE.Color;
 
   public customMaterial: THREE.ShaderMaterial | null = null;
   public outlineMesh: THREE.Mesh | null = null;
@@ -37,6 +40,8 @@ export class AnimeCelShader extends Component {
     this.outlineThickness = options?.outlineThickness ?? 0.035;
     this.rimPower = options?.rimPower ?? 3.5;
     this.lightDirection = options?.lightDirection ?? new THREE.Vector3(0.5, 1.0, 0.75).normalize();
+    const ambient = options?.ambient ?? [0, 0, 0];
+    this.ambient = new THREE.Color(ambient[0], ambient[1], ambient[2]);
   }
 
   public override start(): void {
@@ -57,7 +62,8 @@ export class AnimeCelShader extends Component {
         uShadowColor: { value: this.shadowColor },
         uRimColor: { value: this.rimColor },
         uRimPower: { value: this.rimPower },
-        uLightDir: { value: this.lightDirection }
+        uLightDir: { value: this.lightDirection },
+        uAmbient: { value: this.ambient }
       },
       vertexShader: `
         varying vec3 vNormal;
@@ -76,6 +82,7 @@ export class AnimeCelShader extends Component {
         uniform vec3 uRimColor;
         uniform float uRimPower;
         uniform vec3 uLightDir;
+        uniform vec3 uAmbient;
 
         varying vec3 vNormal;
         varying vec3 vViewDir;
@@ -86,7 +93,7 @@ export class AnimeCelShader extends Component {
           
           // Stepped 2-band toon ramp
           float diffuseFactor = smoothstep(0.05, 0.1, nDotL);
-          vec3 diffuse = mix(uShadowColor, uBaseColor, diffuseFactor);
+          vec3 diffuse = mix(uShadowColor, uBaseColor, diffuseFactor) + uAmbient;
 
           // Fresnel Rim Light
           float rim = 1.0 - max(0.0, dot(vNormal, vViewDir));
@@ -153,7 +160,8 @@ export class AnimeCelShader extends Component {
       rimColor: '#' + this.rimColor.getHexString(),
       outlineColor: '#' + this.outlineColor.getHexString(),
       outlineThickness: this.outlineThickness,
-      rimPower: this.rimPower
+      rimPower: this.rimPower,
+      ambient: [this.ambient.r, this.ambient.g, this.ambient.b]
     };
   }
 
@@ -165,5 +173,8 @@ export class AnimeCelShader extends Component {
     if (typeof data.outlineColor === 'string') this.outlineColor.set(data.outlineColor);
     if (data.outlineThickness !== undefined) this.outlineThickness = data.outlineThickness;
     if (data.rimPower !== undefined) this.rimPower = data.rimPower;
+    if (Array.isArray(data.ambient) && data.ambient.length >= 3) {
+      this.ambient.setRGB(Number(data.ambient[0]) || 0, Number(data.ambient[1]) || 0, Number(data.ambient[2]) || 0);
+    }
   }
 }

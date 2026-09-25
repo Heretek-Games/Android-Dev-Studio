@@ -23,6 +23,8 @@ import {
   AudioMixer,
   NavGrid,
   NavAgent,
+  LightProbeVolume,
+  ColorGrade,
   type PrefabStore
 } from '@heretek/engine';
 
@@ -215,6 +217,52 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         refreshScene();
         addLog('info', 'Scene', 'Spawned nav crossing probe.');
         return ['Probe Nav A', 'Probe Nav B'];
+      },
+      probeLightRig: () => {
+        // Read-only rig audit over the live scene: bake one probe from the
+        // real lights, sample every mesh, grade one LUT lookup.
+        const toLinear = (hex: string): [number, number, number] => {
+          const m = /^#([0-9a-f]{6})$/i.exec(hex || '');
+          if (!m) return [1, 1, 1];
+          const v = parseInt(m[1], 16);
+          return [((v >> 16) & 255) / 255, ((v >> 8) & 255) / 255, (v & 255) / 255];
+        };
+        const lights: Array<{ kind: 'directional' | 'point' | 'ambient'; color: [number, number, number]; intensity: number; direction?: [number, number, number]; position?: [number, number, number] }> = [];
+        const meshPoints: Array<[number, number, number]> = [];
+        for (const go of scene.gameObjects) {
+          const comps: any[] = go.components;
+          for (const comp of comps) {
+            const name = comp.constructor.name;
+            if (name === 'LightComponent') {
+              const color = toLinear(comp.color);
+              const intensity = comp.intensity ?? 1;
+              if (comp.lightType === 'ambient') lights.push({ kind: 'ambient', color, intensity });
+              else if (comp.lightType === 'directional') {
+                const p = go.transform.position;
+                const len = Math.hypot(p.x, p.y, p.z) || 1;
+                lights.push({ kind: 'directional', color, intensity, direction: [p.x / len, p.y / len, p.z / len] });
+              } else {
+                const p = go.transform.position;
+                lights.push({ kind: 'point', color, intensity, position: [p.x, p.y, p.z] });
+              }
+            } else if (name === 'MeshRenderer' || name === 'ModelRenderer') {
+              const p = go.transform.position;
+              meshPoints.push([p.x, p.y, p.z]);
+            }
+          }
+        }
+        const volume = new LightProbeVolume({ probes: [{ position: [0, 3, 0], radius: 25 }] });
+        volume.bake(lights);
+        const hero = meshPoints[0] ?? [0, 0, 0];
+        const sample = volume.sample(hero[0], hero[1], hero[2]);
+        const grade = new ColorGrade({ size: 8, preset: 'sunset', amount: 0.6 });
+        return {
+          lights: lights.length,
+          meshes: meshPoints.length,
+          sample: { color: sample.color.map(v => Number(v.toFixed(4))), covered: sample.covered },
+          coverage: Number(volume.coverage(meshPoints).toFixed(3)),
+          graded: grade.grade(0.9, 0.5, 0.2).map(v => Number(v.toFixed(4)))
+        };
       },
       probeInputMap: () => {
         // End-to-end through the real capture path: synthetic key events on
