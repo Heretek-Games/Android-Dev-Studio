@@ -800,3 +800,23 @@ timing (`SYNC_STATS` at frame 600). Commits `1c87bca` (transport) + `7b8c4f1` (r
 Option A stands: isolate render cost on physical hardware (blocked: #1) and design explicit
 host↔device synchronization; input round-trip probe (experiment 2) proceeds against this
 baseline. ADR-1790368134523.
+
+---
+
+## Run Block 22 — 2026-09-25, Track 0 Experiment 2: Input Round-Trip Probe ⚠️ (Path Proven, Latency Partial)
+
+**Question:** does a tap reach staged motion within ≤ 3 frames?
+**Setup:** tap-driven mover-0 target through `__probeTick` input; `INPUT_TAP` receipt timestamps
++ mover-x trace every 10 frames (`INPUT_PROBE`). Commit `9b1f103`.
+
+### Verdict
+
+| Check | Evidence |
+|-------|----------|
+| Full path tap→photon-path | **PROVEN** — tap (2000,500) → `INPUT_TAP x=0.667` → JS target → staged sync → mover eased 0.0 → 6.667 (exact target = 0.667×10), converged and held |
+| Latency ≤ 3 frames | **NOT MET on evidence** — tap landed 14.7 ms after frame 4350's apply; first moved sample frame 4360 (+268 ms). 10-frame trace granularity bounds true latency at ≤ 10 frames (consistent with ~2–5, unresolvable without per-frame tracing) |
+| Incidental findings | Touch space is 2400×1080 landscape despite `wm size` reporting portrait — off-space taps clip silently (voided two earlier taps); hidden-WebView rAF lesson reinforced |
+
+### Prescription
+Per-frame tracing window (log every frame for ~60 frames post-tap) or hardware measurement
+(blocked: #1) to resolve ≤ 3. Path proven; no architecture change indicated. ADR-1790368461390.
