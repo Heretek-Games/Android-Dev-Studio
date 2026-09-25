@@ -17,6 +17,7 @@ import { EventSheet } from '../events/EventSheet.js';
 import { AnimationController } from '../animation/BlendTree.js';
 import { BehaviorTreeComponent } from '../ai/BehaviorTree.js';
 import { registerComponent } from './ComponentRegistry.js';
+import { Tween } from '../behaviors/Tween.js';
 
 /**
  * Registers every restorable built-in component by its toJSON type name.
@@ -41,6 +42,7 @@ export function registerBuiltinComponents(): void {  registerComponent('MeshRend
   registerComponent('EventSheet', EventSheet);
   registerComponent('AnimationController', AnimationController);
   registerComponent('BehaviorTreeComponent', BehaviorTreeComponent);
+  registerComponent('Tween', Tween);
 }
 
 // Self-register on import so restores work without a manual init call.
