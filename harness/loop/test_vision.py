@@ -155,6 +155,45 @@ class CritiqueTests(unittest.TestCase):
         self.assertEqual(client.calls[0]["image"], b"\x89PNG-rendered-frame")
 
 
+class RetryTests(unittest.TestCase):
+    def test_truncated_empty_response_is_retried_with_larger_budget(self):
+        calls = []
+
+        class RetryClient:
+            def chat_with_image(self, prompt, image_bytes, mime="image/png", model=None, max_tokens=6000, **kwargs):
+                calls.append(max_tokens)
+                if len(calls) == 1:
+                    return LlmResponse(
+                        text="", model="reasoner", prompt_tokens=100, completion_tokens=900,
+                        latency_seconds=30.0, finish_reason="length",
+                    )
+                return LlmResponse(
+                    text=json.dumps({"issues": ["player overlaps ground"], "suggestions": []}),
+                    model="reasoner", prompt_tokens=120, completion_tokens=200,
+                    latency_seconds=20.0, finish_reason="stop",
+                )
+
+        result = make_layout_critique(RetryClient())(scene(), [])
+        self.assertEqual(result.notes, ["Issue: player overlaps ground"])
+        self.assertEqual(calls, [6000, 12000])
+        self.assertIn("retried at 12000", result.detail)
+        self.assertEqual(result.total_tokens, 100 + 900 + 120 + 200)
+        self.assertIsNone(result.error)
+
+    def test_persistent_empty_response_reports_error(self):
+        class EmptyClient:
+            def chat_with_image(self, prompt, image_bytes, mime="image/png", model=None, max_tokens=6000, **kwargs):
+                return LlmResponse(
+                    text="", model="reasoner", prompt_tokens=50, completion_tokens=950,
+                    latency_seconds=25.0, finish_reason="length",
+                )
+
+        result = make_layout_critique(EmptyClient())(scene(), [])
+        self.assertEqual(result.notes, [])
+        self.assertIsNotNone(result.error)
+        self.assertIn("no content", result.error or "")
+
+
 class PreviewTests(unittest.TestCase):
     def test_render_produces_png(self):
         png = render_layout_png(scene())

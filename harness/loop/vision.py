@@ -19,6 +19,11 @@ from typing import Any, Callable, Dict, List, Optional
 from harness.loop.llm_client import DEFAULT_VISION_MODEL, LlmClient
 from harness.loop.scene_preview import render_layout_png
 
+#: The vision route is served by a reasoning model: small budgets are consumed by
+#: the thinking phase and return empty content with finish_reason="length".
+DEFAULT_VISION_MAX_TOKENS = 6000
+VISION_RETRY_MAX_TOKENS = 12000
+
 CRITIQUE_PROMPT = """You are the visual QA reviewer for a mobile 3D game scene under construction.
 
 The attached image is a TOP-DOWN layout diagram of the generated scene:
@@ -47,6 +52,7 @@ class VisionResult:
     completion_tokens: int = 0
     latency_seconds: float = 0.0
     error: Optional[str] = None
+    detail: str = ""
 
     @property
     def total_tokens(self) -> int:
@@ -94,6 +100,51 @@ def _failure_context(failed_rules: Optional[List[Dict[str, Any]]]) -> str:
     )
 
 
+def _critique_call(
+    client: LlmClient,
+    prompt: str,
+    image_bytes: bytes,
+    model: Optional[str],
+    max_tokens: int,
+    mime: str = "image/png",
+) -> VisionResult:
+    """
+    One critique call with a single self-healing retry: reasoning models can
+    exhaust a small budget and return empty content (finish_reason="length"), so
+    that specific outcome is retried with a larger budget before giving up.
+    """
+    response = client.chat_with_image(
+        prompt, image_bytes, mime=mime, model=model, max_tokens=max_tokens
+    )
+    prompt_tokens = response.prompt_tokens
+    completion_tokens = response.completion_tokens
+    latency = response.latency_seconds
+    detail = ""
+
+    if not response.text.strip() and response.finish_reason == "length":
+        retry_budget = min(max_tokens * 2, VISION_RETRY_MAX_TOKENS)
+        retry = client.chat_with_image(
+            prompt, image_bytes, mime=mime, model=model, max_tokens=retry_budget
+        )
+        prompt_tokens += retry.prompt_tokens
+        completion_tokens += retry.completion_tokens
+        latency += retry.latency_seconds
+        detail = f"first vision attempt truncated at {max_tokens} tokens; retried at {retry_budget}"
+        response = retry
+
+    result = VisionResult(
+        notes=parse_critique(response.text),
+        model=response.model,
+        prompt_tokens=prompt_tokens,
+        completion_tokens=completion_tokens,
+        latency_seconds=latency,
+        detail=detail,
+    )
+    if not response.text.strip():
+        result.error = f"vision model returned no content (finish_reason={response.finish_reason or 'unknown'})"
+    return result
+
+
 def make_layout_critique(
     client: LlmClient,
     model: Optional[str] = None,
@@ -107,16 +158,15 @@ def make_layout_critique(
     ) -> VisionResult:
         png = render_layout_png(scene)
         prompt = CRITIQUE_PROMPT + _failure_context(failed_rules)
-        response = client.chat_with_image(
-            prompt, png, model=model or DEFAULT_VISION_MODEL
+        result = _critique_call(
+            client,
+            prompt,
+            png,
+            model or DEFAULT_VISION_MODEL,
+            DEFAULT_VISION_MAX_TOKENS,
         )
-        return VisionResult(
-            notes=parse_critique(response.text)[:max_notes],
-            model=response.model,
-            prompt_tokens=response.prompt_tokens,
-            completion_tokens=response.completion_tokens,
-            latency_seconds=response.latency_seconds,
-        )
+        result.notes = result.notes[:max_notes]
+        return result
 
     return critique
 
@@ -131,13 +181,13 @@ def critique_frame(
 ) -> VisionResult:
     """Critique an actual rendered frame (studio screenshot / emulator readback)."""
     prompt = CRITIQUE_PROMPT + _failure_context(failed_rules)
-    response = client.chat_with_image(
-        prompt, frame_bytes, mime=mime, model=model or DEFAULT_VISION_MODEL
+    result = _critique_call(
+        client,
+        prompt,
+        frame_bytes,
+        model or DEFAULT_VISION_MODEL,
+        DEFAULT_VISION_MAX_TOKENS,
+        mime=mime,
     )
-    return VisionResult(
-        notes=parse_critique(response.text)[:max_notes],
-        model=response.model,
-        prompt_tokens=response.prompt_tokens,
-        completion_tokens=response.completion_tokens,
-        latency_seconds=response.latency_seconds,
-    )
+    result.notes = result.notes[:max_notes]
+    return result
