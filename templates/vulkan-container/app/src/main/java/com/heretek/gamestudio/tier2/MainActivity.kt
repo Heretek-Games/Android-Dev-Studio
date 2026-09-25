@@ -6,6 +6,8 @@ import android.view.SurfaceHolder
 import android.view.SurfaceView
 import android.view.ViewGroup
 import android.view.WindowManager
+import android.webkit.JavascriptInterface
+import android.webkit.WebView
 import java.io.File
 import java.io.FileOutputStream
 
@@ -28,10 +30,43 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
     private external fun nativeCaptureFrame(path: String): Boolean
     private external fun nativeFrame()
     private external fun nativeShutdown()
+    /** Experiment 1 (delta-loop spike): batched per-frame instance sync. */
+    private external fun nativeSyncInstances(slots: IntArray, xyz: FloatArray): Int
 
     private lateinit var surfaceView: SurfaceView
     private var initialized = false
     private var surfaceReady = false
+
+    // ---- Experiment 1 probe state (delta-loop spike) ----
+    @Volatile private var pendingSlots: IntArray? = null
+    @Volatile private var pendingXyz: FloatArray? = null
+    private val frameDeltasNs = ArrayList<Long>(1024)
+    private val syncCostsNs = ArrayList<Long>(1024)
+    private var lastFrameNs: Long = 0
+    private var syncFrames = 0
+
+    private inner class SyncBridge {
+        @JavascriptInterface
+        fun push(payload: String) {
+            // Binder thread: parse compact "slot,x,y,z;..." and stage for the frame loop.
+            try {
+                val entries = payload.split(';')
+                val slots = IntArray(entries.size)
+                val xyz = FloatArray(entries.size * 3)
+                for (i in entries.indices) {
+                    val p = entries[i].split(',')
+                    slots[i] = p[0].toInt()
+                    xyz[i * 3] = p[1].toFloat()
+                    xyz[i * 3 + 1] = p[2].toFloat()
+                    xyz[i * 3 + 2] = p[3].toFloat()
+                }
+                pendingSlots = slots
+                pendingXyz = xyz
+            } catch (e: Exception) {
+                android.util.Log.w("HeretekTier2", "sync payload parse failed: ${e.message}")
+            }
+        }
+    }
 
     companion object {
         init {
@@ -70,6 +105,16 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
                 ViewGroup.LayoutParams.MATCH_PARENT
             )
         )
+
+        // Experiment 1: hidden WebView driving the fixed-dt waypoint stepper.
+        // Zero-size keeps it off-screen; JS runs on the WebView thread while
+        // the frame loop below consumes staged batches on the UI thread.
+        val probeView = WebView(this)
+        probeView.layoutParams = ViewGroup.LayoutParams(1, 1)
+        probeView.settings.javaScriptEnabled = true
+        probeView.addJavascriptInterface(SyncBridge(), "Sync")
+        (surfaceView.parent as ViewGroup).addView(probeView)
+        probeView.loadUrl("file:///android_asset/sync_probe.html")
     }
 
     private fun copyAsset(assetPath: String, target: File): File {
@@ -116,10 +161,50 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
     private val frameLoop = object : Runnable {
         override fun run() {
             if (surfaceReady) {
+                val nowNs = System.nanoTime()
+                if (lastFrameNs != 0L) {
+                    frameDeltasNs.add(nowNs - lastFrameNs)
+                }
+                lastFrameNs = nowNs
+                // Experiment 1: apply the latest staged sync batch, timed.
+                val slots = pendingSlots
+                val xyz = pendingXyz
+                if (slots != null && xyz != null) {
+                    pendingSlots = null
+                    pendingXyz = null
+                    val t0 = System.nanoTime()
+                    val applied = nativeSyncInstances(slots, xyz)
+                    syncCostsNs.add(System.nanoTime() - t0)
+                    if (applied != slots.size) {
+                        android.util.Log.w(
+                            "HeretekTier2",
+                            "sync partial: applied=$applied of ${slots.size}"
+                        )
+                    }
+                }
                 nativeFrame()
+                syncFrames++
+                if (syncFrames == 600) {
+                    reportSyncStats()
+                }
             }
             surfaceView.postDelayed(this, 16) // ~60 FPS target
         }
+    }
+
+    private fun reportSyncStats() {
+        if (frameDeltasNs.isEmpty()) return
+        val sorted = frameDeltasNs.sorted()
+        fun pct(p: Double): Double =
+            sorted[((sorted.size * p).toInt()).coerceIn(0, sorted.size - 1)] / 1_000_000.0
+        val meanSyncUs = if (syncCostsNs.isEmpty()) -1.0
+        else syncCostsNs.average() / 1_000.0
+        android.util.Log.i(
+            "HeretekTier2",
+            "SYNC_STATS frames=${sorted.size} p50=${"%.2f".format(pct(0.5))}ms " +
+                "p95=${"%.2f".format(pct(0.95))}ms max=${"%.2f".format(pct(1.0))}ms " +
+                "syncBatches=${syncCostsNs.size} meanSync=${"%.1f".format(meanSyncUs)}us"
+        )
     }
 
     override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {}

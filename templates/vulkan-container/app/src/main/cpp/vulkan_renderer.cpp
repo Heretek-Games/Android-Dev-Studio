@@ -793,6 +793,24 @@ void VulkanRenderer::uploadScene(const NativeScene& scene) {
   }
 }
 
+int VulkanRenderer::syncInstances(const int* slots, const float* xyz, int count) {
+  if (instanceMapped_ == nullptr || slots == nullptr || xyz == nullptr || count <= 0) {
+    return 0;
+  }
+  float* instances = static_cast<float*>(instanceMapped_);
+  int applied = 0;
+  for (int i = 0; i < count; i++) {
+    const int slot = slots[i];
+    if (slot < 0 || slot >= instanceCount_) continue;
+    float* dst = instances + static_cast<size_t>(slot) * 8;
+    dst[0] = xyz[static_cast<size_t>(i) * 3];
+    dst[1] = xyz[static_cast<size_t>(i) * 3 + 1];
+    dst[2] = xyz[static_cast<size_t>(i) * 3 + 2];
+    applied++;
+  }
+  return applied;
+}
+
 void VulkanRenderer::recordFrame(VkCommandBuffer cmd, uint32_t imageIndex, bool capture) {
   VkCommandBufferBeginInfo beginInfo{};
   beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;

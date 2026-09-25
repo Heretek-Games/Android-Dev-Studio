@@ -119,4 +119,24 @@ Java_com_heretek_gamestudio_tier2_MainActivity_nativeShutdown(JNIEnv* /*env*/, j
   gSceneReady = false;
 }
 
+// Experiment 1 (delta-loop spike): batched per-frame instance sync.
+// slots[i] selects the instance, xyz[3i..3i+2] its new position. Returns applied.
+extern "C" JNIEXPORT jint JNICALL
+Java_com_heretek_gamestudio_tier2_MainActivity_nativeSyncInstances(JNIEnv* env, jobject /*this*/,
+                                                                   jintArray slots,
+                                                                   jfloatArray xyz) {
+  if (!gSceneReady || slots == nullptr || xyz == nullptr) return 0;
+  const jsize n = env->GetArrayLength(slots);
+  if (n <= 0 || env->GetArrayLength(xyz) < n * 3) return 0;
+  jint* slotPtr = static_cast<jint*>(env->GetPrimitiveArrayCritical(slots, nullptr));
+  jfloat* xyzPtr = static_cast<jfloat*>(env->GetPrimitiveArrayCritical(xyz, nullptr));
+  int applied = 0;
+  if (slotPtr != nullptr && xyzPtr != nullptr) {
+    applied = gRenderer.syncInstances(slotPtr, xyzPtr, n);
+  }
+  if (xyzPtr != nullptr) env->ReleasePrimitiveArrayCritical(xyz, xyzPtr, JNI_ABORT);
+  if (slotPtr != nullptr) env->ReleasePrimitiveArrayCritical(slots, slotPtr, JNI_ABORT);
+  return applied;
+}
+
 #endif  // __ANDROID__

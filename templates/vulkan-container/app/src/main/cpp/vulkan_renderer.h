@@ -35,6 +35,12 @@ class VulkanRenderer {
   /** Requests a one-shot readback of the next rendered frame (writes a PPM P6 file). */
   bool captureNextFrame(const std::string& path);
   void uploadScene(const NativeScene& scene);
+  /**
+   * Experiment 1 (delta-loop spike): rewrites instance positions in place in
+   * the mapped instance buffer. slots[i] selects the instance, xyz[3i..3i+2]
+   * its new position. Out-of-range slots are skipped. Returns slots applied.
+   */
+  int syncInstances(const int* slots, const float* xyz, int count);
   void shutdown();
 
   int drawCallEstimate() const { return drawCallEstimate_; }
@@ -161,6 +167,10 @@ class VulkanRenderer {
   void uploadScene(const NativeScene& scene) {
     drawCallEstimate_ = scene.drawCallEstimate();
     instanceCount_ = static_cast<int>(scene.instances.size());
+  }
+  int syncInstances(const int* /*slots*/, const float* /*xyz*/, int count) {
+    // Host stub: buffers don't exist; validate shape only.
+    return count >= 0 ? count : 0;
   }
   void shutdown() {}
 

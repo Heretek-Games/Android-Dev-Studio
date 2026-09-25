@@ -13,6 +13,7 @@
 #include "../culling.h"
 #include "../scene_loader.h"
 #include "../terrain_mesh.h"
+#include "../vulkan_renderer.h"
 
 using namespace heretek;
 
@@ -243,6 +244,16 @@ int main(int argc, char** argv) {
   const bool parsedBroken = parseSceneText("scene S\nmesh Bad 1 2\n", broken, brokenError);
   CHECK(!parsedBroken, "malformed mesh record rejected");
   CHECK(brokenError.find("line 2") != std::string::npos, "error reports the offending line");
+
+  // Experiment 1 (delta-loop spike): host-stub syncInstances validates shape.
+  {
+    VulkanRenderer stub;
+    const int slots[3] = {0, 1, 2};
+    const float xyz[9] = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+    CHECK(stub.syncInstances(slots, xyz, 3) == 3, "stub syncInstances accepts a batch");
+    CHECK(stub.syncInstances(nullptr, nullptr, 0) == 0, "stub syncInstances rejects empty");
+    CHECK(stub.syncInstances(slots, xyz, -1) == 0, "stub syncInstances rejects negative count");
+  }
 
   std::printf("\n%s (%d failure%s)\n", failures == 0 ? "NATIVE CORE TESTS PASSED" : "NATIVE CORE TESTS FAILED",
               failures, failures == 1 ? "" : "s");
