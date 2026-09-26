@@ -72,6 +72,96 @@ function sceneBridgePlugin(): Plugin {
   };
 }
 
+// Dev-server bridge to the frame diff audit (Track A.4 studio half):
+// GET  /api/spatial/frames -> recent loop frame PNGs + approved baselines.
+// POST /api/spatial/diff { frame, baseline?, promote? } -> compare_to_baseline
+// JSON with diffPercent, worstRegion, and a heatmap data URL for the dock.
+// Frame/baseline names are basenames only (no path traversal); heatmaps are
+// never written to disk (data URL in the response).
+function diffBridgePlugin(): Plugin {
+  return {
+    name: 'heretek-diff-bridge',
+    configureServer(server) {
+      const repoRoot = path.resolve(__dirname, '..');
+      const runsDir = path.join(repoRoot, 'harness', 'runs', 'loop_runs');
+      const baseDir = path.join(repoRoot, 'harness', 'runs', 'frame_baselines');
+      const safe = (name: unknown) => String(name || '').split('/').pop()?.split('\\').pop() || '';
+
+      server.middlewares.use('/api/spatial/frames', (req, res) => {
+        res.setHeader('Content-Type', 'application/json');
+        if (req.method !== 'GET') {
+          res.statusCode = 405;
+          res.end(JSON.stringify({ error: 'GET required' }));
+          return;
+        }
+        const list = (dir: string) => {
+          try {
+            return fs.readdirSync(dir)
+              .filter((f: string) => f.endsWith('.png'))
+              .map((f: string) => {
+                const st = fs.statSync(path.join(dir, f));
+                return { name: f, mtime: st.mtimeMs };
+              })
+              .sort((a: { mtime: number }, b: { mtime: number }) => b.mtime - a.mtime)
+              .slice(0, 20);
+          } catch { return []; }
+        };
+        res.statusCode = 200;
+        res.end(JSON.stringify({ frames: list(runsDir), baselines: list(baseDir) }));
+      });
+
+      server.middlewares.use('/api/spatial/diff', (req, res) => {
+        res.setHeader('Content-Type', 'application/json');
+        if (req.method !== 'POST') {
+          res.statusCode = 405;
+          res.end(JSON.stringify({ ok: false, error: 'POST required' }));
+          return;
+        }
+        let body = '';
+        req.on('data', chunk => { body += chunk; });
+        req.on('end', () => {
+          let frame = '', baseline = '', promote = false;
+          try {
+            const parsed = JSON.parse(body || '{}');
+            frame = safe(parsed.frame);
+            baseline = safe(parsed.baseline) || frame.replace(/\.png$/, '');
+            promote = parsed.promote === true;
+          } catch {
+            res.statusCode = 400;
+            res.end(JSON.stringify({ ok: false, error: 'frame is required' }));
+            return;
+          }
+          if (!frame) {
+            res.statusCode = 400;
+            res.end(JSON.stringify({ ok: false, error: 'frame is required' }));
+            return;
+          }
+          const framePath = path.join(runsDir, frame);
+          const script = [
+            'import base64,json,sys;',
+            'sys.path.insert(0, ".");',
+            'from harness.loop.frame_diff import compare_to_baseline;',
+            'from pathlib import Path;',
+            'r = compare_to_baseline(sys.argv[2], Path(sys.argv[1]).read_bytes(), promote=sys.argv[3]=="1");',
+            'h = r.pop("heatmap", b"");',
+            'r["heatmapDataUrl"] = ("data:image/png;base64," + base64.b64encode(h).decode()) if h else None;',
+            'print(json.dumps(r));'
+          ].join('');
+          const proc = spawn('python3', ['-c', script, framePath, baseline, promote ? '1' : '0'], { cwd: repoRoot });
+          let out = '';
+          let err = '';
+          proc.stdout.on('data', d => { out += d; });
+          proc.stderr.on('data', d => { err += d; });
+          proc.on('close', code => {
+            res.statusCode = code === 0 && out ? 200 : 502;
+            res.end(out || JSON.stringify({ ok: false, error: err.trim() || 'diff unavailable' }));
+          });
+        });
+      });
+    }
+  };
+}
+// POST /api/spatial/ghost { placement, scene? } -> runs ghost_cli.py against
 // Dev-server bridge to the ghost placement probe (Track B.3):
 // POST /api/spatial/ghost { placement, scene? } -> runs ghost_cli.py against
 // the canonical scene (or a supplied scene) and returns the audit verdict
@@ -122,7 +212,7 @@ function ghostBridgePlugin(): Plugin {
           };
           if (scene) {
             try {
-              require('node:fs').writeFileSync(
+              fs.writeFileSync(
                 path.resolve(repoRoot, scene.slice(1)), JSON.stringify((JSON.parse(body) as { scene: unknown }).scene));
             } catch {
               res.statusCode = 400;
@@ -470,7 +560,7 @@ export default defineConfig({
   // Relative asset paths so the built bundle also works when mounted under a
   // sub-path (the Android WebView container serves it at /assets/game/).
   base: './',
-  plugins: [react(), sceneBridgePlugin(), qaBridgePlugin(), swarmBridgePlugin(), deviceBridgePlugin(), ghostBridgePlugin()],
+  plugins: [react(), sceneBridgePlugin(), qaBridgePlugin(), swarmBridgePlugin(), deviceBridgePlugin(), ghostBridgePlugin(), diffBridgePlugin()],
   define: {
     __LLM_MODEL__: JSON.stringify(llmModel)
   },
