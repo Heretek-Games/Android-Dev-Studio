@@ -881,3 +881,9 @@ Every capability built end-to-end (OSINT → ADR → engine + runner + loop + st
 | B.3 | diffs + ghosts (`4af3a5b`, `ede09b2`) | per-iteration spatialDiff + repair line; ghost VALID/BLOCKED live proof, 0 console errors |
 
 Standing blockers (hardware-bound, unchanged): #1 physical arm64, #3 50k-instance on-device, #6 validation-layer soak. Deferred items (full GI, multiplayer, consoles, 2D, iOS, shader graph, vendor vision APIs) never entered; opening any needs explicit direction.
+
+---
+
+## Run Block 27 — 2026-09-26, Track C.3 PBR Gate (emulator proof) ✅
+
+`emulator_smoke.py --tier2-only` PASS against the fixed tree: NDK compiled the Cook-Torrance shader + stride-12 instance layout + VERTEX|FRAGMENT push constants, APK installed/launched on the emulator, logcat asserts clean (no VK failures), PPM frame readback non-uniform. Headless half was already green (engine 458/92, exporter+applier 105/105, native host checks with material/legacy asserts). Textures/IBL remain explicit Phase 2; physical-device proof stays deferred per the emulator≠device invariant.
