@@ -2,7 +2,9 @@
 /**
  * dumpAdapterGraph — build a spec through the REAL studio adapter
  * (HarnessSceneAdapter.buildEngineScene) and print the canonical static
- * scene graph as JSON (same form as dumpRunnerGraph.mjs).
+ * scene graph as JSON (same form as dumpRunnerGraph.mjs — both dumpers import
+ * the single shared canonicalizer in sceneGraphCanonical.ts, so the form
+ * cannot drift between dumpers).
  *
  * Run with Node type-stripping (Node >= 22.18) from the app workspace so
  * the `@heretek/engine` import resolves via app/node_modules:
