@@ -34,7 +34,7 @@ Action RPG program (Tracks E.1→E.6, machine side) are implemented and verified
   Tier 2 is validated on an Android target (emulator): real swapchain, 3 instanced cubes +
   64 terrain LOD leaf draws, `VK_SUCCESS` acquire/submit/present at ~61.5 FPS, rendered output
   confirmed on-display — see
-  [`harness/runs/RUNS.md`](file:///home/john/Projects/Android-Dev-Studio/harness/runs/RUNS.md) (Run Block 2).
+  [`harness/runs/RUNS.md`](file:///home/john/Projects/Heretek-Games/Heretek-Engine/harness/runs/RUNS.md) (Run Block 2).
   Correction (2026-09-26, issue #7): the in-renderer frame readback delivers a fixed pattern,
   not the framebuffer — earlier "confirmed by frame readback" claims are withdrawn; the
   emulator leg rests on swapchain/visibility/present evidence only. Title APKs ship for both
@@ -464,7 +464,7 @@ python3 harness/agents/artemis_qa_runner.py --goal "Mini arena QA" --scenario ha
 - From the Studio UI: the Artemis dock calls `POST /api/qa/run` (Vite dev-server bridge in
   `app/vite.config.ts`) — never simulated telemetry.
 - On-device touch automation still follows the **Dynamic-First, Coordinate-Fallback** locator
-  pattern documented in [`harness/config/artemis_game_rules.md`](file:///home/john/Projects/Android-Dev-Studio/harness/config/artemis_game_rules.md).
+  pattern documented in [`harness/config/artemis_game_rules.md`](file:///home/john/Projects/Heretek-Games/Heretek-Engine/harness/config/artemis_game_rules.md).
 
 ### 5. OpenCode Delegation for Token Savings
 To conserve subscription credits, Antigravity should delegate file generation, repetitive refactoring, and boilerplate implementation to OpenCode via `opencode-mcp` tools (`opencode_run`, `opencode_fire`, `opencode_review_changes`). Antigravity acts as the architect and reviewer.
