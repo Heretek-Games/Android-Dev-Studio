@@ -70,6 +70,17 @@ export class EnemyAI extends Component {
     if (applied > 0) this.attacksLanded += 1;
   }
 
+  /**
+   * Retarget the behavior tree (Track E.6): node targets bake at build, so
+   * reassigning targetName alone never redirects aggro — rebuild instead.
+   * Party systems call this when the active hero swaps.
+   */
+  public retarget(targetName: string): void {
+    if (!targetName || targetName === this.targetName) return;
+    this.targetName = targetName;
+    this.tree = new BehaviorTreeComponent(this.buildTree());
+  }
+
   private buildTree(): BTNode {
     return new SelectorNode([
       new AttackNode(this.targetName, this.attackRange, (actor, target) => this.attackTarget(target), this.attackIntervalSeconds),

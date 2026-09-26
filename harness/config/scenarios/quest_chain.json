@@ -4,7 +4,10 @@
   "game": {
     "playerName": "Adventurer",
     "totalWaves": 2,
-    "enemiesPerWave": [2, 1],
+    "enemiesPerWave": [
+      2,
+      1
+    ],
     "spawnRadius": 5,
     "scorePerKill": 100,
     "interWaveDelaySeconds": 0.5,
@@ -19,7 +22,11 @@
     },
     "enemy": {
       "shape": "sphere",
-      "size": [1.2, 1.2, 1.2],
+      "size": [
+        1.2,
+        1.2,
+        1.2
+      ],
       "color": "#f97316",
       "y": 0.8,
       "elemental": {
@@ -38,14 +45,18 @@
       "wave": 2,
       "name": "Cinder Tyrant",
       "health": 240,
-      "size": [2.2, 2.8, 2.2],
+      "size": [
+        2.2,
+        2.8,
+        2.2
+      ],
       "color": "#dc2626",
       "telegraph": {
         "windupSeconds": 0.6,
         "strikeSeconds": 0.2,
         "recoverSeconds": 0.8
       },
-      "strikeDamage": 12,
+      "strikeDamage": 8,
       "strikeRange": 4.0
     }
   },
@@ -54,26 +65,61 @@
     "stages": [
       {
         "id": "audience",
-        "objectives": [{ "id": "meet", "kind": "flag", "target": "greet" }]
+        "objectives": [
+          {
+            "id": "meet",
+            "kind": "flag",
+            "target": "greet"
+          }
+        ]
       },
       {
         "id": "blessing",
-        "objectives": [{ "id": "blessed", "kind": "flag", "target": "hydro_blessing" }]
+        "objectives": [
+          {
+            "id": "blessed",
+            "kind": "flag",
+            "target": "hydro_blessing"
+          }
+        ]
       },
       {
         "id": "clear_hall",
         "objectives": [
-          { "id": "slay", "kind": "kills", "target": "any", "count": 2 },
-          { "id": "react", "kind": "reactions", "target": "any", "count": 1 }
+          {
+            "id": "slay",
+            "kind": "kills",
+            "target": "any",
+            "count": 2
+          },
+          {
+            "id": "react",
+            "kind": "reactions",
+            "target": "any",
+            "count": 1
+          }
         ]
       },
       {
         "id": "slay_tyrant",
-        "objectives": [{ "id": "boss", "kind": "kills", "target": "any", "count": 3 }]
+        "objectives": [
+          {
+            "id": "boss",
+            "kind": "kills",
+            "target": "any",
+            "count": 3
+          }
+        ]
       },
       {
         "id": "victory",
-        "objectives": [{ "id": "won", "kind": "phase", "target": "won" }]
+        "objectives": [
+          {
+            "id": "won",
+            "kind": "phase",
+            "target": "won"
+          }
+        ]
       }
     ]
   },
@@ -81,16 +127,32 @@
     {
       "name": "Dungeon Floor",
       "shape": "box",
-      "size": [30, 1, 30],
-      "position": [0, -0.5, 0],
+      "size": [
+        30,
+        1,
+        30
+      ],
+      "position": [
+        0,
+        -0.5,
+        0
+      ],
       "color": "#1f1b16",
       "physics": "fixed"
     },
     {
       "name": "Adventurer",
       "shape": "capsule",
-      "size": [1, 1.5, 1],
-      "position": [0, 1.5, 0],
+      "size": [
+        1,
+        1.5,
+        1
+      ],
+      "position": [
+        0,
+        1.5,
+        0
+      ],
       "color": "#38bdf8",
       "physics": "none",
       "controller": true,
@@ -105,7 +167,11 @@
       "lightType": "directional",
       "color": "#ffb066",
       "intensity": 2.2,
-      "position": [6, 10, 4]
+      "position": [
+        6,
+        10,
+        4
+      ]
     }
   ],
   "dialogues": {

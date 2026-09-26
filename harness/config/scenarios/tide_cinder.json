@@ -8,7 +8,7 @@
       2,
       1
     ],
-    "spawnRadius": 5,
+    "spawnRadius": 7,
     "scorePerKill": 100,
     "interWaveDelaySeconds": 0.5,
     "melee": {
@@ -35,10 +35,10 @@
       },
       "ai": {
         "targetName": "Adventurer",
-        "moveSpeed": 2.5,
+        "moveSpeed": 2.2,
         "attackRange": 2.0,
         "attackDamage": 6,
-        "attackIntervalSeconds": 1.2
+        "attackIntervalSeconds": 2.0
       }
     },
     "boss": {
@@ -56,7 +56,7 @@
         "strikeSeconds": 0.2,
         "recoverSeconds": 0.8
       },
-      "strikeDamage": 12,
+      "strikeDamage": 8,
       "strikeRange": 4.0
     }
   },
@@ -157,7 +157,7 @@
       "physics": "none",
       "controller": true,
       "health": {
-        "maxHealth": 100,
+        "maxHealth": 140,
         "destroyOnDeath": false
       }
     },

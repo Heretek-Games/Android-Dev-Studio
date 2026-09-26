@@ -265,6 +265,16 @@ export const GameView: React.FC = () => {
         }
       });
 
+      // Tide and Cinder: post-wave respite — clearing a wave restores 40 HP
+      // to both party heroes (standard ARPG condolence for slow readers).
+      if (isTide) {
+        runtime.spawner.onWaveCleared(() => {
+          for (const member of [player, squire]) {
+            member?.getComponent(HealthComponent)?.heal(40);
+          }
+        });
+      }
+
       const buildingMeshes = new Map<number, GameObject>();
       const resetArena = () => {
         for (const name of runtime!.spawner.getSpawnedNames()) {
@@ -646,7 +656,13 @@ export const GameView: React.FC = () => {
           if (!player) return null;
           const p = player.transform.position;
           const r = player.transform.rotation;
-          return { x: p.x, y: p.y, z: p.z, pitch: r.x, yaw: r.y };
+          const hero = party?.active() ?? player;
+          const heroHealth = hero.getComponent(HealthComponent) ?? null;
+          return {
+            x: p.x, y: p.y, z: p.z, pitch: r.x, yaw: r.y,
+            hp: heroHealth ? Math.ceil(heroHealth.health) : null,
+            active: hero.name
+          };
         },
         settlement: () => settlement?.snapshot() ?? null,
         enemies: () =>
@@ -837,10 +853,17 @@ export const GameView: React.FC = () => {
             aimAndFire();
           }
           if (isTide) {
-            // Companion AI: the inactive hero trails the active one; the
-            // active hero drives the camera and the quest snapshot.
+            // Active-hero aggro: living enemies chase whoever leads the party
+            // (Genshin targeting); the benched hero catches a breath.
             party?.update(dt);
             const hero = party?.active() ?? player;
+            for (const name of runtime.spawner.getSpawnedNames()) {
+              const enemy = scene.findByName(name);
+              const brain = enemy?.getComponent(EnemyAI) ?? null;
+              // retarget() rebuilds the baked behavior tree; assigning
+              // targetName alone never redirects aggro.
+              if (brain && hero && brain.targetName !== hero.name) brain.retarget(hero.name);
+            }
             const other = party && hero && squire
               ? (hero === player ? squire : player)
               : null;
@@ -873,16 +896,20 @@ export const GameView: React.FC = () => {
                 lastQuestKills = meleeKills;
                 lastQuestReactions = meleeReactions;
                 const squireHealth = squire?.getComponent(HealthComponent) ?? null;
-                const squireLine = squireHealth
-                  ? ` · Squire ${Math.ceil(squireHealth.health)}/${squireHealth.maxHealth}`
-                  : '';
+                const heroHealth = player?.getComponent(HealthComponent) ?? null;
+                const hpLine =
+                  heroHealth && squireHealth
+                    ? ` · ❤ ${Math.ceil(heroHealth.health)}/${heroHealth.maxHealth} | Squire ${Math.ceil(squireHealth.health)}/${squireHealth.maxHealth}`
+                    : squireHealth
+                      ? ` · Squire ${Math.ceil(squireHealth.health)}/${squireHealth.maxHealth}`
+                      : '';
                 const stage = quest.currentStage();
                 questBar.style.display = 'block';
                 questBar.textContent =
                   (quest.complete
                     ? `✔ ${quest.id} complete`
                     : `Quest: ${stage?.id ?? '—'} (${quest.stageIndex + 1}/${quest.stages.length})`) +
-                  ` · Foes ${meleeKills} · Reactions ${meleeReactions}${squireLine}`;
+                  ` · Foes ${meleeKills} · Reactions ${meleeReactions}${hpLine}`;
               }
             }
           }

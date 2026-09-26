@@ -78,3 +78,35 @@ describe('EnemyAI — chase, attack, aggro', () => {
     assert.strictEqual(json.attackDamage, 7);
   });
 });
+
+describe('EnemyAI — retarget (E.6 aggro)', () => {
+  test('retarget redirects attacks to the new hero', () => {
+    const scene = new Scene('Swap');
+    const oldHero = new GameObject('Adventurer');
+    const oldHealth = oldHero.addComponent(new HealthComponent({ maxHealth: 100, destroyOnDeath: false }));
+    scene.addGameObject(oldHero);
+    const squire = new GameObject('Squire');
+    const squireHealth = squire.addComponent(new HealthComponent({ maxHealth: 100, destroyOnDeath: false }));
+    scene.addGameObject(squire);
+    const enemy = new GameObject('Slime');
+    enemy.transform.setPosition(1.5, 0, 0);
+    scene.addGameObject(enemy);
+    const ai = enemy.addComponent(
+      new EnemyAI({ targetName: 'Adventurer', attackRange: 5, attackDamage: 10, attackIntervalSeconds: 0.5 })
+    );
+    ai.update(0.6);
+    assert.strictEqual(oldHealth.health, 90);
+    ai.retarget('Squire');
+    assert.strictEqual(ai.targetName, 'Squire');
+    ai.update(0.6);
+    assert.strictEqual(squireHealth.health, 90);
+    assert.strictEqual(oldHealth.health, 90); // benched hero catches a breath
+  });
+
+  test('retarget to the same name is a no-op', () => {
+    const { ai } = arena([1.5, 0, 0]);
+    const tree = (ai as unknown as { tree: unknown }).tree;
+    ai.retarget('Player Hero');
+    assert.strictEqual((ai as unknown as { tree: unknown }).tree, tree);
+  });
+});
