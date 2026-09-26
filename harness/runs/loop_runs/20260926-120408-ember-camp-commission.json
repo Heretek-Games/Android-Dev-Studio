@@ -1,0 +1,410 @@
+{
+  "goal": "Ember Camp Commission",
+  "rules": [
+    {
+      "type": "dialogue_reaches",
+      "tree": "Sergeant",
+      "node": "ordered",
+      "id": "order-briefing"
+    },
+    {
+      "type": "dialogue_event_fired",
+      "tree": "Sergeant",
+      "event": "commission_taken",
+      "id": "order-flag"
+    },
+    {
+      "type": "game_melee_kills_min",
+      "min": 2,
+      "id": "camp-cleared"
+    },
+    {
+      "type": "game_melee_reactions_min",
+      "min": 1,
+      "id": "melt-reactions"
+    },
+    {
+      "type": "quest_complete",
+      "id": "quest-complete"
+    },
+    {
+      "type": "draw_call_budget",
+      "max": 100,
+      "id": "draw-budget"
+    },
+    {
+      "type": "fps_min",
+      "min": 30,
+      "id": "sim-fps"
+    }
+  ],
+  "verdict": "green",
+  "iterations": [
+    {
+      "iteration": 1,
+      "phase": "generate",
+      "visionNotes": [],
+      "llm": {
+        "model": "mimo-v2.6-flash",
+        "promptTokens": 6375,
+        "completionTokens": 5233,
+        "totalTokens": 11608,
+        "latencySeconds": 126.062,
+        "finishReason": "stop",
+        "attempts": 1
+      },
+      "parse": {
+        "strategy": "salvaged",
+        "actionCount": 21,
+        "summary": "A compact ember camp with a top-down hero, Sergeant briefing dialogue that fires commission_taken, wave-based melee combat with Hydro-vs-Pyro Vaporize reactions, and a three-stage quest that completes on flag + 2 kills.",
+        "error": "primary parse failed (raw: Expecting ',' delimiter: line 1 column 4391 (char 4390)); salvaged complete actions"
+      },
+      "apply": {
+        "applied": 17,
+        "targetMissing": 0,
+        "invalid": 4,
+        "failed": 0,
+        "outcomes": [
+          {
+            "index": 0,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Ember Ground (box) at [0.0, 0.0, 0.0]",
+            "target": "Ember Ground"
+          },
+          {
+            "index": 1,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Player Hero (capsule) at [0.0, 1.4, -6.0]",
+            "target": "Player Hero"
+          },
+          {
+            "index": 2,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Sergeant (capsule) at [3.0, 1.45, -9.0]",
+            "target": "Sergeant"
+          },
+          {
+            "index": 3,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Ember Bandit A (capsule) at [4.0, 1.4, 3.0]",
+            "target": "Ember Bandit A"
+          },
+          {
+            "index": 4,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Ember Bandit B (capsule) at [-4.0, 1.4, 5.0]",
+            "target": "Ember Bandit B"
+          },
+          {
+            "index": 5,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Campfire Ring (cylinder) at [0.0, 0.8, 0.0]",
+            "target": "Campfire Ring"
+          },
+          {
+            "index": 6,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Ember Flame (cylinder) at [0.0, 1.6, 0.0]",
+            "target": "Ember Flame"
+          },
+          {
+            "index": 7,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Tent West (box) at [-8.0, 2.0, 4.0]",
+            "target": "Tent West"
+          },
+          {
+            "index": 8,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Tent East (box) at [8.0, 2.0, 4.0]",
+            "target": "Tent East"
+          },
+          {
+            "index": 9,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Barrel West (cylinder) at [-4.0, 1.1, 9.0]",
+            "target": "Barrel West"
+          },
+          {
+            "index": 10,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Barrel East (cylinder) at [4.0, 1.1, 9.0]",
+            "target": "Barrel East"
+          },
+          {
+            "index": 11,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added directional light 'Camp Sun' (intensity 2.0)",
+            "target": "Camp Sun"
+          },
+          {
+            "index": 12,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added ambient light 'Dusk Fill' (intensity 0.7)",
+            "target": "Dusk Fill"
+          },
+          {
+            "index": 13,
+            "type": "place",
+            "status": "applied",
+            "detail": "Place 'ember camp' defined"
+          },
+          {
+            "index": 14,
+            "type": "place",
+            "status": "applied",
+            "detail": "Place 'sergeant post' defined"
+          },
+          {
+            "index": 15,
+            "type": "dialogue",
+            "status": "applied",
+            "detail": "Registered dialogue tree 'Sergeant' (4 nodes from 'greet')"
+          },
+          {
+            "index": 16,
+            "type": "game",
+            "status": "applied",
+            "detail": "Set waves-mode quest config for player 'Player Hero'"
+          },
+          {
+            "index": 17,
+            "type": "malformed",
+            "status": "invalid",
+            "detail": "Action #17 is not a valid action object"
+          },
+          {
+            "index": 18,
+            "type": "malformed",
+            "status": "invalid",
+            "detail": "Action #18 is not a valid action object"
+          },
+          {
+            "index": 19,
+            "type": "malformed",
+            "status": "invalid",
+            "detail": "Action #19 is not a valid action object"
+          },
+          {
+            "index": 20,
+            "type": "malformed",
+            "status": "invalid",
+            "detail": "Action #20 is not a valid action object"
+          }
+        ],
+        "appliedDescriptions": [
+          "Spawned Ember Ground (box) at [0.0, 0.0, 0.0]",
+          "Spawned Player Hero (capsule) at [0.0, 1.4, -6.0]",
+          "Spawned Sergeant (capsule) at [3.0, 1.45, -9.0]",
+          "Spawned Ember Bandit A (capsule) at [4.0, 1.4, 3.0]",
+          "Spawned Ember Bandit B (capsule) at [-4.0, 1.4, 5.0]",
+          "Spawned Campfire Ring (cylinder) at [0.0, 0.8, 0.0]",
+          "Spawned Ember Flame (cylinder) at [0.0, 1.6, 0.0]",
+          "Spawned Tent West (box) at [-8.0, 2.0, 4.0]",
+          "Spawned Tent East (box) at [8.0, 2.0, 4.0]",
+          "Spawned Barrel West (cylinder) at [-4.0, 1.1, 9.0]",
+          "Spawned Barrel East (cylinder) at [4.0, 1.1, 9.0]",
+          "Added directional light 'Camp Sun' (intensity 2.0)",
+          "Added ambient light 'Dusk Fill' (intensity 0.7)",
+          "Place 'ember camp' defined",
+          "Place 'sergeant post' defined",
+          "Registered dialogue tree 'Sergeant' (4 nodes from 'greet')",
+          "Set waves-mode quest config for player 'Player Hero'"
+        ]
+      },
+      "spatialDiff": {
+        "added": [
+          "Barrel East",
+          "Barrel West",
+          "Camp Sun",
+          "Campfire Ring",
+          "Dusk Fill",
+          "Ember Bandit A",
+          "Ember Bandit B",
+          "Ember Flame",
+          "Ember Ground",
+          "Player Hero",
+          "Sergeant",
+          "Tent East",
+          "Tent West"
+        ],
+        "removed": [],
+        "moved": [],
+        "resized": [],
+        "physics_changed": [],
+        "ui_changed": false,
+        "places_changed": [
+          "ember camp",
+          "sergeant post"
+        ],
+        "theme_changed": false,
+        "empty": false
+      },
+      "frame": {
+        "cameraSource": "chase",
+        "cameraName": "Player Hero",
+        "cameraPosition": [
+          0.0,
+          4.9,
+          0.0
+        ],
+        "fov": 60.0,
+        "objectCount": 13,
+        "iteration": 1,
+        "path": "/home/john/Projects/Android-Dev-Studio/harness/runs/loop_runs/20260926-120202-ember-camp-commission-iter1.png",
+        "bytes": 6992
+      },
+      "gate": {
+        "valid": true,
+        "violations": []
+      },
+      "qa": {
+        "verdict": "SUCCEEDED",
+        "passed": 7,
+        "total": 7,
+        "failedRules": [],
+        "metrics": {
+          "avgFrameTimeMs": 0.1125,
+          "p95FrameTimeMs": 0.1695,
+          "maxFrameTimeMs": 21.0755,
+          "simFpsEstimate": 8886.11,
+          "drawCallEstimate": 12,
+          "instancedBatches": 0,
+          "instancedEntities": 0,
+          "memoryHeapMb": 20.99,
+          "objectCount": 14,
+          "physicsBodyCount": 7,
+          "eventCount": 0
+        }
+      }
+    }
+  ],
+  "totalTokens": 11608,
+  "totalLatencySeconds": 126.062,
+  "finalReport": {
+    "schemaVersion": 1,
+    "runner": "qa_scenario_runner.mjs",
+    "scenario": "loop_work_scene.json",
+    "goal": "Ember Camp Commission",
+    "timestamp": 1790438648.505,
+    "frames": 600,
+    "fixedDeltaSeconds": 0.016666666666666666,
+    "metrics": {
+      "avgFrameTimeMs": 0.1125,
+      "p95FrameTimeMs": 0.1695,
+      "maxFrameTimeMs": 21.0755,
+      "simFpsEstimate": 8886.11,
+      "drawCallEstimate": 12,
+      "instancedBatches": 0,
+      "instancedEntities": 0,
+      "memoryHeapMb": 20.99,
+      "objectCount": 14,
+      "physicsBodyCount": 7,
+      "eventCount": 0
+    },
+    "game": {
+      "mode": "waves",
+      "phase": "playing",
+      "score": 0,
+      "kills": 0,
+      "wave": 2,
+      "traveledDistance": 0,
+      "settlement": null,
+      "reactions": 0,
+      "shots": 0,
+      "maxEnemyDisplacement": 9.433
+    },
+    "dialogue": {
+      "Sergeant": {
+        "visited": [
+          "greet",
+          "ordered",
+          "seal"
+        ],
+        "events": [
+          "commission_taken"
+        ],
+        "error": null
+      }
+    },
+    "rules": [
+      {
+        "id": "order-briefing",
+        "type": "dialogue_reaches",
+        "pass": true,
+        "detail": "dialogue \"Sergeant\" visited \"ordered\" (path: greet -> ordered -> seal)"
+      },
+      {
+        "id": "order-flag",
+        "type": "dialogue_event_fired",
+        "pass": true,
+        "detail": "dialogue \"Sergeant\" fired \"commission_taken\""
+      },
+      {
+        "id": "camp-cleared",
+        "type": "game_melee_kills_min",
+        "pass": true,
+        "detail": "melee kills=2 (min 2, swings=40)"
+      },
+      {
+        "id": "melt-reactions",
+        "type": "game_melee_reactions_min",
+        "pass": true,
+        "detail": "melee reactions=2 (min 1)"
+      },
+      {
+        "id": "quest-complete",
+        "type": "quest_complete",
+        "pass": true,
+        "detail": "quest \"commission\" complete"
+      },
+      {
+        "id": "draw-budget",
+        "type": "draw_call_budget",
+        "pass": true,
+        "detail": "drawCallEstimate=12 (budget 100)"
+      },
+      {
+        "id": "sim-fps",
+        "type": "fps_min",
+        "pass": true,
+        "detail": "simFpsEstimate=8886.1 (min 30)"
+      }
+    ],
+    "passed": 7,
+    "total": 7,
+    "verdict": "SUCCEEDED",
+    "confidence": 1
+  },
+  "error": null,
+  "workScene": "/home/john/Projects/Android-Dev-Studio/harness/scenes/loop_work_scene.json",
+  "frames": [
+    {
+      "cameraSource": "chase",
+      "cameraName": "Player Hero",
+      "cameraPosition": [
+        0.0,
+        4.9,
+        0.0
+      ],
+      "fov": 60.0,
+      "objectCount": 13,
+      "iteration": 1,
+      "path": "/home/john/Projects/Android-Dev-Studio/harness/runs/loop_runs/20260926-120202-ember-camp-commission-iter1.png",
+      "bytes": 6992
+    }
+  ]
+}
