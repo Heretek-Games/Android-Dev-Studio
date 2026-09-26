@@ -62,7 +62,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-      - run: python3 -m unittest harness.validation.test_scene_invariants harness.validation.test_quadtree_parity harness.build.test_scene_exporter harness.build.test_apk_builder harness.build.test_tier2_parity harness.briefs.test_game_brief harness.scenes.test_v2 harness.perf.test_tiers harness.assets.test_importer harness.memory.test_project_memory harness.orchestrator.test_agent_swarm harness.prefabs.test_prefabs
+      - run: python3 -m unittest harness.validation.test_scene_invariants harness.validation.test_quadtree_parity harness.build.test_scene_exporter harness.build.test_apk_builder harness.build.test_tier2_parity harness.briefs.test_game_brief harness.scenes.test_v2 harness.perf.test_tiers harness.assets.test_importer harness.memory.test_project_memory harness.orchestrator.test_agent_swarm harness.prefabs.test_prefabs harness.market.test_market
       - run: python3 -m unittest discover -s harness/loop -p "test_*.py"
       - run: python3 -m unittest discover -s harness/agents -p "test_*.py"
 
