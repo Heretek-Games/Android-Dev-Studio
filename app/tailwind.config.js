@@ -16,7 +16,10 @@ export default {
           accent: '#3b82f6',
           success: '#10b981',
           warning: '#f59e0b',
-          danger: '#ef4444'
+          danger: '#ef4444',
+          text: '#f4f4f5',
+          muted: '#a1a1aa',
+          faint: '#71717a'
         }
       }
     },

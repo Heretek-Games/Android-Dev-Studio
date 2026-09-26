@@ -8,6 +8,7 @@ import {
 import 'dockview-react/dist/styles/dockview.css';
 
 import { useStudio } from '../state/StudioState';
+import { useWorkspaceLayouts } from '../state/useWorkspaceLayouts';
 import { StudioHeader } from './StudioHeader';
 import { StatusBar } from './StatusBar';
 import { CommandPalette } from './CommandPalette';
@@ -53,6 +54,8 @@ export const DockviewWorkspace: React.FC = () => {
   const apiRef = useRef<DockviewApi | null>(null);
   const [activePreset, setActivePreset] = useState<WorkspacePreset>('default');
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const layouts = useWorkspaceLayouts();
+  const detachLayouts = useRef<(() => void) | null>(null);
 
   // Ctrl+K command palette (Track D.1); ignored inside text inputs.
   useEffect(() => {
@@ -65,7 +68,10 @@ export const DockviewWorkspace: React.FC = () => {
       }
     };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      detachLayouts.current?.();
+    };
   }, []);
 
   // Apply workspace layout presets
@@ -326,8 +332,10 @@ export const DockviewWorkspace: React.FC = () => {
 
   const onReady = useCallback((event: DockviewReadyEvent) => {
     apiRef.current = event.api;
-    applyPreset('default', event.api);
-  }, [applyPreset]);
+    detachLayouts.current = layouts.attach(event.api);
+    // User's last state wins; fall back to the default preset.
+    if (!layouts.restoreLast()) applyPreset('default', event.api);
+  }, [applyPreset, layouts]);
 
   const handleOpenPanel = (panelId: string, title: string) => {
     if (!apiRef.current) return;
@@ -345,7 +353,7 @@ export const DockviewWorkspace: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full w-full bg-zinc-950 text-gray-200 select-none overflow-hidden font-sans">
+    <div className="flex flex-col h-full w-full bg-studio-bg text-studio-text select-none overflow-hidden font-sans">
       {/* Top Unified Studio Master Header */}
       <StudioHeader
         activePreset={activePreset}
@@ -367,6 +375,16 @@ export const DockviewWorkspace: React.FC = () => {
           onSelectPreset={(p) => {
             if (apiRef.current) applyPreset(p, apiRef.current);
           }}
+          onSaveLayoutAs={(name) => layouts.saveNamed(name)}
+          extraCommands={[
+            ...layouts.savedNames.map(name => ({
+              id: `layout-open-${name}`,
+              category: 'Layout',
+              label: `Open layout "${name}"`,
+              run: () => { layouts.restoreNamed(name); }
+            })),
+            { id: 'layout-reset', category: 'Layout', label: 'Reset to default workspace', run: () => { if (apiRef.current) applyPreset('default', apiRef.current); } }
+          ]}
         />
       </main>
 

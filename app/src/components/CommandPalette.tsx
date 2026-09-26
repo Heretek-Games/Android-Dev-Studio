@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useStudio } from '../state/StudioState';
+import { KitEmptyState } from './UiKit';
 import type { WorkspacePreset } from './DockviewWorkspace';
 
 /**
@@ -36,7 +37,10 @@ export const CommandPalette: React.FC<{
   open: boolean;
   onClose: () => void;
   onSelectPreset: (preset: WorkspacePreset) => void;
-}> = ({ open, onClose, onSelectPreset }) => {
+  /** Save-as-layout hook (Track D.1): receives the current query as the name. */
+  onSaveLayoutAs?: (name: string) => boolean;
+  extraCommands?: PaletteCommand[];
+}> = ({ open, onClose, onSelectPreset, onSaveLayoutAs, extraCommands }) => {
   const {
     scene,
     setSelectedId,
@@ -70,10 +74,11 @@ export const CommandPalette: React.FC<{
         hint: go.id,
         run: () => setSelectedId(go.id)
       })),
-      { id: 'docs-engine', category: 'Docs', label: 'Open engine parity program', run: () => window.open('https://github.com/Heretek-Games/Android-Dev-Studio', '_blank') }
+      { id: 'docs-engine', category: 'Docs', label: 'Open engine parity program', run: () => window.open('https://github.com/Heretek-Games/Android-Dev-Studio', '_blank') },
+      ...(extraCommands ?? [])
     ];
     return list;
-  }, [scene, gizmoMode, isPlaying, onSelectPreset, setGizmoMode, setSelectedId, startPlayMode, stopPlayMode]);
+  }, [scene, gizmoMode, isPlaying, onSelectPreset, setGizmoMode, setSelectedId, startPlayMode, stopPlayMode, extraCommands]);
 
   const results = useMemo(() => {
     const scored = commands
@@ -95,9 +100,16 @@ export const CommandPalette: React.FC<{
 
   if (!open) return null;
 
+  // "Save layout as <query>": the query text becomes the layout name.
+  const showSaveAs = onSaveLayoutAs && query.trim().length > 1;
+
   const choose = (cmd: PaletteCommand) => {
     onClose();
     cmd.run();
+  };
+
+  const saveAs = () => {
+    if (onSaveLayoutAs?.(query)) onClose();
   };
 
   return (
@@ -115,14 +127,24 @@ export const CommandPalette: React.FC<{
             if (e.key === 'Escape') onClose();
             else if (e.key === 'ArrowDown') { e.preventDefault(); setCursor(c => Math.min(c + 1, results.length - 1)); }
             else if (e.key === 'ArrowUp') { e.preventDefault(); setCursor(c => Math.max(c - 1, 0)); }
+            else if (e.key === 'Enter' && showSaveAs && e.shiftKey) saveAs();
             else if (e.key === 'Enter' && results[cursor]) choose(results[cursor]);
           }}
           placeholder="Type a command, entity, or layout…"
-          className="px-4 py-3 bg-transparent text-sm text-white placeholder-zinc-500 outline-none border-b border-studio-border font-mono"
+          className="px-4 py-3 bg-transparent text-sm text-studio-text placeholder-studio-faint outline-none border-b border-studio-border font-mono"
         />
         <div className="overflow-y-auto py-1">
-          {results.length === 0 && (
-            <div className="px-4 py-6 text-center text-xs text-zinc-500">No matching commands.</div>
+          {showSaveAs && (
+            <button
+              onClick={saveAs}
+              className="w-full flex items-center space-x-2 px-4 py-1.5 text-left text-xs text-studio-success hover:bg-studio-success/20"
+            >
+              <span className="text-[10px] uppercase tracking-wider text-studio-muted w-14 shrink-0">Layout</span>
+              <span className="truncate">Save layout as “{query.trim().slice(0, 48)}” (Shift+Enter)</span>
+            </button>
+          )}
+          {results.length === 0 && !showSaveAs && (
+            <KitEmptyState>No matching commands.</KitEmptyState>
           )}
           {results.map((cmd, i) => (
             <button
@@ -130,12 +152,12 @@ export const CommandPalette: React.FC<{
               onMouseEnter={() => setCursor(i)}
               onClick={() => choose(cmd)}
               className={`w-full flex items-center space-x-2 px-4 py-1.5 text-left text-xs ${
-                i === cursor ? 'bg-blue-600/30 text-white' : 'text-zinc-300'
+                i === cursor ? 'bg-studio-accent/30 text-studio-text' : 'text-studio-text'
               }`}
             >
-              <span className="text-[10px] uppercase tracking-wider text-zinc-500 w-14 shrink-0">{cmd.category}</span>
+              <span className="text-[10px] uppercase tracking-wider text-studio-muted w-14 shrink-0">{cmd.category}</span>
               <span className="truncate">{cmd.label}</span>
-              {cmd.hint && <span className="ml-auto font-mono text-[10px] text-zinc-600 truncate">{cmd.hint}</span>}
+              {cmd.hint && <span className="ml-auto font-mono text-[10px] text-studio-faint truncate">{cmd.hint}</span>}
             </button>
           ))}
         </div>
