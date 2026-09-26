@@ -1,0 +1,59 @@
+{
+  "goal": "Frost Hollow Commission",
+  "rules": [
+    {
+      "type": "dialogue_reaches",
+      "tree": "Warden",
+      "node": "briefed",
+      "id": "warden-briefing"
+    },
+    {
+      "type": "dialogue_event_fired",
+      "tree": "Warden",
+      "event": "commission_taken",
+      "id": "commission-flag"
+    },
+    {
+      "type": "game_melee_kills_min",
+      "min": 2,
+      "id": "slimes-cleared"
+    },
+    {
+      "type": "game_melee_reactions_min",
+      "min": 1,
+      "id": "melt-reactions"
+    },
+    {
+      "type": "quest_complete",
+      "id": "quest-complete"
+    },
+    {
+      "type": "draw_call_budget",
+      "max": 100,
+      "id": "draw-budget"
+    },
+    {
+      "type": "fps_min",
+      "min": 30,
+      "id": "sim-fps"
+    }
+  ],
+  "verdict": "error",
+  "iterations": [
+    {
+      "iteration": 1,
+      "phase": "generate",
+      "visionNotes": [],
+      "llm": {
+        "error": "chat completion failed after 3 attempt(s): TimeoutError: The read operation timed out"
+      },
+      "error": "chat completion failed after 3 attempt(s): TimeoutError: The read operation timed out"
+    }
+  ],
+  "totalTokens": 0,
+  "totalLatencySeconds": 0.0,
+  "finalReport": null,
+  "error": "LLM call failed: chat completion failed after 3 attempt(s): TimeoutError: The read operation timed out",
+  "workScene": "/home/john/Projects/Android-Dev-Studio/harness/scenes/loop_work_scene.json",
+  "frames": []
+}
