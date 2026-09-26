@@ -2,12 +2,22 @@ import * as THREE from 'three';
 import { GameObject } from './GameObject.js';
 import type { PhysicsWorld } from '../physics/PhysicsWorld.js';
 
+/** Named geography (Track B.2): first-class places shared by briefs, dialogue,
+ * quests, and agents. Pure data — no game logic lives here. */
+export interface ScenePlace {
+  name: string;
+  position: [number, number, number];
+  radius?: number;
+}
+
 export class Scene {
   public id: string;
   public name: string;
   public threeScene: THREE.Scene;
   public gameObjects: GameObject[] = [];
   public physicsWorld: PhysicsWorld | null = null;
+  /** Named places (set via setPlaces; validated finite positions). */
+  public places: ScenePlace[] = [];
 
   constructor(name = 'MainScene', id?: string) {
     this.name = name;
@@ -52,6 +62,44 @@ export class Scene {
 
   public findByTag(tag: string): GameObject[] {
     return this.gameObjects.filter(g => g.tag === tag);
+  }
+
+  /** Replace the named-place table (drops malformed entries, keeps finite ones). */
+  public setPlaces(places: ScenePlace[] | undefined | null): void {
+    if (!Array.isArray(places)) {
+      this.places = [];
+      return;
+    }
+    const seen = new Set<string>();
+    this.places = [];
+    for (const p of places) {
+      if (!p || typeof p.name !== 'string' || !p.name) continue;
+      if (seen.has(p.name)) continue;
+      seen.add(p.name);
+      const pos = p.position;
+      if (!Array.isArray(pos) || pos.length !== 3) continue;
+      const xyz = [Number(pos[0]), Number(pos[1]), Number(pos[2])];
+      if (!xyz.every(Number.isFinite)) continue;
+      this.places.push({
+        name: p.name,
+        position: [xyz[0], xyz[1], xyz[2]],
+        radius: Number.isFinite(p.radius) && (p.radius as number) > 0 ? p.radius : 1
+      });
+    }
+  }
+
+  public findPlace(name: string): ScenePlace | null {
+    return this.places.find(p => p.name === name) || null;
+  }
+
+  /** Resolve a target name to a world position: live object first, named
+   * place second (actors beat geography). Returns null when unknown. */
+  public resolveTargetPosition(name: string): THREE.Vector3 | null {
+    const go = this.findByName(name);
+    if (go) return go.transform.position.clone();
+    const place = this.findPlace(name);
+    if (place) return new THREE.Vector3(place.position[0], place.position[1], place.position[2]);
+    return null;
   }
 
   public update(deltaTime: number): void {

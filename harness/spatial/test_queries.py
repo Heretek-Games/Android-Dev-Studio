@@ -231,6 +231,43 @@ class PlacesAuditTests(unittest.TestCase):
         audit = spatial_audit(scene)
         self.assertFalse(audit["pass"])
 
+    def test_ai_targeting_place_passes(self):
+        scene = arena()
+        scene["gameObjects"] = [
+            o for o in scene["gameObjects"] if o["name"] != "Imp"
+        ] + [
+            {
+                "name": "Imp",
+                "shape": "capsule",
+                "size": [1, 1.5, 1],
+                "position": [6, 1.5, 6],
+                "color": "#ef4444",
+                "physics": "none",
+                "ai": {"targetName": "plaza", "moveSpeed": 2},
+            }
+        ]
+        scene["places"] = [{"name": "plaza", "position": [4, 0.5, 6], "radius": 3}]
+        audit = spatial_audit(scene)
+        self.assertTrue(audit["pass"], audit["defects"])
+
+    def test_ai_targeting_missing_everything_fails(self):
+        scene = arena()
+        scene["gameObjects"] = [
+            o for o in scene["gameObjects"] if o["name"] != "Imp"
+        ] + [
+            {
+                "name": "Imp",
+                "shape": "capsule",
+                "size": [1, 1.5, 1],
+                "position": [6, 1.5, 6],
+                "color": "#ef4444",
+                "physics": "none",
+                "ai": {"targetName": "void", "moveSpeed": 2},
+            }
+        ]
+        audit = spatial_audit(scene)
+        self.assertFalse(audit["pass"])
+
 
 class DigestTests(unittest.TestCase):
     def test_digest_compacts(self):

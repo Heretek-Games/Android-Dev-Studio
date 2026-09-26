@@ -73,14 +73,13 @@ export class DistanceCheckNode extends BTNode {
 
   public override tick(actor: GameObject, _dt: number): BTStatus {
     if (!actor.scene) return BTStatus.FAILURE;
-    const target = actor.scene.findByName(this.targetName);
+    const target = actor.scene.resolveTargetPosition(this.targetName);
     if (!target) return BTStatus.FAILURE;
 
     const p1 = actor.transform.position;
-    const p2 = target.transform.position;
-    const dx = p1.x - p2.x;
-    const dy = p1.y - p2.y;
-    const dz = p1.z - p2.z;
+    const dx = p1.x - target.x;
+    const dy = p1.y - target.y;
+    const dz = p1.z - target.z;
     const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
 
     const conditionMet = this.compareMode === 'less' ? dist <= this.maxDistance : dist >= this.maxDistance;
@@ -95,13 +94,12 @@ export class MoveTowardsNode extends BTNode {
 
   public override tick(actor: GameObject, dt: number): BTStatus {
     if (!actor.scene) return BTStatus.FAILURE;
-    const target = actor.scene.findByName(this.targetName);
+    const target = actor.scene.resolveTargetPosition(this.targetName);
     if (!target) return BTStatus.FAILURE;
 
     const p1 = actor.transform.position;
-    const p2 = target.transform.position;
-    const dx = p2.x - p1.x;
-    const dz = p2.z - p1.z;
+    const dx = target.x - p1.x;
+    const dz = target.z - p1.z;
     const dist = Math.sqrt(dx * dx + dz * dz);
 
     if (dist <= this.stopDistance) {
@@ -121,6 +119,9 @@ export class MoveTowardsNode extends BTNode {
  * Attacks the target when within range, rate-limited by a cooldown. The attack
  * itself is an injected callback, so the node stays decoupled from game systems
  * (weapons, damage routing, events).
+ *
+ * NOTE: intentionally object-only (findByName, not resolveTargetPosition) —
+ * attacking named geography is meaningless. Use MoveTowardsNode for places.
  */
 export class AttackNode extends BTNode {
   private cooldownRemaining = 0;

@@ -161,21 +161,36 @@ def spatial_audit(scene: Dict[str, Any]) -> Dict[str, Any]:
     for owner in ai_owners:
         label = f"ai '{owner.get('name')}'"
         target = _by_name(objects, owner["ai"].get("targetName"))
-        if target is None:
-            fail(
-                label,
-                f"target {owner['ai'].get('targetName')!r} missing → repair: name a real entity",
-            )
-            continue
         ox, _, oz = _pos3(owner)
-        tx, _, tz = _pos3(target)
+        if target is None:
+            # Named places are valid AI destinations too (B.2 engine parity).
+            place_pos = None
+            try:
+                from harness.spatial.spatial_queries import QueryRunner
+
+                place_pos = QueryRunner(
+                    {"gameObjects": objects, "places": scene.get("places")}
+                ).place_position(str(owner["ai"].get("targetName")))
+            except (ImportError, ValueError, TypeError):
+                place_pos = None
+            if place_pos is None:
+                fail(
+                    label,
+                    f"target {owner['ai'].get('targetName')!r} missing → repair: name a real entity or place",
+                )
+                continue
+            tx, _, tz = place_pos
+            target_label = f"place '{owner['ai'].get('targetName')}'"
+        else:
+            tx, _, tz = _pos3(target)
+            target_label = f"'{target.get('name')}'"
         if not index.reachable(ox, oz, tx, tz):
             fail(
                 label,
-                f"cannot reach '{target.get('name')}' from ({ox:g}, {oz:g}) → repair: open a corridor",
+                f"cannot reach {target_label} from ({ox:g}, {oz:g}) → repair: open a corridor",
             )
         else:
-            ok(label, f"reaches '{target.get('name')}'")
+            ok(label, f"reaches {target_label}")
 
     # 4. camera framing (gameplay sight line unoccluded).
     try:

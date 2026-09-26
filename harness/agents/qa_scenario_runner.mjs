@@ -249,6 +249,7 @@ function runTraversalAudit(scene, physicsWorld, opts = {}) {
 
 function buildScene(spec, engine) {
   const scene = new engine.Scene(spec.name || 'QAScene');
+  if (engine.Scene && Array.isArray(spec.places)) scene.setPlaces(spec.places);
   for (const objSpec of spec.gameObjects || []) {
     const go = new engine.GameObject(objSpec.name || 'Object');
     const pos = objSpec.position || [0, 0, 0];
@@ -509,6 +510,12 @@ function setupNav(spec, scene, engine) {
     const target = objSpec.nav.target;
     if (Array.isArray(target) && target.length >= 2) {
       agent.setDestination(target[0], target[1]);
+    } else if (typeof target === 'string') {
+      // Named place destination (B.2): resolve through the scene's place
+      // table; unknown names fail loudly, never silently to (0, 0).
+      const place = scene.findPlace ? scene.findPlace(target) : null;
+      if (!place) throw new Error(`nav target place "${target}" is not a defined place`);
+      agent.setDestination(place.position[0], place.position[2]);
     }
   }
   for (const agent of agents) {

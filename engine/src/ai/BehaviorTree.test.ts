@@ -79,6 +79,31 @@ describe('BehaviorTree — composite and leaf node semantics', () => {
     assert.strictEqual(move.tick(actor, 0.5), BTStatus.SUCCESS, 'arrives and reports success');
   });
 
+  test('movement and distance nodes resolve named places (actors win ties)', () => {
+    const scene = new Scene('BTPlaces');
+    const actor = new GameObject('Actor');
+    scene.addGameObject(actor);
+    scene.setPlaces([
+      { name: 'north gate', position: [0, 0, -10], radius: 2 },
+      { name: 'bad', position: [NaN, 0, 0] },
+      { name: 'north gate', position: [99, 0, 99] }
+    ]);
+    // Malformed + duplicate places are dropped.
+    assert.deepStrictEqual(scene.places.map(p => p.name), ['north gate']);
+
+    const move = new MoveTowardsNode('north gate', 4, 1.5);
+    assert.strictEqual(move.tick(actor, 0.5), BTStatus.RUNNING);
+    assert.ok(Math.abs(actor.transform.position.z - -2) < 1e-6);
+    assert.strictEqual(new DistanceCheckNode('north gate', 9, 'less').tick(actor, 0.016), BTStatus.SUCCESS);
+    assert.strictEqual(new DistanceCheckNode('Missing', 100).tick(actor, 0.016), BTStatus.FAILURE);
+
+    // A live object beats a same-named place.
+    const decoy = new GameObject('north gate');
+    decoy.transform.setPosition(0, 0, 4);
+    scene.addGameObject(decoy);
+    assert.strictEqual(new DistanceCheckNode('north gate', 7, 'less').tick(actor, 0.016), BTStatus.SUCCESS);
+  });
+
   test('BehaviorTreeComponent ticks its tree against the owning GameObject', () => {
     const scene = new Scene('BTComponent');
     const actor = new GameObject('Guard');
