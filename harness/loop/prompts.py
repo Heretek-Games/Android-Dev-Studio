@@ -65,6 +65,9 @@ RULE_DESCRIPTIONS = {
     "remoteconfig_get": lambda r: (
         f"remote config '{r.get('key')}' must resolve to {r.get('expected')!r}"
     ),
+    "store_assert": lambda r: (
+        f"store check '{r.get('check', 'grant')}' must hold for '{r.get('sku', 'any')}'"
+    ),
     "object_count": lambda r: (
         f"the scene must contain exactly {r.get('count')} objects"
     ),
@@ -183,6 +186,9 @@ ACTION_SCHEMA = """Action vocabulary (a JSON array named "actions"):
   - {"type": "operate", "config": {"telemetry": {"enabled": true, "build": "1.0"}, "remoteConfig": {"defaults": {"doubleXp": false}, "values": {"doubleXp": true}}}}
     (registers operate telemetry (phase-transition events) plus remote config for the
     telemetry_events_min/remoteconfig_get audits; telemetry off by default engine-side)
+  - {"type": "store", "config": {"catalog": [{"sku": "coins100", "kind": "consumable", "priceMicros": 990000}], "script": [{"op": "purchase", "sku": "coins100"}, {"op": "consume", "sku": "coins100"}]}}
+    (registers the fake store catalog plus a scripted purchase flow for the store_assert
+    audit; script SKUs must name catalog products; checks: grant/no_grant/consumed_once/restored)
   - Camera clips ride the timeline vocabulary: {"type": "timeline", ... "clips": [{"id": "wide", "start": 0, "dur": 2, "type": "camera", "data": {"shot": "wide", "to": [0, 2, 8], "cut": true}}]}
     (cinematic data keys: shot id, cut bool, blend seconds, lookTarget name + deadzone/
     lookahead/smoothTime, dolly|crane {path, ease}, shake {trauma, decay, freq, ampPos,

@@ -33,6 +33,7 @@ import {
   Telemetry,
   CrashReportCollector,
   RemoteConfig,
+  FakeStoreBackend,
   type PrefabStore
 } from '@heretek/engine';
 
@@ -317,6 +318,35 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           flagAfter: (rc.activate(), rc.getBool('doubleXp')),
           cohort: rc.gated('doubleXp', 50)
         }));
+      },
+      probeStore: () => {
+        // Store flows through the real bundled FakeBackend (async).
+        const store = new FakeStoreBackend({
+          catalog: [
+            { sku: 'coins100', kind: 'consumable', title: '100 Coins', priceMicros: 990000, currency: 'USD' },
+            { sku: 'pro', kind: 'non_consumable', title: 'Pro', priceMicros: 4990000, currency: 'USD' }
+          ],
+          seed: 7
+        });
+        return (async () => {
+          await store.signIn(true);
+          const bought = await store.purchase('coins100');
+          const acked = await store.acknowledge(bought.orderId);
+          const consumed = await store.consume(bought.orderId);
+          const reconsumed = await store.consume(bought.orderId);
+          const pro = await store.purchase('pro');
+          const restored = await store.restorePurchases();
+          await store.cloudPut('save1', '{"level":3}');
+          return {
+            granted: bought.state,
+            acked,
+            consumed,
+            reconsumed,
+            proKept: restored.some(r => r.sku === 'pro'),
+            cloud: await store.cloudGet('save1'),
+            ledger: store.ledgerSize
+          };
+        })();
       },
       spawnWreckProbe: () => {
         undoService.checkpoint(scene);

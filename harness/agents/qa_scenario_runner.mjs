@@ -627,6 +627,56 @@ function setupOperate(spec, game, engine) {
   return { telemetry, remoteConfig };
 }
 /**
+ * Store services (Track 3): deterministic FakeBackend purchase scripts run
+ * pre-frames (OpenIAP-shaped flows, no devices). Main is async, so scripted
+ * ops await cleanly; results feed the store_assert rule.
+ */
+async function setupStore(spec, engine) {
+  if (!spec.store || typeof spec.store !== 'object') return null;
+  const cfg = spec.store;
+  const store = new engine.FakeStoreBackend({
+    catalog: cfg.catalog || [],
+    seed: cfg.seed ?? 42
+  });
+  await store.signIn(true);
+  const log = [];
+  for (const step of cfg.script || []) {
+    if (!step || typeof step.op !== 'string') continue;
+    try {
+      if (step.op === 'purchase') {
+        const record = await store.purchase(step.sku);
+        log.push({ op: 'purchase', sku: step.sku, ok: record.state === 'purchased', orderId: record.orderId, state: record.state });
+      } else if (step.op === 'acknowledge') {
+        const orderId = latestOrder(store, step.sku);
+        const ok = orderId ? await store.acknowledge(orderId) : false;
+        log.push({ op: 'acknowledge', sku: step.sku, ok });
+      } else if (step.op === 'consume') {
+        const orderId = latestOrder(store, step.sku);
+        const ok = orderId ? await store.consume(orderId) : false;
+        log.push({ op: 'consume', sku: step.sku, ok });
+      } else if (step.op === 'unlock') {
+        const ok = await store.unlockAchievement(step.id);
+        log.push({ op: 'unlock', id: step.id, ok });
+      } else if (step.op === 'submit') {
+        const ok = await store.submitScore(step.leaderboard, step.score);
+        log.push({ op: 'submit', leaderboard: step.leaderboard, ok });
+      } else if (step.op === 'cloudPut') {
+        const ok = await store.cloudPut(step.slot, step.data);
+        log.push({ op: 'cloudPut', slot: step.slot, ok });
+      }
+    } catch (error) {
+      log.push({ op: step.op, ok: false, error: String(error) });
+    }
+  }
+  return { store, log };
+}
+
+function latestOrder(store, sku) {
+  // Newest ledger order for the sku (buyer-side order tracking).
+  const entries = store.toJSON().ledger.filter(r => r.sku === sku);
+  return entries.length ? entries[entries.length - 1].orderId : null;
+}
+/**
  * Dialogue auto-play: register every spec.dialogues tree and walk each one
  * deterministically (first available choice, bounded steps), recording stable
  * node visits plus emitted events. Action/condition nodes self-resolve inside
@@ -875,7 +925,7 @@ function placementNote(game) {
 }
 
 function evaluateRules(spec, ctxData) {
-  const { scene, samples, firstSamples, metrics, dt, game, dialogue, input, audio, nav, lighting, destruction, operate } = ctxData;
+  const { scene, samples, firstSamples, metrics, dt, game, dialogue, input, audio, nav, lighting, destruction, operate, store } = ctxData;
   const results = [];
 
   for (const rule of spec.rules || []) {
@@ -1098,6 +1148,31 @@ function evaluateRules(spec, ctxData) {
         const resolved = operate.remoteConfig.get(rule.key);
         pass = JSON.stringify(resolved) === JSON.stringify(rule.expected);
         detail = `remoteconfig '${rule.key}'=${JSON.stringify(resolved)} (want ${JSON.stringify(rule.expected)})`;
+        break;
+      }
+      case 'store_assert': {
+        if (!store) { pass = false; detail = 'no spec.store present'; break; }
+        const check = rule.check || 'grant';
+        const log = store.log.filter(e => !rule.sku || e.sku === rule.sku);
+        if (check === 'grant') {
+          const grants = log.filter(e => e.op === 'purchase' && e.ok);
+          pass = grants.length >= (rule.min ?? 1);
+          detail = `grants=${grants.length} (min=${rule.min ?? 1})`;
+        } else if (check === 'no_grant') {
+          pass = !log.some(e => e.op === 'purchase' && e.ok && (!rule.sku || e.sku === rule.sku));
+          detail = `purchases blocked (${log.length} script steps)`;
+        } else if (check === 'consumed_once') {
+          const consumes = log.filter(e => e.op === 'consume' && e.sku === rule.sku).map(e => e.ok);
+          pass = consumes.length >= 2 && consumes[0] === true && consumes.slice(1).every(v => v === false);
+          detail = `consume sequence=[${consumes.join(',')}] (want true then false)`;
+        } else if (check === 'restored') {
+          pass = store.store.hasAchievement(rule.id) || store.store.bestScore(rule.leaderboard ?? '') !== null ||
+            store.store.toJSON().ledger.some(r => r.sku === rule.sku && r.state === 'purchased' && !r.consumed);
+          detail = `entitlement '${rule.sku ?? rule.id ?? rule.leaderboard}' present=${pass}`;
+        } else {
+          pass = false;
+          detail = `unknown store check '${check}'`;
+        }
         break;
       }
       case 'object_count': {
@@ -1398,6 +1473,7 @@ async function main() {
   const lighting = setupLighting(spec, scene, engine);
   const destruction = setupDestruction(spec, scene, engine, physicsWorld);
   const operate = setupOperate(spec, game, engine);
+  const store = await setupStore(spec, engine);
 
   const eventCount = scene.gameObjects.reduce(
     (n, go) => n + go.components.filter(c => c.constructor.name === 'EventSheet').reduce((m, es) => m + es.events.length, 0), 0
@@ -1499,7 +1575,7 @@ async function main() {
     }
   }
 
-  const ruleResults = evaluateRules(spec, { scene, samples, firstSamples, metrics, dt: args.dt, game, dialogue, input, audio, nav, lighting, destruction, operate });
+  const ruleResults = evaluateRules(spec, { scene, samples, firstSamples, metrics, dt: args.dt, game, dialogue, input, audio, nav, lighting, destruction, operate, store });
   const passed = ruleResults.filter(r => r.pass).length;
   const total = ruleResults.length;
   const allPass = total > 0 && passed === total;

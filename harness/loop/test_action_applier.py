@@ -1834,6 +1834,83 @@ class OperateActionTests(unittest.TestCase):
             self.assertIn(hint, result.outcomes[0]["detail"])
 
 
+class StoreActionTests(unittest.TestCase):
+    def test_store_action_registers_catalog_and_script(self):
+        scene, result = apply_actions(
+            base_scene(),
+            [
+                {
+                    "type": "store",
+                    "config": {
+                        "catalog": [
+                            {
+                                "sku": "coins100",
+                                "kind": "consumable",
+                                "priceMicros": 990000,
+                            },
+                            {"sku": "pro", "kind": "non_consumable"},
+                        ],
+                        "script": [
+                            {"op": "purchase", "sku": "coins100"},
+                            {"op": "consume", "sku": "coins100"},
+                            {"op": "unlock", "id": "first_win"},
+                        ],
+                    },
+                }
+            ],
+        )
+        self.assertEqual(result.applied, 1)
+        self.assertEqual(len(scene["store"]["catalog"]), 2)
+        self.assertEqual(len(scene["store"]["script"]), 3)
+        self.assertEqual(scene["store"]["script"][0]["op"], "purchase")
+
+    def test_store_rejects_malformed(self):
+        for action, hint in (
+            ({"type": "store", "config": {"catalog": []}}, "non-empty"),
+            (
+                {
+                    "type": "store",
+                    "config": {"catalog": [{"sku": "a", "kind": "rental"}]},
+                },
+                "kind",
+            ),
+            (
+                {
+                    "type": "store",
+                    "config": {
+                        "catalog": [
+                            {"sku": "a", "kind": "consumable", "priceMicros": -1}
+                        ]
+                    },
+                },
+                "priceMicros",
+            ),
+            (
+                {
+                    "type": "store",
+                    "config": {
+                        "catalog": [{"sku": "a", "kind": "consumable"}],
+                        "script": [{"op": "buy"}],
+                    },
+                },
+                "op",
+            ),
+            (
+                {
+                    "type": "store",
+                    "config": {
+                        "catalog": [{"sku": "a", "kind": "consumable"}],
+                        "script": [{"op": "purchase", "sku": "b"}],
+                    },
+                },
+                "catalog product",
+            ),
+        ):
+            _, result = apply_actions(base_scene(), [action])
+            self.assertEqual(result.invalid, 1, f"should reject {action!r}")
+            self.assertIn(hint, result.outcomes[0]["detail"])
+
+
 class PrefabActionTests(unittest.TestCase):
     def test_prefab_define_registers_template(self):
         scene, result = apply_actions(

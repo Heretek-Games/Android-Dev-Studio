@@ -2603,6 +2603,177 @@ def _validate_audio(
     return normalized
 
 
+STORE_PRODUCT_KINDS = {"consumable", "non_consumable", "subscription"}
+STORE_SCRIPT_OPS = {
+    "purchase",
+    "acknowledge",
+    "consume",
+    "unlock",
+    "submit",
+    "cloudPut",
+}
+
+
+def _validate_store_catalog(
+    value: Any, errors: Optional[List[str]]
+) -> Optional[List[Dict[str, Any]]]:
+    def fail(reason: str) -> None:
+        if errors is not None:
+            errors.append(reason)
+        return None
+
+    if not isinstance(value, list) or not value:
+        fail("store 'catalog' must be a non-empty array of products")
+        return None
+    catalog: List[Dict[str, Any]] = []
+    seen: set = set()
+    for i, product in enumerate(value):
+        if not isinstance(product, dict):
+            fail(f"store catalog[{i}] must be an object")
+            return None
+        sku = product.get("sku")
+        if not isinstance(sku, str) or not sku.strip() or sku in seen:
+            fail(f"store catalog[{i}].sku must be a unique non-empty string")
+            return None
+        seen.add(sku)
+        kind = product.get("kind")
+        if kind not in STORE_PRODUCT_KINDS:
+            fail(
+                f"store catalog[{i}].kind must be one of {sorted(STORE_PRODUCT_KINDS)}"
+            )
+            return None
+        price = product.get("priceMicros", 0)
+        if (
+            isinstance(price, bool)
+            or not isinstance(price, (int, float))
+            or int(price) != price
+            or price < 0
+        ):
+            fail(f"store catalog[{i}].priceMicros must be an integer >= 0")
+            return None
+        entry: Dict[str, Any] = {
+            "sku": sku.strip(),
+            "kind": kind,
+            "title": product.get("title", sku.strip())
+            if isinstance(product.get("title", sku), str)
+            else sku.strip(),
+            "priceMicros": int(price),
+            "currency": product.get("currency", "USD")
+            if isinstance(product.get("currency", "USD"), str)
+            else "USD",
+        }
+        catalog.append(entry)
+    return catalog
+
+
+def _validate_store(
+    value: Any, errors: Optional[List[str]] = None
+) -> Optional[Dict[str, Any]]:
+    """Store specs pass straight to the QA runner (spec.store).
+
+    Returns the normalized {catalog, script?, seed?}, or None when
+    malformed. Script steps reference catalog SKUs (checked here so typos
+    surface as repair input, not silent no-ops).
+    """
+
+    def fail(reason: str) -> None:
+        if errors is not None:
+            errors.append(reason)
+        return None
+
+    if not isinstance(value, dict):
+        fail("store 'config' must be an object")
+        return None
+    catalog = _validate_store_catalog(value.get("catalog"), errors)
+    if catalog is None:
+        return None
+    skus = {p["sku"] for p in catalog}
+    normalized: Dict[str, Any] = {"catalog": catalog}
+    raw_script = value.get("script", [])
+    if not isinstance(raw_script, list):
+        fail("store 'script' must be an array of purchase steps")
+        return None
+    script: List[Dict[str, Any]] = []
+    for i, step in enumerate(raw_script):
+        if not isinstance(step, dict):
+            fail(f"store script[{i}] must be an object")
+            return None
+        op = step.get("op")
+        if op not in STORE_SCRIPT_OPS:
+            fail(f"store script[{i}].op must be one of {sorted(STORE_SCRIPT_OPS)}")
+            return None
+        entry: Dict[str, Any] = {"op": op}
+        if op in ("purchase", "acknowledge", "consume"):
+            if step.get("sku") not in skus:
+                fail(f"store script[{i}].sku must name a catalog product")
+                return None
+            entry["sku"] = step["sku"]
+        elif op == "unlock":
+            if not isinstance(step.get("id"), str) or not step.get("id").strip():
+                fail(f"store script[{i}] needs a non-empty achievement 'id'")
+                return None
+            entry["id"] = step["id"].strip()
+        elif op == "submit":
+            if (
+                not isinstance(step.get("leaderboard"), str)
+                or not step.get("leaderboard").strip()
+            ):
+                fail(f"store script[{i}] needs a non-empty 'leaderboard'")
+                return None
+            if not _is_finite_number(step.get("score")):
+                fail(f"store script[{i}].score must be finite")
+                return None
+            entry["leaderboard"] = step["leaderboard"].strip()
+            entry["score"] = float(step["score"])
+        elif op == "cloudPut":
+            if not isinstance(step.get("slot"), str) or not step.get("slot").strip():
+                fail(f"store script[{i}] needs a non-empty 'slot'")
+                return None
+            if not isinstance(step.get("data"), str):
+                fail(f"store script[{i}].data must be a string")
+                return None
+            entry["slot"] = step["slot"].strip()
+            entry["data"] = step["data"]
+        script.append(entry)
+    normalized["script"] = script
+    if "seed" in value:
+        seed = value["seed"]
+        if (
+            isinstance(seed, bool)
+            or not isinstance(seed, (int, float))
+            or int(seed) != seed
+            or seed < 0
+        ):
+            fail("store 'seed' must be an integer >= 0")
+            return None
+        normalized["seed"] = int(seed)
+    for key in value:
+        if key not in ("catalog", "script", "seed"):
+            fail(f"unknown store config key '{key}'")
+            return None
+    return normalized
+
+
+def _apply_store(
+    scene: Dict[str, Any], action: Dict[str, Any], result: ApplyResult, index: int
+) -> None:
+    reasons: List[str] = []
+    config = _validate_store(action.get("config"), reasons)
+    if config is None:
+        detail = reasons[0] if reasons else "malformed config"
+        return _outcome(
+            result, index, "store", "invalid", f"store config rejected — {detail}"
+        )
+    scene["store"] = config
+    _outcome(
+        result,
+        index,
+        "store",
+        "applied",
+        f"Registered store ({len(config['catalog'])} product(s), {len(config['script'])} script step(s))",
+    )
+
+
 def _validate_operate(
     value: Any, errors: Optional[List[str]] = None
 ) -> Optional[Dict[str, Any]]:
@@ -3663,6 +3834,7 @@ _HANDLERS = {
     "navgrid": _apply_navgrid,
     "lightrig": _apply_lightrig,
     "operate": _apply_operate,
+    "store": _apply_store,
 }
 
 

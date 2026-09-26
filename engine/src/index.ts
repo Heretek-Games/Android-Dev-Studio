@@ -79,6 +79,7 @@ export * from './navigation/NavBake.js';
 export * from './operate/Telemetry.js';
 export * from './operate/CrashReport.js';
 export * from './operate/RemoteConfig.js';
+export * from './store/Store.js';
 export * from './destruction/Destructible.js';
 export * from './cinematics/CineCamera.js';
 export * from './cinematics/CineShots.js';
