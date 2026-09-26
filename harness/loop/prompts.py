@@ -203,6 +203,16 @@ ACTION_SCHEMA = """Action vocabulary (a JSON array named "actions"):
   - {"type": "store", "config": {"catalog": [{"sku": "coins100", "kind": "consumable", "priceMicros": 990000}], "script": [{"op": "purchase", "sku": "coins100"}, {"op": "consume", "sku": "coins100"}]}}
     (registers the fake store catalog plus a scripted purchase flow for the store_assert
     audit; script SKUs must name catalog products; checks: grant/no_grant/consumed_once/restored)
+  - {"type": "ui", "op": "kit", "kit": "hud_arena"} (installs a prefab UI kit:
+    hud_arena|hud_racer|menu_basic|dialogue_panel; kits carry their theme and
+    safe-area-clean elements, so prefer kits over hand-placed elements)
+  - {"type": "ui", "op": "theme", "theme": "fantasy"} (sets the UI theme:
+    fantasy|dungeon|driving|city|scifi|default; match the brief genre)
+  - {"type": "ui", "op": "element", "element": {"id": "score", "kind": "label", "zone": "top_center", "size": [0.28, 0.08], "order": 0}}
+    (places one HUD element: kinds label|bar|button|panel|toast|minimap; zones
+    top_center|top_left|top_right|bottom_left|bottom_right|bottom_center|center|full;
+    interactive kinds must stay inside the safe area; same-zone elements stack by
+    distinct order; audited by the ui_alignment axis of visual_quality_min)
   - Camera clips ride the timeline vocabulary: {"type": "timeline", ... "clips": [{"id": "wide", "start": 0, "dur": 2, "type": "camera", "data": {"shot": "wide", "to": [0, 2, 8], "cut": true}}]}
     (cinematic data keys: shot id, cut bool, blend seconds, lookTarget name + deadzone/
     lookahead/smoothTime, dolly|crane {path, ease}, shake {trauma, decay, freq, ampPos,

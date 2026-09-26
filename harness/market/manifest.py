@@ -8,7 +8,7 @@ Extension pack manifests (Track 3 marketplace, ADR-1790382427947).
       "displayName": "Coin Pack",        # optional
       "description": "...",              # optional
       "engine": ">=1.0.0",              # engine-API pin, required
-      "kind": "prefab",                  # behavior|prefab|brief|dialogue, required
+      "kind": "prefab",                  # behavior|prefab|brief|dialogue|ui, required
       "entry": "coin.json",              # payload path inside the pack, required
       "dependencies": {"com.heretek.core": "1.0.0"},  # exact pins only (UPM rule)
       "license": "MIT",                  # SPDX id, required
@@ -20,7 +20,7 @@ Extension pack manifests (Track 3 marketplace, ADR-1790382427947).
 import re
 from typing import Any, Dict, List, Optional
 
-PACK_KINDS = {"behavior", "prefab", "brief", "dialogue"}
+PACK_KINDS = {"behavior", "prefab", "brief", "dialogue", "ui"}
 
 #: Permissive-only default allowlist (configurable at review time).
 SPDX_ALLOWLIST = {

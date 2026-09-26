@@ -89,6 +89,14 @@ def _check_api_surface(manifest: Dict[str, Any], files: Dict[str, bytes]) -> Lis
             for key in ("id", "goal"):
                 if key not in payload:
                     failures.append(f"api-surface: brief payload missing '{key}'")
+        elif kind == "ui":
+            import sys
+
+            sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
+            from harness.loop.ui_kits import validate_kit
+
+            for problem in validate_kit(payload):
+                failures.append(f"api-surface: ui kit {problem}")
         else:
             failures.append(f"api-surface: unknown kind '{kind}'")
     except ImportError as exc:

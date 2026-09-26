@@ -3819,6 +3819,113 @@ def _outcome(
         result.failed += 1
 
 
+def _apply_ui(
+    scene: Dict[str, Any], action: Dict[str, Any], result: ApplyResult, index: int
+) -> None:
+    """UI shell action (Track A.3): theme / element / kit / remove / clear.
+
+    Writes scene["ui"] = {"theme": <known theme>, "elements": [...]}. Every
+    element is validated against the ui_layout vocabulary; kits come from the
+    validated ui_kits registry. Malformed actions become invalid outcomes
+    (repair input), never exceptions.
+    """
+    from harness.loop.ui_kits import get_kit, kit_names
+    from harness.loop.ui_layout import validate_element
+    from harness.loop.ui_themes import get_theme, theme_names
+
+    op = action.get("op", "element")
+    ui = scene.get("ui")
+    if not isinstance(ui, dict):
+        ui = {}
+    theme = ui.get("theme", "default")
+    elements = [e for e in ui.get("elements", []) if isinstance(e, dict)]
+
+    if op == "theme":
+        name = action.get("theme")
+        if get_theme(name) is None:
+            return _outcome(
+                result,
+                index,
+                "ui",
+                "invalid",
+                f"ui theme rejected — unknown theme {name!r} (known: {theme_names()})",
+            )
+        theme = str(name).strip().lower()
+        _outcome(result, index, "ui", "applied", f"UI theme set to '{theme}'")
+    elif op == "element":
+        element = action.get("element")
+        problems = validate_element(element)
+        if problems:
+            return _outcome(
+                result,
+                index,
+                "ui",
+                "invalid",
+                f"ui element rejected — {problems[0]}",
+            )
+        entry = {
+            "id": element["id"].strip(),
+            "kind": element["kind"],
+            "zone": element["zone"],
+            "size": [float(element["size"][0]), float(element["size"][1])],
+            "order": int(element.get("order", 0)),
+        }
+        elements = [e for e in elements if e.get("id") != entry["id"]]
+        elements.append(entry)
+        _outcome(
+            result,
+            index,
+            "ui",
+            "applied",
+            f"UI element '{entry['id']}' placed in {entry['zone']}",
+        )
+    elif op == "kit":
+        name = action.get("kit")
+        kit = get_kit(name)
+        if kit is None:
+            return _outcome(
+                result,
+                index,
+                "ui",
+                "invalid",
+                f"ui kit rejected — unknown kit {name!r} (known: {kit_names()})",
+            )
+        theme = kit["theme"]
+        elements = kit["elements"]
+        _outcome(
+            result,
+            index,
+            "ui",
+            "applied",
+            f"UI kit '{name}' applied ({len(elements)} elements, theme '{theme}')",
+        )
+    elif op == "remove":
+        target = action.get("id")
+        if not any(e.get("id") == target for e in elements):
+            return _outcome(
+                result,
+                index,
+                "ui",
+                "target-missing",
+                f"ui remove rejected — no element {target!r}",
+            )
+        elements = [e for e in elements if e.get("id") != target]
+        _outcome(result, index, "ui", "applied", f"UI element {target!r} removed")
+    elif op == "clear":
+        scene.pop("ui", None)
+        _outcome(result, index, "ui", "applied", "UI shell cleared")
+        return
+    else:
+        return _outcome(
+            result,
+            index,
+            "ui",
+            "invalid",
+            f"ui op rejected — must be theme|element|kit|remove|clear (got {op!r})",
+        )
+    scene["ui"] = {"theme": theme, "elements": elements}
+
+
 _HANDLERS = {
     "spawn": _apply_spawn,
     "light": _apply_light,
@@ -3835,6 +3942,7 @@ _HANDLERS = {
     "lightrig": _apply_lightrig,
     "operate": _apply_operate,
     "store": _apply_store,
+    "ui": _apply_ui,
 }
 
 

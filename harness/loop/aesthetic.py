@@ -266,8 +266,17 @@ def audit_scene(scene: Dict[str, Any]) -> Dict[str, Any]:
                 }
             )
 
-    # --- ui_alignment: explicit neutral stub (no UI tree headless yet) ---
-    scores["ui_alignment"] = 3
+    # --- ui_alignment: real audit when the scene carries a UI shell (A.3),
+    # explicit neutral stub otherwise (no UI tree exists headless yet).
+    from harness.loop.ui_layout import audit_ui
+
+    ui_audit = audit_ui(scene.get("ui"))
+    if ui_audit["present"]:
+        scores["ui_alignment"] = ui_audit["score"]
+        for defect in ui_audit["defects"]:
+            defects.append(defect)
+    else:
+        scores["ui_alignment"] = 3
 
     overall = min(scores.values()) if scores else 1
     mean = round(sum(scores.values()) / len(scores), 2) if scores else 1.0

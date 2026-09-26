@@ -10,6 +10,7 @@ register into kind-appropriate stores (Godot checkbox enable model):
   - brief    -> brief index (structural brief validation)
   - dialogue -> dialogue registry (loop dialogue-tree validation)
   - behavior -> preset index (loop behavior-array validation)
+  - ui       -> UI kit shell (validate_kit layout/theme semantics)
 
 Only local folders + `packs/index.json` — no daemon or registry server.
 """
