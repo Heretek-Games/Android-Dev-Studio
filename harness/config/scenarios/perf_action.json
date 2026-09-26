@@ -1,0 +1,893 @@
+{
+  "name": "perf_action",
+  "goal": "E.5 headless leg: 2400 instanced + 32 AI combatants + 6 VFX emitters with melee kills, inside draw budget at sim-60fps headroom",
+  "game": {
+    "playerName": "Hero",
+    "totalWaves": 2,
+    "enemiesPerWave": 4,
+    "spawnRadius": 6,
+    "scorePerKill": 100,
+    "interWaveDelaySeconds": 0.5,
+    "melee": {
+      "damage": 40,
+      "range": 3.5,
+      "arcDegrees": 120,
+      "element": "Hydro",
+      "gauge": 1,
+      "swingEveryFrames": 15,
+      "invulnSeconds": 0.2
+    },
+    "enemy": {
+      "shape": "sphere",
+      "size": [
+        1.2,
+        1.2,
+        1.2
+      ],
+      "color": "#f97316",
+      "y": 0.8,
+      "elemental": {
+        "aura": "Pyro",
+        "maxHealth": 60
+      },
+      "ai": {
+        "targetName": "Hero",
+        "moveSpeed": 2.5,
+        "attackRange": 2.0,
+        "attackDamage": 6,
+        "attackIntervalSeconds": 1.2
+      }
+    }
+  },
+  "gameObjects": [
+    {
+      "name": "Arena Ground",
+      "shape": "box",
+      "size": [
+        140,
+        1,
+        140
+      ],
+      "position": [
+        0,
+        -0.5,
+        0
+      ],
+      "color": "#292524",
+      "physics": "fixed"
+    },
+    {
+      "name": "Hero",
+      "shape": "capsule",
+      "size": [
+        1,
+        1.5,
+        1
+      ],
+      "position": [
+        0,
+        1.5,
+        0
+      ],
+      "color": "#38bdf8",
+      "physics": "none",
+      "controller": true,
+      "health": {
+        "maxHealth": 100,
+        "destroyOnDeath": false
+      }
+    },
+    {
+      "name": "Meadow West",
+      "position": [
+        -30,
+        0,
+        -20
+      ],
+      "foliage": {
+        "count": 1200,
+        "radius": 30,
+        "windSpeed": 3.5
+      }
+    },
+    {
+      "name": "Meadow East",
+      "position": [
+        30,
+        0,
+        20
+      ],
+      "foliage": {
+        "count": 1200,
+        "radius": 30,
+        "windSpeed": 4.0
+      }
+    },
+    {
+      "name": "Camp Slime 1",
+      "shape": "sphere",
+      "size": [
+        1.2,
+        1.2,
+        1.2
+      ],
+      "position": [
+        33.0,
+        0.8,
+        0.0
+      ],
+      "color": "#f97316",
+      "elemental": {
+        "aura": "Pyro",
+        "maxHealth": 60
+      },
+      "ai": {
+        "targetName": "Hero",
+        "moveSpeed": 2.0,
+        "attackRange": 2.0
+      }
+    },
+    {
+      "name": "Camp Slime 2",
+      "shape": "sphere",
+      "size": [
+        1.2,
+        1.2,
+        1.2
+      ],
+      "position": [
+        41.8,
+        0.8,
+        9.1
+      ],
+      "color": "#38bdf8",
+      "elemental": {
+        "aura": "Cryo",
+        "maxHealth": 60
+      },
+      "ai": {
+        "targetName": "Hero",
+        "moveSpeed": 2.0,
+        "attackRange": 2.0
+      }
+    },
+    {
+      "name": "Camp Slime 3",
+      "shape": "sphere",
+      "size": [
+        1.2,
+        1.2,
+        1.2
+      ],
+      "position": [
+        47.0,
+        0.8,
+        22.5
+      ],
+      "color": "#f97316",
+      "elemental": {
+        "aura": "Pyro",
+        "maxHealth": 60
+      },
+      "ai": {
+        "targetName": "Hero",
+        "moveSpeed": 2.0,
+        "attackRange": 2.0
+      }
+    },
+    {
+      "name": "Camp Slime 4",
+      "shape": "sphere",
+      "size": [
+        1.2,
+        1.2,
+        1.2
+      ],
+      "position": [
+        25.7,
+        0.8,
+        17.7
+      ],
+      "color": "#38bdf8",
+      "elemental": {
+        "aura": "Cryo",
+        "maxHealth": 60
+      },
+      "ai": {
+        "targetName": "Hero",
+        "moveSpeed": 2.0,
+        "attackRange": 2.0
+      }
+    },
+    {
+      "name": "Camp Slime 5",
+      "shape": "sphere",
+      "size": [
+        1.2,
+        1.2,
+        1.2
+      ],
+      "position": [
+        25.5,
+        0.8,
+        30.3
+      ],
+      "color": "#f97316",
+      "elemental": {
+        "aura": "Pyro",
+        "maxHealth": 60
+      },
+      "ai": {
+        "targetName": "Hero",
+        "moveSpeed": 2.0,
+        "attackRange": 2.0
+      }
+    },
+    {
+      "name": "Camp Slime 6",
+      "shape": "sphere",
+      "size": [
+        1.2,
+        1.2,
+        1.2
+      ],
+      "position": [
+        19.6,
+        0.8,
+        43.5
+      ],
+      "color": "#38bdf8",
+      "elemental": {
+        "aura": "Cryo",
+        "maxHealth": 60
+      },
+      "ai": {
+        "targetName": "Hero",
+        "moveSpeed": 2.0,
+        "attackRange": 2.0
+      }
+    },
+    {
+      "name": "Camp Slime 7",
+      "shape": "sphere",
+      "size": [
+        1.2,
+        1.2,
+        1.2
+      ],
+      "position": [
+        8.0,
+        0.8,
+        25.0
+      ],
+      "color": "#f97316",
+      "elemental": {
+        "aura": "Pyro",
+        "maxHealth": 60
+      },
+      "ai": {
+        "targetName": "Hero",
+        "moveSpeed": 2.0,
+        "attackRange": 2.0
+      }
+    },
+    {
+      "name": "Camp Slime 8",
+      "shape": "sphere",
+      "size": [
+        1.2,
+        1.2,
+        1.2
+      ],
+      "position": [
+        -1.1,
+        0.8,
+        33.8
+      ],
+      "color": "#38bdf8",
+      "elemental": {
+        "aura": "Cryo",
+        "maxHealth": 60
+      },
+      "ai": {
+        "targetName": "Hero",
+        "moveSpeed": 2.0,
+        "attackRange": 2.0
+      }
+    },
+    {
+      "name": "Camp Slime 9",
+      "shape": "sphere",
+      "size": [
+        1.2,
+        1.2,
+        1.2
+      ],
+      "position": [
+        -14.5,
+        0.8,
+        39.0
+      ],
+      "color": "#f97316",
+      "elemental": {
+        "aura": "Pyro",
+        "maxHealth": 60
+      },
+      "ai": {
+        "targetName": "Hero",
+        "moveSpeed": 2.0,
+        "attackRange": 2.0
+      }
+    },
+    {
+      "name": "Camp Slime 10",
+      "shape": "sphere",
+      "size": [
+        1.2,
+        1.2,
+        1.2
+      ],
+      "position": [
+        -9.7,
+        0.8,
+        17.7
+      ],
+      "color": "#38bdf8",
+      "elemental": {
+        "aura": "Cryo",
+        "maxHealth": 60
+      },
+      "ai": {
+        "targetName": "Hero",
+        "moveSpeed": 2.0,
+        "attackRange": 2.0
+      }
+    },
+    {
+      "name": "Camp Slime 11",
+      "shape": "sphere",
+      "size": [
+        1.2,
+        1.2,
+        1.2
+      ],
+      "position": [
+        -22.3,
+        0.8,
+        17.5
+      ],
+      "color": "#f97316",
+      "elemental": {
+        "aura": "Pyro",
+        "maxHealth": 60
+      },
+      "ai": {
+        "targetName": "Hero",
+        "moveSpeed": 2.0,
+        "attackRange": 2.0
+      }
+    },
+    {
+      "name": "Camp Slime 12",
+      "shape": "sphere",
+      "size": [
+        1.2,
+        1.2,
+        1.2
+      ],
+      "position": [
+        -35.5,
+        0.8,
+        11.6
+      ],
+      "color": "#38bdf8",
+      "elemental": {
+        "aura": "Cryo",
+        "maxHealth": 60
+      },
+      "ai": {
+        "targetName": "Hero",
+        "moveSpeed": 2.0,
+        "attackRange": 2.0
+      }
+    },
+    {
+      "name": "Camp Slime 13",
+      "shape": "sphere",
+      "size": [
+        1.2,
+        1.2,
+        1.2
+      ],
+      "position": [
+        -17.0,
+        0.8,
+        0.0
+      ],
+      "color": "#f97316",
+      "elemental": {
+        "aura": "Pyro",
+        "maxHealth": 60
+      },
+      "ai": {
+        "targetName": "Hero",
+        "moveSpeed": 2.0,
+        "attackRange": 2.0
+      }
+    },
+    {
+      "name": "Camp Slime 14",
+      "shape": "sphere",
+      "size": [
+        1.2,
+        1.2,
+        1.2
+      ],
+      "position": [
+        -25.8,
+        0.8,
+        -9.1
+      ],
+      "color": "#38bdf8",
+      "elemental": {
+        "aura": "Cryo",
+        "maxHealth": 60
+      },
+      "ai": {
+        "targetName": "Hero",
+        "moveSpeed": 2.0,
+        "attackRange": 2.0
+      }
+    },
+    {
+      "name": "Camp Slime 15",
+      "shape": "sphere",
+      "size": [
+        1.2,
+        1.2,
+        1.2
+      ],
+      "position": [
+        -31.0,
+        0.8,
+        -22.5
+      ],
+      "color": "#f97316",
+      "elemental": {
+        "aura": "Pyro",
+        "maxHealth": 60
+      },
+      "ai": {
+        "targetName": "Hero",
+        "moveSpeed": 2.0,
+        "attackRange": 2.0
+      }
+    },
+    {
+      "name": "Camp Slime 16",
+      "shape": "sphere",
+      "size": [
+        1.2,
+        1.2,
+        1.2
+      ],
+      "position": [
+        -9.7,
+        0.8,
+        -17.7
+      ],
+      "color": "#38bdf8",
+      "elemental": {
+        "aura": "Cryo",
+        "maxHealth": 60
+      },
+      "ai": {
+        "targetName": "Hero",
+        "moveSpeed": 2.0,
+        "attackRange": 2.0
+      }
+    },
+    {
+      "name": "Camp Slime 17",
+      "shape": "sphere",
+      "size": [
+        1.2,
+        1.2,
+        1.2
+      ],
+      "position": [
+        -9.5,
+        0.8,
+        -30.3
+      ],
+      "color": "#f97316",
+      "elemental": {
+        "aura": "Pyro",
+        "maxHealth": 60
+      },
+      "ai": {
+        "targetName": "Hero",
+        "moveSpeed": 2.0,
+        "attackRange": 2.0
+      }
+    },
+    {
+      "name": "Camp Slime 18",
+      "shape": "sphere",
+      "size": [
+        1.2,
+        1.2,
+        1.2
+      ],
+      "position": [
+        -3.6,
+        0.8,
+        -43.5
+      ],
+      "color": "#38bdf8",
+      "elemental": {
+        "aura": "Cryo",
+        "maxHealth": 60
+      },
+      "ai": {
+        "targetName": "Hero",
+        "moveSpeed": 2.0,
+        "attackRange": 2.0
+      }
+    },
+    {
+      "name": "Camp Slime 19",
+      "shape": "sphere",
+      "size": [
+        1.2,
+        1.2,
+        1.2
+      ],
+      "position": [
+        8.0,
+        0.8,
+        -25.0
+      ],
+      "color": "#f97316",
+      "elemental": {
+        "aura": "Pyro",
+        "maxHealth": 60
+      },
+      "ai": {
+        "targetName": "Hero",
+        "moveSpeed": 2.0,
+        "attackRange": 2.0
+      }
+    },
+    {
+      "name": "Camp Slime 20",
+      "shape": "sphere",
+      "size": [
+        1.2,
+        1.2,
+        1.2
+      ],
+      "position": [
+        17.1,
+        0.8,
+        -33.8
+      ],
+      "color": "#38bdf8",
+      "elemental": {
+        "aura": "Cryo",
+        "maxHealth": 60
+      },
+      "ai": {
+        "targetName": "Hero",
+        "moveSpeed": 2.0,
+        "attackRange": 2.0
+      }
+    },
+    {
+      "name": "Camp Slime 21",
+      "shape": "sphere",
+      "size": [
+        1.2,
+        1.2,
+        1.2
+      ],
+      "position": [
+        30.5,
+        0.8,
+        -39.0
+      ],
+      "color": "#f97316",
+      "elemental": {
+        "aura": "Pyro",
+        "maxHealth": 60
+      },
+      "ai": {
+        "targetName": "Hero",
+        "moveSpeed": 2.0,
+        "attackRange": 2.0
+      }
+    },
+    {
+      "name": "Camp Slime 22",
+      "shape": "sphere",
+      "size": [
+        1.2,
+        1.2,
+        1.2
+      ],
+      "position": [
+        25.7,
+        0.8,
+        -17.7
+      ],
+      "color": "#38bdf8",
+      "elemental": {
+        "aura": "Cryo",
+        "maxHealth": 60
+      },
+      "ai": {
+        "targetName": "Hero",
+        "moveSpeed": 2.0,
+        "attackRange": 2.0
+      }
+    },
+    {
+      "name": "Camp Slime 23",
+      "shape": "sphere",
+      "size": [
+        1.2,
+        1.2,
+        1.2
+      ],
+      "position": [
+        38.3,
+        0.8,
+        -17.5
+      ],
+      "color": "#f97316",
+      "elemental": {
+        "aura": "Pyro",
+        "maxHealth": 60
+      },
+      "ai": {
+        "targetName": "Hero",
+        "moveSpeed": 2.0,
+        "attackRange": 2.0
+      }
+    },
+    {
+      "name": "Camp Slime 24",
+      "shape": "sphere",
+      "size": [
+        1.2,
+        1.2,
+        1.2
+      ],
+      "position": [
+        51.5,
+        0.8,
+        -11.6
+      ],
+      "color": "#38bdf8",
+      "elemental": {
+        "aura": "Cryo",
+        "maxHealth": 60
+      },
+      "ai": {
+        "targetName": "Hero",
+        "moveSpeed": 2.0,
+        "attackRange": 2.0
+      }
+    },
+    {
+      "name": "Brazier 1",
+      "shape": "box",
+      "size": [
+        0.8,
+        1.2,
+        0.8
+      ],
+      "position": [
+        -15,
+        0.6,
+        -15
+      ],
+      "color": "#57534e",
+      "particle": {
+        "maxParticles": 128,
+        "rate": 24,
+        "burst": 8,
+        "duration": 2,
+        "loop": true,
+        "shapeSize": [
+          0.5,
+          1.0,
+          0.5
+        ]
+      }
+    },
+    {
+      "name": "Brazier 2",
+      "shape": "box",
+      "size": [
+        0.8,
+        1.2,
+        0.8
+      ],
+      "position": [
+        15,
+        0.6,
+        -15
+      ],
+      "color": "#57534e",
+      "particle": {
+        "maxParticles": 128,
+        "rate": 24,
+        "burst": 8,
+        "duration": 2,
+        "loop": true,
+        "shapeSize": [
+          0.5,
+          1.0,
+          0.5
+        ]
+      }
+    },
+    {
+      "name": "Brazier 3",
+      "shape": "box",
+      "size": [
+        0.8,
+        1.2,
+        0.8
+      ],
+      "position": [
+        -15,
+        0.6,
+        15
+      ],
+      "color": "#57534e",
+      "particle": {
+        "maxParticles": 128,
+        "rate": 24,
+        "burst": 8,
+        "duration": 2,
+        "loop": true,
+        "shapeSize": [
+          0.5,
+          1.0,
+          0.5
+        ]
+      }
+    },
+    {
+      "name": "Brazier 4",
+      "shape": "box",
+      "size": [
+        0.8,
+        1.2,
+        0.8
+      ],
+      "position": [
+        15,
+        0.6,
+        15
+      ],
+      "color": "#57534e",
+      "particle": {
+        "maxParticles": 128,
+        "rate": 24,
+        "burst": 8,
+        "duration": 2,
+        "loop": true,
+        "shapeSize": [
+          0.5,
+          1.0,
+          0.5
+        ]
+      }
+    },
+    {
+      "name": "Brazier 5",
+      "shape": "box",
+      "size": [
+        0.8,
+        1.2,
+        0.8
+      ],
+      "position": [
+        0,
+        0.6,
+        -25
+      ],
+      "color": "#57534e",
+      "particle": {
+        "maxParticles": 128,
+        "rate": 24,
+        "burst": 8,
+        "duration": 2,
+        "loop": true,
+        "shapeSize": [
+          0.5,
+          1.0,
+          0.5
+        ]
+      }
+    },
+    {
+      "name": "Brazier 6",
+      "shape": "box",
+      "size": [
+        0.8,
+        1.2,
+        0.8
+      ],
+      "position": [
+        0,
+        0.6,
+        25
+      ],
+      "color": "#57534e",
+      "particle": {
+        "maxParticles": 128,
+        "rate": 24,
+        "burst": 8,
+        "duration": 2,
+        "loop": true,
+        "shapeSize": [
+          0.5,
+          1.0,
+          0.5
+        ]
+      }
+    }
+  ],
+  "rules": [
+    {
+      "id": "crowd_instanced",
+      "type": "instance_count_min",
+      "min": 2000
+    },
+    {
+      "id": "sim_headroom",
+      "type": "frame_p95_max_ms",
+      "max": 8
+    },
+    {
+      "id": "kills",
+      "type": "game_melee_kills_min",
+      "min": 8
+    },
+    {
+      "id": "reactions",
+      "type": "game_melee_reactions_min",
+      "min": 4
+    },
+    {
+      "id": "vfx_alive",
+      "type": "particle_count_min",
+      "target": "Brazier 1",
+      "min": 5
+    },
+    {
+      "id": "vfx_budget",
+      "type": "particle_budget",
+      "target": "Brazier 1",
+      "maxAlive": 256
+    },
+    {
+      "id": "finite",
+      "type": "no_nan_transforms"
+    },
+    {
+      "id": "draws",
+      "type": "draw_call_budget",
+      "max": 100
+    },
+    {
+      "id": "fps",
+      "type": "fps_min",
+      "min": 60
+    }
+  ]
+}

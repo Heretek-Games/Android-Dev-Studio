@@ -334,6 +334,10 @@ function buildScene(spec, engine) {
       if (objSpec.particle) {
         go.addComponent(new engine.ParticleSystem(objSpec.particle));
       }
+      if (objSpec.foliage) {
+        // Track E.5: single-draw instanced background (GPU-instancing canon).
+        go.addComponent(new engine.FoliageInstancer(objSpec.foliage));
+      }
       if (objSpec.anim) {
         go.addComponent(new engine.AnimFSM(objSpec.anim));
       }
@@ -1630,6 +1634,20 @@ function evaluateRules(spec, ctxData) {
         detail = `boss telegraph strikes=${strikes} (min ${rule.min ?? 1})`;
         break;
       }
+      case 'instance_count_min': {
+        // Track E.5: GPU-instanced background entities at 60fps headroom.
+        const n = metrics.instancedEntities ?? 0;
+        pass = n >= (rule.min ?? 1);
+        detail = `instanced entities=${n} (min ${rule.min ?? 1}, batches=${metrics.instancedBatches})`;
+        break;
+      }
+      case 'frame_p95_max_ms': {
+        // Track E.5: sublinear scaling proof — heavy scenes stay sim-fast.
+        const p95 = metrics.p95FrameTimeMs ?? Infinity;
+        pass = p95 <= (rule.max ?? 16.7);
+        detail = `p95 frame=${p95}ms (max ${rule.max ?? 16.7}ms)`;
+        break;
+      }
       case 'game_enemy_chase_min': {
         if (!game) { pass = false; detail = 'no game config in scenario'; break; }
         const moved = game.maxEnemyDisplacement();
@@ -1826,6 +1844,18 @@ async function main() {
   const sorted = [...times].sort((a, b) => a - b);
   const avg = times.reduce((a, b) => a + b, 0) / times.length;
   const { drawCalls, instancedBatches } = estimateDrawCalls(scene, engine);
+  // Track E.5: GPU-instanced background entities (single-draw crowds).
+  let instancedEntities = 0;
+  for (const go of scene.gameObjects) {
+    for (const comp of go.components) {
+      const name = comp.constructor.name;
+      if (name === 'FoliageInstancer' && Number.isFinite(comp.count)) {
+        instancedEntities += Math.max(0, Math.floor(comp.count));
+      } else if (name === 'InstancedMeshBatcher' && Number.isFinite(comp.activeCount)) {
+        instancedEntities += Math.max(0, Math.floor(comp.activeCount));
+      }
+    }
+  }
   const heapMb = process.memoryUsage().heapUsed / (1024 * 1024);
 
   const metrics = {
@@ -1835,6 +1865,7 @@ async function main() {
     simFpsEstimate: Number((1000 / Math.max(avg, 1e-6)).toFixed(2)),
     drawCallEstimate: drawCalls,
     instancedBatches,
+    instancedEntities,
     memoryHeapMb: Number(heapMb.toFixed(2)),
     objectCount: scene.gameObjects.length,
     physicsBodyCount,
