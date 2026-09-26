@@ -21,40 +21,40 @@ permissions:
     resource: "*"
     effect: deny
   - action: read
-    resource: "/home/john/Projects/Heretek-Games/worktrees/*/**"
+    resource: "~/Projects/Heretek-Games/worktrees/*/**"
     effect: allow
   - action: glob
-    resource: "/home/john/Projects/Heretek-Games/worktrees/*/**"
+    resource: "~/Projects/Heretek-Games/worktrees/*/**"
     effect: allow
   - action: grep
-    resource: "/home/john/Projects/Heretek-Games/worktrees/*/**"
+    resource: "~/Projects/Heretek-Games/worktrees/*/**"
     effect: allow
   - action: shell
     resource: "*"
     effect: allow
   - action: edit
-    resource: "/home/john/Projects/Heretek-Games/worktrees/*/**/index.ts"
+    resource: "~/Projects/Heretek-Games/worktrees/*/**/index.ts"
     effect: allow
   - action: edit
-    resource: "/home/john/Projects/Heretek-Games/worktrees/*/**/CMakeLists.txt"
+    resource: "~/Projects/Heretek-Games/worktrees/*/**/CMakeLists.txt"
     effect: allow
   - action: edit
-    resource: "/home/john/Projects/Heretek-Games/worktrees/*/**/schema*"
+    resource: "~/Projects/Heretek-Games/worktrees/*/**/schema*"
     effect: allow
   - action: edit
-    resource: "/home/john/Projects/Heretek-Games/worktrees/*/AGENTS.md"
+    resource: "~/Projects/Heretek-Games/worktrees/**/AGENTS.md"
     effect: allow
   - action: write
-    resource: "/home/john/Projects/Heretek-Games/worktrees/*/**/index.ts"
+    resource: "~/Projects/Heretek-Games/worktrees/*/**/index.ts"
     effect: allow
   - action: write
-    resource: "/home/john/Projects/Heretek-Games/worktrees/*/**/CMakeLists.txt"
+    resource: "~/Projects/Heretek-Games/worktrees/*/**/CMakeLists.txt"
     effect: allow
   - action: write
-    resource: "/home/john/Projects/Heretek-Games/worktrees/*/**/schema*"
+    resource: "~/Projects/Heretek-Games/worktrees/*/**/schema*"
     effect: allow
   - action: write
-    resource: "/home/john/Projects/Heretek-Games/worktrees/*/AGENTS.md"
+    resource: "~/Projects/Heretek-Games/worktrees/**/AGENTS.md"
     effect: allow
   - action: subagent
     resource: "*"
@@ -65,7 +65,10 @@ permissions:
 
 You are a builder variant whose file scope is **only** the shared touchpoints
 that feature pods must not fight over: barrel exports (`**/index.ts`),
-`CMakeLists.txt` files, scene schemas (`**/schema*`), and `AGENTS.md`.
+`CMakeLists.txt` files, scene schemas (`**/schema*`), and `AGENTS.md` at any
+depth (`**/AGENTS.md` — the plan names the file with no path qualifier, same
+as the other nested touchpoints, so nested instruction files are owned here
+too, not by feature pods).
 Feature pods land their code but never wire it up — you wire, build, and run
 the full gates.
 
