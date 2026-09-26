@@ -887,3 +887,21 @@ Standing blockers (hardware-bound, unchanged): #1 physical arm64, #3 50k-instanc
 ## Run Block 27 — 2026-09-26, Track C.3 PBR Gate (emulator proof) ✅
 
 `emulator_smoke.py --tier2-only` PASS against the fixed tree: NDK compiled the Cook-Torrance shader + stride-12 instance layout + VERTEX|FRAGMENT push constants, APK installed/launched on the emulator, logcat asserts clean (no VK failures), PPM frame readback non-uniform. Headless half was already green (engine 458/92, exporter+applier 105/105, native host checks with material/legacy asserts). Textures/IBL remain explicit Phase 2; physical-device proof stays deferred per the emulator≠device invariant.
+
+---
+
+## Run Block 28 — 2026-09-26, Unity-Parity Program Complete (C.0–C.6) ✅
+
+Every track built end-to-end (OSINT → ADR → build → tests → commit), all suites green on fresh runs this block (engine 458/92, loop 235, agents 44, harness 162-module line, native host checks, app build, tier2 parity).
+
+| Track | Items | Gate evidence |
+|-------|-------|---------------|
+| C.0 | bench baselines (`bbd56b5`, `331c7e0`) | SpatialGrid 50k in 83/37ms, 10k scene updates 0.51ms, 4000 events 1.58ms — no surgery justified |
+| C.1 | inspector schemas (`3251a56`) | min-safe tables, studio cards live-proven (Type flip, 0 console errors) |
+| C.2 | KTX2 transcode (`9275310`, `43a73f6`) | source-built basisu, magic + `basisu -info` verified; PATH-fallback test flaw caught live |
+| C.3 | PBR + emulator gate (`14b96c6`, `7df707d`, Block 27) | GGX + unlit fallback, std430 fix, tier2 smoke PASS |
+| C.4 | physics contract (`c326f2b`) | snapshot MD5 identical ×3 runs; Jolt refused |
+| C.5 | WASM sandbox (`d5db605`) | seek/arrive deterministic, fs-import rejected |
+| C.6 | nav-bake strangler (`913dd40`, `c2794b0`) | TS↔C++ parity 3/3 after two float-precision bugs the harness itself caught |
+
+Standing blockers (hardware-bound, unchanged): #1 physical arm64, #3 50k-instance on-device, #6 validation-layer soak. Deferred items never entered; opening any needs explicit direction plus a gate artifact.
