@@ -863,3 +863,21 @@ Every listed track item built end-to-end (OSINT → ADR → engine + runner + lo
 | Track 3 (4/4) | operate telemetry (`d7077cb`), storefront (`88dd8f1`), marketplace (`75e9d96`), 10/10 templates first-pass green (`729d85d` + verdict matrix) | engine 445/89, loop 154; 7 loop-side prompt fixes from first-pass failures, zero template changes |
 
 Standing blockers (hardware-bound, unchanged): #1 physical arm64, #3 50k-instance on-device, #6 validation-layer soak. Deferred items (multiplayer, consoles, 2D, iOS, full GI, shader graph) never entered; opening any needs explicit direction.
+
+---
+
+## Run Block 26 — 2026-09-25, Perception & Coherence Program (A.1→B.3) ✅
+
+Every capability built end-to-end (OSINT → ADR → engine + runner + loop + studio proof → commit), all suites green on fresh runs this block (engine 450/90, loop 219, spatial 45, agents 41, harness validation/build/market/memory lines, app build).
+
+| Track | Items | Gate evidence |
+|-------|-------|---------------|
+| A.1 | gameplay-camera frames (`702c313`) | deterministic Pillow perspective render stored per iteration; run log references |
+| A.2 | rubric + proxies + gate (`3ba46d6`) | 4 axes 1–5, defects→repair; enforced mud-scene stays unresolved while node QA SUCCEEDS |
+| A.3 | themes/kits/audit + shell tokens (`1061939`, `eb8eb15`) | 4 kits audit 5/5; `ui` market kind; GameShell default-preserving themes |
+| A.4 | taste memory + diff view (`57f0d78`, `4bc88a8`) | genre-keyed green looks feed generation; dock compare/approve live proof, 0 console errors |
+| B.1 | spatial index + audit + parity (`8321120`) | blocked grids + LoS identical to engine across 3 cases; settle-tolerance + bounds fixes from real failures |
+| B.2 | queries + places + digest (`a6ac299`) | EQS-shaped API over the same index; places audit family; NULL-tags ADR side effect repaired |
+| B.3 | diffs + ghosts (`4af3a5b`, `ede09b2`) | per-iteration spatialDiff + repair line; ghost VALID/BLOCKED live proof, 0 console errors |
+
+Standing blockers (hardware-bound, unchanged): #1 physical arm64, #3 50k-instance on-device, #6 validation-layer soak. Deferred items (full GI, multiplayer, consoles, 2D, iOS, shader graph, vendor vision APIs) never entered; opening any needs explicit direction.

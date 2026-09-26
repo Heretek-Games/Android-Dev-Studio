@@ -8,16 +8,22 @@ This document is the single source of truth for AI agents (Antigravity, Claude C
 
 ## 📊 Project Status (last verified 2026-09-25)
 
-All four genre milestone sets, the autonomous harness, and both Android containers are
-implemented and verified:
+All four genre milestone sets, the autonomous harness, both Android containers,
+and the Perception & Coherence program (Tracks A.1→B.3) are implemented and verified:
 
-- **Engine** — 445 tests / 89 suites green (`npm test`); every logic source file has a companion
+- **Engine** — 450 tests / 90 suites green (`npm test`); every logic source file has a companion
   headless `.test.ts` (Zero Untested Code).
 - **Harness** — 24 MCP tools behind the transactional 7-point invariant gate; Artemis QA with
   scenario-keyed regression baselines; 50 Python tests (invariants, exporter, apk_builder,
   cross-tier quadtree parity); an **autonomous iterate-until-green loop** (`harness/loop/`)
   that drives generated scenes to QA-verified green with vision critique, regression bisect,
-  and a cost/latency dashboard (121 loop tests).
+  and a cost/latency dashboard (219 loop tests).
+- **Perception** — gameplay-camera frame capture per iteration, 4-axis visual rubric +
+  deterministic aesthetic proxies (`visual_quality_min` gate), genre UI themes + kits +
+  GameShell token plumbing, taste memory + Artemis diff view, unified spatial index +
+  consistency audit (`spatial_audit` gate) with engine parity, EQS-style queries + named
+  places, viewport ghosts + mutation diffs (45 spatial tests + 2 parity suites green;
+  ghost + diff views proven live in chrome-devtools with zero console errors).
 - **Containers** — both tiers assemble real debug APKs and deploy/launch on an attached device.
   Tier 2 is validated on an Android target (emulator): real swapchain, 3 instanced cubes +
   64 terrain LOD leaf draws, `VK_SUCCESS` acquire/submit/present at ~61.5 FPS, rendered output
