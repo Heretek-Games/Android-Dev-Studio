@@ -1821,6 +1821,17 @@ async function main() {
   const sampleEvery = Math.max(1, Math.floor(args.frames / 12));
   const samples = [];
   const times = [];
+  // Per-frame quest/wave timeline (transition-only event list): one entry
+  // per quest stage completion ({frame, stage}) and per spawner wave change
+  // ({frame, wave}), capped so the report stays small. Powers true
+  // time-series playthrough assertions (stage ordering in wall-clock frame
+  // order) without per-frame spam; overhead is two integer compares/frame.
+  const QUEST_TIMELINE_CAP = 256;
+  const questTimeline = { stages: [], waves: [] };
+  let lastTimelineStageIndex = quest ? quest.quest.stageIndex : -1;
+  let lastTimelineWave = game ? game.runtime.spawner.getWave() : -1;
+  let stagesDrained = 0;
+  if (game) questTimeline.waves.push({ frame: 0, wave: lastTimelineWave });
   for (let frame = 0; frame < args.frames; frame++) {
     const t0 = performance.now();
     if (input) input.beginFrame(frame);
@@ -1833,6 +1844,24 @@ async function main() {
       if (typeof game.bossTick === 'function') game.bossTick();
       game.trackEnemies();
       if (quest) quest.poll(game, dialogue);
+      if (quest && quest.quest.stageIndex !== lastTimelineStageIndex) {
+        // At most one stage completes per update(); drain every newly seen
+        // stage so same-run multi-frame chains each keep their own frame.
+        for (let s = stagesDrained;
+          s < quest.stagesSeen.length && questTimeline.stages.length < QUEST_TIMELINE_CAP;
+          s++) {
+          questTimeline.stages.push({ frame, stage: quest.stagesSeen[s] });
+        }
+        stagesDrained = quest.stagesSeen.length;
+        lastTimelineStageIndex = quest.quest.stageIndex;
+      }
+      const waveNow = game.runtime.spawner.getWave();
+      if (waveNow !== lastTimelineWave) {
+        if (questTimeline.waves.length < QUEST_TIMELINE_CAP) {
+          questTimeline.waves.push({ frame, wave: waveNow });
+        }
+        lastTimelineWave = waveNow;
+      }
       if (saveRestoreWanted && !game.saveRestoreProbe && frame >= Math.floor(args.frames / 2)) {
         game.saveRestoreProbe = runSaveRestoreProbe(game, engine);
       }
@@ -1934,6 +1963,7 @@ async function main() {
     frames: args.frames,
     fixedDeltaSeconds: args.dt,
     metrics,
+    questTimeline,
     ...(game
       ? {
           game: {
