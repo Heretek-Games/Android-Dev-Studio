@@ -131,11 +131,19 @@ ACTION_SCHEMA = """Action vocabulary (a JSON array named "actions"):
   - {"type": "game", "config": {"mode": "waves", "playerName": "Player Hero",
      "totalWaves": 2, "enemiesPerWave": 2, "hitDamage": 50} (quest/combat setup: spawns a
      GameRuntime that runs wave defense or settlement-build around the named player object;
+     the optional "enemy" block takes ONLY shape, color, size, y, health, ai, elemental
+     (no physics/mass/position keys — enemies spawn from the runtime); hitElement goes
+     beside "enemy", never inside it.
      "mode": "build" with a "settlement" block runs the settlement path instead.
      Settlement blocks take ONLY gridSize, targetPopulation, startingGold, startingFood,
      and placements (no name/description keys); placements is an array of {type, x, z}
      with type house|farm|market and integer x/z plots inside the grid, e.g.
      "settlement": {"gridSize": 8, "targetPopulation": 6, "placements": [{"type": "house", "x": 0, "z": 0}]})
+     Settlement economy (fixed engine costs): house=50 gold, farm=40, market=80,
+     plus 1-2 upkeep per step. BUDGET the treasury first: startingGold must cover
+     every placement plus margin (e.g. 2 houses + 1 farm needs startingGold >= 190),
+     and include startingFood (farms take steps to produce). Underfunded charters
+     stall at 1 placed plot with 0 population — the classic first-pass failure.
   - {"type": "dialogue", "tree": {"id": "Keeper", "startNodeId": "greet", "nodes": {
      "greet": {"id": "greet", "type": "choice", "speaker": "Keeper", "text": "...",
       "choices": [{"id": "bless", "text": "...", "nextNodeId": "blessed"}]},
@@ -201,6 +209,11 @@ How acceptance rules map onto the schema (the QA runner checks these exact compo
     REQUIRED non-empty "wheels" array, e.g. "vehicle": {"throttle": 1.0, "wheels": [{"offset": [-0.8,0,1.2]}, {"offset": [0.8,0,1.2]}]}
   - "WorldStreamer" component -> the spawn has "streamer", e.g. "streamer": {"chunkSize": 16, "renderDistance": 1, "resolution": 8} (all fields optional positive numbers)
   - biome_coverage_min rules -> tag objects with "biome": "<brief biome name>" so each brief biome has enough live objects inside its region
+  - traversal_coverage_min rules -> the audit raycasts the WHOLE scene bounds
+    and reads missing colliders as void holes: give every mesh under the play
+    area physics "fixed" (including water/ocean planes), and keep decorative
+    backdrops (skybox, distant scenery) inside the ground footprint or they
+    stretch the bounds past your collidable ground and fail coverage
   - "WeaponController" component -> the spawn (or a "modify") has "weapon", e.g. "weapon": {"damage": 50, "fireRate": 8, "range": 100, "maxAmmo": 30}
   - "HealthComponent" component -> the spawn (or a "modify") has "health", e.g. "health": {"maxHealth": 100}
   - "EnemyAI" component -> the spawn (or a "modify") has "ai" naming its target, e.g. "ai": {"targetName": "Player Hero", "moveSpeed": 2.5, "attackRange": 2.2}.
@@ -253,7 +266,20 @@ How acceptance rules map onto the schema (the QA runner checks these exact compo
 Constraints enforced by the scene invariant gate (violations are rejected):
   - unique, non-empty object names; finite transforms; positive mass on dynamic bodies
   - <= 100 unbatched draw calls per scene (prefer few objects; instanced foliage is not available here)
-  - dynamic bodies must not spawn intersecting fixed geometry
+  - dynamic bodies must not spawn intersecting fixed geometry: derive clearance
+    from YOUR OWN ground spawn, not from any example number. If your ground is
+    a slab with position [gx, gy, gz] and size [sx, sy, sz], its top surface is
+    at gy + sy/2; a capsule/box of height H standing on it rests its CENTER at
+    (gy + sy/2) + H/2 + 0.1. Example only: ground top at y=0 + 1.5-tall hero
+    -> center y=0.85; but if YOUR ground is a [30,1,30] slab centered at y=0
+    its top is y=0.5, so the same hero needs center y=1.35. Keep every dynamic
+    body fully clear of fixed slabs, walls, and pillars using the sizes and
+    positions YOU chose. Clearance is lateral too, not just vertical: before
+    placing a player, vehicle, or enemy, check its XZ against EVERY fixed
+    box footprint (position ± size/2 on x and z); when in doubt spawn in
+    open space at least 3 units from the nearest fixed box edge. A barn,
+    wall, or pillar overlapping the spawn point fails the gate exactly like
+    a buried collider does.
 """
 
 OUTPUT_FORMAT = """Respond with a single JSON object and nothing else:
@@ -273,6 +299,47 @@ def generation_messages(
             "\nA base scene already exists; keep its objects and ADD to them with spawn/event actions:\n"
             f"{seed_objects}\n"
         )
+    # Deterministic scaffolding (not prose): actions the ruleset provably needs,
+    # named per rule id so no abstraction gap remains.
+    required: List[str] = []
+    game_rules = sorted(
+        {
+            str(r.get("id", r.get("type")))
+            for r in rules or []
+            if str(r.get("type", "")).startswith("game_")
+        }
+    )
+    if game_rules:
+        required.append(
+            "one 'game' action (rules "
+            + ", ".join(f"'{i}'" for i in game_rules)
+            + " fail with 'no game config' without it)"
+        )
+    dialogue_rules = sorted(
+        {
+            str(r.get("id", r.get("type")))
+            for r in rules or []
+            if str(r.get("type", "")).startswith("dialogue_")
+        }
+    )
+    if dialogue_rules:
+        required.append(
+            "one 'dialogue' action per tree (rules "
+            + ", ".join(f"'{i}'" for i in dialogue_rules)
+            + " fail with 'no transcript' without it)"
+        )
+    rule_types = {str(r.get("type", "")) for r in rules or []}
+    if any(
+        t in ("traversal_coverage_min", "streaming_coherence_min") for t in rule_types
+    ):
+        required.append("a 'streamer' object or equivalent traversal setup")
+    required_note = (
+        "\nREQUIRED ACTIONS for this ruleset (QA fails without each one): "
+        + "; ".join(required)
+        + ".\n"
+        if required
+        else ""
+    )
     system = (
         "You are the autonomous world builder for Heretek 3D Android Studio, a mobile game engine.\n"
         "You design complete, playable scenes and emit them as machine-applicable actions.\n\n"
@@ -284,9 +351,19 @@ def generation_messages(
         "The scene must satisfy ALL of these acceptance rules (QA will verify each one):\n"
         f"{format_rules(rules)}\n"
         f"{seed_note}\n"
+        f"{required_note}"
         "Entity names referenced by the rules MUST match exactly. Include a ground plane, "
         "the player/actor, and all props required by the rules. Keep the scene small enough "
-        "to stay within the 100 draw-call mobile budget."
+        "to stay within the 100 draw-call mobile budget.\n"
+        "PRE-SUBMIT CHECKLIST (verify every line before responding, or QA fails it):\n"
+        "- every game_* rule has a matching 'game' action in your actions array;\n"
+        "- every dialogue_* rule has a matching 'dialogue' action;\n"
+        "- every entity_component rule names a component your spawn actually attaches;\n"
+        "- every dynamic spawn clears fixed geometry laterally AND vertically.\n"
+        "- decorative geometry (rings, hoops, torus shapes, banners, backdrop meshes)\n"
+        '  gets "physics": "none": their bounding boxes read as solid to the gate, so\n'
+        "  a fighter standing inside a torus ring fails penetration. Only floors,\n"
+        '  walls, pillars, and other truly solid obstacles get "physics": "fixed".'
     )
     return [
         {"role": "system", "content": system},

@@ -1,0 +1,357 @@
+{
+  "goal": "Keeper Blessing",
+  "rules": [
+    {
+      "type": "entity_exists",
+      "target": "Dungeon Keeper",
+      "id": "keeper-present"
+    },
+    {
+      "type": "entity_component",
+      "target": "Adventurer",
+      "component": "WeaponController",
+      "id": "adventurer-ready"
+    },
+    {
+      "type": "dialogue_event_fired",
+      "tree": "DungeonKeeper",
+      "event": "hydro_blessing",
+      "id": "blessing-taken"
+    },
+    {
+      "type": "dialogue_sets_variable",
+      "tree": "DungeonKeeper",
+      "variable": "hydroBlessing",
+      "value": true,
+      "id": "blessing-flagged"
+    },
+    {
+      "type": "game_reactions_min",
+      "min": 2,
+      "id": "reactions-fired"
+    },
+    {
+      "type": "game_phase",
+      "phase": "won",
+      "id": "hall-cleared"
+    },
+    {
+      "type": "draw_call_budget",
+      "max": 100,
+      "id": "draw-budget"
+    },
+    {
+      "type": "fps_min",
+      "min": 30,
+      "id": "sim-fps"
+    }
+  ],
+  "verdict": "green",
+  "iterations": [
+    {
+      "iteration": 1,
+      "phase": "generate",
+      "visionNotes": [],
+      "llm": {
+        "model": "mimo-v2.6-flash",
+        "promptTokens": 5490,
+        "completionTokens": 2842,
+        "totalTokens": 8332,
+        "latencySeconds": 52.274,
+        "finishReason": "stop",
+        "attempts": 1
+      },
+      "parse": {
+        "strategy": "raw",
+        "actionCount": 19,
+        "summary": "A small dungeon hall with a Dungeon Keeper altar, an armed Adventurer, and a two-wave Pyro-warden gauntlet where Hydro strikes trigger reactions until the hall is won.",
+        "error": null
+      },
+      "apply": {
+        "applied": 19,
+        "targetMissing": 0,
+        "invalid": 0,
+        "failed": 0,
+        "outcomes": [
+          {
+            "index": 0,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Ground (box) at [0.0, 0.0, 0.0]",
+            "target": "Ground"
+          },
+          {
+            "index": 1,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Adventurer (capsule) at [0.0, 1.5, 6.0]",
+            "target": "Adventurer"
+          },
+          {
+            "index": 2,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Dungeon Keeper (cylinder) at [-6.0, 2.0, -6.0]",
+            "target": "Dungeon Keeper"
+          },
+          {
+            "index": 3,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Keeper Altar (box) at [-6.0, 0.8, -4.4]",
+            "target": "Keeper Altar"
+          },
+          {
+            "index": 4,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Pillar NE (box) at [8.0, 2.5, 8.0]",
+            "target": "Pillar NE"
+          },
+          {
+            "index": 5,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Pillar NW (box) at [-8.0, 2.5, 8.0]",
+            "target": "Pillar NW"
+          },
+          {
+            "index": 6,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Pillar SE (box) at [8.0, 2.5, -8.0]",
+            "target": "Pillar SE"
+          },
+          {
+            "index": 7,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Pillar SW (box) at [-8.0, 2.5, -8.0]",
+            "target": "Pillar SW"
+          },
+          {
+            "index": 8,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Wall North (box) at [0.0, 2.5, -19.5]",
+            "target": "Wall North"
+          },
+          {
+            "index": 9,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Wall South (box) at [0.0, 2.5, 19.5]",
+            "target": "Wall South"
+          },
+          {
+            "index": 10,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Wall East (box) at [19.5, 2.5, 0.0]",
+            "target": "Wall East"
+          },
+          {
+            "index": 11,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Wall West (box) at [-19.5, 2.5, 0.0]",
+            "target": "Wall West"
+          },
+          {
+            "index": 12,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Keeper Brazier (cylinder) at [-4.0, 1.1, -6.0]",
+            "target": "Keeper Brazier"
+          },
+          {
+            "index": 13,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Gate Marker (box) at [0.0, 0.65, -16.0]",
+            "target": "Gate Marker"
+          },
+          {
+            "index": 14,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added directional light 'Key Sun' (intensity 1.6)",
+            "target": "Key Sun"
+          },
+          {
+            "index": 15,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added ambient light 'Hall Fill' (intensity 0.55)",
+            "target": "Hall Fill"
+          },
+          {
+            "index": 16,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added point light 'Brazier Glow' (intensity 3.2)",
+            "target": "Brazier Glow"
+          },
+          {
+            "index": 17,
+            "type": "dialogue",
+            "status": "applied",
+            "detail": "Registered dialogue tree 'DungeonKeeper' (4 nodes from 'greet')"
+          },
+          {
+            "index": 18,
+            "type": "game",
+            "status": "applied",
+            "detail": "Set waves-mode quest config for player 'Adventurer'"
+          }
+        ],
+        "appliedDescriptions": [
+          "Spawned Ground (box) at [0.0, 0.0, 0.0]",
+          "Spawned Adventurer (capsule) at [0.0, 1.5, 6.0]",
+          "Spawned Dungeon Keeper (cylinder) at [-6.0, 2.0, -6.0]",
+          "Spawned Keeper Altar (box) at [-6.0, 0.8, -4.4]",
+          "Spawned Pillar NE (box) at [8.0, 2.5, 8.0]",
+          "Spawned Pillar NW (box) at [-8.0, 2.5, 8.0]",
+          "Spawned Pillar SE (box) at [8.0, 2.5, -8.0]",
+          "Spawned Pillar SW (box) at [-8.0, 2.5, -8.0]",
+          "Spawned Wall North (box) at [0.0, 2.5, -19.5]",
+          "Spawned Wall South (box) at [0.0, 2.5, 19.5]",
+          "Spawned Wall East (box) at [19.5, 2.5, 0.0]",
+          "Spawned Wall West (box) at [-19.5, 2.5, 0.0]",
+          "Spawned Keeper Brazier (cylinder) at [-4.0, 1.1, -6.0]",
+          "Spawned Gate Marker (box) at [0.0, 0.65, -16.0]",
+          "Added directional light 'Key Sun' (intensity 1.6)",
+          "Added ambient light 'Hall Fill' (intensity 0.55)",
+          "Added point light 'Brazier Glow' (intensity 3.2)",
+          "Registered dialogue tree 'DungeonKeeper' (4 nodes from 'greet')",
+          "Set waves-mode quest config for player 'Adventurer'"
+        ]
+      },
+      "gate": {
+        "valid": true,
+        "violations": []
+      },
+      "qa": {
+        "verdict": "SUCCEEDED",
+        "passed": 8,
+        "total": 8,
+        "failedRules": [],
+        "metrics": {
+          "avgFrameTimeMs": 0.158,
+          "p95FrameTimeMs": 0.2893,
+          "maxFrameTimeMs": 30.5592,
+          "simFpsEstimate": 6328.93,
+          "drawCallEstimate": 14,
+          "instancedBatches": 0,
+          "memoryHeapMb": 22.32,
+          "objectCount": 17,
+          "physicsBodyCount": 14,
+          "eventCount": 0
+        }
+      }
+    }
+  ],
+  "totalTokens": 8332,
+  "totalLatencySeconds": 52.274,
+  "finalReport": {
+    "schemaVersion": 1,
+    "runner": "qa_scenario_runner.mjs",
+    "scenario": "loop_work_scene.json",
+    "goal": "Keeper Blessing",
+    "timestamp": 1790384921.09,
+    "frames": 600,
+    "fixedDeltaSeconds": 0.016666666666666666,
+    "metrics": {
+      "avgFrameTimeMs": 0.158,
+      "p95FrameTimeMs": 0.2893,
+      "maxFrameTimeMs": 30.5592,
+      "simFpsEstimate": 6328.93,
+      "drawCallEstimate": 14,
+      "instancedBatches": 0,
+      "memoryHeapMb": 22.32,
+      "objectCount": 17,
+      "physicsBodyCount": 14,
+      "eventCount": 0
+    },
+    "game": {
+      "mode": "waves",
+      "phase": "won",
+      "score": 400,
+      "kills": 4,
+      "wave": 2,
+      "traveledDistance": 0,
+      "settlement": null,
+      "reactions": 4,
+      "shots": 4,
+      "maxEnemyDisplacement": 1.14
+    },
+    "dialogue": {
+      "DungeonKeeper": {
+        "visited": [
+          "greet",
+          "ripple"
+        ],
+        "events": [
+          "hydro_blessing"
+        ],
+        "error": null
+      }
+    },
+    "rules": [
+      {
+        "id": "keeper-present",
+        "type": "entity_exists",
+        "pass": true,
+        "detail": "found \"Dungeon Keeper\""
+      },
+      {
+        "id": "adventurer-ready",
+        "type": "entity_component",
+        "pass": true,
+        "detail": "Adventurer components: [MeshRenderer, RigidBody3D, Collider3D, MobileController, WeaponController, TopDownMovement, HealthComponent]"
+      },
+      {
+        "id": "blessing-taken",
+        "type": "dialogue_event_fired",
+        "pass": true,
+        "detail": "dialogue \"DungeonKeeper\" fired \"hydro_blessing\""
+      },
+      {
+        "id": "blessing-flagged",
+        "type": "dialogue_sets_variable",
+        "pass": true,
+        "detail": "dialogue variable \"hydroBlessing\"=true (expected true)"
+      },
+      {
+        "id": "reactions-fired",
+        "type": "game_reactions_min",
+        "pass": true,
+        "detail": "reactions=4 (min 2)"
+      },
+      {
+        "id": "hall-cleared",
+        "type": "game_phase",
+        "pass": true,
+        "detail": "phase=won (expected won)"
+      },
+      {
+        "id": "draw-budget",
+        "type": "draw_call_budget",
+        "pass": true,
+        "detail": "drawCallEstimate=14 (budget 100)"
+      },
+      {
+        "id": "sim-fps",
+        "type": "fps_min",
+        "pass": true,
+        "detail": "simFpsEstimate=6328.9 (min 30)"
+      }
+    ],
+    "passed": 8,
+    "total": 8,
+    "verdict": "SUCCEEDED",
+    "confidence": 1
+  },
+  "error": null,
+  "workScene": "/home/john/Projects/Android-Dev-Studio/harness/scenes/loop_work_scene.json"
+}

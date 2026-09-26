@@ -1,0 +1,875 @@
+{
+  "goal": "Drivable Collection Island",
+  "rules": [
+    {
+      "type": "entity_exists",
+      "target": "Island Ground",
+      "id": "island-ground"
+    },
+    {
+      "type": "entity_component",
+      "target": "Player Car",
+      "component": "VehicleController",
+      "id": "player-car"
+    },
+    {
+      "type": "object_count",
+      "min": 8,
+      "max": 40,
+      "id": "buoy-field"
+    },
+    {
+      "type": "event_attached",
+      "target": "Buoy 1",
+      "action": "RotateY",
+      "id": "buoys-spin"
+    },
+    {
+      "type": "traversal_coverage_min",
+      "min": 0.8,
+      "id": "island-traversable"
+    },
+    {
+      "type": "draw_call_budget",
+      "max": 100,
+      "id": "draw-budget"
+    },
+    {
+      "type": "fps_min",
+      "min": 30,
+      "id": "sim-fps"
+    }
+  ],
+  "verdict": "unresolved",
+  "iterations": [
+    {
+      "iteration": 1,
+      "phase": "generate",
+      "visionNotes": [],
+      "llm": {
+        "model": "mimo-v2.6-flash",
+        "promptTokens": 5245,
+        "completionTokens": 4000,
+        "totalTokens": 9245,
+        "latencySeconds": 95.481,
+        "finishReason": "length",
+        "attempts": 1
+      },
+      "parse": {
+        "strategy": "failed",
+        "actionCount": 0,
+        "summary": null,
+        "error": "empty response"
+      },
+      "apply": {
+        "applied": 0,
+        "targetMissing": 0,
+        "invalid": 0,
+        "failed": 0,
+        "outcomes": [],
+        "appliedDescriptions": []
+      },
+      "gate": {
+        "valid": true,
+        "violations": []
+      },
+      "qa": {
+        "verdict": "FAILED",
+        "passed": 2,
+        "total": 7,
+        "failedRules": [
+          {
+            "id": "island-ground",
+            "type": "entity_exists",
+            "detail": "missing \"Island Ground\""
+          },
+          {
+            "id": "player-car",
+            "type": "entity_component",
+            "detail": "missing \"Player Car\""
+          },
+          {
+            "id": "buoy-field",
+            "type": "object_count",
+            "detail": "objectCount=0 (min=8 max=40)"
+          },
+          {
+            "id": "buoys-spin",
+            "type": "event_attached",
+            "detail": "no EventSheet events on \"Buoy 1\""
+          },
+          {
+            "id": "island-traversable",
+            "type": "traversal_coverage_min",
+            "detail": "coverage=0 (min 0.8), holes=81, steep=0, stepHazards=0"
+          }
+        ],
+        "metrics": {
+          "avgFrameTimeMs": 0.0598,
+          "p95FrameTimeMs": 0.0295,
+          "maxFrameTimeMs": 25.44,
+          "simFpsEstimate": 16709.45,
+          "drawCallEstimate": 0,
+          "instancedBatches": 0,
+          "memoryHeapMb": 15.06,
+          "objectCount": 0,
+          "physicsBodyCount": 0,
+          "eventCount": 0,
+          "traversal": {
+            "grid": 9,
+            "cells": 81,
+            "hits": 0,
+            "coverage": 0,
+            "holes": [
+              {
+                "x": -17.778,
+                "z": -17.778
+              },
+              {
+                "x": -17.778,
+                "z": -13.333
+              },
+              {
+                "x": -17.778,
+                "z": -8.889
+              },
+              {
+                "x": -17.778,
+                "z": -4.444
+              },
+              {
+                "x": -17.778,
+                "z": 0
+              },
+              {
+                "x": -17.778,
+                "z": 4.444
+              },
+              {
+                "x": -17.778,
+                "z": 8.889
+              },
+              {
+                "x": -17.778,
+                "z": 13.333
+              },
+              {
+                "x": -17.778,
+                "z": 17.778
+              },
+              {
+                "x": -13.333,
+                "z": -17.778
+              },
+              {
+                "x": -13.333,
+                "z": -13.333
+              },
+              {
+                "x": -13.333,
+                "z": -8.889
+              },
+              {
+                "x": -13.333,
+                "z": -4.444
+              },
+              {
+                "x": -13.333,
+                "z": 0
+              },
+              {
+                "x": -13.333,
+                "z": 4.444
+              },
+              {
+                "x": -13.333,
+                "z": 8.889
+              },
+              {
+                "x": -13.333,
+                "z": 13.333
+              },
+              {
+                "x": -13.333,
+                "z": 17.778
+              },
+              {
+                "x": -8.889,
+                "z": -17.778
+              },
+              {
+                "x": -8.889,
+                "z": -13.333
+              },
+              {
+                "x": -8.889,
+                "z": -8.889
+              },
+              {
+                "x": -8.889,
+                "z": -4.444
+              },
+              {
+                "x": -8.889,
+                "z": 0
+              },
+              {
+                "x": -8.889,
+                "z": 4.444
+              },
+              {
+                "x": -8.889,
+                "z": 8.889
+              },
+              {
+                "x": -8.889,
+                "z": 13.333
+              },
+              {
+                "x": -8.889,
+                "z": 17.778
+              },
+              {
+                "x": -4.444,
+                "z": -17.778
+              },
+              {
+                "x": -4.444,
+                "z": -13.333
+              },
+              {
+                "x": -4.444,
+                "z": -8.889
+              },
+              {
+                "x": -4.444,
+                "z": -4.444
+              },
+              {
+                "x": -4.444,
+                "z": 0
+              },
+              {
+                "x": -4.444,
+                "z": 4.444
+              },
+              {
+                "x": -4.444,
+                "z": 8.889
+              },
+              {
+                "x": -4.444,
+                "z": 13.333
+              },
+              {
+                "x": -4.444,
+                "z": 17.778
+              },
+              {
+                "x": 0,
+                "z": -17.778
+              },
+              {
+                "x": 0,
+                "z": -13.333
+              },
+              {
+                "x": 0,
+                "z": -8.889
+              },
+              {
+                "x": 0,
+                "z": -4.444
+              },
+              {
+                "x": 0,
+                "z": 0
+              },
+              {
+                "x": 0,
+                "z": 4.444
+              },
+              {
+                "x": 0,
+                "z": 8.889
+              },
+              {
+                "x": 0,
+                "z": 13.333
+              },
+              {
+                "x": 0,
+                "z": 17.778
+              },
+              {
+                "x": 4.444,
+                "z": -17.778
+              },
+              {
+                "x": 4.444,
+                "z": -13.333
+              },
+              {
+                "x": 4.444,
+                "z": -8.889
+              },
+              {
+                "x": 4.444,
+                "z": -4.444
+              },
+              {
+                "x": 4.444,
+                "z": 0
+              },
+              {
+                "x": 4.444,
+                "z": 4.444
+              },
+              {
+                "x": 4.444,
+                "z": 8.889
+              },
+              {
+                "x": 4.444,
+                "z": 13.333
+              },
+              {
+                "x": 4.444,
+                "z": 17.778
+              },
+              {
+                "x": 8.889,
+                "z": -17.778
+              },
+              {
+                "x": 8.889,
+                "z": -13.333
+              },
+              {
+                "x": 8.889,
+                "z": -8.889
+              },
+              {
+                "x": 8.889,
+                "z": -4.444
+              },
+              {
+                "x": 8.889,
+                "z": 0
+              },
+              {
+                "x": 8.889,
+                "z": 4.444
+              },
+              {
+                "x": 8.889,
+                "z": 8.889
+              },
+              {
+                "x": 8.889,
+                "z": 13.333
+              },
+              {
+                "x": 8.889,
+                "z": 17.778
+              },
+              {
+                "x": 13.333,
+                "z": -17.778
+              },
+              {
+                "x": 13.333,
+                "z": -13.333
+              },
+              {
+                "x": 13.333,
+                "z": -8.889
+              },
+              {
+                "x": 13.333,
+                "z": -4.444
+              },
+              {
+                "x": 13.333,
+                "z": 0
+              },
+              {
+                "x": 13.333,
+                "z": 4.444
+              },
+              {
+                "x": 13.333,
+                "z": 8.889
+              },
+              {
+                "x": 13.333,
+                "z": 13.333
+              },
+              {
+                "x": 13.333,
+                "z": 17.778
+              },
+              {
+                "x": 17.778,
+                "z": -17.778
+              },
+              {
+                "x": 17.778,
+                "z": -13.333
+              },
+              {
+                "x": 17.778,
+                "z": -8.889
+              },
+              {
+                "x": 17.778,
+                "z": -4.444
+              },
+              {
+                "x": 17.778,
+                "z": 0
+              },
+              {
+                "x": 17.778,
+                "z": 4.444
+              },
+              {
+                "x": 17.778,
+                "z": 8.889
+              },
+              {
+                "x": 17.778,
+                "z": 13.333
+              },
+              {
+                "x": 17.778,
+                "z": 17.778
+              }
+            ],
+            "steep": [],
+            "stepHazards": [],
+            "bounds": {
+              "minX": -20,
+              "maxX": 20,
+              "minZ": -20,
+              "maxZ": 20
+            }
+          }
+        }
+      }
+    }
+  ],
+  "totalTokens": 9245,
+  "totalLatencySeconds": 95.481,
+  "finalReport": {
+    "schemaVersion": 1,
+    "runner": "qa_scenario_runner.mjs",
+    "scenario": "loop_work_scene.json",
+    "goal": "Drivable Collection Island",
+    "timestamp": 1790384095.685,
+    "frames": 600,
+    "fixedDeltaSeconds": 0.016666666666666666,
+    "metrics": {
+      "avgFrameTimeMs": 0.0598,
+      "p95FrameTimeMs": 0.0295,
+      "maxFrameTimeMs": 25.44,
+      "simFpsEstimate": 16709.45,
+      "drawCallEstimate": 0,
+      "instancedBatches": 0,
+      "memoryHeapMb": 15.06,
+      "objectCount": 0,
+      "physicsBodyCount": 0,
+      "eventCount": 0,
+      "traversal": {
+        "grid": 9,
+        "cells": 81,
+        "hits": 0,
+        "coverage": 0,
+        "holes": [
+          {
+            "x": -17.778,
+            "z": -17.778
+          },
+          {
+            "x": -17.778,
+            "z": -13.333
+          },
+          {
+            "x": -17.778,
+            "z": -8.889
+          },
+          {
+            "x": -17.778,
+            "z": -4.444
+          },
+          {
+            "x": -17.778,
+            "z": 0
+          },
+          {
+            "x": -17.778,
+            "z": 4.444
+          },
+          {
+            "x": -17.778,
+            "z": 8.889
+          },
+          {
+            "x": -17.778,
+            "z": 13.333
+          },
+          {
+            "x": -17.778,
+            "z": 17.778
+          },
+          {
+            "x": -13.333,
+            "z": -17.778
+          },
+          {
+            "x": -13.333,
+            "z": -13.333
+          },
+          {
+            "x": -13.333,
+            "z": -8.889
+          },
+          {
+            "x": -13.333,
+            "z": -4.444
+          },
+          {
+            "x": -13.333,
+            "z": 0
+          },
+          {
+            "x": -13.333,
+            "z": 4.444
+          },
+          {
+            "x": -13.333,
+            "z": 8.889
+          },
+          {
+            "x": -13.333,
+            "z": 13.333
+          },
+          {
+            "x": -13.333,
+            "z": 17.778
+          },
+          {
+            "x": -8.889,
+            "z": -17.778
+          },
+          {
+            "x": -8.889,
+            "z": -13.333
+          },
+          {
+            "x": -8.889,
+            "z": -8.889
+          },
+          {
+            "x": -8.889,
+            "z": -4.444
+          },
+          {
+            "x": -8.889,
+            "z": 0
+          },
+          {
+            "x": -8.889,
+            "z": 4.444
+          },
+          {
+            "x": -8.889,
+            "z": 8.889
+          },
+          {
+            "x": -8.889,
+            "z": 13.333
+          },
+          {
+            "x": -8.889,
+            "z": 17.778
+          },
+          {
+            "x": -4.444,
+            "z": -17.778
+          },
+          {
+            "x": -4.444,
+            "z": -13.333
+          },
+          {
+            "x": -4.444,
+            "z": -8.889
+          },
+          {
+            "x": -4.444,
+            "z": -4.444
+          },
+          {
+            "x": -4.444,
+            "z": 0
+          },
+          {
+            "x": -4.444,
+            "z": 4.444
+          },
+          {
+            "x": -4.444,
+            "z": 8.889
+          },
+          {
+            "x": -4.444,
+            "z": 13.333
+          },
+          {
+            "x": -4.444,
+            "z": 17.778
+          },
+          {
+            "x": 0,
+            "z": -17.778
+          },
+          {
+            "x": 0,
+            "z": -13.333
+          },
+          {
+            "x": 0,
+            "z": -8.889
+          },
+          {
+            "x": 0,
+            "z": -4.444
+          },
+          {
+            "x": 0,
+            "z": 0
+          },
+          {
+            "x": 0,
+            "z": 4.444
+          },
+          {
+            "x": 0,
+            "z": 8.889
+          },
+          {
+            "x": 0,
+            "z": 13.333
+          },
+          {
+            "x": 0,
+            "z": 17.778
+          },
+          {
+            "x": 4.444,
+            "z": -17.778
+          },
+          {
+            "x": 4.444,
+            "z": -13.333
+          },
+          {
+            "x": 4.444,
+            "z": -8.889
+          },
+          {
+            "x": 4.444,
+            "z": -4.444
+          },
+          {
+            "x": 4.444,
+            "z": 0
+          },
+          {
+            "x": 4.444,
+            "z": 4.444
+          },
+          {
+            "x": 4.444,
+            "z": 8.889
+          },
+          {
+            "x": 4.444,
+            "z": 13.333
+          },
+          {
+            "x": 4.444,
+            "z": 17.778
+          },
+          {
+            "x": 8.889,
+            "z": -17.778
+          },
+          {
+            "x": 8.889,
+            "z": -13.333
+          },
+          {
+            "x": 8.889,
+            "z": -8.889
+          },
+          {
+            "x": 8.889,
+            "z": -4.444
+          },
+          {
+            "x": 8.889,
+            "z": 0
+          },
+          {
+            "x": 8.889,
+            "z": 4.444
+          },
+          {
+            "x": 8.889,
+            "z": 8.889
+          },
+          {
+            "x": 8.889,
+            "z": 13.333
+          },
+          {
+            "x": 8.889,
+            "z": 17.778
+          },
+          {
+            "x": 13.333,
+            "z": -17.778
+          },
+          {
+            "x": 13.333,
+            "z": -13.333
+          },
+          {
+            "x": 13.333,
+            "z": -8.889
+          },
+          {
+            "x": 13.333,
+            "z": -4.444
+          },
+          {
+            "x": 13.333,
+            "z": 0
+          },
+          {
+            "x": 13.333,
+            "z": 4.444
+          },
+          {
+            "x": 13.333,
+            "z": 8.889
+          },
+          {
+            "x": 13.333,
+            "z": 13.333
+          },
+          {
+            "x": 13.333,
+            "z": 17.778
+          },
+          {
+            "x": 17.778,
+            "z": -17.778
+          },
+          {
+            "x": 17.778,
+            "z": -13.333
+          },
+          {
+            "x": 17.778,
+            "z": -8.889
+          },
+          {
+            "x": 17.778,
+            "z": -4.444
+          },
+          {
+            "x": 17.778,
+            "z": 0
+          },
+          {
+            "x": 17.778,
+            "z": 4.444
+          },
+          {
+            "x": 17.778,
+            "z": 8.889
+          },
+          {
+            "x": 17.778,
+            "z": 13.333
+          },
+          {
+            "x": 17.778,
+            "z": 17.778
+          }
+        ],
+        "steep": [],
+        "stepHazards": [],
+        "bounds": {
+          "minX": -20,
+          "maxX": 20,
+          "minZ": -20,
+          "maxZ": 20
+        }
+      }
+    },
+    "rules": [
+      {
+        "id": "island-ground",
+        "type": "entity_exists",
+        "pass": false,
+        "detail": "missing \"Island Ground\""
+      },
+      {
+        "id": "player-car",
+        "type": "entity_component",
+        "pass": false,
+        "detail": "missing \"Player Car\""
+      },
+      {
+        "id": "buoy-field",
+        "type": "object_count",
+        "pass": false,
+        "detail": "objectCount=0 (min=8 max=40)"
+      },
+      {
+        "id": "buoys-spin",
+        "type": "event_attached",
+        "pass": false,
+        "detail": "no EventSheet events on \"Buoy 1\""
+      },
+      {
+        "id": "island-traversable",
+        "type": "traversal_coverage_min",
+        "pass": false,
+        "detail": "coverage=0 (min 0.8), holes=81, steep=0, stepHazards=0"
+      },
+      {
+        "id": "draw-budget",
+        "type": "draw_call_budget",
+        "pass": true,
+        "detail": "drawCallEstimate=0 (budget 100)"
+      },
+      {
+        "id": "sim-fps",
+        "type": "fps_min",
+        "pass": true,
+        "detail": "simFpsEstimate=16709.5 (min 30)"
+      }
+    ],
+    "passed": 2,
+    "total": 7,
+    "verdict": "FAILED",
+    "confidence": 0.286
+  },
+  "error": null,
+  "workScene": "/home/john/Projects/Android-Dev-Studio/harness/scenes/loop_work_scene.json"
+}

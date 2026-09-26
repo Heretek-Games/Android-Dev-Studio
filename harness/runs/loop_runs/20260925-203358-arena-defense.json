@@ -1,0 +1,216 @@
+{
+  "goal": "Arena Defense",
+  "rules": [
+    {
+      "type": "entity_exists",
+      "target": "Ground Arena",
+      "id": "arena-ground"
+    },
+    {
+      "type": "entity_component",
+      "target": "Player Hero",
+      "component": "MobileController",
+      "id": "player-hero"
+    },
+    {
+      "type": "entity_component",
+      "target": "Player Hero",
+      "component": "WeaponController",
+      "id": "hero-armed"
+    },
+    {
+      "type": "entity_component",
+      "target": "Player Hero",
+      "component": "HealthComponent",
+      "id": "hero-tough"
+    },
+    {
+      "type": "game_enemy_chase_min",
+      "min": 0.5,
+      "id": "enemies-chase"
+    },
+    {
+      "type": "game_kills_min",
+      "min": 2,
+      "id": "kills-scored"
+    },
+    {
+      "type": "game_score_min",
+      "min": 200,
+      "id": "score-awarded"
+    },
+    {
+      "type": "game_wave_reached",
+      "wave": 2,
+      "id": "wave-advanced"
+    },
+    {
+      "type": "game_phase",
+      "phase": "won",
+      "id": "run-won"
+    },
+    {
+      "type": "draw_call_budget",
+      "max": 100,
+      "id": "draw-budget"
+    },
+    {
+      "type": "fps_min",
+      "min": 30,
+      "id": "sim-fps"
+    }
+  ],
+  "verdict": "unresolved",
+  "iterations": [
+    {
+      "iteration": 1,
+      "phase": "generate",
+      "visionNotes": [],
+      "llm": {
+        "model": "mimo-v2.6-flash",
+        "promptTokens": 4929,
+        "completionTokens": 1819,
+        "totalTokens": 6748,
+        "latencySeconds": 10.928,
+        "finishReason": "stop",
+        "attempts": 1
+      },
+      "parse": {
+        "strategy": "salvaged",
+        "actionCount": 13,
+        "summary": "A compact arena defense scene with a ground plane, an armed and tough Player Hero with mobile controls, four AI enemies that chase the hero, lighting, and a two-wave GameRuntime tuned for kills, score, wave advancement, and an eventual win.",
+        "error": "primary parse failed (raw: Extra data: line 1 column 257 (char 256)); salvaged complete actions"
+      },
+      "apply": {
+        "applied": 12,
+        "targetMissing": 0,
+        "invalid": 1,
+        "failed": 0,
+        "outcomes": [
+          {
+            "index": 0,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Ground Arena (plane) at [0.0, 0.0, 0.0]",
+            "target": "Ground Arena"
+          },
+          {
+            "index": 1,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Player Hero (capsule) at [0.0, 1.0, 0.0]",
+            "target": "Player Hero"
+          },
+          {
+            "index": 2,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Pillar North (cylinder) at [0.0, 2.0, 12.0]",
+            "target": "Pillar North"
+          },
+          {
+            "index": 3,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Pillar East (cylinder) at [12.0, 2.0, 0.0]",
+            "target": "Pillar East"
+          },
+          {
+            "index": 4,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Pillar West (cylinder) at [-12.0, 2.0, 0.0]",
+            "target": "Pillar West"
+          },
+          {
+            "index": 5,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Pillar South (cylinder) at [0.0, 2.0, -12.0]",
+            "target": "Pillar South"
+          },
+          {
+            "index": 6,
+            "type": "prefab",
+            "status": "applied",
+            "detail": "Registered prefab 'raider'"
+          },
+          {
+            "index": 7,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Raider A (capsule) at [8.0, 1.0, 8.0]",
+            "target": "Raider A"
+          },
+          {
+            "index": 8,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Raider B (capsule) at [-8.0, 1.0, 8.0]",
+            "target": "Raider B"
+          },
+          {
+            "index": 9,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added directional light 'Sun Key' (intensity 2.2)",
+            "target": "Sun Key"
+          },
+          {
+            "index": 10,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added point light 'Arena Fill' (intensity 1.4)",
+            "target": "Arena Fill"
+          },
+          {
+            "index": 11,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added ambient light 'Ambient Haze' (intensity 0.6)",
+            "target": "Ambient Haze"
+          },
+          {
+            "index": 12,
+            "type": "game",
+            "status": "invalid",
+            "detail": "game config rejected \u2014 unknown game enemy key 'name' (allowed: shape, color, size, y, health, ai, elemental)"
+          }
+        ],
+        "appliedDescriptions": [
+          "Spawned Ground Arena (plane) at [0.0, 0.0, 0.0]",
+          "Spawned Player Hero (capsule) at [0.0, 1.0, 0.0]",
+          "Spawned Pillar North (cylinder) at [0.0, 2.0, 12.0]",
+          "Spawned Pillar East (cylinder) at [12.0, 2.0, 0.0]",
+          "Spawned Pillar West (cylinder) at [-12.0, 2.0, 0.0]",
+          "Spawned Pillar South (cylinder) at [0.0, 2.0, -12.0]",
+          "Registered prefab 'raider'",
+          "Spawned Raider A (capsule) at [8.0, 1.0, 8.0]",
+          "Spawned Raider B (capsule) at [-8.0, 1.0, 8.0]",
+          "Added directional light 'Sun Key' (intensity 2.2)",
+          "Added point light 'Arena Fill' (intensity 1.4)",
+          "Added ambient light 'Ambient Haze' (intensity 0.6)"
+        ]
+      },
+      "gate": {
+        "valid": false,
+        "violations": [
+          {
+            "code": "COLLIDER_PENETRATION_AT_SPAWN",
+            "message": "Dynamic collider 'Player Hero' penetrates fixed collider 'Ground Arena' at spawn",
+            "entity": "Player Hero"
+          }
+        ]
+      },
+      "qa": {
+        "verdict": "skipped",
+        "reason": "invariant gate violation"
+      }
+    }
+  ],
+  "totalTokens": 6748,
+  "totalLatencySeconds": 10.928,
+  "finalReport": null,
+  "error": null,
+  "workScene": "/home/john/Projects/Android-Dev-Studio/harness/scenes/loop_work_scene.json"
+}

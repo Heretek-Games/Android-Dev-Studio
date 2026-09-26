@@ -1,0 +1,205 @@
+{
+ "total": 10,
+ "green": 10,
+ "rows": [
+  {
+   "brief": "arena_defense.json",
+   "verdict": "green",
+   "wall_seconds": 27.3,
+   "tokens": 6938,
+   "criteria_total": 13,
+   "criteria_failed": [
+    "arena-ground",
+    "player-hero",
+    "hero-armed",
+    "hero-tough",
+    "enemies-chase",
+    "kills-scored",
+    "score-awarded",
+    "wave-advanced",
+    "run-won",
+    "draw-budget",
+    "sim-fps",
+    "arena-read",
+    "brief-faithful"
+   ],
+   "defects": []
+  },
+  {
+   "brief": "checkpoint_keep.json",
+   "verdict": "green",
+   "wall_seconds": 55.0,
+   "tokens": 7892,
+   "criteria_total": 10,
+   "criteria_failed": [
+    "keep-floor",
+    "defender-ready",
+    "kills-scored",
+    "wave-advanced",
+    "save-compatible",
+    "run-won",
+    "draw-budget",
+    "sim-fps",
+    "keep-read",
+    "brief-faithful"
+   ],
+   "defects": []
+  },
+  {
+   "brief": "county_districts.json",
+   "verdict": "green",
+   "wall_seconds": 69.0,
+   "tokens": 9270,
+   "criteria_total": 11,
+   "criteria_failed": [
+    "county-ground",
+    "player-car",
+    "town-held",
+    "farms-held",
+    "wilds-held",
+    "county-traversable",
+    "streaming-seamless",
+    "draw-budget",
+    "sim-fps",
+    "county-read",
+    "brief-faithful"
+   ],
+   "defects": []
+  },
+  {
+   "brief": "founding_hollow.json",
+   "verdict": "green",
+   "wall_seconds": 47.6,
+   "tokens": 8111,
+   "criteria_total": 8,
+   "criteria_failed": [
+    "settlement-ground",
+    "population-grown",
+    "treasury-healthy",
+    "charter-granted",
+    "draw-budget",
+    "sim-fps",
+    "hamlet-read",
+    "brief-faithful"
+   ],
+   "defects": []
+  },
+  {
+   "brief": "island_collection_quest.json",
+   "verdict": "green",
+   "wall_seconds": 76.7,
+   "tokens": 9093,
+   "criteria_total": 9,
+   "criteria_failed": [
+    "island-ground",
+    "player-car",
+    "buoy-field",
+    "buoys-spin",
+    "island-traversable",
+    "draw-budget",
+    "sim-fps",
+    "island-read",
+    "brief-faithful"
+   ],
+   "defects": []
+  },
+  {
+   "brief": "keeper_blessing.json",
+   "verdict": "green",
+   "wall_seconds": 53.5,
+   "tokens": 8332,
+   "criteria_total": 10,
+   "criteria_failed": [
+    "keeper-present",
+    "adventurer-ready",
+    "blessing-taken",
+    "blessing-flagged",
+    "reactions-fired",
+    "hall-cleared",
+    "draw-budget",
+    "sim-fps",
+    "dungeon-read",
+    "brief-faithful"
+   ],
+   "defects": []
+  },
+  {
+   "brief": "sunset_duel.json",
+   "verdict": "green",
+   "wall_seconds": 48.6,
+   "tokens": 8357,
+   "criteria_total": 9,
+   "criteria_failed": [
+    "ring-floor",
+    "hero-shaded",
+    "rival-shaded",
+    "rival-chases",
+    "round-won",
+    "draw-budget",
+    "sim-fps",
+    "sunset-read",
+    "brief-faithful"
+   ],
+   "defects": []
+  },
+  {
+   "brief": "urban_outskirts.json",
+   "verdict": "green",
+   "wall_seconds": 115.5,
+   "tokens": 12898,
+   "criteria_total": 11,
+   "criteria_failed": [
+    "urban-ground",
+    "player-car",
+    "downtown-held",
+    "suburbs-held",
+    "park-held",
+    "urban-traversable",
+    "streaming-seamless",
+    "draw-budget",
+    "sim-fps",
+    "urban-read",
+    "brief-faithful"
+   ],
+   "defects": []
+  },
+  {
+   "brief": "valley_biomes.json",
+   "verdict": "green",
+   "wall_seconds": 119.0,
+   "tokens": 12479,
+   "criteria_total": 10,
+   "criteria_failed": [
+    "valley-ground",
+    "player-car",
+    "sand-held",
+    "grass-held",
+    "valley-traversable",
+    "streaming-seamless",
+    "draw-budget",
+    "sim-fps",
+    "valley-read",
+    "brief-faithful"
+   ],
+   "defects": []
+  },
+  {
+   "brief": "valley_streaming.json",
+   "verdict": "green",
+   "wall_seconds": 43.6,
+   "tokens": 8113,
+   "criteria_total": 8,
+   "criteria_failed": [
+    "valley-ground",
+    "player-car",
+    "valley-traversable",
+    "streaming-seamless",
+    "draw-budget",
+    "sim-fps",
+    "valley-read",
+    "brief-faithful"
+   ],
+   "defects": []
+  }
+ ]
+}

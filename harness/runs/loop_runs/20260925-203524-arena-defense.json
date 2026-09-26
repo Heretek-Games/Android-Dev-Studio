@@ -1,0 +1,249 @@
+{
+  "goal": "Arena Defense",
+  "rules": [
+    {
+      "type": "entity_exists",
+      "target": "Ground Arena",
+      "id": "arena-ground"
+    },
+    {
+      "type": "entity_component",
+      "target": "Player Hero",
+      "component": "MobileController",
+      "id": "player-hero"
+    },
+    {
+      "type": "entity_component",
+      "target": "Player Hero",
+      "component": "WeaponController",
+      "id": "hero-armed"
+    },
+    {
+      "type": "entity_component",
+      "target": "Player Hero",
+      "component": "HealthComponent",
+      "id": "hero-tough"
+    },
+    {
+      "type": "game_enemy_chase_min",
+      "min": 0.5,
+      "id": "enemies-chase"
+    },
+    {
+      "type": "game_kills_min",
+      "min": 2,
+      "id": "kills-scored"
+    },
+    {
+      "type": "game_score_min",
+      "min": 200,
+      "id": "score-awarded"
+    },
+    {
+      "type": "game_wave_reached",
+      "wave": 2,
+      "id": "wave-advanced"
+    },
+    {
+      "type": "game_phase",
+      "phase": "won",
+      "id": "run-won"
+    },
+    {
+      "type": "draw_call_budget",
+      "max": 100,
+      "id": "draw-budget"
+    },
+    {
+      "type": "fps_min",
+      "min": 30,
+      "id": "sim-fps"
+    }
+  ],
+  "verdict": "unresolved",
+  "iterations": [
+    {
+      "iteration": 1,
+      "phase": "generate",
+      "visionNotes": [],
+      "llm": {
+        "model": "mimo-v2.6-flash",
+        "promptTokens": 5044,
+        "completionTokens": 1028,
+        "totalTokens": 6072,
+        "latencySeconds": 17.424,
+        "finishReason": "stop",
+        "attempts": 1
+      },
+      "parse": {
+        "strategy": "raw",
+        "actionCount": 17,
+        "summary": "A compact arena-defense scene: 'Ground Arena' plane, a MobileController hero armed with a weapon and high health, four chasing AI enemies, lighting, and a two-wave GameRuntime that reaches wave 2, scores 200+ from 2+ kills, and finishes in the 'won' phase within budget.",
+        "error": null
+      },
+      "apply": {
+        "applied": 17,
+        "targetMissing": 0,
+        "invalid": 0,
+        "failed": 0,
+        "outcomes": [
+          {
+            "index": 0,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Ground Arena (plane) at [0.0, 0.0, 0.0]",
+            "target": "Ground Arena"
+          },
+          {
+            "index": 1,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Player Hero (capsule) at [0.0, 0.85, 0.0]",
+            "target": "Player Hero"
+          },
+          {
+            "index": 2,
+            "type": "prefab",
+            "status": "applied",
+            "detail": "Registered prefab 'raider'"
+          },
+          {
+            "index": 3,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Raider A (capsule) at [8.0, 0.8, 6.0]",
+            "target": "Raider A"
+          },
+          {
+            "index": 4,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Raider B (capsule) at [-8.0, 0.8, 6.0]",
+            "target": "Raider B"
+          },
+          {
+            "index": 5,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Raider C (capsule) at [8.0, 0.8, -6.0]",
+            "target": "Raider C"
+          },
+          {
+            "index": 6,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Raider D (capsule) at [-8.0, 0.8, -6.0]",
+            "target": "Raider D"
+          },
+          {
+            "index": 7,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Pillar NE (cylinder) at [14.0, 2.0, 14.0]",
+            "target": "Pillar NE"
+          },
+          {
+            "index": 8,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Pillar NW (cylinder) at [-14.0, 2.0, 14.0]",
+            "target": "Pillar NW"
+          },
+          {
+            "index": 9,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Pillar SE (cylinder) at [14.0, 2.0, -14.0]",
+            "target": "Pillar SE"
+          },
+          {
+            "index": 10,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Pillar SW (cylinder) at [-14.0, 2.0, -14.0]",
+            "target": "Pillar SW"
+          },
+          {
+            "index": 11,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Arena Crate (box) at [0.0, 1.0, 10.0]",
+            "target": "Arena Crate"
+          },
+          {
+            "index": 12,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added directional light 'Sun' (intensity 2.0)",
+            "target": "Sun"
+          },
+          {
+            "index": 13,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added ambient light 'Fill' (intensity 0.6)",
+            "target": "Fill"
+          },
+          {
+            "index": 14,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added point light 'Torch NE' (intensity 1.5)",
+            "target": "Torch NE"
+          },
+          {
+            "index": 15,
+            "type": "event",
+            "status": "applied",
+            "detail": "Wired Timer -> SetScale on Arena Crate",
+            "target": "Arena Crate"
+          },
+          {
+            "index": 16,
+            "type": "game",
+            "status": "applied",
+            "detail": "Set waves-mode quest config for player 'Player Hero'"
+          }
+        ],
+        "appliedDescriptions": [
+          "Spawned Ground Arena (plane) at [0.0, 0.0, 0.0]",
+          "Spawned Player Hero (capsule) at [0.0, 0.85, 0.0]",
+          "Registered prefab 'raider'",
+          "Spawned Raider A (capsule) at [8.0, 0.8, 6.0]",
+          "Spawned Raider B (capsule) at [-8.0, 0.8, 6.0]",
+          "Spawned Raider C (capsule) at [8.0, 0.8, -6.0]",
+          "Spawned Raider D (capsule) at [-8.0, 0.8, -6.0]",
+          "Spawned Pillar NE (cylinder) at [14.0, 2.0, 14.0]",
+          "Spawned Pillar NW (cylinder) at [-14.0, 2.0, 14.0]",
+          "Spawned Pillar SE (cylinder) at [14.0, 2.0, -14.0]",
+          "Spawned Pillar SW (cylinder) at [-14.0, 2.0, -14.0]",
+          "Spawned Arena Crate (box) at [0.0, 1.0, 10.0]",
+          "Added directional light 'Sun' (intensity 2.0)",
+          "Added ambient light 'Fill' (intensity 0.6)",
+          "Added point light 'Torch NE' (intensity 1.5)",
+          "Wired Timer -> SetScale on Arena Crate",
+          "Set waves-mode quest config for player 'Player Hero'"
+        ]
+      },
+      "gate": {
+        "valid": false,
+        "violations": [
+          {
+            "code": "COLLIDER_PENETRATION_AT_SPAWN",
+            "message": "Dynamic collider 'Player Hero' penetrates fixed collider 'Ground Arena' at spawn",
+            "entity": "Player Hero"
+          }
+        ]
+      },
+      "qa": {
+        "verdict": "skipped",
+        "reason": "invariant gate violation"
+      }
+    }
+  ],
+  "totalTokens": 6072,
+  "totalLatencySeconds": 17.424,
+  "finalReport": null,
+  "error": null,
+  "workScene": "/home/john/Projects/Android-Dev-Studio/harness/scenes/loop_work_scene.json"
+}

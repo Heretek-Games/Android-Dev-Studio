@@ -1,0 +1,1334 @@
+{
+  "goal": "Two-Biome Valley",
+  "rules": [
+    {
+      "type": "entity_exists",
+      "target": "Valley Ground",
+      "id": "valley-ground"
+    },
+    {
+      "type": "entity_component",
+      "target": "Player Car",
+      "component": "VehicleController",
+      "id": "player-car"
+    },
+    {
+      "type": "biome_coverage_min",
+      "biome": "sand",
+      "min": 2,
+      "region": {
+        "minX": -30,
+        "maxX": 0,
+        "minZ": -15,
+        "maxZ": 15
+      },
+      "id": "sand-held"
+    },
+    {
+      "type": "biome_coverage_min",
+      "biome": "grass",
+      "min": 2,
+      "region": {
+        "minX": 0,
+        "maxX": 30,
+        "minZ": -15,
+        "maxZ": 15
+      },
+      "id": "grass-held"
+    },
+    {
+      "type": "traversal_coverage_min",
+      "min": 0.8,
+      "id": "valley-traversable"
+    },
+    {
+      "type": "streaming_coherence_min",
+      "min": 1.0,
+      "id": "streaming-seamless"
+    },
+    {
+      "type": "draw_call_budget",
+      "max": 100,
+      "id": "draw-budget"
+    },
+    {
+      "type": "fps_min",
+      "min": 30,
+      "id": "sim-fps"
+    }
+  ],
+  "verdict": "green",
+  "iterations": [
+    {
+      "iteration": 1,
+      "phase": "generate",
+      "visionNotes": [],
+      "llm": {
+        "model": "mimo-v2.6-flash",
+        "promptTokens": 5639,
+        "completionTokens": 6840,
+        "totalTokens": 12479,
+        "latencySeconds": 117.555,
+        "finishReason": "stop",
+        "attempts": 1
+      },
+      "parse": {
+        "strategy": "raw",
+        "actionCount": 20,
+        "summary": "A two-biome valley with a chunk-streamed fixed ground slab, a road down the middle, sand dunes on the west half and grass hills on the east half, plus a drivable Player Car with a VehicleController.",
+        "error": null
+      },
+      "apply": {
+        "applied": 20,
+        "targetMissing": 0,
+        "invalid": 0,
+        "failed": 0,
+        "outcomes": [
+          {
+            "index": 0,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Valley Ground (box) at [0.0, 0.0, 0.0]",
+            "target": "Valley Ground"
+          },
+          {
+            "index": 1,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned River Road (box) at [0.0, 0.55, 0.0]",
+            "target": "River Road"
+          },
+          {
+            "index": 2,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Player Car (box) at [-6.0, 1.05, -4.0]",
+            "target": "Player Car"
+          },
+          {
+            "index": 3,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Sand Dune A (sphere) at [-18.0, 0.0, -8.0]",
+            "target": "Sand Dune A"
+          },
+          {
+            "index": 4,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Sand Dune B (sphere) at [-25.0, 0.0, 6.0]",
+            "target": "Sand Dune B"
+          },
+          {
+            "index": 5,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Sand Dune C (sphere) at [-8.0, 0.0, 11.0]",
+            "target": "Sand Dune C"
+          },
+          {
+            "index": 6,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Sand Rock (box) at [-13.0, 1.1, 3.0]",
+            "target": "Sand Rock"
+          },
+          {
+            "index": 7,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Desert Cactus (cylinder) at [-20.0, 2.0, -14.0]",
+            "target": "Desert Cactus"
+          },
+          {
+            "index": 8,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Grass Hill A (sphere) at [17.0, 0.0, -7.0]",
+            "target": "Grass Hill A"
+          },
+          {
+            "index": 9,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Grass Hill B (sphere) at [25.0, 0.0, 7.0]",
+            "target": "Grass Hill B"
+          },
+          {
+            "index": 10,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Grass Mound C (sphere) at [9.0, 0.0, 12.0]",
+            "target": "Grass Mound C"
+          },
+          {
+            "index": 11,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Grass Rock (box) at [4.0, 1.1, -13.0]",
+            "target": "Grass Rock"
+          },
+          {
+            "index": 12,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Oak Trunk A (cylinder) at [12.0, 2.5, 4.0]",
+            "target": "Oak Trunk A"
+          },
+          {
+            "index": 13,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Oak Canopy A (sphere) at [12.0, 5.8, 4.0]",
+            "target": "Oak Canopy A"
+          },
+          {
+            "index": 14,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Oak Trunk B (cylinder) at [21.0, 3.0, -11.0]",
+            "target": "Oak Trunk B"
+          },
+          {
+            "index": 15,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Oak Canopy B (sphere) at [21.0, 6.6, -11.0]",
+            "target": "Oak Canopy B"
+          },
+          {
+            "index": 16,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Bush A (sphere) at [7.0, 1.2, -9.0]",
+            "target": "Bush A"
+          },
+          {
+            "index": 17,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Bush B (sphere) at [26.0, 1.15, -3.0]",
+            "target": "Bush B"
+          },
+          {
+            "index": 18,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added directional light 'Valley Sun' (intensity 2.2)",
+            "target": "Valley Sun"
+          },
+          {
+            "index": 19,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added ambient light 'Sky Fill' (intensity 0.55)",
+            "target": "Sky Fill"
+          }
+        ],
+        "appliedDescriptions": [
+          "Spawned Valley Ground (box) at [0.0, 0.0, 0.0]",
+          "Spawned River Road (box) at [0.0, 0.55, 0.0]",
+          "Spawned Player Car (box) at [-6.0, 1.05, -4.0]",
+          "Spawned Sand Dune A (sphere) at [-18.0, 0.0, -8.0]",
+          "Spawned Sand Dune B (sphere) at [-25.0, 0.0, 6.0]",
+          "Spawned Sand Dune C (sphere) at [-8.0, 0.0, 11.0]",
+          "Spawned Sand Rock (box) at [-13.0, 1.1, 3.0]",
+          "Spawned Desert Cactus (cylinder) at [-20.0, 2.0, -14.0]",
+          "Spawned Grass Hill A (sphere) at [17.0, 0.0, -7.0]",
+          "Spawned Grass Hill B (sphere) at [25.0, 0.0, 7.0]",
+          "Spawned Grass Mound C (sphere) at [9.0, 0.0, 12.0]",
+          "Spawned Grass Rock (box) at [4.0, 1.1, -13.0]",
+          "Spawned Oak Trunk A (cylinder) at [12.0, 2.5, 4.0]",
+          "Spawned Oak Canopy A (sphere) at [12.0, 5.8, 4.0]",
+          "Spawned Oak Trunk B (cylinder) at [21.0, 3.0, -11.0]",
+          "Spawned Oak Canopy B (sphere) at [21.0, 6.6, -11.0]",
+          "Spawned Bush A (sphere) at [7.0, 1.2, -9.0]",
+          "Spawned Bush B (sphere) at [26.0, 1.15, -3.0]",
+          "Added directional light 'Valley Sun' (intensity 2.2)",
+          "Added ambient light 'Sky Fill' (intensity 0.55)"
+        ]
+      },
+      "gate": {
+        "valid": true,
+        "violations": []
+      },
+      "qa": {
+        "verdict": "SUCCEEDED",
+        "passed": 8,
+        "total": 8,
+        "failedRules": [],
+        "metrics": {
+          "avgFrameTimeMs": 0.2242,
+          "p95FrameTimeMs": 0.4136,
+          "maxFrameTimeMs": 36.9873,
+          "simFpsEstimate": 4460.99,
+          "drawCallEstimate": 18,
+          "instancedBatches": 0,
+          "memoryHeapMb": 17.67,
+          "objectCount": 29,
+          "physicsBodyCount": 14,
+          "eventCount": 0,
+          "traversal": {
+            "grid": 9,
+            "cells": 81,
+            "hits": 81,
+            "coverage": 1,
+            "holes": [],
+            "steep": [
+              {
+                "x": -28.444,
+                "z": 7.556,
+                "normalY": 0.327
+              },
+              {
+                "x": -21.333,
+                "z": -11.333,
+                "normalY": 0.619
+              },
+              {
+                "x": -21.333,
+                "z": -3.778,
+                "normalY": 0.443
+              },
+              {
+                "x": -14.222,
+                "z": -11.333,
+                "normalY": 0.543
+              },
+              {
+                "x": -14.222,
+                "z": -3.778,
+                "normalY": 0.329
+              },
+              {
+                "x": 14.222,
+                "z": -11.333,
+                "normalY": 0.352
+              },
+              {
+                "x": 14.222,
+                "z": -3.778,
+                "normalY": 0.634
+              },
+              {
+                "x": 21.333,
+                "z": -7.556,
+                "normalY": 0.607
+              },
+              {
+                "x": 21.333,
+                "z": -3.778,
+                "normalY": 0.19
+              },
+              {
+                "x": 21.333,
+                "z": 7.556,
+                "normalY": 0.375
+              },
+              {
+                "x": 28.444,
+                "z": 7.556,
+                "normalY": 0.489
+              }
+            ],
+            "stepHazards": [
+              {
+                "from": {
+                  "x": -28.444,
+                  "z": -11.333
+                },
+                "to": {
+                  "x": -21.333,
+                  "z": -11.333
+                },
+                "drop": 3.212
+              },
+              {
+                "from": {
+                  "x": -28.444,
+                  "z": -7.556
+                },
+                "to": {
+                  "x": -21.333,
+                  "z": -7.556
+                },
+                "drop": 4.469
+              },
+              {
+                "from": {
+                  "x": -28.444,
+                  "z": -3.778
+                },
+                "to": {
+                  "x": -21.333,
+                  "z": -3.778
+                },
+                "drop": 2.157
+              },
+              {
+                "from": {
+                  "x": -21.333,
+                  "z": -15.111
+                },
+                "to": {
+                  "x": -21.333,
+                  "z": -11.333
+                },
+                "drop": 3.212
+              },
+              {
+                "from": {
+                  "x": -21.333,
+                  "z": -11.333
+                },
+                "to": {
+                  "x": -21.333,
+                  "z": -7.556
+                },
+                "drop": 1.257
+              },
+              {
+                "from": {
+                  "x": -21.333,
+                  "z": -7.556
+                },
+                "to": {
+                  "x": -21.333,
+                  "z": -3.778
+                },
+                "drop": 2.312
+              },
+              {
+                "from": {
+                  "x": -21.333,
+                  "z": -3.778
+                },
+                "to": {
+                  "x": -21.333,
+                  "z": 0
+                },
+                "drop": 2.157
+              },
+              {
+                "from": {
+                  "x": -14.222,
+                  "z": -15.111
+                },
+                "to": {
+                  "x": -14.222,
+                  "z": -11.333
+                },
+                "drop": 2.758
+              },
+              {
+                "from": {
+                  "x": -14.222,
+                  "z": -11.333
+                },
+                "to": {
+                  "x": -7.111,
+                  "z": -11.333
+                },
+                "drop": 2.758
+              },
+              {
+                "from": {
+                  "x": -14.222,
+                  "z": -11.333
+                },
+                "to": {
+                  "x": -14.222,
+                  "z": -7.556
+                },
+                "drop": 1.382
+              },
+              {
+                "from": {
+                  "x": -14.222,
+                  "z": -7.556
+                },
+                "to": {
+                  "x": -7.111,
+                  "z": -7.556
+                },
+                "drop": 4.14
+              },
+              {
+                "from": {
+                  "x": -14.222,
+                  "z": -7.556
+                },
+                "to": {
+                  "x": -14.222,
+                  "z": -3.778
+                },
+                "drop": 2.665
+              },
+              {
+                "from": {
+                  "x": -14.222,
+                  "z": -3.778
+                },
+                "to": {
+                  "x": -7.111,
+                  "z": -3.778
+                },
+                "drop": 1.475
+              },
+              {
+                "from": {
+                  "x": -14.222,
+                  "z": -3.778
+                },
+                "to": {
+                  "x": -14.222,
+                  "z": 0
+                },
+                "drop": 1.475
+              },
+              {
+                "from": {
+                  "x": -14.222,
+                  "z": 11.333
+                },
+                "to": {
+                  "x": -7.111,
+                  "z": 11.333
+                },
+                "drop": 2.869
+              },
+              {
+                "from": {
+                  "x": -7.111,
+                  "z": 7.556
+                },
+                "to": {
+                  "x": -7.111,
+                  "z": 11.333
+                },
+                "drop": 2.869
+              },
+              {
+                "from": {
+                  "x": -7.111,
+                  "z": 11.333
+                },
+                "to": {
+                  "x": 0,
+                  "z": 11.333
+                },
+                "drop": 2.769
+              },
+              {
+                "from": {
+                  "x": -7.111,
+                  "z": 11.333
+                },
+                "to": {
+                  "x": -7.111,
+                  "z": 15.111
+                },
+                "drop": 2.869
+              },
+              {
+                "from": {
+                  "x": 0,
+                  "z": 11.333
+                },
+                "to": {
+                  "x": 7.111,
+                  "z": 11.333
+                },
+                "drop": 1.633
+              },
+              {
+                "from": {
+                  "x": 7.111,
+                  "z": -11.333
+                },
+                "to": {
+                  "x": 14.222,
+                  "z": -11.333
+                },
+                "drop": 1.438
+              },
+              {
+                "from": {
+                  "x": 7.111,
+                  "z": -7.556
+                },
+                "to": {
+                  "x": 14.222,
+                  "z": -7.556
+                },
+                "drop": 4.214
+              },
+              {
+                "from": {
+                  "x": 7.111,
+                  "z": -3.778
+                },
+                "to": {
+                  "x": 14.222,
+                  "z": -3.778
+                },
+                "drop": 2.986
+              },
+              {
+                "from": {
+                  "x": 7.111,
+                  "z": 7.556
+                },
+                "to": {
+                  "x": 7.111,
+                  "z": 11.333
+                },
+                "drop": 1.733
+              },
+              {
+                "from": {
+                  "x": 7.111,
+                  "z": 11.333
+                },
+                "to": {
+                  "x": 14.222,
+                  "z": 11.333
+                },
+                "drop": 1.733
+              },
+              {
+                "from": {
+                  "x": 7.111,
+                  "z": 11.333
+                },
+                "to": {
+                  "x": 7.111,
+                  "z": 15.111
+                },
+                "drop": 1.733
+              },
+              {
+                "from": {
+                  "x": 14.222,
+                  "z": -15.111
+                },
+                "to": {
+                  "x": 14.222,
+                  "z": -11.333
+                },
+                "drop": 1.438
+              },
+              {
+                "from": {
+                  "x": 14.222,
+                  "z": -11.333
+                },
+                "to": {
+                  "x": 21.333,
+                  "z": -11.333
+                },
+                "drop": 1.438
+              },
+              {
+                "from": {
+                  "x": 14.222,
+                  "z": -11.333
+                },
+                "to": {
+                  "x": 14.222,
+                  "z": -7.556
+                },
+                "drop": 2.776
+              },
+              {
+                "from": {
+                  "x": 14.222,
+                  "z": -7.556
+                },
+                "to": {
+                  "x": 21.333,
+                  "z": -7.556
+                },
+                "drop": 1.373
+              },
+              {
+                "from": {
+                  "x": 14.222,
+                  "z": -7.556
+                },
+                "to": {
+                  "x": 14.222,
+                  "z": -3.778
+                },
+                "drop": 1.228
+              },
+              {
+                "from": {
+                  "x": 14.222,
+                  "z": -3.778
+                },
+                "to": {
+                  "x": 21.333,
+                  "z": -3.778
+                },
+                "drop": 2.442
+              },
+              {
+                "from": {
+                  "x": 14.222,
+                  "z": -3.778
+                },
+                "to": {
+                  "x": 14.222,
+                  "z": 0
+                },
+                "drop": 2.986
+              },
+              {
+                "from": {
+                  "x": 21.333,
+                  "z": -11.333
+                },
+                "to": {
+                  "x": 21.333,
+                  "z": -7.556
+                },
+                "drop": 2.841
+              },
+              {
+                "from": {
+                  "x": 21.333,
+                  "z": -7.556
+                },
+                "to": {
+                  "x": 28.444,
+                  "z": -7.556
+                },
+                "drop": 2.841
+              },
+              {
+                "from": {
+                  "x": 21.333,
+                  "z": -7.556
+                },
+                "to": {
+                  "x": 21.333,
+                  "z": -3.778
+                },
+                "drop": 2.297
+              },
+              {
+                "from": {
+                  "x": 28.444,
+                  "z": 3.778
+                },
+                "to": {
+                  "x": 28.444,
+                  "z": 7.556
+                },
+                "drop": 1.456
+              },
+              {
+                "from": {
+                  "x": 28.444,
+                  "z": 7.556
+                },
+                "to": {
+                  "x": 28.444,
+                  "z": 11.333
+                },
+                "drop": 1.456
+              }
+            ],
+            "bounds": {
+              "minX": -32,
+              "maxX": 32,
+              "minZ": -17,
+              "maxZ": 17
+            }
+          },
+          "streaming": {
+            "samples": 5,
+            "settleFrames": 11,
+            "coverage": 1,
+            "gaps": [],
+            "thrashReloads": 0,
+            "maxActiveChunks": 9,
+            "uniqueChunks": 15,
+            "chunkSize": 32,
+            "renderDistance": 1
+          }
+        }
+      }
+    }
+  ],
+  "totalTokens": 12479,
+  "totalLatencySeconds": 117.555,
+  "finalReport": {
+    "schemaVersion": 1,
+    "runner": "qa_scenario_runner.mjs",
+    "scenario": "loop_work_scene.json",
+    "goal": "Two-Biome Valley",
+    "timestamp": 1790385682.003,
+    "frames": 600,
+    "fixedDeltaSeconds": 0.016666666666666666,
+    "metrics": {
+      "avgFrameTimeMs": 0.2242,
+      "p95FrameTimeMs": 0.4136,
+      "maxFrameTimeMs": 36.9873,
+      "simFpsEstimate": 4460.99,
+      "drawCallEstimate": 18,
+      "instancedBatches": 0,
+      "memoryHeapMb": 17.67,
+      "objectCount": 29,
+      "physicsBodyCount": 14,
+      "eventCount": 0,
+      "traversal": {
+        "grid": 9,
+        "cells": 81,
+        "hits": 81,
+        "coverage": 1,
+        "holes": [],
+        "steep": [
+          {
+            "x": -28.444,
+            "z": 7.556,
+            "normalY": 0.327
+          },
+          {
+            "x": -21.333,
+            "z": -11.333,
+            "normalY": 0.619
+          },
+          {
+            "x": -21.333,
+            "z": -3.778,
+            "normalY": 0.443
+          },
+          {
+            "x": -14.222,
+            "z": -11.333,
+            "normalY": 0.543
+          },
+          {
+            "x": -14.222,
+            "z": -3.778,
+            "normalY": 0.329
+          },
+          {
+            "x": 14.222,
+            "z": -11.333,
+            "normalY": 0.352
+          },
+          {
+            "x": 14.222,
+            "z": -3.778,
+            "normalY": 0.634
+          },
+          {
+            "x": 21.333,
+            "z": -7.556,
+            "normalY": 0.607
+          },
+          {
+            "x": 21.333,
+            "z": -3.778,
+            "normalY": 0.19
+          },
+          {
+            "x": 21.333,
+            "z": 7.556,
+            "normalY": 0.375
+          },
+          {
+            "x": 28.444,
+            "z": 7.556,
+            "normalY": 0.489
+          }
+        ],
+        "stepHazards": [
+          {
+            "from": {
+              "x": -28.444,
+              "z": -11.333
+            },
+            "to": {
+              "x": -21.333,
+              "z": -11.333
+            },
+            "drop": 3.212
+          },
+          {
+            "from": {
+              "x": -28.444,
+              "z": -7.556
+            },
+            "to": {
+              "x": -21.333,
+              "z": -7.556
+            },
+            "drop": 4.469
+          },
+          {
+            "from": {
+              "x": -28.444,
+              "z": -3.778
+            },
+            "to": {
+              "x": -21.333,
+              "z": -3.778
+            },
+            "drop": 2.157
+          },
+          {
+            "from": {
+              "x": -21.333,
+              "z": -15.111
+            },
+            "to": {
+              "x": -21.333,
+              "z": -11.333
+            },
+            "drop": 3.212
+          },
+          {
+            "from": {
+              "x": -21.333,
+              "z": -11.333
+            },
+            "to": {
+              "x": -21.333,
+              "z": -7.556
+            },
+            "drop": 1.257
+          },
+          {
+            "from": {
+              "x": -21.333,
+              "z": -7.556
+            },
+            "to": {
+              "x": -21.333,
+              "z": -3.778
+            },
+            "drop": 2.312
+          },
+          {
+            "from": {
+              "x": -21.333,
+              "z": -3.778
+            },
+            "to": {
+              "x": -21.333,
+              "z": 0
+            },
+            "drop": 2.157
+          },
+          {
+            "from": {
+              "x": -14.222,
+              "z": -15.111
+            },
+            "to": {
+              "x": -14.222,
+              "z": -11.333
+            },
+            "drop": 2.758
+          },
+          {
+            "from": {
+              "x": -14.222,
+              "z": -11.333
+            },
+            "to": {
+              "x": -7.111,
+              "z": -11.333
+            },
+            "drop": 2.758
+          },
+          {
+            "from": {
+              "x": -14.222,
+              "z": -11.333
+            },
+            "to": {
+              "x": -14.222,
+              "z": -7.556
+            },
+            "drop": 1.382
+          },
+          {
+            "from": {
+              "x": -14.222,
+              "z": -7.556
+            },
+            "to": {
+              "x": -7.111,
+              "z": -7.556
+            },
+            "drop": 4.14
+          },
+          {
+            "from": {
+              "x": -14.222,
+              "z": -7.556
+            },
+            "to": {
+              "x": -14.222,
+              "z": -3.778
+            },
+            "drop": 2.665
+          },
+          {
+            "from": {
+              "x": -14.222,
+              "z": -3.778
+            },
+            "to": {
+              "x": -7.111,
+              "z": -3.778
+            },
+            "drop": 1.475
+          },
+          {
+            "from": {
+              "x": -14.222,
+              "z": -3.778
+            },
+            "to": {
+              "x": -14.222,
+              "z": 0
+            },
+            "drop": 1.475
+          },
+          {
+            "from": {
+              "x": -14.222,
+              "z": 11.333
+            },
+            "to": {
+              "x": -7.111,
+              "z": 11.333
+            },
+            "drop": 2.869
+          },
+          {
+            "from": {
+              "x": -7.111,
+              "z": 7.556
+            },
+            "to": {
+              "x": -7.111,
+              "z": 11.333
+            },
+            "drop": 2.869
+          },
+          {
+            "from": {
+              "x": -7.111,
+              "z": 11.333
+            },
+            "to": {
+              "x": 0,
+              "z": 11.333
+            },
+            "drop": 2.769
+          },
+          {
+            "from": {
+              "x": -7.111,
+              "z": 11.333
+            },
+            "to": {
+              "x": -7.111,
+              "z": 15.111
+            },
+            "drop": 2.869
+          },
+          {
+            "from": {
+              "x": 0,
+              "z": 11.333
+            },
+            "to": {
+              "x": 7.111,
+              "z": 11.333
+            },
+            "drop": 1.633
+          },
+          {
+            "from": {
+              "x": 7.111,
+              "z": -11.333
+            },
+            "to": {
+              "x": 14.222,
+              "z": -11.333
+            },
+            "drop": 1.438
+          },
+          {
+            "from": {
+              "x": 7.111,
+              "z": -7.556
+            },
+            "to": {
+              "x": 14.222,
+              "z": -7.556
+            },
+            "drop": 4.214
+          },
+          {
+            "from": {
+              "x": 7.111,
+              "z": -3.778
+            },
+            "to": {
+              "x": 14.222,
+              "z": -3.778
+            },
+            "drop": 2.986
+          },
+          {
+            "from": {
+              "x": 7.111,
+              "z": 7.556
+            },
+            "to": {
+              "x": 7.111,
+              "z": 11.333
+            },
+            "drop": 1.733
+          },
+          {
+            "from": {
+              "x": 7.111,
+              "z": 11.333
+            },
+            "to": {
+              "x": 14.222,
+              "z": 11.333
+            },
+            "drop": 1.733
+          },
+          {
+            "from": {
+              "x": 7.111,
+              "z": 11.333
+            },
+            "to": {
+              "x": 7.111,
+              "z": 15.111
+            },
+            "drop": 1.733
+          },
+          {
+            "from": {
+              "x": 14.222,
+              "z": -15.111
+            },
+            "to": {
+              "x": 14.222,
+              "z": -11.333
+            },
+            "drop": 1.438
+          },
+          {
+            "from": {
+              "x": 14.222,
+              "z": -11.333
+            },
+            "to": {
+              "x": 21.333,
+              "z": -11.333
+            },
+            "drop": 1.438
+          },
+          {
+            "from": {
+              "x": 14.222,
+              "z": -11.333
+            },
+            "to": {
+              "x": 14.222,
+              "z": -7.556
+            },
+            "drop": 2.776
+          },
+          {
+            "from": {
+              "x": 14.222,
+              "z": -7.556
+            },
+            "to": {
+              "x": 21.333,
+              "z": -7.556
+            },
+            "drop": 1.373
+          },
+          {
+            "from": {
+              "x": 14.222,
+              "z": -7.556
+            },
+            "to": {
+              "x": 14.222,
+              "z": -3.778
+            },
+            "drop": 1.228
+          },
+          {
+            "from": {
+              "x": 14.222,
+              "z": -3.778
+            },
+            "to": {
+              "x": 21.333,
+              "z": -3.778
+            },
+            "drop": 2.442
+          },
+          {
+            "from": {
+              "x": 14.222,
+              "z": -3.778
+            },
+            "to": {
+              "x": 14.222,
+              "z": 0
+            },
+            "drop": 2.986
+          },
+          {
+            "from": {
+              "x": 21.333,
+              "z": -11.333
+            },
+            "to": {
+              "x": 21.333,
+              "z": -7.556
+            },
+            "drop": 2.841
+          },
+          {
+            "from": {
+              "x": 21.333,
+              "z": -7.556
+            },
+            "to": {
+              "x": 28.444,
+              "z": -7.556
+            },
+            "drop": 2.841
+          },
+          {
+            "from": {
+              "x": 21.333,
+              "z": -7.556
+            },
+            "to": {
+              "x": 21.333,
+              "z": -3.778
+            },
+            "drop": 2.297
+          },
+          {
+            "from": {
+              "x": 28.444,
+              "z": 3.778
+            },
+            "to": {
+              "x": 28.444,
+              "z": 7.556
+            },
+            "drop": 1.456
+          },
+          {
+            "from": {
+              "x": 28.444,
+              "z": 7.556
+            },
+            "to": {
+              "x": 28.444,
+              "z": 11.333
+            },
+            "drop": 1.456
+          }
+        ],
+        "bounds": {
+          "minX": -32,
+          "maxX": 32,
+          "minZ": -17,
+          "maxZ": 17
+        }
+      },
+      "streaming": {
+        "samples": 5,
+        "settleFrames": 11,
+        "coverage": 1,
+        "gaps": [],
+        "thrashReloads": 0,
+        "maxActiveChunks": 9,
+        "uniqueChunks": 15,
+        "chunkSize": 32,
+        "renderDistance": 1
+      }
+    },
+    "rules": [
+      {
+        "id": "valley-ground",
+        "type": "entity_exists",
+        "pass": true,
+        "detail": "found \"Valley Ground\""
+      },
+      {
+        "id": "player-car",
+        "type": "entity_component",
+        "pass": true,
+        "detail": "Player Car components: [MeshRenderer, RigidBody3D, Collider3D, HealthComponent, VehicleController]"
+      },
+      {
+        "id": "sand-held",
+        "type": "biome_coverage_min",
+        "pass": true,
+        "detail": "biome 'sand': 5 live objects in region (min 2)"
+      },
+      {
+        "id": "grass-held",
+        "type": "biome_coverage_min",
+        "pass": true,
+        "detail": "biome 'grass': 10 live objects in region (min 2)"
+      },
+      {
+        "id": "valley-traversable",
+        "type": "traversal_coverage_min",
+        "pass": true,
+        "detail": "coverage=1 (min 0.8), holes=0, steep=11, stepHazards=37"
+      },
+      {
+        "id": "streaming-seamless",
+        "type": "streaming_coherence_min",
+        "pass": true,
+        "detail": "coverage=1 (min 1), gaps=0, thrashReloads=0, maxActive=9"
+      },
+      {
+        "id": "draw-budget",
+        "type": "draw_call_budget",
+        "pass": true,
+        "detail": "drawCallEstimate=18 (budget 100)"
+      },
+      {
+        "id": "sim-fps",
+        "type": "fps_min",
+        "pass": true,
+        "detail": "simFpsEstimate=4461.0 (min 30)"
+      }
+    ],
+    "passed": 8,
+    "total": 8,
+    "verdict": "SUCCEEDED",
+    "confidence": 1
+  },
+  "error": null,
+  "workScene": "/home/john/Projects/Android-Dev-Studio/harness/scenes/loop_work_scene.json"
+}

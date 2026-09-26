@@ -1,0 +1,818 @@
+{
+  "goal": "Urban Outskirts",
+  "rules": [
+    {
+      "type": "entity_exists",
+      "target": "Urban Ground",
+      "id": "urban-ground"
+    },
+    {
+      "type": "entity_component",
+      "target": "Player Car",
+      "component": "VehicleController",
+      "id": "player-car"
+    },
+    {
+      "type": "biome_coverage_min",
+      "biome": "downtown",
+      "min": 4,
+      "region": {
+        "minX": -15,
+        "maxX": 15,
+        "minZ": -25,
+        "maxZ": 25
+      },
+      "id": "downtown-held"
+    },
+    {
+      "type": "biome_coverage_min",
+      "biome": "suburbs",
+      "min": 3,
+      "region": {
+        "minX": -60,
+        "maxX": -15,
+        "minZ": -25,
+        "maxZ": 25
+      },
+      "id": "suburbs-held"
+    },
+    {
+      "type": "biome_coverage_min",
+      "biome": "park",
+      "min": 2,
+      "region": {
+        "minX": 15,
+        "maxX": 60,
+        "minZ": -25,
+        "maxZ": 25
+      },
+      "id": "park-held"
+    },
+    {
+      "type": "traversal_coverage_min",
+      "min": 0.8,
+      "id": "urban-traversable"
+    },
+    {
+      "type": "streaming_coherence_min",
+      "min": 1.0,
+      "id": "streaming-seamless"
+    },
+    {
+      "type": "draw_call_budget",
+      "max": 100,
+      "id": "draw-budget"
+    },
+    {
+      "type": "fps_min",
+      "min": 30,
+      "id": "sim-fps"
+    }
+  ],
+  "verdict": "green",
+  "iterations": [
+    {
+      "iteration": 1,
+      "phase": "generate",
+      "visionNotes": [],
+      "llm": {
+        "model": "mimo-v2.6-flash",
+        "promptTokens": 5715,
+        "completionTokens": 7183,
+        "totalTokens": 12898,
+        "latencySeconds": 114.145,
+        "finishReason": "stop",
+        "attempts": 1
+      },
+      "parse": {
+        "strategy": "raw",
+        "actionCount": 25,
+        "summary": "Urban outskirts scene with a streaming ground slab, vehicle-driven Player Car on a street grid, downtown towers, suburb houses and a park zone satisfying all biome coverage regions.",
+        "error": null
+      },
+      "apply": {
+        "applied": 25,
+        "targetMissing": 0,
+        "invalid": 0,
+        "failed": 0,
+        "outcomes": [
+          {
+            "index": 0,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Urban Ground (box) at [0.0, -0.5, 0.0]",
+            "target": "Urban Ground"
+          },
+          {
+            "index": 1,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Main Street (box) at [0.0, 0.06, 10.0]",
+            "target": "Main Street"
+          },
+          {
+            "index": 2,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Cross Street (box) at [0.0, 0.07, 0.0]",
+            "target": "Cross Street"
+          },
+          {
+            "index": 3,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Player Car (box) at [0.0, 0.7, 10.0]",
+            "target": "Player Car"
+          },
+          {
+            "index": 4,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Downtown Tower A (box) at [-11.0, 7.0, -14.0]",
+            "target": "Downtown Tower A"
+          },
+          {
+            "index": 5,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Downtown Tower B (box) at [11.0, 9.0, -16.0]",
+            "target": "Downtown Tower B"
+          },
+          {
+            "index": 6,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Downtown Block C (box) at [-12.0, 5.0, 0.0]",
+            "target": "Downtown Block C"
+          },
+          {
+            "index": 7,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Downtown Block D (box) at [12.0, 6.0, 0.0]",
+            "target": "Downtown Block D"
+          },
+          {
+            "index": 8,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Downtown Plaza (box) at [0.0, 0.3, -20.0]",
+            "target": "Downtown Plaza"
+          },
+          {
+            "index": 9,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Suburb House A (box) at [-25.0, 2.0, -8.0]",
+            "target": "Suburb House A"
+          },
+          {
+            "index": 10,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Suburb House B (box) at [-38.0, 2.0, 6.0]",
+            "target": "Suburb House B"
+          },
+          {
+            "index": 11,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Suburb House C (box) at [-52.0, 2.0, -10.0]",
+            "target": "Suburb House C"
+          },
+          {
+            "index": 12,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Suburb House D (box) at [-45.0, 2.0, -18.0]",
+            "target": "Suburb House D"
+          },
+          {
+            "index": 13,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Park Tree A (cylinder) at [26.0, 3.0, -5.0]",
+            "target": "Park Tree A"
+          },
+          {
+            "index": 14,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Park Tree B (cylinder) at [40.0, 3.5, 4.0]",
+            "target": "Park Tree B"
+          },
+          {
+            "index": 15,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Park Tree C (cylinder) at [52.0, 3.0, -14.0]",
+            "target": "Park Tree C"
+          },
+          {
+            "index": 16,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Park Pond (box) at [34.0, 0.2, 16.0]",
+            "target": "Park Pond"
+          },
+          {
+            "index": 17,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Park Canopy A (sphere) at [26.0, 7.0, -5.0]",
+            "target": "Park Canopy A"
+          },
+          {
+            "index": 18,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Park Canopy B (sphere) at [40.0, 8.0, 4.0]",
+            "target": "Park Canopy B"
+          },
+          {
+            "index": 19,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Park Canopy C (sphere) at [52.0, 7.0, -14.0]",
+            "target": "Park Canopy C"
+          },
+          {
+            "index": 20,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Streetlight A (cylinder) at [-20.0, 3.0, 5.6]",
+            "target": "Streetlight A"
+          },
+          {
+            "index": 21,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Streetlight B (cylinder) at [20.0, 3.0, 5.6]",
+            "target": "Streetlight B"
+          },
+          {
+            "index": 22,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Streetlight C (cylinder) at [0.0, 3.0, 15.6]",
+            "target": "Streetlight C"
+          },
+          {
+            "index": 23,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added directional light 'Sun' (intensity 1.6)",
+            "target": "Sun"
+          },
+          {
+            "index": 24,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added ambient light 'Ambient Sky' (intensity 0.6)",
+            "target": "Ambient Sky"
+          }
+        ],
+        "appliedDescriptions": [
+          "Spawned Urban Ground (box) at [0.0, -0.5, 0.0]",
+          "Spawned Main Street (box) at [0.0, 0.06, 10.0]",
+          "Spawned Cross Street (box) at [0.0, 0.07, 0.0]",
+          "Spawned Player Car (box) at [0.0, 0.7, 10.0]",
+          "Spawned Downtown Tower A (box) at [-11.0, 7.0, -14.0]",
+          "Spawned Downtown Tower B (box) at [11.0, 9.0, -16.0]",
+          "Spawned Downtown Block C (box) at [-12.0, 5.0, 0.0]",
+          "Spawned Downtown Block D (box) at [12.0, 6.0, 0.0]",
+          "Spawned Downtown Plaza (box) at [0.0, 0.3, -20.0]",
+          "Spawned Suburb House A (box) at [-25.0, 2.0, -8.0]",
+          "Spawned Suburb House B (box) at [-38.0, 2.0, 6.0]",
+          "Spawned Suburb House C (box) at [-52.0, 2.0, -10.0]",
+          "Spawned Suburb House D (box) at [-45.0, 2.0, -18.0]",
+          "Spawned Park Tree A (cylinder) at [26.0, 3.0, -5.0]",
+          "Spawned Park Tree B (cylinder) at [40.0, 3.5, 4.0]",
+          "Spawned Park Tree C (cylinder) at [52.0, 3.0, -14.0]",
+          "Spawned Park Pond (box) at [34.0, 0.2, 16.0]",
+          "Spawned Park Canopy A (sphere) at [26.0, 7.0, -5.0]",
+          "Spawned Park Canopy B (sphere) at [40.0, 8.0, 4.0]",
+          "Spawned Park Canopy C (sphere) at [52.0, 7.0, -14.0]",
+          "Spawned Streetlight A (cylinder) at [-20.0, 3.0, 5.6]",
+          "Spawned Streetlight B (cylinder) at [20.0, 3.0, 5.6]",
+          "Spawned Streetlight C (cylinder) at [0.0, 3.0, 15.6]",
+          "Added directional light 'Sun' (intensity 1.6)",
+          "Added ambient light 'Ambient Sky' (intensity 0.6)"
+        ]
+      },
+      "gate": {
+        "valid": true,
+        "violations": []
+      },
+      "qa": {
+        "verdict": "SUCCEEDED",
+        "passed": 9,
+        "total": 9,
+        "failedRules": [],
+        "metrics": {
+          "avgFrameTimeMs": 0.1978,
+          "p95FrameTimeMs": 0.296,
+          "maxFrameTimeMs": 36.4942,
+          "simFpsEstimate": 5055.5,
+          "drawCallEstimate": 23,
+          "instancedBatches": 0,
+          "memoryHeapMb": 18.1,
+          "objectCount": 50,
+          "physicsBodyCount": 18,
+          "eventCount": 0,
+          "traversal": {
+            "grid": 9,
+            "cells": 81,
+            "hits": 81,
+            "coverage": 1,
+            "holes": [],
+            "steep": [],
+            "stepHazards": [
+              {
+                "from": {
+                  "x": -57.778,
+                  "z": -20
+                },
+                "to": {
+                  "x": -43.333,
+                  "z": -20
+                },
+                "drop": 4
+              },
+              {
+                "from": {
+                  "x": -43.333,
+                  "z": -26.667
+                },
+                "to": {
+                  "x": -43.333,
+                  "z": -20
+                },
+                "drop": 4
+              },
+              {
+                "from": {
+                  "x": -43.333,
+                  "z": -20
+                },
+                "to": {
+                  "x": -28.889,
+                  "z": -20
+                },
+                "drop": 4
+              },
+              {
+                "from": {
+                  "x": -43.333,
+                  "z": -20
+                },
+                "to": {
+                  "x": -43.333,
+                  "z": -13.333
+                },
+                "drop": 4
+              },
+              {
+                "from": {
+                  "x": -28.889,
+                  "z": 0
+                },
+                "to": {
+                  "x": -14.444,
+                  "z": 0
+                },
+                "drop": 10
+              },
+              {
+                "from": {
+                  "x": -14.444,
+                  "z": -6.667
+                },
+                "to": {
+                  "x": -14.444,
+                  "z": 0
+                },
+                "drop": 10
+              },
+              {
+                "from": {
+                  "x": -14.444,
+                  "z": 0
+                },
+                "to": {
+                  "x": 0,
+                  "z": 0
+                },
+                "drop": 10
+              },
+              {
+                "from": {
+                  "x": -14.444,
+                  "z": 0
+                },
+                "to": {
+                  "x": -14.444,
+                  "z": 6.667
+                },
+                "drop": 10
+              },
+              {
+                "from": {
+                  "x": 0,
+                  "z": -13.333
+                },
+                "to": {
+                  "x": 14.444,
+                  "z": -13.333
+                },
+                "drop": 18
+              },
+              {
+                "from": {
+                  "x": 0,
+                  "z": 0
+                },
+                "to": {
+                  "x": 14.444,
+                  "z": 0
+                },
+                "drop": 12
+              },
+              {
+                "from": {
+                  "x": 14.444,
+                  "z": -20
+                },
+                "to": {
+                  "x": 14.444,
+                  "z": -13.333
+                },
+                "drop": 18
+              },
+              {
+                "from": {
+                  "x": 14.444,
+                  "z": -13.333
+                },
+                "to": {
+                  "x": 28.889,
+                  "z": -13.333
+                },
+                "drop": 18
+              },
+              {
+                "from": {
+                  "x": 14.444,
+                  "z": -13.333
+                },
+                "to": {
+                  "x": 14.444,
+                  "z": -6.667
+                },
+                "drop": 18
+              },
+              {
+                "from": {
+                  "x": 14.444,
+                  "z": -6.667
+                },
+                "to": {
+                  "x": 14.444,
+                  "z": 0
+                },
+                "drop": 12
+              },
+              {
+                "from": {
+                  "x": 14.444,
+                  "z": 0
+                },
+                "to": {
+                  "x": 28.889,
+                  "z": 0
+                },
+                "drop": 12
+              },
+              {
+                "from": {
+                  "x": 14.444,
+                  "z": 0
+                },
+                "to": {
+                  "x": 14.444,
+                  "z": 6.667
+                },
+                "drop": 12
+              }
+            ],
+            "bounds": {
+              "minX": -65,
+              "maxX": 65,
+              "minZ": -30,
+              "maxZ": 30
+            }
+          },
+          "streaming": {
+            "samples": 5,
+            "settleFrames": 27,
+            "coverage": 1,
+            "gaps": [],
+            "thrashReloads": 0,
+            "maxActiveChunks": 25,
+            "uniqueChunks": 70,
+            "chunkSize": 16,
+            "renderDistance": 2
+          }
+        }
+      }
+    }
+  ],
+  "totalTokens": 12898,
+  "totalLatencySeconds": 114.145,
+  "finalReport": {
+    "schemaVersion": 1,
+    "runner": "qa_scenario_runner.mjs",
+    "scenario": "loop_work_scene.json",
+    "goal": "Urban Outskirts",
+    "timestamp": 1790385557.723,
+    "frames": 600,
+    "fixedDeltaSeconds": 0.016666666666666666,
+    "metrics": {
+      "avgFrameTimeMs": 0.1978,
+      "p95FrameTimeMs": 0.296,
+      "maxFrameTimeMs": 36.4942,
+      "simFpsEstimate": 5055.5,
+      "drawCallEstimate": 23,
+      "instancedBatches": 0,
+      "memoryHeapMb": 18.1,
+      "objectCount": 50,
+      "physicsBodyCount": 18,
+      "eventCount": 0,
+      "traversal": {
+        "grid": 9,
+        "cells": 81,
+        "hits": 81,
+        "coverage": 1,
+        "holes": [],
+        "steep": [],
+        "stepHazards": [
+          {
+            "from": {
+              "x": -57.778,
+              "z": -20
+            },
+            "to": {
+              "x": -43.333,
+              "z": -20
+            },
+            "drop": 4
+          },
+          {
+            "from": {
+              "x": -43.333,
+              "z": -26.667
+            },
+            "to": {
+              "x": -43.333,
+              "z": -20
+            },
+            "drop": 4
+          },
+          {
+            "from": {
+              "x": -43.333,
+              "z": -20
+            },
+            "to": {
+              "x": -28.889,
+              "z": -20
+            },
+            "drop": 4
+          },
+          {
+            "from": {
+              "x": -43.333,
+              "z": -20
+            },
+            "to": {
+              "x": -43.333,
+              "z": -13.333
+            },
+            "drop": 4
+          },
+          {
+            "from": {
+              "x": -28.889,
+              "z": 0
+            },
+            "to": {
+              "x": -14.444,
+              "z": 0
+            },
+            "drop": 10
+          },
+          {
+            "from": {
+              "x": -14.444,
+              "z": -6.667
+            },
+            "to": {
+              "x": -14.444,
+              "z": 0
+            },
+            "drop": 10
+          },
+          {
+            "from": {
+              "x": -14.444,
+              "z": 0
+            },
+            "to": {
+              "x": 0,
+              "z": 0
+            },
+            "drop": 10
+          },
+          {
+            "from": {
+              "x": -14.444,
+              "z": 0
+            },
+            "to": {
+              "x": -14.444,
+              "z": 6.667
+            },
+            "drop": 10
+          },
+          {
+            "from": {
+              "x": 0,
+              "z": -13.333
+            },
+            "to": {
+              "x": 14.444,
+              "z": -13.333
+            },
+            "drop": 18
+          },
+          {
+            "from": {
+              "x": 0,
+              "z": 0
+            },
+            "to": {
+              "x": 14.444,
+              "z": 0
+            },
+            "drop": 12
+          },
+          {
+            "from": {
+              "x": 14.444,
+              "z": -20
+            },
+            "to": {
+              "x": 14.444,
+              "z": -13.333
+            },
+            "drop": 18
+          },
+          {
+            "from": {
+              "x": 14.444,
+              "z": -13.333
+            },
+            "to": {
+              "x": 28.889,
+              "z": -13.333
+            },
+            "drop": 18
+          },
+          {
+            "from": {
+              "x": 14.444,
+              "z": -13.333
+            },
+            "to": {
+              "x": 14.444,
+              "z": -6.667
+            },
+            "drop": 18
+          },
+          {
+            "from": {
+              "x": 14.444,
+              "z": -6.667
+            },
+            "to": {
+              "x": 14.444,
+              "z": 0
+            },
+            "drop": 12
+          },
+          {
+            "from": {
+              "x": 14.444,
+              "z": 0
+            },
+            "to": {
+              "x": 28.889,
+              "z": 0
+            },
+            "drop": 12
+          },
+          {
+            "from": {
+              "x": 14.444,
+              "z": 0
+            },
+            "to": {
+              "x": 14.444,
+              "z": 6.667
+            },
+            "drop": 12
+          }
+        ],
+        "bounds": {
+          "minX": -65,
+          "maxX": 65,
+          "minZ": -30,
+          "maxZ": 30
+        }
+      },
+      "streaming": {
+        "samples": 5,
+        "settleFrames": 27,
+        "coverage": 1,
+        "gaps": [],
+        "thrashReloads": 0,
+        "maxActiveChunks": 25,
+        "uniqueChunks": 70,
+        "chunkSize": 16,
+        "renderDistance": 2
+      }
+    },
+    "rules": [
+      {
+        "id": "urban-ground",
+        "type": "entity_exists",
+        "pass": true,
+        "detail": "found \"Urban Ground\""
+      },
+      {
+        "id": "player-car",
+        "type": "entity_component",
+        "pass": true,
+        "detail": "Player Car components: [MeshRenderer, RigidBody3D, Collider3D, VehicleController]"
+      },
+      {
+        "id": "downtown-held",
+        "type": "biome_coverage_min",
+        "pass": true,
+        "detail": "biome 'downtown': 5 live objects in region (min 4)"
+      },
+      {
+        "id": "suburbs-held",
+        "type": "biome_coverage_min",
+        "pass": true,
+        "detail": "biome 'suburbs': 4 live objects in region (min 3)"
+      },
+      {
+        "id": "park-held",
+        "type": "biome_coverage_min",
+        "pass": true,
+        "detail": "biome 'park': 4 live objects in region (min 2)"
+      },
+      {
+        "id": "urban-traversable",
+        "type": "traversal_coverage_min",
+        "pass": true,
+        "detail": "coverage=1 (min 0.8), holes=0, steep=0, stepHazards=16"
+      },
+      {
+        "id": "streaming-seamless",
+        "type": "streaming_coherence_min",
+        "pass": true,
+        "detail": "coverage=1 (min 1), gaps=0, thrashReloads=0, maxActive=25"
+      },
+      {
+        "id": "draw-budget",
+        "type": "draw_call_budget",
+        "pass": true,
+        "detail": "drawCallEstimate=23 (budget 100)"
+      },
+      {
+        "id": "sim-fps",
+        "type": "fps_min",
+        "pass": true,
+        "detail": "simFpsEstimate=5055.5 (min 30)"
+      }
+    ],
+    "passed": 9,
+    "total": 9,
+    "verdict": "SUCCEEDED",
+    "confidence": 1
+  },
+  "error": null,
+  "workScene": "/home/john/Projects/Android-Dev-Studio/harness/scenes/loop_work_scene.json"
+}

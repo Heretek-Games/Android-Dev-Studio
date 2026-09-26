@@ -1,0 +1,375 @@
+{
+  "goal": "Arena Defense",
+  "rules": [
+    {
+      "type": "entity_exists",
+      "target": "Ground Arena",
+      "id": "arena-ground"
+    },
+    {
+      "type": "entity_component",
+      "target": "Player Hero",
+      "component": "MobileController",
+      "id": "player-hero"
+    },
+    {
+      "type": "entity_component",
+      "target": "Player Hero",
+      "component": "WeaponController",
+      "id": "hero-armed"
+    },
+    {
+      "type": "entity_component",
+      "target": "Player Hero",
+      "component": "HealthComponent",
+      "id": "hero-tough"
+    },
+    {
+      "type": "game_enemy_chase_min",
+      "min": 0.5,
+      "id": "enemies-chase"
+    },
+    {
+      "type": "game_kills_min",
+      "min": 2,
+      "id": "kills-scored"
+    },
+    {
+      "type": "game_score_min",
+      "min": 200,
+      "id": "score-awarded"
+    },
+    {
+      "type": "game_wave_reached",
+      "wave": 2,
+      "id": "wave-advanced"
+    },
+    {
+      "type": "game_phase",
+      "phase": "won",
+      "id": "run-won"
+    },
+    {
+      "type": "draw_call_budget",
+      "max": 100,
+      "id": "draw-budget"
+    },
+    {
+      "type": "fps_min",
+      "min": 30,
+      "id": "sim-fps"
+    }
+  ],
+  "verdict": "unresolved",
+  "iterations": [
+    {
+      "iteration": 1,
+      "phase": "generate",
+      "visionNotes": [],
+      "llm": {
+        "model": "mimo-v2.6-flash",
+        "promptTokens": 5117,
+        "completionTokens": 3205,
+        "totalTokens": 8322,
+        "latencySeconds": 55.492,
+        "finishReason": "stop",
+        "attempts": 1
+      },
+      "parse": {
+        "strategy": "raw",
+        "actionCount": 17,
+        "summary": "A compact arena-defense scene: 'Ground Arena' slab with walls and pillars, a cel-shaded 'Player Hero' (MobileController + WeaponController + HealthComponent), two chasing raiders, and a 2-wave GameRuntime configured for 4 kills and 400+ points.",
+        "error": null
+      },
+      "apply": {
+        "applied": 16,
+        "targetMissing": 0,
+        "invalid": 1,
+        "failed": 0,
+        "outcomes": [
+          {
+            "index": 0,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Ground Arena (box) at [0.0, 0.0, 0.0]",
+            "target": "Ground Arena"
+          },
+          {
+            "index": 1,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned North Wall (box) at [0.0, 2.0, -19.5]",
+            "target": "North Wall"
+          },
+          {
+            "index": 2,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned South Wall (box) at [0.0, 2.0, 19.5]",
+            "target": "South Wall"
+          },
+          {
+            "index": 3,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned East Wall (box) at [19.5, 2.0, 0.0]",
+            "target": "East Wall"
+          },
+          {
+            "index": 4,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned West Wall (box) at [-19.5, 2.0, 0.0]",
+            "target": "West Wall"
+          },
+          {
+            "index": 5,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Pillar NE (cylinder) at [10.0, 2.5, -10.0]",
+            "target": "Pillar NE"
+          },
+          {
+            "index": 6,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Pillar NW (cylinder) at [-10.0, 2.5, -10.0]",
+            "target": "Pillar NW"
+          },
+          {
+            "index": 7,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Pillar SE (cylinder) at [10.0, 2.5, 10.0]",
+            "target": "Pillar SE"
+          },
+          {
+            "index": 8,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Pillar SW (cylinder) at [-10.0, 2.5, 10.0]",
+            "target": "Pillar SW"
+          },
+          {
+            "index": 9,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Player Hero (capsule) at [0.0, 1.35, 0.0]",
+            "target": "Player Hero"
+          },
+          {
+            "index": 10,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Raider A (capsule) at [7.0, 1.35, -7.0]",
+            "target": "Raider A"
+          },
+          {
+            "index": 11,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Raider B (capsule) at [-7.0, 1.35, 7.0]",
+            "target": "Raider B"
+          },
+          {
+            "index": 12,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Ember Brazier (box) at [10.0, 0.9, 10.0]",
+            "target": "Ember Brazier"
+          },
+          {
+            "index": 13,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added directional light 'Sun Key' (intensity 1.6)",
+            "target": "Sun Key"
+          },
+          {
+            "index": 14,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added ambient light 'Arena Ambient' (intensity 0.6)",
+            "target": "Arena Ambient"
+          },
+          {
+            "index": 15,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added point light 'Brazier Glow' (intensity 1.4)",
+            "target": "Brazier Glow"
+          },
+          {
+            "index": 16,
+            "type": "game",
+            "status": "invalid",
+            "detail": "game config rejected \u2014 unknown game enemy key 'name' (allowed: shape, color, size, y, health, ai, elemental)"
+          }
+        ],
+        "appliedDescriptions": [
+          "Spawned Ground Arena (box) at [0.0, 0.0, 0.0]",
+          "Spawned North Wall (box) at [0.0, 2.0, -19.5]",
+          "Spawned South Wall (box) at [0.0, 2.0, 19.5]",
+          "Spawned East Wall (box) at [19.5, 2.0, 0.0]",
+          "Spawned West Wall (box) at [-19.5, 2.0, 0.0]",
+          "Spawned Pillar NE (cylinder) at [10.0, 2.5, -10.0]",
+          "Spawned Pillar NW (cylinder) at [-10.0, 2.5, -10.0]",
+          "Spawned Pillar SE (cylinder) at [10.0, 2.5, 10.0]",
+          "Spawned Pillar SW (cylinder) at [-10.0, 2.5, 10.0]",
+          "Spawned Player Hero (capsule) at [0.0, 1.35, 0.0]",
+          "Spawned Raider A (capsule) at [7.0, 1.35, -7.0]",
+          "Spawned Raider B (capsule) at [-7.0, 1.35, 7.0]",
+          "Spawned Ember Brazier (box) at [10.0, 0.9, 10.0]",
+          "Added directional light 'Sun Key' (intensity 1.6)",
+          "Added ambient light 'Arena Ambient' (intensity 0.6)",
+          "Added point light 'Brazier Glow' (intensity 1.4)"
+        ]
+      },
+      "gate": {
+        "valid": true,
+        "violations": []
+      },
+      "qa": {
+        "verdict": "FAILED",
+        "passed": 6,
+        "total": 11,
+        "failedRules": [
+          {
+            "id": "enemies-chase",
+            "type": "game_enemy_chase_min",
+            "detail": "no game config in scenario"
+          },
+          {
+            "id": "kills-scored",
+            "type": "game_kills_min",
+            "detail": "no game config in scenario"
+          },
+          {
+            "id": "score-awarded",
+            "type": "game_score_min",
+            "detail": "no game config in scenario"
+          },
+          {
+            "id": "wave-advanced",
+            "type": "game_wave_reached",
+            "detail": "no game config in scenario"
+          },
+          {
+            "id": "run-won",
+            "type": "game_phase",
+            "detail": "no game config in scenario"
+          }
+        ],
+        "metrics": {
+          "avgFrameTimeMs": 0.2027,
+          "p95FrameTimeMs": 0.3698,
+          "maxFrameTimeMs": 37.2667,
+          "simFpsEstimate": 4934.14,
+          "drawCallEstimate": 13,
+          "instancedBatches": 0,
+          "memoryHeapMb": 16.66,
+          "objectCount": 16,
+          "physicsBodyCount": 11,
+          "eventCount": 0
+        }
+      }
+    }
+  ],
+  "totalTokens": 8322,
+  "totalLatencySeconds": 55.492,
+  "finalReport": {
+    "schemaVersion": 1,
+    "runner": "qa_scenario_runner.mjs",
+    "scenario": "loop_work_scene.json",
+    "goal": "Arena Defense",
+    "timestamp": 1790383029.245,
+    "frames": 600,
+    "fixedDeltaSeconds": 0.016666666666666666,
+    "metrics": {
+      "avgFrameTimeMs": 0.2027,
+      "p95FrameTimeMs": 0.3698,
+      "maxFrameTimeMs": 37.2667,
+      "simFpsEstimate": 4934.14,
+      "drawCallEstimate": 13,
+      "instancedBatches": 0,
+      "memoryHeapMb": 16.66,
+      "objectCount": 16,
+      "physicsBodyCount": 11,
+      "eventCount": 0
+    },
+    "rules": [
+      {
+        "id": "arena-ground",
+        "type": "entity_exists",
+        "pass": true,
+        "detail": "found \"Ground Arena\""
+      },
+      {
+        "id": "player-hero",
+        "type": "entity_component",
+        "pass": true,
+        "detail": "Player Hero components: [MeshRenderer, RigidBody3D, Collider3D, MobileController, WeaponController, AnimeCelShader, HealthComponent]"
+      },
+      {
+        "id": "hero-armed",
+        "type": "entity_component",
+        "pass": true,
+        "detail": "Player Hero components: [MeshRenderer, RigidBody3D, Collider3D, MobileController, WeaponController, AnimeCelShader, HealthComponent]"
+      },
+      {
+        "id": "hero-tough",
+        "type": "entity_component",
+        "pass": true,
+        "detail": "Player Hero components: [MeshRenderer, RigidBody3D, Collider3D, MobileController, WeaponController, AnimeCelShader, HealthComponent]"
+      },
+      {
+        "id": "enemies-chase",
+        "type": "game_enemy_chase_min",
+        "pass": false,
+        "detail": "no game config in scenario"
+      },
+      {
+        "id": "kills-scored",
+        "type": "game_kills_min",
+        "pass": false,
+        "detail": "no game config in scenario"
+      },
+      {
+        "id": "score-awarded",
+        "type": "game_score_min",
+        "pass": false,
+        "detail": "no game config in scenario"
+      },
+      {
+        "id": "wave-advanced",
+        "type": "game_wave_reached",
+        "pass": false,
+        "detail": "no game config in scenario"
+      },
+      {
+        "id": "run-won",
+        "type": "game_phase",
+        "pass": false,
+        "detail": "no game config in scenario"
+      },
+      {
+        "id": "draw-budget",
+        "type": "draw_call_budget",
+        "pass": true,
+        "detail": "drawCallEstimate=13 (budget 100)"
+      },
+      {
+        "id": "sim-fps",
+        "type": "fps_min",
+        "pass": true,
+        "detail": "simFpsEstimate=4934.1 (min 30)"
+      }
+    ],
+    "passed": 6,
+    "total": 11,
+    "verdict": "FAILED",
+    "confidence": 0.545
+  },
+  "error": null,
+  "workScene": "/home/john/Projects/Android-Dev-Studio/harness/scenes/loop_work_scene.json"
+}

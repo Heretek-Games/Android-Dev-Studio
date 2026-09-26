@@ -1,0 +1,619 @@
+{
+  "goal": "Drivable Collection Island",
+  "rules": [
+    {
+      "type": "entity_exists",
+      "target": "Island Ground",
+      "id": "island-ground"
+    },
+    {
+      "type": "entity_component",
+      "target": "Player Car",
+      "component": "VehicleController",
+      "id": "player-car"
+    },
+    {
+      "type": "object_count",
+      "min": 8,
+      "max": 40,
+      "id": "buoy-field"
+    },
+    {
+      "type": "event_attached",
+      "target": "Buoy 1",
+      "action": "RotateY",
+      "id": "buoys-spin"
+    },
+    {
+      "type": "traversal_coverage_min",
+      "min": 0.8,
+      "id": "island-traversable"
+    },
+    {
+      "type": "draw_call_budget",
+      "max": 100,
+      "id": "draw-budget"
+    },
+    {
+      "type": "fps_min",
+      "min": 30,
+      "id": "sim-fps"
+    }
+  ],
+  "verdict": "green",
+  "iterations": [
+    {
+      "iteration": 1,
+      "phase": "generate",
+      "visionNotes": [],
+      "llm": {
+        "model": "mimo-v2.6-flash",
+        "promptTokens": 5326,
+        "completionTokens": 3767,
+        "totalTokens": 9093,
+        "latencySeconds": 75.295,
+        "finishReason": "stop",
+        "attempts": 1
+      },
+      "parse": {
+        "strategy": "raw",
+        "actionCount": 19,
+        "summary": "A compact drivable sand-rim island with a VehicleController player car, fixed collidable ground, palms, rocks, a dock, a ramp, and an event-driven Buoy 1 on a water pad.",
+        "error": null
+      },
+      "apply": {
+        "applied": 19,
+        "targetMissing": 0,
+        "invalid": 0,
+        "failed": 0,
+        "outcomes": [
+          {
+            "index": 0,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Island Ground (box) at [0.0, 0.0, 0.0]",
+            "target": "Island Ground"
+          },
+          {
+            "index": 1,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Player Car (box) at [0.0, 0.95, -8.0]",
+            "target": "Player Car"
+          },
+          {
+            "index": 2,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Buoy 1 (cylinder) at [10.0, 1.3, 10.0]",
+            "target": "Buoy 1"
+          },
+          {
+            "index": 3,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Water Pad (box) at [10.0, 0.55, 10.0]",
+            "target": "Water Pad"
+          },
+          {
+            "index": 4,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Palm Trunk 1 (cylinder) at [8.0, 2.5, -6.0]",
+            "target": "Palm Trunk 1"
+          },
+          {
+            "index": 5,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Palm Canopy 1 (sphere) at [8.0, 4.8, -6.0]",
+            "target": "Palm Canopy 1"
+          },
+          {
+            "index": 6,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Palm Trunk 2 (cylinder) at [-10.0, 2.5, 2.0]",
+            "target": "Palm Trunk 2"
+          },
+          {
+            "index": 7,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Palm Canopy 2 (sphere) at [-10.0, 4.8, 2.0]",
+            "target": "Palm Canopy 2"
+          },
+          {
+            "index": 8,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Palm Trunk 3 (cylinder) at [4.0, 2.2, 14.0]",
+            "target": "Palm Trunk 3"
+          },
+          {
+            "index": 9,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Palm Canopy 3 (sphere) at [4.0, 4.2, 14.0]",
+            "target": "Palm Canopy 3"
+          },
+          {
+            "index": 10,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Rock 1 (sphere) at [6.0, 1.1, 4.0]",
+            "target": "Rock 1"
+          },
+          {
+            "index": 11,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Rock 2 (sphere) at [-6.0, 1.05, -4.0]",
+            "target": "Rock 2"
+          },
+          {
+            "index": 12,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Rock 3 (sphere) at [-9.0, 1.25, 9.0]",
+            "target": "Rock 3"
+          },
+          {
+            "index": 13,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Dock Plank (box) at [0.0, 0.7, 17.0]",
+            "target": "Dock Plank"
+          },
+          {
+            "index": 14,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Ramp (box) at [0.0, 0.8, -2.0]",
+            "target": "Ramp"
+          },
+          {
+            "index": 15,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Beach Crate (box) at [-3.0, 1.25, 6.0]",
+            "target": "Beach Crate"
+          },
+          {
+            "index": 16,
+            "type": "event",
+            "status": "applied",
+            "detail": "Wired Timer -> RotateY on Buoy 1",
+            "target": "Buoy 1"
+          },
+          {
+            "index": 17,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added directional light 'Sun' (intensity 2.2)",
+            "target": "Sun"
+          },
+          {
+            "index": 18,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added ambient light 'Island Fill' (intensity 0.5)",
+            "target": "Island Fill"
+          }
+        ],
+        "appliedDescriptions": [
+          "Spawned Island Ground (box) at [0.0, 0.0, 0.0]",
+          "Spawned Player Car (box) at [0.0, 0.95, -8.0]",
+          "Spawned Buoy 1 (cylinder) at [10.0, 1.3, 10.0]",
+          "Spawned Water Pad (box) at [10.0, 0.55, 10.0]",
+          "Spawned Palm Trunk 1 (cylinder) at [8.0, 2.5, -6.0]",
+          "Spawned Palm Canopy 1 (sphere) at [8.0, 4.8, -6.0]",
+          "Spawned Palm Trunk 2 (cylinder) at [-10.0, 2.5, 2.0]",
+          "Spawned Palm Canopy 2 (sphere) at [-10.0, 4.8, 2.0]",
+          "Spawned Palm Trunk 3 (cylinder) at [4.0, 2.2, 14.0]",
+          "Spawned Palm Canopy 3 (sphere) at [4.0, 4.2, 14.0]",
+          "Spawned Rock 1 (sphere) at [6.0, 1.1, 4.0]",
+          "Spawned Rock 2 (sphere) at [-6.0, 1.05, -4.0]",
+          "Spawned Rock 3 (sphere) at [-9.0, 1.25, 9.0]",
+          "Spawned Dock Plank (box) at [0.0, 0.7, 17.0]",
+          "Spawned Ramp (box) at [0.0, 0.8, -2.0]",
+          "Spawned Beach Crate (box) at [-3.0, 1.25, 6.0]",
+          "Wired Timer -> RotateY on Buoy 1",
+          "Added directional light 'Sun' (intensity 2.2)",
+          "Added ambient light 'Island Fill' (intensity 0.5)"
+        ]
+      },
+      "gate": {
+        "valid": true,
+        "violations": []
+      },
+      "qa": {
+        "verdict": "SUCCEEDED",
+        "passed": 7,
+        "total": 7,
+        "failedRules": [],
+        "metrics": {
+          "avgFrameTimeMs": 0.2234,
+          "p95FrameTimeMs": 0.3265,
+          "maxFrameTimeMs": 36.6451,
+          "simFpsEstimate": 4475.5,
+          "drawCallEstimate": 16,
+          "instancedBatches": 0,
+          "memoryHeapMb": 16.49,
+          "objectCount": 18,
+          "physicsBodyCount": 16,
+          "eventCount": 1,
+          "traversal": {
+            "grid": 9,
+            "cells": 81,
+            "hits": 81,
+            "coverage": 1,
+            "holes": [],
+            "steep": [],
+            "stepHazards": [
+              {
+                "from": {
+                  "x": -13.333,
+                  "z": 8.889
+                },
+                "to": {
+                  "x": -8.889,
+                  "z": 8.889
+                },
+                "drop": 1.738
+              },
+              {
+                "from": {
+                  "x": -8.889,
+                  "z": 4.444
+                },
+                "to": {
+                  "x": -8.889,
+                  "z": 8.889
+                },
+                "drop": 1.738
+              },
+              {
+                "from": {
+                  "x": -8.889,
+                  "z": 8.889
+                },
+                "to": {
+                  "x": -4.444,
+                  "z": 8.889
+                },
+                "drop": 1.738
+              },
+              {
+                "from": {
+                  "x": -8.889,
+                  "z": 8.889
+                },
+                "to": {
+                  "x": -8.889,
+                  "z": 13.333
+                },
+                "drop": 1.738
+              },
+              {
+                "from": {
+                  "x": -4.444,
+                  "z": -8.889
+                },
+                "to": {
+                  "x": 0,
+                  "z": -8.889
+                },
+                "drop": 1.219
+              },
+              {
+                "from": {
+                  "x": 0,
+                  "z": -13.333
+                },
+                "to": {
+                  "x": 0,
+                  "z": -8.889
+                },
+                "drop": 1.219
+              },
+              {
+                "from": {
+                  "x": 0,
+                  "z": -8.889
+                },
+                "to": {
+                  "x": 4.444,
+                  "z": -8.889
+                },
+                "drop": 1.219
+              },
+              {
+                "from": {
+                  "x": 0,
+                  "z": -8.889
+                },
+                "to": {
+                  "x": 0,
+                  "z": -4.444
+                },
+                "drop": 1.219
+              },
+              {
+                "from": {
+                  "x": 0,
+                  "z": 13.333
+                },
+                "to": {
+                  "x": 4.444,
+                  "z": 13.333
+                },
+                "drop": 4.848
+              },
+              {
+                "from": {
+                  "x": 4.444,
+                  "z": 8.889
+                },
+                "to": {
+                  "x": 4.444,
+                  "z": 13.333
+                },
+                "drop": 4.848
+              },
+              {
+                "from": {
+                  "x": 4.444,
+                  "z": 13.333
+                },
+                "to": {
+                  "x": 8.889,
+                  "z": 13.333
+                },
+                "drop": 4.848
+              },
+              {
+                "from": {
+                  "x": 4.444,
+                  "z": 13.333
+                },
+                "to": {
+                  "x": 4.444,
+                  "z": 17.778
+                },
+                "drop": 4.848
+              }
+            ],
+            "bounds": {
+              "minX": -20,
+              "maxX": 20,
+              "minZ": -20,
+              "maxZ": 20
+            }
+          }
+        }
+      }
+    }
+  ],
+  "totalTokens": 9093,
+  "totalLatencySeconds": 75.295,
+  "finalReport": {
+    "schemaVersion": 1,
+    "runner": "qa_scenario_runner.mjs",
+    "scenario": "loop_work_scene.json",
+    "goal": "Drivable Collection Island",
+    "timestamp": 1790384546.789,
+    "frames": 600,
+    "fixedDeltaSeconds": 0.016666666666666666,
+    "metrics": {
+      "avgFrameTimeMs": 0.2234,
+      "p95FrameTimeMs": 0.3265,
+      "maxFrameTimeMs": 36.6451,
+      "simFpsEstimate": 4475.5,
+      "drawCallEstimate": 16,
+      "instancedBatches": 0,
+      "memoryHeapMb": 16.49,
+      "objectCount": 18,
+      "physicsBodyCount": 16,
+      "eventCount": 1,
+      "traversal": {
+        "grid": 9,
+        "cells": 81,
+        "hits": 81,
+        "coverage": 1,
+        "holes": [],
+        "steep": [],
+        "stepHazards": [
+          {
+            "from": {
+              "x": -13.333,
+              "z": 8.889
+            },
+            "to": {
+              "x": -8.889,
+              "z": 8.889
+            },
+            "drop": 1.738
+          },
+          {
+            "from": {
+              "x": -8.889,
+              "z": 4.444
+            },
+            "to": {
+              "x": -8.889,
+              "z": 8.889
+            },
+            "drop": 1.738
+          },
+          {
+            "from": {
+              "x": -8.889,
+              "z": 8.889
+            },
+            "to": {
+              "x": -4.444,
+              "z": 8.889
+            },
+            "drop": 1.738
+          },
+          {
+            "from": {
+              "x": -8.889,
+              "z": 8.889
+            },
+            "to": {
+              "x": -8.889,
+              "z": 13.333
+            },
+            "drop": 1.738
+          },
+          {
+            "from": {
+              "x": -4.444,
+              "z": -8.889
+            },
+            "to": {
+              "x": 0,
+              "z": -8.889
+            },
+            "drop": 1.219
+          },
+          {
+            "from": {
+              "x": 0,
+              "z": -13.333
+            },
+            "to": {
+              "x": 0,
+              "z": -8.889
+            },
+            "drop": 1.219
+          },
+          {
+            "from": {
+              "x": 0,
+              "z": -8.889
+            },
+            "to": {
+              "x": 4.444,
+              "z": -8.889
+            },
+            "drop": 1.219
+          },
+          {
+            "from": {
+              "x": 0,
+              "z": -8.889
+            },
+            "to": {
+              "x": 0,
+              "z": -4.444
+            },
+            "drop": 1.219
+          },
+          {
+            "from": {
+              "x": 0,
+              "z": 13.333
+            },
+            "to": {
+              "x": 4.444,
+              "z": 13.333
+            },
+            "drop": 4.848
+          },
+          {
+            "from": {
+              "x": 4.444,
+              "z": 8.889
+            },
+            "to": {
+              "x": 4.444,
+              "z": 13.333
+            },
+            "drop": 4.848
+          },
+          {
+            "from": {
+              "x": 4.444,
+              "z": 13.333
+            },
+            "to": {
+              "x": 8.889,
+              "z": 13.333
+            },
+            "drop": 4.848
+          },
+          {
+            "from": {
+              "x": 4.444,
+              "z": 13.333
+            },
+            "to": {
+              "x": 4.444,
+              "z": 17.778
+            },
+            "drop": 4.848
+          }
+        ],
+        "bounds": {
+          "minX": -20,
+          "maxX": 20,
+          "minZ": -20,
+          "maxZ": 20
+        }
+      }
+    },
+    "rules": [
+      {
+        "id": "island-ground",
+        "type": "entity_exists",
+        "pass": true,
+        "detail": "found \"Island Ground\""
+      },
+      {
+        "id": "player-car",
+        "type": "entity_component",
+        "pass": true,
+        "detail": "Player Car components: [MeshRenderer, RigidBody3D, Collider3D, MobileController, VehicleController]"
+      },
+      {
+        "id": "buoy-field",
+        "type": "object_count",
+        "pass": true,
+        "detail": "objectCount=18 (min=8 max=40)"
+      },
+      {
+        "id": "buoys-spin",
+        "type": "event_attached",
+        "pass": true,
+        "detail": "actions: [RotateY]"
+      },
+      {
+        "id": "island-traversable",
+        "type": "traversal_coverage_min",
+        "pass": true,
+        "detail": "coverage=1 (min 0.8), holes=0, steep=0, stepHazards=12"
+      },
+      {
+        "id": "draw-budget",
+        "type": "draw_call_budget",
+        "pass": true,
+        "detail": "drawCallEstimate=16 (budget 100)"
+      },
+      {
+        "id": "sim-fps",
+        "type": "fps_min",
+        "pass": true,
+        "detail": "simFpsEstimate=4475.5 (min 30)"
+      }
+    ],
+    "passed": 7,
+    "total": 7,
+    "verdict": "SUCCEEDED",
+    "confidence": 1
+  },
+  "error": null,
+  "workScene": "/home/john/Projects/Android-Dev-Studio/harness/scenes/loop_work_scene.json"
+}

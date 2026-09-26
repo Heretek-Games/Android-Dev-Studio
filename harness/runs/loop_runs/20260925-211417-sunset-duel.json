@@ -1,0 +1,279 @@
+{
+  "goal": "Sunset Duel",
+  "rules": [
+    {
+      "type": "entity_exists",
+      "target": "Duel Ring",
+      "id": "ring-floor"
+    },
+    {
+      "type": "entity_component",
+      "target": "Duelist Hero",
+      "component": "AnimeCelShader",
+      "id": "hero-shaded"
+    },
+    {
+      "type": "entity_component",
+      "target": "Duelist Rival",
+      "component": "AnimeCelShader",
+      "id": "rival-shaded"
+    },
+    {
+      "type": "distance_traveled",
+      "target": "Duelist Rival",
+      "min": 0.5,
+      "id": "rival-chases"
+    },
+    {
+      "type": "game_phase",
+      "phase": "won",
+      "id": "round-won"
+    },
+    {
+      "type": "draw_call_budget",
+      "max": 100,
+      "id": "draw-budget"
+    },
+    {
+      "type": "fps_min",
+      "min": 30,
+      "id": "sim-fps"
+    }
+  ],
+  "verdict": "unresolved",
+  "iterations": [
+    {
+      "iteration": 1,
+      "phase": "generate",
+      "visionNotes": [],
+      "llm": {
+        "model": "mimo-v2.6-flash",
+        "promptTokens": 5474,
+        "completionTokens": 4527,
+        "totalTokens": 10001,
+        "latencySeconds": 91.758,
+        "finishReason": "stop",
+        "attempts": 1
+      },
+      "parse": {
+        "strategy": "raw",
+        "actionCount": 13,
+        "summary": "A sunset duel arena with a 'Duel Ring' cylinder floor, cel-shaded hero and chasing rival, corner pillars, sunset lighting, and a wave game runtime that resolves to a won phase.",
+        "error": null
+      },
+      "apply": {
+        "applied": 12,
+        "targetMissing": 0,
+        "invalid": 1,
+        "failed": 0,
+        "outcomes": [
+          {
+            "index": 0,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Arena Ground (box) at [0.0, -0.5, 0.0]",
+            "target": "Arena Ground"
+          },
+          {
+            "index": 1,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Duel Ring (cylinder) at [0.0, 0.1, 0.0]",
+            "target": "Duel Ring"
+          },
+          {
+            "index": 2,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Pillar NE (box) at [8.5, 1.5, 8.5]",
+            "target": "Pillar NE"
+          },
+          {
+            "index": 3,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Pillar NW (box) at [-8.5, 1.5, 8.5]",
+            "target": "Pillar NW"
+          },
+          {
+            "index": 4,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Pillar SE (box) at [8.5, 1.5, -8.5]",
+            "target": "Pillar SE"
+          },
+          {
+            "index": 5,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Pillar SW (box) at [-8.5, 1.5, -8.5]",
+            "target": "Pillar SW"
+          },
+          {
+            "index": 6,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Sunset Banner (box) at [-8.5, 4.4, 8.5]",
+            "target": "Sunset Banner"
+          },
+          {
+            "index": 7,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Duelist Hero (box) at [0.0, 1.2, -3.0]",
+            "target": "Duelist Hero"
+          },
+          {
+            "index": 8,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Duelist Rival (box) at [0.0, 1.2, 3.0]",
+            "target": "Duelist Rival"
+          },
+          {
+            "index": 9,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added directional light 'Sunset Key' (intensity 2.2)",
+            "target": "Sunset Key"
+          },
+          {
+            "index": 10,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added ambient light 'Dusk Fill' (intensity 0.7)",
+            "target": "Dusk Fill"
+          },
+          {
+            "index": 11,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added point light 'Ring Torch' (intensity 1.4)",
+            "target": "Ring Torch"
+          },
+          {
+            "index": 12,
+            "type": "game",
+            "status": "invalid",
+            "detail": "game config rejected \u2014 game enemy 'health' must be an object"
+          }
+        ],
+        "appliedDescriptions": [
+          "Spawned Arena Ground (box) at [0.0, -0.5, 0.0]",
+          "Spawned Duel Ring (cylinder) at [0.0, 0.1, 0.0]",
+          "Spawned Pillar NE (box) at [8.5, 1.5, 8.5]",
+          "Spawned Pillar NW (box) at [-8.5, 1.5, 8.5]",
+          "Spawned Pillar SE (box) at [8.5, 1.5, -8.5]",
+          "Spawned Pillar SW (box) at [-8.5, 1.5, -8.5]",
+          "Spawned Sunset Banner (box) at [-8.5, 4.4, 8.5]",
+          "Spawned Duelist Hero (box) at [0.0, 1.2, -3.0]",
+          "Spawned Duelist Rival (box) at [0.0, 1.2, 3.0]",
+          "Added directional light 'Sunset Key' (intensity 2.2)",
+          "Added ambient light 'Dusk Fill' (intensity 0.7)",
+          "Added point light 'Ring Torch' (intensity 1.4)"
+        ]
+      },
+      "gate": {
+        "valid": true,
+        "violations": []
+      },
+      "qa": {
+        "verdict": "FAILED",
+        "passed": 6,
+        "total": 7,
+        "failedRules": [
+          {
+            "id": "round-won",
+            "type": "game_phase",
+            "detail": "no game config in scenario"
+          }
+        ],
+        "metrics": {
+          "avgFrameTimeMs": 0.218,
+          "p95FrameTimeMs": 0.3839,
+          "maxFrameTimeMs": 32.5641,
+          "simFpsEstimate": 4587.81,
+          "drawCallEstimate": 9,
+          "instancedBatches": 0,
+          "memoryHeapMb": 16.96,
+          "objectCount": 12,
+          "physicsBodyCount": 7,
+          "eventCount": 0
+        }
+      }
+    }
+  ],
+  "totalTokens": 10001,
+  "totalLatencySeconds": 91.758,
+  "finalReport": {
+    "schemaVersion": 1,
+    "runner": "qa_scenario_runner.mjs",
+    "scenario": "loop_work_scene.json",
+    "goal": "Sunset Duel",
+    "timestamp": 1790385257.023,
+    "frames": 600,
+    "fixedDeltaSeconds": 0.016666666666666666,
+    "metrics": {
+      "avgFrameTimeMs": 0.218,
+      "p95FrameTimeMs": 0.3839,
+      "maxFrameTimeMs": 32.5641,
+      "simFpsEstimate": 4587.81,
+      "drawCallEstimate": 9,
+      "instancedBatches": 0,
+      "memoryHeapMb": 16.96,
+      "objectCount": 12,
+      "physicsBodyCount": 7,
+      "eventCount": 0
+    },
+    "rules": [
+      {
+        "id": "ring-floor",
+        "type": "entity_exists",
+        "pass": true,
+        "detail": "found \"Duel Ring\""
+      },
+      {
+        "id": "hero-shaded",
+        "type": "entity_component",
+        "pass": true,
+        "detail": "Duelist Hero components: [MeshRenderer, RigidBody3D, Collider3D, MobileController, WeaponController, AnimeCelShader, TopDownMovement, HealthComponent]"
+      },
+      {
+        "id": "rival-shaded",
+        "type": "entity_component",
+        "pass": true,
+        "detail": "Duelist Rival components: [MeshRenderer, AnimeCelShader, HealthComponent, EnemyAI]"
+      },
+      {
+        "id": "rival-chases",
+        "type": "distance_traveled",
+        "pass": true,
+        "detail": "Duelist Rival traveled 3.62m (min=0.5)"
+      },
+      {
+        "id": "round-won",
+        "type": "game_phase",
+        "pass": false,
+        "detail": "no game config in scenario"
+      },
+      {
+        "id": "draw-budget",
+        "type": "draw_call_budget",
+        "pass": true,
+        "detail": "drawCallEstimate=9 (budget 100)"
+      },
+      {
+        "id": "sim-fps",
+        "type": "fps_min",
+        "pass": true,
+        "detail": "simFpsEstimate=4587.8 (min 30)"
+      }
+    ],
+    "passed": 6,
+    "total": 7,
+    "verdict": "FAILED",
+    "confidence": 0.857
+  },
+  "error": null,
+  "workScene": "/home/john/Projects/Android-Dev-Studio/harness/scenes/loop_work_scene.json"
+}

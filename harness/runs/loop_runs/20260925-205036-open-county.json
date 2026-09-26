@@ -1,0 +1,637 @@
+{
+  "goal": "Open County",
+  "rules": [
+    {
+      "type": "entity_exists",
+      "target": "County Ground",
+      "id": "county-ground"
+    },
+    {
+      "type": "entity_component",
+      "target": "Player Car",
+      "component": "VehicleController",
+      "id": "player-car"
+    },
+    {
+      "type": "biome_coverage_min",
+      "biome": "town",
+      "min": 3,
+      "region": {
+        "minX": -60,
+        "maxX": -10,
+        "minZ": -20,
+        "maxZ": 20
+      },
+      "id": "town-held"
+    },
+    {
+      "type": "biome_coverage_min",
+      "biome": "farm",
+      "min": 2,
+      "region": {
+        "minX": -10,
+        "maxX": 20,
+        "minZ": -20,
+        "maxZ": 20
+      },
+      "id": "farms-held"
+    },
+    {
+      "type": "biome_coverage_min",
+      "biome": "wilds",
+      "min": 2,
+      "region": {
+        "minX": 20,
+        "maxX": 60,
+        "minZ": -20,
+        "maxZ": 20
+      },
+      "id": "wilds-held"
+    },
+    {
+      "type": "traversal_coverage_min",
+      "min": 0.8,
+      "id": "county-traversable"
+    },
+    {
+      "type": "streaming_coherence_min",
+      "min": 1.0,
+      "id": "streaming-seamless"
+    },
+    {
+      "type": "draw_call_budget",
+      "max": 100,
+      "id": "draw-budget"
+    },
+    {
+      "type": "fps_min",
+      "min": 30,
+      "id": "sim-fps"
+    }
+  ],
+  "verdict": "green",
+  "iterations": [
+    {
+      "iteration": 1,
+      "phase": "generate",
+      "visionNotes": [],
+      "llm": {
+        "model": "mimo-v2.6-flash",
+        "promptTokens": 5353,
+        "completionTokens": 3917,
+        "totalTokens": 9270,
+        "latencySeconds": 67.686,
+        "finishReason": "stop",
+        "attempts": 1
+      },
+      "parse": {
+        "strategy": "raw",
+        "actionCount": 19,
+        "summary": "An open county scene with a streaming ground slab, a drivable Player Car, and town/farm/wilds biome props laid out across the three required regions.",
+        "error": null
+      },
+      "apply": {
+        "applied": 19,
+        "targetMissing": 0,
+        "invalid": 0,
+        "failed": 0,
+        "outcomes": [
+          {
+            "index": 0,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned County Ground (box) at [0.0, -0.5, 0.0]",
+            "target": "County Ground"
+          },
+          {
+            "index": 1,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned County Road (box) at [0.0, 0.1, 0.0]",
+            "target": "County Road"
+          },
+          {
+            "index": 2,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Player Car (box) at [-50.0, 0.85, 10.0]",
+            "target": "Player Car"
+          },
+          {
+            "index": 3,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Town Hall (box) at [-40.0, 2.5, 0.0]",
+            "target": "Town Hall"
+          },
+          {
+            "index": 4,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned General Store (box) at [-30.0, 2.0, -8.0]",
+            "target": "General Store"
+          },
+          {
+            "index": 5,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Chapel (box) at [-22.0, 3.0, 6.0]",
+            "target": "Chapel"
+          },
+          {
+            "index": 6,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Town Lamppost (cylinder) at [-35.0, 2.0, 8.0]",
+            "target": "Town Lamppost"
+          },
+          {
+            "index": 7,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Farm Barn (box) at [0.0, 2.5, -6.0]",
+            "target": "Farm Barn"
+          },
+          {
+            "index": 8,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Farm Silo (cylinder) at [8.0, 3.0, 4.0]",
+            "target": "Farm Silo"
+          },
+          {
+            "index": 9,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Hay Bale (cylinder) at [12.0, 0.85, -10.0]",
+            "target": "Hay Bale"
+          },
+          {
+            "index": 10,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Wilds Rock A (sphere) at [30.0, 1.5, 0.0]",
+            "target": "Wilds Rock A"
+          },
+          {
+            "index": 11,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Wilds Rock B (sphere) at [42.0, 1.2, -8.0]",
+            "target": "Wilds Rock B"
+          },
+          {
+            "index": 12,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Wilds Pine Trunk (cylinder) at [50.0, 2.0, 6.0]",
+            "target": "Wilds Pine Trunk"
+          },
+          {
+            "index": 13,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Wilds Pine Canopy (sphere) at [50.0, 5.0, 6.0]",
+            "target": "Wilds Pine Canopy"
+          },
+          {
+            "index": 14,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Crate A (box) at [-12.0, 0.7, 9.0]",
+            "target": "Crate A"
+          },
+          {
+            "index": 15,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Crate B (box) at [-9.5, 0.7, 10.5]",
+            "target": "Crate B"
+          },
+          {
+            "index": 16,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added directional light 'County Sun' (intensity 2.2)",
+            "target": "County Sun"
+          },
+          {
+            "index": 17,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added ambient light 'County Sky Fill' (intensity 0.55)",
+            "target": "County Sky Fill"
+          },
+          {
+            "index": 18,
+            "type": "input",
+            "status": "applied",
+            "detail": "Registered input map (2 action(s), 1 script step(s))"
+          }
+        ],
+        "appliedDescriptions": [
+          "Spawned County Ground (box) at [0.0, -0.5, 0.0]",
+          "Spawned County Road (box) at [0.0, 0.1, 0.0]",
+          "Spawned Player Car (box) at [-50.0, 0.85, 10.0]",
+          "Spawned Town Hall (box) at [-40.0, 2.5, 0.0]",
+          "Spawned General Store (box) at [-30.0, 2.0, -8.0]",
+          "Spawned Chapel (box) at [-22.0, 3.0, 6.0]",
+          "Spawned Town Lamppost (cylinder) at [-35.0, 2.0, 8.0]",
+          "Spawned Farm Barn (box) at [0.0, 2.5, -6.0]",
+          "Spawned Farm Silo (cylinder) at [8.0, 3.0, 4.0]",
+          "Spawned Hay Bale (cylinder) at [12.0, 0.85, -10.0]",
+          "Spawned Wilds Rock A (sphere) at [30.0, 1.5, 0.0]",
+          "Spawned Wilds Rock B (sphere) at [42.0, 1.2, -8.0]",
+          "Spawned Wilds Pine Trunk (cylinder) at [50.0, 2.0, 6.0]",
+          "Spawned Wilds Pine Canopy (sphere) at [50.0, 5.0, 6.0]",
+          "Spawned Crate A (box) at [-12.0, 0.7, 9.0]",
+          "Spawned Crate B (box) at [-9.5, 0.7, 10.5]",
+          "Added directional light 'County Sun' (intensity 2.2)",
+          "Added ambient light 'County Sky Fill' (intensity 0.55)",
+          "Registered input map (2 action(s), 1 script step(s))"
+        ]
+      },
+      "gate": {
+        "valid": true,
+        "violations": []
+      },
+      "qa": {
+        "verdict": "SUCCEEDED",
+        "passed": 9,
+        "total": 9,
+        "failedRules": [],
+        "metrics": {
+          "avgFrameTimeMs": 0.2491,
+          "p95FrameTimeMs": 0.3377,
+          "maxFrameTimeMs": 24.5637,
+          "simFpsEstimate": 4014.67,
+          "drawCallEstimate": 16,
+          "instancedBatches": 0,
+          "memoryHeapMb": 17.92,
+          "objectCount": 187,
+          "physicsBodyCount": 16,
+          "eventCount": 0,
+          "traversal": {
+            "grid": 9,
+            "cells": 81,
+            "hits": 81,
+            "coverage": 1,
+            "holes": [],
+            "steep": [],
+            "stepHazards": [
+              {
+                "from": {
+                  "x": -53.333,
+                  "z": 0.25
+                },
+                "to": {
+                  "x": -40,
+                  "z": 0.25
+                },
+                "drop": 4.8
+              },
+              {
+                "from": {
+                  "x": -40,
+                  "z": -4.25
+                },
+                "to": {
+                  "x": -40,
+                  "z": 0.25
+                },
+                "drop": 5
+              },
+              {
+                "from": {
+                  "x": -40,
+                  "z": 0.25
+                },
+                "to": {
+                  "x": -26.667,
+                  "z": 0.25
+                },
+                "drop": 4.8
+              },
+              {
+                "from": {
+                  "x": -40,
+                  "z": 0.25
+                },
+                "to": {
+                  "x": -40,
+                  "z": 4.75
+                },
+                "drop": 5
+              },
+              {
+                "from": {
+                  "x": -13.333,
+                  "z": -8.75
+                },
+                "to": {
+                  "x": 0,
+                  "z": -8.75
+                },
+                "drop": 5
+              },
+              {
+                "from": {
+                  "x": -13.333,
+                  "z": -4.25
+                },
+                "to": {
+                  "x": 0,
+                  "z": -4.25
+                },
+                "drop": 5
+              },
+              {
+                "from": {
+                  "x": 0,
+                  "z": -13.25
+                },
+                "to": {
+                  "x": 0,
+                  "z": -8.75
+                },
+                "drop": 5
+              },
+              {
+                "from": {
+                  "x": 0,
+                  "z": -8.75
+                },
+                "to": {
+                  "x": 13.333,
+                  "z": -8.75
+                },
+                "drop": 5
+              },
+              {
+                "from": {
+                  "x": 0,
+                  "z": -4.25
+                },
+                "to": {
+                  "x": 13.333,
+                  "z": -4.25
+                },
+                "drop": 5
+              },
+              {
+                "from": {
+                  "x": 0,
+                  "z": -4.25
+                },
+                "to": {
+                  "x": 0,
+                  "z": 0.25
+                },
+                "drop": 4.8
+              }
+            ],
+            "bounds": {
+              "minX": -60,
+              "maxX": 60,
+              "minZ": -20,
+              "maxZ": 20.5
+            }
+          },
+          "streaming": {
+            "samples": 5,
+            "settleFrames": 171,
+            "coverage": 1,
+            "gaps": [],
+            "thrashReloads": 0,
+            "maxActiveChunks": 169,
+            "uniqueChunks": 260,
+            "chunkSize": 16,
+            "renderDistance": 6
+          }
+        }
+      }
+    }
+  ],
+  "totalTokens": 9270,
+  "totalLatencySeconds": 67.686,
+  "finalReport": {
+    "schemaVersion": 1,
+    "runner": "qa_scenario_runner.mjs",
+    "scenario": "loop_work_scene.json",
+    "goal": "Open County",
+    "timestamp": 1790383836.668,
+    "frames": 600,
+    "fixedDeltaSeconds": 0.016666666666666666,
+    "metrics": {
+      "avgFrameTimeMs": 0.2491,
+      "p95FrameTimeMs": 0.3377,
+      "maxFrameTimeMs": 24.5637,
+      "simFpsEstimate": 4014.67,
+      "drawCallEstimate": 16,
+      "instancedBatches": 0,
+      "memoryHeapMb": 17.92,
+      "objectCount": 187,
+      "physicsBodyCount": 16,
+      "eventCount": 0,
+      "traversal": {
+        "grid": 9,
+        "cells": 81,
+        "hits": 81,
+        "coverage": 1,
+        "holes": [],
+        "steep": [],
+        "stepHazards": [
+          {
+            "from": {
+              "x": -53.333,
+              "z": 0.25
+            },
+            "to": {
+              "x": -40,
+              "z": 0.25
+            },
+            "drop": 4.8
+          },
+          {
+            "from": {
+              "x": -40,
+              "z": -4.25
+            },
+            "to": {
+              "x": -40,
+              "z": 0.25
+            },
+            "drop": 5
+          },
+          {
+            "from": {
+              "x": -40,
+              "z": 0.25
+            },
+            "to": {
+              "x": -26.667,
+              "z": 0.25
+            },
+            "drop": 4.8
+          },
+          {
+            "from": {
+              "x": -40,
+              "z": 0.25
+            },
+            "to": {
+              "x": -40,
+              "z": 4.75
+            },
+            "drop": 5
+          },
+          {
+            "from": {
+              "x": -13.333,
+              "z": -8.75
+            },
+            "to": {
+              "x": 0,
+              "z": -8.75
+            },
+            "drop": 5
+          },
+          {
+            "from": {
+              "x": -13.333,
+              "z": -4.25
+            },
+            "to": {
+              "x": 0,
+              "z": -4.25
+            },
+            "drop": 5
+          },
+          {
+            "from": {
+              "x": 0,
+              "z": -13.25
+            },
+            "to": {
+              "x": 0,
+              "z": -8.75
+            },
+            "drop": 5
+          },
+          {
+            "from": {
+              "x": 0,
+              "z": -8.75
+            },
+            "to": {
+              "x": 13.333,
+              "z": -8.75
+            },
+            "drop": 5
+          },
+          {
+            "from": {
+              "x": 0,
+              "z": -4.25
+            },
+            "to": {
+              "x": 13.333,
+              "z": -4.25
+            },
+            "drop": 5
+          },
+          {
+            "from": {
+              "x": 0,
+              "z": -4.25
+            },
+            "to": {
+              "x": 0,
+              "z": 0.25
+            },
+            "drop": 4.8
+          }
+        ],
+        "bounds": {
+          "minX": -60,
+          "maxX": 60,
+          "minZ": -20,
+          "maxZ": 20.5
+        }
+      },
+      "streaming": {
+        "samples": 5,
+        "settleFrames": 171,
+        "coverage": 1,
+        "gaps": [],
+        "thrashReloads": 0,
+        "maxActiveChunks": 169,
+        "uniqueChunks": 260,
+        "chunkSize": 16,
+        "renderDistance": 6
+      }
+    },
+    "rules": [
+      {
+        "id": "county-ground",
+        "type": "entity_exists",
+        "pass": true,
+        "detail": "found \"County Ground\""
+      },
+      {
+        "id": "player-car",
+        "type": "entity_component",
+        "pass": true,
+        "detail": "Player Car components: [MeshRenderer, RigidBody3D, Collider3D, MobileController, VehicleController]"
+      },
+      {
+        "id": "town-held",
+        "type": "biome_coverage_min",
+        "pass": true,
+        "detail": "biome 'town': 4 live objects in region (min 3)"
+      },
+      {
+        "id": "farms-held",
+        "type": "biome_coverage_min",
+        "pass": true,
+        "detail": "biome 'farm': 3 live objects in region (min 2)"
+      },
+      {
+        "id": "wilds-held",
+        "type": "biome_coverage_min",
+        "pass": true,
+        "detail": "biome 'wilds': 4 live objects in region (min 2)"
+      },
+      {
+        "id": "county-traversable",
+        "type": "traversal_coverage_min",
+        "pass": true,
+        "detail": "coverage=1 (min 0.8), holes=0, steep=0, stepHazards=10"
+      },
+      {
+        "id": "streaming-seamless",
+        "type": "streaming_coherence_min",
+        "pass": true,
+        "detail": "coverage=1 (min 1), gaps=0, thrashReloads=0, maxActive=169"
+      },
+      {
+        "id": "draw-budget",
+        "type": "draw_call_budget",
+        "pass": true,
+        "detail": "drawCallEstimate=16 (budget 100)"
+      },
+      {
+        "id": "sim-fps",
+        "type": "fps_min",
+        "pass": true,
+        "detail": "simFpsEstimate=4014.7 (min 30)"
+      }
+    ],
+    "passed": 9,
+    "total": 9,
+    "verdict": "SUCCEEDED",
+    "confidence": 1
+  },
+  "error": null,
+  "workScene": "/home/john/Projects/Android-Dev-Studio/harness/scenes/loop_work_scene.json"
+}

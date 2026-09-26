@@ -1,0 +1,318 @@
+{
+  "goal": "Sunset Duel",
+  "rules": [
+    {
+      "type": "entity_exists",
+      "target": "Duel Ring",
+      "id": "ring-floor"
+    },
+    {
+      "type": "entity_component",
+      "target": "Duelist Hero",
+      "component": "AnimeCelShader",
+      "id": "hero-shaded"
+    },
+    {
+      "type": "entity_component",
+      "target": "Duelist Rival",
+      "component": "AnimeCelShader",
+      "id": "rival-shaded"
+    },
+    {
+      "type": "distance_traveled",
+      "target": "Duelist Rival",
+      "min": 0.5,
+      "id": "rival-chases"
+    },
+    {
+      "type": "game_phase",
+      "phase": "won",
+      "id": "round-won"
+    },
+    {
+      "type": "draw_call_budget",
+      "max": 100,
+      "id": "draw-budget"
+    },
+    {
+      "type": "fps_min",
+      "min": 30,
+      "id": "sim-fps"
+    }
+  ],
+  "verdict": "unresolved",
+  "iterations": [
+    {
+      "iteration": 1,
+      "phase": "generate",
+      "visionNotes": [],
+      "llm": {
+        "model": "mimo-v2.6-flash",
+        "promptTokens": 5501,
+        "completionTokens": 2643,
+        "totalTokens": 8144,
+        "latencySeconds": 44.629,
+        "finishReason": "stop",
+        "attempts": 1
+      },
+      "parse": {
+        "strategy": "salvaged",
+        "actionCount": 18,
+        "summary": "A sunset arena duel: cel-shaded Duelist Hero vs. a Pyro-aura Duelist Rival inside the Duel Ring, with a wave-based game runtime that reaches the 'won' phase.",
+        "error": "primary parse failed (raw: Expecting ',' delimiter: line 1 column 4031 (char 4030)); salvaged complete actions"
+      },
+      "apply": {
+        "applied": 17,
+        "targetMissing": 0,
+        "invalid": 1,
+        "failed": 0,
+        "outcomes": [
+          {
+            "index": 0,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Ground (box) at [0.0, 0.0, 0.0]",
+            "target": "Ground"
+          },
+          {
+            "index": 1,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Ring Floor (cylinder) at [0.0, 0.55, 0.0]",
+            "target": "Ring Floor"
+          },
+          {
+            "index": 2,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Duel Ring (torus) at [0.0, 0.7, 0.0]",
+            "target": "Duel Ring"
+          },
+          {
+            "index": 3,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Pillar A (cylinder) at [-11.0, 3.0, -11.0]",
+            "target": "Pillar A"
+          },
+          {
+            "index": 4,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Pillar B (cylinder) at [11.0, 3.0, -11.0]",
+            "target": "Pillar B"
+          },
+          {
+            "index": 5,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Pillar C (cylinder) at [-11.0, 3.0, 11.0]",
+            "target": "Pillar C"
+          },
+          {
+            "index": 6,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Pillar D (cylinder) at [11.0, 3.0, 11.0]",
+            "target": "Pillar D"
+          },
+          {
+            "index": 7,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Banner Left (box) at [-12.5, 3.0, -11.0]",
+            "target": "Banner Left"
+          },
+          {
+            "index": 8,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Banner Right (box) at [12.5, 3.0, 11.0]",
+            "target": "Banner Right"
+          },
+          {
+            "index": 9,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Sunset Backdrop (box) at [0.0, 4.0, -14.0]",
+            "target": "Sunset Backdrop"
+          },
+          {
+            "index": 10,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Duelist Hero (capsule) at [0.0, 1.5, -6.0]",
+            "target": "Duelist Hero"
+          },
+          {
+            "index": 11,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Duelist Rival (capsule) at [0.0, 1.5, 6.0]",
+            "target": "Duelist Rival"
+          },
+          {
+            "index": 12,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added directional light 'Sunset Key' (intensity 2.2)",
+            "target": "Sunset Key"
+          },
+          {
+            "index": 13,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added point light 'Arena Fill' (intensity 1.4)",
+            "target": "Arena Fill"
+          },
+          {
+            "index": 14,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added ambient light 'Sunset Ambient' (intensity 0.7)",
+            "target": "Sunset Ambient"
+          },
+          {
+            "index": 15,
+            "type": "event",
+            "status": "applied",
+            "detail": "Wired Timer -> SetScale on Duel Ring",
+            "target": "Duel Ring"
+          },
+          {
+            "index": 16,
+            "type": "game",
+            "status": "invalid",
+            "detail": "game config rejected \u2014 game enemy 'health' must be an object"
+          },
+          {
+            "index": 17,
+            "type": "input",
+            "status": "applied",
+            "detail": "Registered input map (2 action(s), 2 script step(s))"
+          }
+        ],
+        "appliedDescriptions": [
+          "Spawned Ground (box) at [0.0, 0.0, 0.0]",
+          "Spawned Ring Floor (cylinder) at [0.0, 0.55, 0.0]",
+          "Spawned Duel Ring (torus) at [0.0, 0.7, 0.0]",
+          "Spawned Pillar A (cylinder) at [-11.0, 3.0, -11.0]",
+          "Spawned Pillar B (cylinder) at [11.0, 3.0, -11.0]",
+          "Spawned Pillar C (cylinder) at [-11.0, 3.0, 11.0]",
+          "Spawned Pillar D (cylinder) at [11.0, 3.0, 11.0]",
+          "Spawned Banner Left (box) at [-12.5, 3.0, -11.0]",
+          "Spawned Banner Right (box) at [12.5, 3.0, 11.0]",
+          "Spawned Sunset Backdrop (box) at [0.0, 4.0, -14.0]",
+          "Spawned Duelist Hero (capsule) at [0.0, 1.5, -6.0]",
+          "Spawned Duelist Rival (capsule) at [0.0, 1.5, 6.0]",
+          "Added directional light 'Sunset Key' (intensity 2.2)",
+          "Added point light 'Arena Fill' (intensity 1.4)",
+          "Added ambient light 'Sunset Ambient' (intensity 0.7)",
+          "Wired Timer -> SetScale on Duel Ring",
+          "Registered input map (2 action(s), 2 script step(s))"
+        ]
+      },
+      "gate": {
+        "valid": true,
+        "violations": []
+      },
+      "qa": {
+        "verdict": "FAILED",
+        "passed": 6,
+        "total": 7,
+        "failedRules": [
+          {
+            "id": "round-won",
+            "type": "game_phase",
+            "detail": "no game config in scenario"
+          }
+        ],
+        "metrics": {
+          "avgFrameTimeMs": 0.2377,
+          "p95FrameTimeMs": 0.4196,
+          "maxFrameTimeMs": 43.6149,
+          "simFpsEstimate": 4207.79,
+          "drawCallEstimate": 12,
+          "instancedBatches": 0,
+          "memoryHeapMb": 17.48,
+          "objectCount": 15,
+          "physicsBodyCount": 7,
+          "eventCount": 1
+        }
+      }
+    }
+  ],
+  "totalTokens": 8144,
+  "totalLatencySeconds": 44.629,
+  "finalReport": {
+    "schemaVersion": 1,
+    "runner": "qa_scenario_runner.mjs",
+    "scenario": "loop_work_scene.json",
+    "goal": "Sunset Duel",
+    "timestamp": 1790385347.524,
+    "frames": 600,
+    "fixedDeltaSeconds": 0.016666666666666666,
+    "metrics": {
+      "avgFrameTimeMs": 0.2377,
+      "p95FrameTimeMs": 0.4196,
+      "maxFrameTimeMs": 43.6149,
+      "simFpsEstimate": 4207.79,
+      "drawCallEstimate": 12,
+      "instancedBatches": 0,
+      "memoryHeapMb": 17.48,
+      "objectCount": 15,
+      "physicsBodyCount": 7,
+      "eventCount": 1
+    },
+    "rules": [
+      {
+        "id": "ring-floor",
+        "type": "entity_exists",
+        "pass": true,
+        "detail": "found \"Duel Ring\""
+      },
+      {
+        "id": "hero-shaded",
+        "type": "entity_component",
+        "pass": true,
+        "detail": "Duelist Hero components: [MeshRenderer, RigidBody3D, Collider3D, MobileController, WeaponController, AnimeCelShader, TopDownMovement, HealthComponent]"
+      },
+      {
+        "id": "rival-shaded",
+        "type": "entity_component",
+        "pass": true,
+        "detail": "Duelist Rival components: [MeshRenderer, WeaponController, AnimeCelShader, HealthComponent, EnemyAI, ElementalReactionComponent]"
+      },
+      {
+        "id": "rival-chases",
+        "type": "distance_traveled",
+        "pass": true,
+        "detail": "Duelist Rival traveled 15.20m (min=0.5)"
+      },
+      {
+        "id": "round-won",
+        "type": "game_phase",
+        "pass": false,
+        "detail": "no game config in scenario"
+      },
+      {
+        "id": "draw-budget",
+        "type": "draw_call_budget",
+        "pass": true,
+        "detail": "drawCallEstimate=12 (budget 100)"
+      },
+      {
+        "id": "sim-fps",
+        "type": "fps_min",
+        "pass": true,
+        "detail": "simFpsEstimate=4207.8 (min 30)"
+      }
+    ],
+    "passed": 6,
+    "total": 7,
+    "verdict": "FAILED",
+    "confidence": 0.857
+  },
+  "error": null,
+  "workScene": "/home/john/Projects/Android-Dev-Studio/harness/scenes/loop_work_scene.json"
+}

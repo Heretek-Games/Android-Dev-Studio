@@ -241,6 +241,7 @@ class IterateLoop:
         vision_critique: Optional[VisionCritique] = None,
         max_total_tokens: Optional[int] = None,
         max_wall_seconds: Optional[float] = None,
+        max_completion_tokens: int = 8000,
         clock: Callable[[], float] = time.monotonic,
     ):
         self.goal = goal
@@ -258,6 +259,7 @@ class IterateLoop:
         self.vision_critique = vision_critique
         self.max_total_tokens = max_total_tokens
         self.max_wall_seconds = max_wall_seconds
+        self.max_completion_tokens = max_completion_tokens
         self.clock = clock
 
     # ------------------------------------------------------------------ helpers
@@ -387,7 +389,9 @@ class IterateLoop:
                 record["vision"] = vision_record
 
             try:
-                response = self.client.chat(messages, model=self.model)
+                response = self.client.chat(
+                    messages, model=self.model, max_tokens=self.max_completion_tokens
+                )
             except LlmError as error:
                 record["llm"] = self._record_llm(None, str(error))
                 record["error"] = str(error)

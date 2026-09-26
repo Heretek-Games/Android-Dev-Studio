@@ -1,0 +1,332 @@
+{
+  "goal": "Founding Hollow",
+  "rules": [
+    {
+      "type": "entity_exists",
+      "target": "Settlement Ground",
+      "id": "settlement-ground"
+    },
+    {
+      "type": "game_settlement_pop_min",
+      "min": 6,
+      "id": "population-grown"
+    },
+    {
+      "type": "game_settlement_gold_min",
+      "min": 1,
+      "id": "treasury-healthy"
+    },
+    {
+      "type": "game_phase",
+      "phase": "won",
+      "id": "charter-granted"
+    },
+    {
+      "type": "draw_call_budget",
+      "max": 100,
+      "id": "draw-budget"
+    },
+    {
+      "type": "fps_min",
+      "min": 30,
+      "id": "sim-fps"
+    }
+  ],
+  "verdict": "green",
+  "iterations": [
+    {
+      "iteration": 1,
+      "phase": "generate",
+      "visionNotes": [],
+      "llm": {
+        "model": "mimo-v2.6-flash",
+        "promptTokens": 5257,
+        "completionTokens": 2854,
+        "totalTokens": 8111,
+        "latencySeconds": 46.27,
+        "finishReason": "stop",
+        "attempts": 1
+      },
+      "parse": {
+        "strategy": "raw",
+        "actionCount": 15,
+        "summary": "A compact settlement-clearing scene with a fixed Settlement Ground slab, a controllable hero, four houses, a farm, a market, well and trees, plus a build-mode game charter funding 6 plots for population 6 and a won phase.",
+        "error": null
+      },
+      "apply": {
+        "applied": 15,
+        "targetMissing": 0,
+        "invalid": 0,
+        "failed": 0,
+        "outcomes": [
+          {
+            "index": 0,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Settlement Ground (box) at [0.0, -0.5, 0.0]",
+            "target": "Settlement Ground"
+          },
+          {
+            "index": 1,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Player Hero (capsule) at [0.0, 1.0, 6.0]",
+            "target": "Player Hero"
+          },
+          {
+            "index": 2,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned House A (box) at [-7.0, 1.5, -6.0]",
+            "target": "House A"
+          },
+          {
+            "index": 3,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned House B (box) at [0.0, 1.5, -8.0]",
+            "target": "House B"
+          },
+          {
+            "index": 4,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned House C (box) at [7.0, 1.5, -6.0]",
+            "target": "House C"
+          },
+          {
+            "index": 5,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned House D (box) at [7.0, 1.5, 2.0]",
+            "target": "House D"
+          },
+          {
+            "index": 6,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Farm Plot (box) at [-7.0, 0.2, 7.0]",
+            "target": "Farm Plot"
+          },
+          {
+            "index": 7,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Market Stall (box) at [5.0, 1.25, 7.0]",
+            "target": "Market Stall"
+          },
+          {
+            "index": 8,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Village Well (cylinder) at [0.0, 0.6, -2.0]",
+            "target": "Village Well"
+          },
+          {
+            "index": 9,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Oak Canopy (sphere) at [-11.0, 2.5, 11.0]",
+            "target": "Oak Canopy"
+          },
+          {
+            "index": 10,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Pine Canopy (sphere) at [11.0, 2.4, -12.0]",
+            "target": "Pine Canopy"
+          },
+          {
+            "index": 11,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added directional light 'Sun' (intensity 1.6)",
+            "target": "Sun"
+          },
+          {
+            "index": 12,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added ambient light 'Sky Fill' (intensity 0.6)",
+            "target": "Sky Fill"
+          },
+          {
+            "index": 13,
+            "type": "input",
+            "status": "applied",
+            "detail": "Registered input map (1 action(s), 1 script step(s))"
+          },
+          {
+            "index": 14,
+            "type": "game",
+            "status": "applied",
+            "detail": "Set build-mode quest config for player 'Player Hero'"
+          }
+        ],
+        "appliedDescriptions": [
+          "Spawned Settlement Ground (box) at [0.0, -0.5, 0.0]",
+          "Spawned Player Hero (capsule) at [0.0, 1.0, 6.0]",
+          "Spawned House A (box) at [-7.0, 1.5, -6.0]",
+          "Spawned House B (box) at [0.0, 1.5, -8.0]",
+          "Spawned House C (box) at [7.0, 1.5, -6.0]",
+          "Spawned House D (box) at [7.0, 1.5, 2.0]",
+          "Spawned Farm Plot (box) at [-7.0, 0.2, 7.0]",
+          "Spawned Market Stall (box) at [5.0, 1.25, 7.0]",
+          "Spawned Village Well (cylinder) at [0.0, 0.6, -2.0]",
+          "Spawned Oak Canopy (sphere) at [-11.0, 2.5, 11.0]",
+          "Spawned Pine Canopy (sphere) at [11.0, 2.4, -12.0]",
+          "Added directional light 'Sun' (intensity 1.6)",
+          "Added ambient light 'Sky Fill' (intensity 0.6)",
+          "Registered input map (1 action(s), 1 script step(s))",
+          "Set build-mode quest config for player 'Player Hero'"
+        ]
+      },
+      "gate": {
+        "valid": true,
+        "violations": []
+      },
+      "qa": {
+        "verdict": "SUCCEEDED",
+        "passed": 6,
+        "total": 6,
+        "failedRules": [],
+        "metrics": {
+          "avgFrameTimeMs": 0.1779,
+          "p95FrameTimeMs": 0.2803,
+          "maxFrameTimeMs": 42.7456,
+          "simFpsEstimate": 5622.43,
+          "drawCallEstimate": 11,
+          "instancedBatches": 0,
+          "memoryHeapMb": 18.12,
+          "objectCount": 13,
+          "physicsBodyCount": 11,
+          "eventCount": 0
+        }
+      }
+    }
+  ],
+  "totalTokens": 8111,
+  "totalLatencySeconds": 46.27,
+  "finalReport": {
+    "schemaVersion": 1,
+    "runner": "qa_scenario_runner.mjs",
+    "scenario": "loop_work_scene.json",
+    "goal": "Founding Hollow",
+    "timestamp": 1790383993.296,
+    "frames": 600,
+    "fixedDeltaSeconds": 0.016666666666666666,
+    "metrics": {
+      "avgFrameTimeMs": 0.1779,
+      "p95FrameTimeMs": 0.2803,
+      "maxFrameTimeMs": 42.7456,
+      "simFpsEstimate": 5622.43,
+      "drawCallEstimate": 11,
+      "instancedBatches": 0,
+      "memoryHeapMb": 18.12,
+      "objectCount": 13,
+      "physicsBodyCount": 11,
+      "eventCount": 0
+    },
+    "game": {
+      "mode": "build",
+      "phase": "won",
+      "score": 0,
+      "kills": 0,
+      "wave": 0,
+      "traveledDistance": 0,
+      "settlement": {
+        "gold": 124,
+        "food": 89,
+        "population": 6,
+        "housing": 24,
+        "buildings": [
+          {
+            "id": 1,
+            "type": "house",
+            "x": 0,
+            "z": 0
+          },
+          {
+            "id": 2,
+            "type": "house",
+            "x": 1,
+            "z": 0
+          },
+          {
+            "id": 3,
+            "type": "house",
+            "x": 2,
+            "z": 0
+          },
+          {
+            "id": 4,
+            "type": "house",
+            "x": 3,
+            "z": 0
+          },
+          {
+            "id": 5,
+            "type": "farm",
+            "x": 0,
+            "z": 1
+          },
+          {
+            "id": 6,
+            "type": "market",
+            "x": 1,
+            "z": 1
+          }
+        ],
+        "simTime": 6,
+        "steps": 6
+      },
+      "reactions": 0,
+      "shots": 0,
+      "maxEnemyDisplacement": 0
+    },
+    "rules": [
+      {
+        "id": "settlement-ground",
+        "type": "entity_exists",
+        "pass": true,
+        "detail": "found \"Settlement Ground\""
+      },
+      {
+        "id": "population-grown",
+        "type": "game_settlement_pop_min",
+        "pass": true,
+        "detail": "population=6 (min 6)"
+      },
+      {
+        "id": "treasury-healthy",
+        "type": "game_settlement_gold_min",
+        "pass": true,
+        "detail": "gold=124 (min 1)"
+      },
+      {
+        "id": "charter-granted",
+        "type": "game_phase",
+        "pass": true,
+        "detail": "phase=won (expected won)"
+      },
+      {
+        "id": "draw-budget",
+        "type": "draw_call_budget",
+        "pass": true,
+        "detail": "drawCallEstimate=11 (budget 100)"
+      },
+      {
+        "id": "sim-fps",
+        "type": "fps_min",
+        "pass": true,
+        "detail": "simFpsEstimate=5622.4 (min 30)"
+      }
+    ],
+    "passed": 6,
+    "total": 6,
+    "verdict": "SUCCEEDED",
+    "confidence": 1
+  },
+  "error": null,
+  "workScene": "/home/john/Projects/Android-Dev-Studio/harness/scenes/loop_work_scene.json"
+}

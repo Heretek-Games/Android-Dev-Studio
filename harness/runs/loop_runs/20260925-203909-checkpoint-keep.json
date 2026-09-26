@@ -1,0 +1,310 @@
+{
+  "goal": "Checkpoint Keep",
+  "rules": [
+    {
+      "type": "entity_exists",
+      "target": "Keep Floor",
+      "id": "keep-floor"
+    },
+    {
+      "type": "entity_component",
+      "target": "Defender",
+      "component": "WeaponController",
+      "id": "defender-ready"
+    },
+    {
+      "type": "game_kills_min",
+      "min": 2,
+      "id": "kills-scored"
+    },
+    {
+      "type": "game_wave_reached",
+      "wave": 2,
+      "id": "wave-advanced"
+    },
+    {
+      "type": "game_save_restore",
+      "id": "save-compatible"
+    },
+    {
+      "type": "game_phase",
+      "phase": "won",
+      "id": "run-won"
+    },
+    {
+      "type": "draw_call_budget",
+      "max": 100,
+      "id": "draw-budget"
+    },
+    {
+      "type": "fps_min",
+      "min": 30,
+      "id": "sim-fps"
+    }
+  ],
+  "verdict": "unresolved",
+  "iterations": [
+    {
+      "iteration": 1,
+      "phase": "generate",
+      "visionNotes": [],
+      "llm": {
+        "model": "mimo-v2.6-flash",
+        "promptTokens": 5038,
+        "completionTokens": 1295,
+        "totalTokens": 6333,
+        "latencySeconds": 24.29,
+        "finishReason": "stop",
+        "attempts": 1
+      },
+      "parse": {
+        "strategy": "raw",
+        "actionCount": 13,
+        "summary": "A compact checkpoint keep arena with a fixed Keep Floor slab, a Defender (controller, weapon, health) holding off 2 waves of 2 enemies each for the wave/kills/won/save acceptance rules.",
+        "error": null
+      },
+      "apply": {
+        "applied": 12,
+        "targetMissing": 0,
+        "invalid": 1,
+        "failed": 0,
+        "outcomes": [
+          {
+            "index": 0,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Keep Floor (box) at [0.0, 0.0, 0.0]",
+            "target": "Keep Floor"
+          },
+          {
+            "index": 1,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Defender (capsule) at [0.0, 1.5, 4.0]",
+            "target": "Defender"
+          },
+          {
+            "index": 2,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Keep Wall North (box) at [0.0, 2.0, -14.5]",
+            "target": "Keep Wall North"
+          },
+          {
+            "index": 3,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Keep Wall South (box) at [0.0, 2.0, 14.5]",
+            "target": "Keep Wall South"
+          },
+          {
+            "index": 4,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Checkpoint Pillar (cylinder) at [-8.0, 2.5, -8.0]",
+            "target": "Checkpoint Pillar"
+          },
+          {
+            "index": 5,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Checkpoint Flag (box) at [-8.0, 5.5, -8.0]",
+            "target": "Checkpoint Flag"
+          },
+          {
+            "index": 6,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added directional light 'Sun' (intensity 2.0)",
+            "target": "Sun"
+          },
+          {
+            "index": 7,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added point light 'Brazier Glow' (intensity 1.5)",
+            "target": "Brazier Glow"
+          },
+          {
+            "index": 8,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added ambient light 'Fill' (intensity 0.5)",
+            "target": "Fill"
+          },
+          {
+            "index": 9,
+            "type": "game",
+            "status": "invalid",
+            "detail": "game config rejected \u2014 unknown game enemy key 'moveSpeed' (allowed: shape, color, size, y, health, ai, elemental)"
+          },
+          {
+            "index": 10,
+            "type": "navgrid",
+            "status": "applied",
+            "detail": "Registered navgrid 16x16 (1 obstacle(s))"
+          },
+          {
+            "index": 11,
+            "type": "input",
+            "status": "applied",
+            "detail": "Registered input map (2 action(s), 1 script step(s))"
+          },
+          {
+            "index": 12,
+            "type": "dialogue",
+            "status": "applied",
+            "detail": "Registered dialogue tree 'Keeper' (3 nodes from 'greet')"
+          }
+        ],
+        "appliedDescriptions": [
+          "Spawned Keep Floor (box) at [0.0, 0.0, 0.0]",
+          "Spawned Defender (capsule) at [0.0, 1.5, 4.0]",
+          "Spawned Keep Wall North (box) at [0.0, 2.0, -14.5]",
+          "Spawned Keep Wall South (box) at [0.0, 2.0, 14.5]",
+          "Spawned Checkpoint Pillar (cylinder) at [-8.0, 2.5, -8.0]",
+          "Spawned Checkpoint Flag (box) at [-8.0, 5.5, -8.0]",
+          "Added directional light 'Sun' (intensity 2.0)",
+          "Added point light 'Brazier Glow' (intensity 1.5)",
+          "Added ambient light 'Fill' (intensity 0.5)",
+          "Registered navgrid 16x16 (1 obstacle(s))",
+          "Registered input map (2 action(s), 1 script step(s))",
+          "Registered dialogue tree 'Keeper' (3 nodes from 'greet')"
+        ]
+      },
+      "gate": {
+        "valid": true,
+        "violations": []
+      },
+      "qa": {
+        "verdict": "FAILED",
+        "passed": 4,
+        "total": 8,
+        "failedRules": [
+          {
+            "id": "kills-scored",
+            "type": "game_kills_min",
+            "detail": "no game config in scenario"
+          },
+          {
+            "id": "wave-advanced",
+            "type": "game_wave_reached",
+            "detail": "no game config in scenario"
+          },
+          {
+            "id": "save-compatible",
+            "type": "game_save_restore",
+            "detail": "no game config in scenario"
+          },
+          {
+            "id": "run-won",
+            "type": "game_phase",
+            "detail": "no game config in scenario"
+          }
+        ],
+        "metrics": {
+          "avgFrameTimeMs": 0.1435,
+          "p95FrameTimeMs": 0.2536,
+          "maxFrameTimeMs": 33.4936,
+          "simFpsEstimate": 6969.48,
+          "drawCallEstimate": 6,
+          "instancedBatches": 0,
+          "memoryHeapMb": 15.43,
+          "objectCount": 9,
+          "physicsBodyCount": 5,
+          "eventCount": 0
+        }
+      }
+    }
+  ],
+  "totalTokens": 6333,
+  "totalLatencySeconds": 24.29,
+  "finalReport": {
+    "schemaVersion": 1,
+    "runner": "qa_scenario_runner.mjs",
+    "scenario": "loop_work_scene.json",
+    "goal": "Checkpoint Keep",
+    "timestamp": 1790383149.695,
+    "frames": 600,
+    "fixedDeltaSeconds": 0.016666666666666666,
+    "metrics": {
+      "avgFrameTimeMs": 0.1435,
+      "p95FrameTimeMs": 0.2536,
+      "maxFrameTimeMs": 33.4936,
+      "simFpsEstimate": 6969.48,
+      "drawCallEstimate": 6,
+      "instancedBatches": 0,
+      "memoryHeapMb": 15.43,
+      "objectCount": 9,
+      "physicsBodyCount": 5,
+      "eventCount": 0
+    },
+    "dialogue": {
+      "Keeper": {
+        "visited": [
+          "greet"
+        ],
+        "events": [
+          "checkpoint_vow"
+        ],
+        "error": null
+      }
+    },
+    "rules": [
+      {
+        "id": "keep-floor",
+        "type": "entity_exists",
+        "pass": true,
+        "detail": "found \"Keep Floor\""
+      },
+      {
+        "id": "defender-ready",
+        "type": "entity_component",
+        "pass": true,
+        "detail": "Defender components: [MeshRenderer, RigidBody3D, Collider3D, MobileController, WeaponController, AnimeCelShader, TopDownMovement, HealthComponent]"
+      },
+      {
+        "id": "kills-scored",
+        "type": "game_kills_min",
+        "pass": false,
+        "detail": "no game config in scenario"
+      },
+      {
+        "id": "wave-advanced",
+        "type": "game_wave_reached",
+        "pass": false,
+        "detail": "no game config in scenario"
+      },
+      {
+        "id": "save-compatible",
+        "type": "game_save_restore",
+        "pass": false,
+        "detail": "no game config in scenario"
+      },
+      {
+        "id": "run-won",
+        "type": "game_phase",
+        "pass": false,
+        "detail": "no game config in scenario"
+      },
+      {
+        "id": "draw-budget",
+        "type": "draw_call_budget",
+        "pass": true,
+        "detail": "drawCallEstimate=6 (budget 100)"
+      },
+      {
+        "id": "sim-fps",
+        "type": "fps_min",
+        "pass": true,
+        "detail": "simFpsEstimate=6969.5 (min 30)"
+      }
+    ],
+    "passed": 4,
+    "total": 8,
+    "verdict": "FAILED",
+    "confidence": 0.5
+  },
+  "error": null,
+  "workScene": "/home/john/Projects/Android-Dev-Studio/harness/scenes/loop_work_scene.json"
+}

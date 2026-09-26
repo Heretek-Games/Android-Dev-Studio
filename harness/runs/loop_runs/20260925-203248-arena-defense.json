@@ -1,0 +1,193 @@
+{
+  "goal": "Arena Defense",
+  "rules": [
+    {
+      "type": "entity_exists",
+      "target": "Ground Arena",
+      "id": "arena-ground"
+    },
+    {
+      "type": "entity_component",
+      "target": "Player Hero",
+      "component": "MobileController",
+      "id": "player-hero"
+    },
+    {
+      "type": "entity_component",
+      "target": "Player Hero",
+      "component": "WeaponController",
+      "id": "hero-armed"
+    },
+    {
+      "type": "entity_component",
+      "target": "Player Hero",
+      "component": "HealthComponent",
+      "id": "hero-tough"
+    },
+    {
+      "type": "game_enemy_chase_min",
+      "min": 0.5,
+      "id": "enemies-chase"
+    },
+    {
+      "type": "game_kills_min",
+      "min": 2,
+      "id": "kills-scored"
+    },
+    {
+      "type": "game_score_min",
+      "min": 200,
+      "id": "score-awarded"
+    },
+    {
+      "type": "game_wave_reached",
+      "wave": 2,
+      "id": "wave-advanced"
+    },
+    {
+      "type": "game_phase",
+      "phase": "won",
+      "id": "run-won"
+    },
+    {
+      "type": "draw_call_budget",
+      "max": 100,
+      "id": "draw-budget"
+    },
+    {
+      "type": "fps_min",
+      "min": 30,
+      "id": "sim-fps"
+    }
+  ],
+  "verdict": "unresolved",
+  "iterations": [
+    {
+      "iteration": 1,
+      "phase": "generate",
+      "visionNotes": [],
+      "llm": {
+        "model": "mimo-v2.6-flash",
+        "promptTokens": 4929,
+        "completionTokens": 957,
+        "totalTokens": 5886,
+        "latencySeconds": 6.48,
+        "finishReason": "stop",
+        "attempts": 1
+      },
+      "parse": {
+        "strategy": "raw",
+        "actionCount": 10,
+        "summary": "A compact arena-defense scene with 'Ground Arena', an armed MobileController hero, chaser enemies, and a 2-wave game config that reaches the won phase.",
+        "error": null
+      },
+      "apply": {
+        "applied": 9,
+        "targetMissing": 0,
+        "invalid": 1,
+        "failed": 0,
+        "outcomes": [
+          {
+            "index": 0,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Ground Arena (plane) at [0.0, 0.0, 0.0]",
+            "target": "Ground Arena"
+          },
+          {
+            "index": 1,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Player Hero (capsule) at [0.0, 1.0, 0.0]",
+            "target": "Player Hero"
+          },
+          {
+            "index": 2,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Enemy Raider A (capsule) at [-6.0, 1.0, -6.0]",
+            "target": "Enemy Raider A"
+          },
+          {
+            "index": 3,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Enemy Raider B (capsule) at [6.0, 1.0, -6.0]",
+            "target": "Enemy Raider B"
+          },
+          {
+            "index": 4,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Arena Pillar North (cylinder) at [-10.0, 2.0, -10.0]",
+            "target": "Arena Pillar North"
+          },
+          {
+            "index": 5,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Arena Pillar South (cylinder) at [10.0, 2.0, 10.0]",
+            "target": "Arena Pillar South"
+          },
+          {
+            "index": 6,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Arena Crate (box) at [8.0, 0.75, -8.0]",
+            "target": "Arena Crate"
+          },
+          {
+            "index": 7,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added directional light 'Sun Light' (intensity 2.2)",
+            "target": "Sun Light"
+          },
+          {
+            "index": 8,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added ambient light 'Arena Fill' (intensity 0.6)",
+            "target": "Arena Fill"
+          },
+          {
+            "index": 9,
+            "type": "game",
+            "status": "invalid",
+            "detail": "game config rejected \u2014 unknown game enemy key 'moveSpeed' (allowed: shape, color, size, y, health, ai, elemental)"
+          }
+        ],
+        "appliedDescriptions": [
+          "Spawned Ground Arena (plane) at [0.0, 0.0, 0.0]",
+          "Spawned Player Hero (capsule) at [0.0, 1.0, 0.0]",
+          "Spawned Enemy Raider A (capsule) at [-6.0, 1.0, -6.0]",
+          "Spawned Enemy Raider B (capsule) at [6.0, 1.0, -6.0]",
+          "Spawned Arena Pillar North (cylinder) at [-10.0, 2.0, -10.0]",
+          "Spawned Arena Pillar South (cylinder) at [10.0, 2.0, 10.0]",
+          "Spawned Arena Crate (box) at [8.0, 0.75, -8.0]",
+          "Added directional light 'Sun Light' (intensity 2.2)",
+          "Added ambient light 'Arena Fill' (intensity 0.6)"
+        ]
+      },
+      "gate": {
+        "valid": false,
+        "violations": [
+          {
+            "code": "COLLIDER_PENETRATION_AT_SPAWN",
+            "message": "Dynamic collider 'Player Hero' penetrates fixed collider 'Ground Arena' at spawn",
+            "entity": "Player Hero"
+          }
+        ]
+      },
+      "qa": {
+        "verdict": "skipped",
+        "reason": "invariant gate violation"
+      }
+    }
+  ],
+  "totalTokens": 5886,
+  "totalLatencySeconds": 6.48,
+  "finalReport": null,
+  "error": null,
+  "workScene": "/home/john/Projects/Android-Dev-Studio/harness/scenes/loop_work_scene.json"
+}

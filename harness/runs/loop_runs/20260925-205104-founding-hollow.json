@@ -1,0 +1,279 @@
+{
+  "goal": "Founding Hollow",
+  "rules": [
+    {
+      "type": "entity_exists",
+      "target": "Settlement Ground",
+      "id": "settlement-ground"
+    },
+    {
+      "type": "game_settlement_pop_min",
+      "min": 6,
+      "id": "population-grown"
+    },
+    {
+      "type": "game_settlement_gold_min",
+      "min": 1,
+      "id": "treasury-healthy"
+    },
+    {
+      "type": "game_phase",
+      "phase": "won",
+      "id": "charter-granted"
+    },
+    {
+      "type": "draw_call_budget",
+      "max": 100,
+      "id": "draw-budget"
+    },
+    {
+      "type": "fps_min",
+      "min": 30,
+      "id": "sim-fps"
+    }
+  ],
+  "verdict": "unresolved",
+  "iterations": [
+    {
+      "iteration": 1,
+      "phase": "generate",
+      "visionNotes": [],
+      "llm": {
+        "model": "mimo-v2.6-flash",
+        "promptTokens": 5149,
+        "completionTokens": 879,
+        "totalTokens": 6028,
+        "latencySeconds": 17.993,
+        "finishReason": "stop",
+        "attempts": 1
+      },
+      "parse": {
+        "strategy": "raw",
+        "actionCount": 10,
+        "summary": "Founding Hollow: a small settlement-build scene with a Settlement Ground, a settler actor, props, lighting, and a build-mode game runtime that grows population to 6 and keeps the treasury positive until the charter is won.",
+        "error": null
+      },
+      "apply": {
+        "applied": 10,
+        "targetMissing": 0,
+        "invalid": 0,
+        "failed": 0,
+        "outcomes": [
+          {
+            "index": 0,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Settlement Ground (box) at [0.0, -0.5, 0.0]",
+            "target": "Settlement Ground"
+          },
+          {
+            "index": 1,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Settler (capsule) at [0.0, 1.3, 0.0]",
+            "target": "Settler"
+          },
+          {
+            "index": 2,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Well (cylinder) at [-6.0, 0.6, -6.0]",
+            "target": "Well"
+          },
+          {
+            "index": 3,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Oak Tree (cylinder) at [7.0, 1.5, -7.0]",
+            "target": "Oak Tree"
+          },
+          {
+            "index": 4,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Oak Canopy (sphere) at [7.0, 3.6, -7.0]",
+            "target": "Oak Canopy"
+          },
+          {
+            "index": 5,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Barn (box) at [-8.0, 1.5, 6.0]",
+            "target": "Barn"
+          },
+          {
+            "index": 6,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Stone Wall (box) at [0.0, 0.8, -14.0]",
+            "target": "Stone Wall"
+          },
+          {
+            "index": 7,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added directional light 'Sun Light' (intensity 2.0)",
+            "target": "Sun Light"
+          },
+          {
+            "index": 8,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added ambient light 'Hollow Ambient' (intensity 0.6)",
+            "target": "Hollow Ambient"
+          },
+          {
+            "index": 9,
+            "type": "game",
+            "status": "applied",
+            "detail": "Set build-mode quest config for player 'Settler'"
+          }
+        ],
+        "appliedDescriptions": [
+          "Spawned Settlement Ground (box) at [0.0, -0.5, 0.0]",
+          "Spawned Settler (capsule) at [0.0, 1.3, 0.0]",
+          "Spawned Well (cylinder) at [-6.0, 0.6, -6.0]",
+          "Spawned Oak Tree (cylinder) at [7.0, 1.5, -7.0]",
+          "Spawned Oak Canopy (sphere) at [7.0, 3.6, -7.0]",
+          "Spawned Barn (box) at [-8.0, 1.5, 6.0]",
+          "Spawned Stone Wall (box) at [0.0, 0.8, -14.0]",
+          "Added directional light 'Sun Light' (intensity 2.0)",
+          "Added ambient light 'Hollow Ambient' (intensity 0.6)",
+          "Set build-mode quest config for player 'Settler'"
+        ]
+      },
+      "gate": {
+        "valid": true,
+        "violations": []
+      },
+      "qa": {
+        "verdict": "FAILED",
+        "passed": 3,
+        "total": 6,
+        "failedRules": [
+          {
+            "id": "population-grown",
+            "type": "game_settlement_pop_min",
+            "detail": "population=0 (min 6); plots placed 1/7; first failure: insufficient gold (need 50, have 40)"
+          },
+          {
+            "id": "treasury-healthy",
+            "type": "game_settlement_gold_min",
+            "detail": "gold=-10 (min 1); plots placed 1/7; first failure: insufficient gold (need 50, have 40)"
+          },
+          {
+            "id": "charter-granted",
+            "type": "game_phase",
+            "detail": "phase=playing (expected won)"
+          }
+        ],
+        "metrics": {
+          "avgFrameTimeMs": 0.1518,
+          "p95FrameTimeMs": 0.2209,
+          "maxFrameTimeMs": 38.0057,
+          "simFpsEstimate": 6589.05,
+          "drawCallEstimate": 7,
+          "instancedBatches": 0,
+          "memoryHeapMb": 16.15,
+          "objectCount": 9,
+          "physicsBodyCount": 6,
+          "eventCount": 0
+        }
+      }
+    }
+  ],
+  "totalTokens": 6028,
+  "totalLatencySeconds": 17.993,
+  "finalReport": {
+    "schemaVersion": 1,
+    "runner": "qa_scenario_runner.mjs",
+    "scenario": "loop_work_scene.json",
+    "goal": "Founding Hollow",
+    "timestamp": 1790383864.255,
+    "frames": 600,
+    "fixedDeltaSeconds": 0.016666666666666666,
+    "metrics": {
+      "avgFrameTimeMs": 0.1518,
+      "p95FrameTimeMs": 0.2209,
+      "maxFrameTimeMs": 38.0057,
+      "simFpsEstimate": 6589.05,
+      "drawCallEstimate": 7,
+      "instancedBatches": 0,
+      "memoryHeapMb": 16.15,
+      "objectCount": 9,
+      "physicsBodyCount": 6,
+      "eventCount": 0
+    },
+    "game": {
+      "mode": "build",
+      "phase": "playing",
+      "score": 0,
+      "kills": 0,
+      "wave": 0,
+      "traveledDistance": 0,
+      "settlement": {
+        "gold": -10,
+        "food": 70,
+        "population": 0,
+        "housing": 0,
+        "buildings": [
+          {
+            "id": 1,
+            "type": "farm",
+            "x": 0,
+            "z": 6
+          }
+        ],
+        "simTime": 10,
+        "steps": 10
+      },
+      "reactions": 0,
+      "shots": 0,
+      "maxEnemyDisplacement": 0
+    },
+    "rules": [
+      {
+        "id": "settlement-ground",
+        "type": "entity_exists",
+        "pass": true,
+        "detail": "found \"Settlement Ground\""
+      },
+      {
+        "id": "population-grown",
+        "type": "game_settlement_pop_min",
+        "pass": false,
+        "detail": "population=0 (min 6); plots placed 1/7; first failure: insufficient gold (need 50, have 40)"
+      },
+      {
+        "id": "treasury-healthy",
+        "type": "game_settlement_gold_min",
+        "pass": false,
+        "detail": "gold=-10 (min 1); plots placed 1/7; first failure: insufficient gold (need 50, have 40)"
+      },
+      {
+        "id": "charter-granted",
+        "type": "game_phase",
+        "pass": false,
+        "detail": "phase=playing (expected won)"
+      },
+      {
+        "id": "draw-budget",
+        "type": "draw_call_budget",
+        "pass": true,
+        "detail": "drawCallEstimate=7 (budget 100)"
+      },
+      {
+        "id": "sim-fps",
+        "type": "fps_min",
+        "pass": true,
+        "detail": "simFpsEstimate=6589.1 (min 30)"
+      }
+    ],
+    "passed": 3,
+    "total": 6,
+    "verdict": "FAILED",
+    "confidence": 0.5
+  },
+  "error": null,
+  "workScene": "/home/john/Projects/Android-Dev-Studio/harness/scenes/loop_work_scene.json"
+}

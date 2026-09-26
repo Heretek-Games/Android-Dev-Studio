@@ -1,0 +1,926 @@
+{
+  "goal": "Open County",
+  "rules": [
+    {
+      "type": "entity_exists",
+      "target": "County Ground",
+      "id": "county-ground"
+    },
+    {
+      "type": "entity_component",
+      "target": "Player Car",
+      "component": "VehicleController",
+      "id": "player-car"
+    },
+    {
+      "type": "biome_coverage_min",
+      "biome": "town",
+      "min": 3,
+      "region": {
+        "minX": -60,
+        "maxX": -10,
+        "minZ": -20,
+        "maxZ": 20
+      },
+      "id": "town-held"
+    },
+    {
+      "type": "biome_coverage_min",
+      "biome": "farm",
+      "min": 2,
+      "region": {
+        "minX": -10,
+        "maxX": 20,
+        "minZ": -20,
+        "maxZ": 20
+      },
+      "id": "farms-held"
+    },
+    {
+      "type": "biome_coverage_min",
+      "biome": "wilds",
+      "min": 2,
+      "region": {
+        "minX": 20,
+        "maxX": 60,
+        "minZ": -20,
+        "maxZ": 20
+      },
+      "id": "wilds-held"
+    },
+    {
+      "type": "traversal_coverage_min",
+      "min": 0.8,
+      "id": "county-traversable"
+    },
+    {
+      "type": "streaming_coherence_min",
+      "min": 1.0,
+      "id": "streaming-seamless"
+    },
+    {
+      "type": "draw_call_budget",
+      "max": 100,
+      "id": "draw-budget"
+    },
+    {
+      "type": "fps_min",
+      "min": 30,
+      "id": "sim-fps"
+    }
+  ],
+  "verdict": "unresolved",
+  "iterations": [
+    {
+      "iteration": 1,
+      "phase": "generate",
+      "visionNotes": [],
+      "llm": {
+        "model": "mimo-v2.6-flash",
+        "promptTokens": 5353,
+        "completionTokens": 4000,
+        "totalTokens": 9353,
+        "latencySeconds": 86.207,
+        "finishReason": "length",
+        "attempts": 1
+      },
+      "parse": {
+        "strategy": "failed",
+        "actionCount": 0,
+        "summary": null,
+        "error": "empty response"
+      },
+      "apply": {
+        "applied": 0,
+        "targetMissing": 0,
+        "invalid": 0,
+        "failed": 0,
+        "outcomes": [],
+        "appliedDescriptions": []
+      },
+      "gate": {
+        "valid": true,
+        "violations": []
+      },
+      "qa": {
+        "verdict": "FAILED",
+        "passed": 2,
+        "total": 9,
+        "failedRules": [
+          {
+            "id": "county-ground",
+            "type": "entity_exists",
+            "detail": "missing \"County Ground\""
+          },
+          {
+            "id": "player-car",
+            "type": "entity_component",
+            "detail": "missing \"Player Car\""
+          },
+          {
+            "id": "town-held",
+            "type": "biome_coverage_min",
+            "detail": "biome 'town': 0 live objects in region (min 3); tagged: []"
+          },
+          {
+            "id": "farms-held",
+            "type": "biome_coverage_min",
+            "detail": "biome 'farm': 0 live objects in region (min 2); tagged: []"
+          },
+          {
+            "id": "wilds-held",
+            "type": "biome_coverage_min",
+            "detail": "biome 'wilds': 0 live objects in region (min 2); tagged: []"
+          },
+          {
+            "id": "county-traversable",
+            "type": "traversal_coverage_min",
+            "detail": "coverage=0 (min 0.8), holes=81, steep=0, stepHazards=0"
+          },
+          {
+            "id": "streaming-seamless",
+            "type": "streaming_coherence_min",
+            "detail": "streaming audit did not run (add spec.streaming with a streamer object)"
+          }
+        ],
+        "metrics": {
+          "avgFrameTimeMs": 0.0579,
+          "p95FrameTimeMs": 0.0177,
+          "maxFrameTimeMs": 28.5261,
+          "simFpsEstimate": 17260.38,
+          "drawCallEstimate": 0,
+          "instancedBatches": 0,
+          "memoryHeapMb": 15.01,
+          "objectCount": 0,
+          "physicsBodyCount": 0,
+          "eventCount": 0,
+          "traversal": {
+            "grid": 9,
+            "cells": 81,
+            "hits": 0,
+            "coverage": 0,
+            "holes": [
+              {
+                "x": -17.778,
+                "z": -17.778
+              },
+              {
+                "x": -17.778,
+                "z": -13.333
+              },
+              {
+                "x": -17.778,
+                "z": -8.889
+              },
+              {
+                "x": -17.778,
+                "z": -4.444
+              },
+              {
+                "x": -17.778,
+                "z": 0
+              },
+              {
+                "x": -17.778,
+                "z": 4.444
+              },
+              {
+                "x": -17.778,
+                "z": 8.889
+              },
+              {
+                "x": -17.778,
+                "z": 13.333
+              },
+              {
+                "x": -17.778,
+                "z": 17.778
+              },
+              {
+                "x": -13.333,
+                "z": -17.778
+              },
+              {
+                "x": -13.333,
+                "z": -13.333
+              },
+              {
+                "x": -13.333,
+                "z": -8.889
+              },
+              {
+                "x": -13.333,
+                "z": -4.444
+              },
+              {
+                "x": -13.333,
+                "z": 0
+              },
+              {
+                "x": -13.333,
+                "z": 4.444
+              },
+              {
+                "x": -13.333,
+                "z": 8.889
+              },
+              {
+                "x": -13.333,
+                "z": 13.333
+              },
+              {
+                "x": -13.333,
+                "z": 17.778
+              },
+              {
+                "x": -8.889,
+                "z": -17.778
+              },
+              {
+                "x": -8.889,
+                "z": -13.333
+              },
+              {
+                "x": -8.889,
+                "z": -8.889
+              },
+              {
+                "x": -8.889,
+                "z": -4.444
+              },
+              {
+                "x": -8.889,
+                "z": 0
+              },
+              {
+                "x": -8.889,
+                "z": 4.444
+              },
+              {
+                "x": -8.889,
+                "z": 8.889
+              },
+              {
+                "x": -8.889,
+                "z": 13.333
+              },
+              {
+                "x": -8.889,
+                "z": 17.778
+              },
+              {
+                "x": -4.444,
+                "z": -17.778
+              },
+              {
+                "x": -4.444,
+                "z": -13.333
+              },
+              {
+                "x": -4.444,
+                "z": -8.889
+              },
+              {
+                "x": -4.444,
+                "z": -4.444
+              },
+              {
+                "x": -4.444,
+                "z": 0
+              },
+              {
+                "x": -4.444,
+                "z": 4.444
+              },
+              {
+                "x": -4.444,
+                "z": 8.889
+              },
+              {
+                "x": -4.444,
+                "z": 13.333
+              },
+              {
+                "x": -4.444,
+                "z": 17.778
+              },
+              {
+                "x": 0,
+                "z": -17.778
+              },
+              {
+                "x": 0,
+                "z": -13.333
+              },
+              {
+                "x": 0,
+                "z": -8.889
+              },
+              {
+                "x": 0,
+                "z": -4.444
+              },
+              {
+                "x": 0,
+                "z": 0
+              },
+              {
+                "x": 0,
+                "z": 4.444
+              },
+              {
+                "x": 0,
+                "z": 8.889
+              },
+              {
+                "x": 0,
+                "z": 13.333
+              },
+              {
+                "x": 0,
+                "z": 17.778
+              },
+              {
+                "x": 4.444,
+                "z": -17.778
+              },
+              {
+                "x": 4.444,
+                "z": -13.333
+              },
+              {
+                "x": 4.444,
+                "z": -8.889
+              },
+              {
+                "x": 4.444,
+                "z": -4.444
+              },
+              {
+                "x": 4.444,
+                "z": 0
+              },
+              {
+                "x": 4.444,
+                "z": 4.444
+              },
+              {
+                "x": 4.444,
+                "z": 8.889
+              },
+              {
+                "x": 4.444,
+                "z": 13.333
+              },
+              {
+                "x": 4.444,
+                "z": 17.778
+              },
+              {
+                "x": 8.889,
+                "z": -17.778
+              },
+              {
+                "x": 8.889,
+                "z": -13.333
+              },
+              {
+                "x": 8.889,
+                "z": -8.889
+              },
+              {
+                "x": 8.889,
+                "z": -4.444
+              },
+              {
+                "x": 8.889,
+                "z": 0
+              },
+              {
+                "x": 8.889,
+                "z": 4.444
+              },
+              {
+                "x": 8.889,
+                "z": 8.889
+              },
+              {
+                "x": 8.889,
+                "z": 13.333
+              },
+              {
+                "x": 8.889,
+                "z": 17.778
+              },
+              {
+                "x": 13.333,
+                "z": -17.778
+              },
+              {
+                "x": 13.333,
+                "z": -13.333
+              },
+              {
+                "x": 13.333,
+                "z": -8.889
+              },
+              {
+                "x": 13.333,
+                "z": -4.444
+              },
+              {
+                "x": 13.333,
+                "z": 0
+              },
+              {
+                "x": 13.333,
+                "z": 4.444
+              },
+              {
+                "x": 13.333,
+                "z": 8.889
+              },
+              {
+                "x": 13.333,
+                "z": 13.333
+              },
+              {
+                "x": 13.333,
+                "z": 17.778
+              },
+              {
+                "x": 17.778,
+                "z": -17.778
+              },
+              {
+                "x": 17.778,
+                "z": -13.333
+              },
+              {
+                "x": 17.778,
+                "z": -8.889
+              },
+              {
+                "x": 17.778,
+                "z": -4.444
+              },
+              {
+                "x": 17.778,
+                "z": 0
+              },
+              {
+                "x": 17.778,
+                "z": 4.444
+              },
+              {
+                "x": 17.778,
+                "z": 8.889
+              },
+              {
+                "x": 17.778,
+                "z": 13.333
+              },
+              {
+                "x": 17.778,
+                "z": 17.778
+              }
+            ],
+            "steep": [],
+            "stepHazards": [],
+            "bounds": {
+              "minX": -20,
+              "maxX": 20,
+              "minZ": -20,
+              "maxZ": 20
+            }
+          }
+        }
+      }
+    }
+  ],
+  "totalTokens": 9353,
+  "totalLatencySeconds": 86.207,
+  "finalReport": {
+    "schemaVersion": 1,
+    "runner": "qa_scenario_runner.mjs",
+    "scenario": "loop_work_scene.json",
+    "goal": "Open County",
+    "timestamp": 1790383729.618,
+    "frames": 600,
+    "fixedDeltaSeconds": 0.016666666666666666,
+    "metrics": {
+      "avgFrameTimeMs": 0.0579,
+      "p95FrameTimeMs": 0.0177,
+      "maxFrameTimeMs": 28.5261,
+      "simFpsEstimate": 17260.38,
+      "drawCallEstimate": 0,
+      "instancedBatches": 0,
+      "memoryHeapMb": 15.01,
+      "objectCount": 0,
+      "physicsBodyCount": 0,
+      "eventCount": 0,
+      "traversal": {
+        "grid": 9,
+        "cells": 81,
+        "hits": 0,
+        "coverage": 0,
+        "holes": [
+          {
+            "x": -17.778,
+            "z": -17.778
+          },
+          {
+            "x": -17.778,
+            "z": -13.333
+          },
+          {
+            "x": -17.778,
+            "z": -8.889
+          },
+          {
+            "x": -17.778,
+            "z": -4.444
+          },
+          {
+            "x": -17.778,
+            "z": 0
+          },
+          {
+            "x": -17.778,
+            "z": 4.444
+          },
+          {
+            "x": -17.778,
+            "z": 8.889
+          },
+          {
+            "x": -17.778,
+            "z": 13.333
+          },
+          {
+            "x": -17.778,
+            "z": 17.778
+          },
+          {
+            "x": -13.333,
+            "z": -17.778
+          },
+          {
+            "x": -13.333,
+            "z": -13.333
+          },
+          {
+            "x": -13.333,
+            "z": -8.889
+          },
+          {
+            "x": -13.333,
+            "z": -4.444
+          },
+          {
+            "x": -13.333,
+            "z": 0
+          },
+          {
+            "x": -13.333,
+            "z": 4.444
+          },
+          {
+            "x": -13.333,
+            "z": 8.889
+          },
+          {
+            "x": -13.333,
+            "z": 13.333
+          },
+          {
+            "x": -13.333,
+            "z": 17.778
+          },
+          {
+            "x": -8.889,
+            "z": -17.778
+          },
+          {
+            "x": -8.889,
+            "z": -13.333
+          },
+          {
+            "x": -8.889,
+            "z": -8.889
+          },
+          {
+            "x": -8.889,
+            "z": -4.444
+          },
+          {
+            "x": -8.889,
+            "z": 0
+          },
+          {
+            "x": -8.889,
+            "z": 4.444
+          },
+          {
+            "x": -8.889,
+            "z": 8.889
+          },
+          {
+            "x": -8.889,
+            "z": 13.333
+          },
+          {
+            "x": -8.889,
+            "z": 17.778
+          },
+          {
+            "x": -4.444,
+            "z": -17.778
+          },
+          {
+            "x": -4.444,
+            "z": -13.333
+          },
+          {
+            "x": -4.444,
+            "z": -8.889
+          },
+          {
+            "x": -4.444,
+            "z": -4.444
+          },
+          {
+            "x": -4.444,
+            "z": 0
+          },
+          {
+            "x": -4.444,
+            "z": 4.444
+          },
+          {
+            "x": -4.444,
+            "z": 8.889
+          },
+          {
+            "x": -4.444,
+            "z": 13.333
+          },
+          {
+            "x": -4.444,
+            "z": 17.778
+          },
+          {
+            "x": 0,
+            "z": -17.778
+          },
+          {
+            "x": 0,
+            "z": -13.333
+          },
+          {
+            "x": 0,
+            "z": -8.889
+          },
+          {
+            "x": 0,
+            "z": -4.444
+          },
+          {
+            "x": 0,
+            "z": 0
+          },
+          {
+            "x": 0,
+            "z": 4.444
+          },
+          {
+            "x": 0,
+            "z": 8.889
+          },
+          {
+            "x": 0,
+            "z": 13.333
+          },
+          {
+            "x": 0,
+            "z": 17.778
+          },
+          {
+            "x": 4.444,
+            "z": -17.778
+          },
+          {
+            "x": 4.444,
+            "z": -13.333
+          },
+          {
+            "x": 4.444,
+            "z": -8.889
+          },
+          {
+            "x": 4.444,
+            "z": -4.444
+          },
+          {
+            "x": 4.444,
+            "z": 0
+          },
+          {
+            "x": 4.444,
+            "z": 4.444
+          },
+          {
+            "x": 4.444,
+            "z": 8.889
+          },
+          {
+            "x": 4.444,
+            "z": 13.333
+          },
+          {
+            "x": 4.444,
+            "z": 17.778
+          },
+          {
+            "x": 8.889,
+            "z": -17.778
+          },
+          {
+            "x": 8.889,
+            "z": -13.333
+          },
+          {
+            "x": 8.889,
+            "z": -8.889
+          },
+          {
+            "x": 8.889,
+            "z": -4.444
+          },
+          {
+            "x": 8.889,
+            "z": 0
+          },
+          {
+            "x": 8.889,
+            "z": 4.444
+          },
+          {
+            "x": 8.889,
+            "z": 8.889
+          },
+          {
+            "x": 8.889,
+            "z": 13.333
+          },
+          {
+            "x": 8.889,
+            "z": 17.778
+          },
+          {
+            "x": 13.333,
+            "z": -17.778
+          },
+          {
+            "x": 13.333,
+            "z": -13.333
+          },
+          {
+            "x": 13.333,
+            "z": -8.889
+          },
+          {
+            "x": 13.333,
+            "z": -4.444
+          },
+          {
+            "x": 13.333,
+            "z": 0
+          },
+          {
+            "x": 13.333,
+            "z": 4.444
+          },
+          {
+            "x": 13.333,
+            "z": 8.889
+          },
+          {
+            "x": 13.333,
+            "z": 13.333
+          },
+          {
+            "x": 13.333,
+            "z": 17.778
+          },
+          {
+            "x": 17.778,
+            "z": -17.778
+          },
+          {
+            "x": 17.778,
+            "z": -13.333
+          },
+          {
+            "x": 17.778,
+            "z": -8.889
+          },
+          {
+            "x": 17.778,
+            "z": -4.444
+          },
+          {
+            "x": 17.778,
+            "z": 0
+          },
+          {
+            "x": 17.778,
+            "z": 4.444
+          },
+          {
+            "x": 17.778,
+            "z": 8.889
+          },
+          {
+            "x": 17.778,
+            "z": 13.333
+          },
+          {
+            "x": 17.778,
+            "z": 17.778
+          }
+        ],
+        "steep": [],
+        "stepHazards": [],
+        "bounds": {
+          "minX": -20,
+          "maxX": 20,
+          "minZ": -20,
+          "maxZ": 20
+        }
+      }
+    },
+    "rules": [
+      {
+        "id": "county-ground",
+        "type": "entity_exists",
+        "pass": false,
+        "detail": "missing \"County Ground\""
+      },
+      {
+        "id": "player-car",
+        "type": "entity_component",
+        "pass": false,
+        "detail": "missing \"Player Car\""
+      },
+      {
+        "id": "town-held",
+        "type": "biome_coverage_min",
+        "pass": false,
+        "detail": "biome 'town': 0 live objects in region (min 3); tagged: []"
+      },
+      {
+        "id": "farms-held",
+        "type": "biome_coverage_min",
+        "pass": false,
+        "detail": "biome 'farm': 0 live objects in region (min 2); tagged: []"
+      },
+      {
+        "id": "wilds-held",
+        "type": "biome_coverage_min",
+        "pass": false,
+        "detail": "biome 'wilds': 0 live objects in region (min 2); tagged: []"
+      },
+      {
+        "id": "county-traversable",
+        "type": "traversal_coverage_min",
+        "pass": false,
+        "detail": "coverage=0 (min 0.8), holes=81, steep=0, stepHazards=0"
+      },
+      {
+        "id": "streaming-seamless",
+        "type": "streaming_coherence_min",
+        "pass": false,
+        "detail": "streaming audit did not run (add spec.streaming with a streamer object)"
+      },
+      {
+        "id": "draw-budget",
+        "type": "draw_call_budget",
+        "pass": true,
+        "detail": "drawCallEstimate=0 (budget 100)"
+      },
+      {
+        "id": "sim-fps",
+        "type": "fps_min",
+        "pass": true,
+        "detail": "simFpsEstimate=17260.4 (min 30)"
+      }
+    ],
+    "passed": 2,
+    "total": 9,
+    "verdict": "FAILED",
+    "confidence": 0.222
+  },
+  "error": null,
+  "workScene": "/home/john/Projects/Android-Dev-Studio/harness/scenes/loop_work_scene.json"
+}
