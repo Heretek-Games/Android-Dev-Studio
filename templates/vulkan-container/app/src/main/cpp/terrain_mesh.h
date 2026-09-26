@@ -10,6 +10,7 @@
 
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <vector>
 
@@ -79,6 +80,21 @@ struct TerrainGpuData {
  */
 TerrainGpuData packTerrainGpuData(const std::vector<TerrainLodRecord>& leaves, uint32_t maxDepth,
                                   uint32_t seed, float maxHeight);
+
+/**
+ * Terrain push-constant block: mirrors shaders/terrain.vert's PushConstants
+ * (mat4 viewProj only — 64 bytes). The terrain pipeline-layout range AND the
+ * recordFrame push call both size from this struct — never from the scene
+ * GraphicsPushConstants block (92 bytes), whose trailing time/camPos bytes
+ * the terrain shader does not declare.
+ */
+struct TerrainPushConstants {
+  float viewProj[16];
+};
+static_assert(sizeof(TerrainPushConstants) == 64,
+              "terrain push block must match terrain.vert (mat4 only)");
+static_assert(offsetof(TerrainPushConstants, viewProj) == 0,
+              "viewProj must lead the terrain push block");
 
 /**
  * Validation fix 4 (VUID-vkCmdDrawIndexedIndirect-drawCount-02718): without

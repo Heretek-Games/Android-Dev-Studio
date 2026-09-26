@@ -71,6 +71,23 @@ Java_com_heretek_gamestudio_tier2_MainActivity_nativeSurfaceDestroyed(JNIEnv* /*
   gRenderer.destroySurface();
 }
 
+// Surface-size change hook for MainActivity.surfaceChanged: the Java side
+// calls this when the live surface is resized (rotation, fold, multi-window)
+// so the native swapchain rebuilds without a full surface teardown. (If the
+// platform destroys the surface instead, surfaceDestroyed/Created already
+// cover it via the full path.)
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_heretek_gamestudio_tier2_MainActivity_nativeSurfaceChanged(JNIEnv* /*env*/,
+                                                                     jobject /*this*/, jint width,
+                                                                     jint height) {
+  const bool ok = gRenderer.onSurfaceSizeChanged(width, height);
+  if (!ok) {
+    LOGE("onSurfaceSizeChanged failed (%dx%d): %s", width, height,
+         gRenderer.lastError().c_str());
+  }
+  return ok ? JNI_TRUE : JNI_FALSE;
+}
+
 extern "C" JNIEXPORT jint JNICALL
 Java_com_heretek_gamestudio_tier2_MainActivity_nativeDrawCalls(JNIEnv* /*env*/, jobject /*this*/) {
   return gSceneReady ? gRenderer.drawCallEstimate() : -1;

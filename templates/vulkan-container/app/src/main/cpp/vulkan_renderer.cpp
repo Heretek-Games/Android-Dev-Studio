@@ -727,15 +727,18 @@ bool VulkanRenderer::createPipelines() {
   }
 
   // ---- Terrain pipeline (no descriptor sets; push-constant viewProj) ------
-  // Validation defect class 3 (VUID-vkCmdPushConstants-offset-01796): the
+  // Validation defect class 3 (VUID-vkCmdPushConstants-offset-01796: the call's
+  // stageFlags must cover every stage of each overlapping layout range): the
   // terrain layout reused the scene graphicsRange (VERTEX|FRAGMENT), but the
   // terrain push call is VERTEX-only. Terrain shaders consume push constants
   // in the vertex stage alone (terrain.frag declares none), so the terrain
   // layout gets its own VERTEX-only range that the call matches exactly.
+  // The range is sized from TerrainPushConstants (64 B = terrain.vert's mat4),
+  // not the 92 B scene block — the shader declares no trailing bytes.
   VkPushConstantRange terrainRange{};
   terrainRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
   terrainRange.offset = 0;
-  terrainRange.size = sizeof(GraphicsPushConstants);
+  terrainRange.size = sizeof(TerrainPushConstants);
   VkShaderModule terrainVertexModule = loadShader(shaderDir_ + "/terrain.vert.spv");
   VkShaderModule terrainFragmentModule = loadShader(shaderDir_ + "/terrain.frag.spv");
   if (terrainVertexModule == VK_NULL_HANDLE || terrainFragmentModule == VK_NULL_HANDLE) return false;
@@ -794,6 +797,81 @@ bool VulkanRenderer::initialize(const std::string& shaderDir) {
   return createCommandPool();
 }
 
+void VulkanRenderer::destroyFrameResources() {
+  if (device_ == VK_NULL_HANDLE) return;
+  for (auto& fence : inFlightFences_) {
+    if (fence != VK_NULL_HANDLE) vkDestroyFence(device_, fence, nullptr);
+    fence = VK_NULL_HANDLE;
+  }
+  for (uint32_t i = 0; i < kMaxFramesInFlight; i++) {
+    if (imageAvailable_[i] != VK_NULL_HANDLE) {
+      vkDestroySemaphore(device_, imageAvailable_[i], nullptr);
+    }
+    imageAvailable_[i] = VK_NULL_HANDLE;
+  }
+  for (auto& semaphore : renderFinished_) {
+    if (semaphore != VK_NULL_HANDLE) vkDestroySemaphore(device_, semaphore, nullptr);
+  }
+  renderFinished_.clear();
+  if (!commandBuffers_.empty() && commandPool_ != VK_NULL_HANDLE) {
+    vkFreeCommandBuffers(device_, commandPool_, static_cast<uint32_t>(commandBuffers_.size()),
+                         commandBuffers_.data());
+    commandBuffers_.clear();
+  }
+}
+
+bool VulkanRenderer::createFrameResources() {
+  destroyFrameResources();  // idempotent entry: a retry after partial failure starts clean
+  const uint32_t imageCount = swapchain_.imageCount();
+  if (imageCount == 0) {
+    lastError_ = "no swapchain images for frame resources";
+    return false;
+  }
+  commandBuffers_.resize(imageCount);
+  VkCommandBufferAllocateInfo allocInfo{};
+  allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+  allocInfo.commandPool = commandPool_;
+  allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+  allocInfo.commandBufferCount = static_cast<uint32_t>(commandBuffers_.size());
+  if (vkAllocateCommandBuffers(device_, &allocInfo, commandBuffers_.data()) != VK_SUCCESS) {
+    lastError_ = "vkAllocateCommandBuffers failed";
+    destroyFrameResources();
+    return false;
+  }
+
+  VkFenceCreateInfo fenceInfo{};
+  fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+  fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+  inFlightFences_.assign(kMaxFramesInFlight, VK_NULL_HANDLE);
+  for (auto& fence : inFlightFences_) {
+    if (vkCreateFence(device_, &fenceInfo, nullptr, &fence) != VK_SUCCESS) {
+      lastError_ = "vkCreateFence failed";
+      destroyFrameResources();
+      return false;
+    }
+  }
+  VkSemaphoreCreateInfo semaphoreInfo{};
+  semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+  for (uint32_t i = 0; i < kMaxFramesInFlight; i++) {
+    if (vkCreateSemaphore(device_, &semaphoreInfo, nullptr, &imageAvailable_[i]) != VK_SUCCESS) {
+      lastError_ = "vkCreateSemaphore failed (acquire)";
+      destroyFrameResources();
+      return false;
+    }
+  }
+  // One signal semaphore per swapchain image (validation fix 5): indexed by
+  // the acquired imageIndex so reuse always follows re-acquire of that image.
+  renderFinished_.assign(imageCount, VK_NULL_HANDLE);
+  for (auto& semaphore : renderFinished_) {
+    if (vkCreateSemaphore(device_, &semaphoreInfo, nullptr, &semaphore) != VK_SUCCESS) {
+      lastError_ = "vkCreateSemaphore failed (present)";
+      destroyFrameResources();
+      return false;
+    }
+  }
+  return true;
+}
+
 bool VulkanRenderer::createSurface(ANativeWindow* window, int width, int height) {
   if (!isReady() || window == nullptr) {
     lastError_ = "renderer not initialized";
@@ -807,46 +885,10 @@ bool VulkanRenderer::createSurface(ANativeWindow* window, int width, int height)
     return false;
   }
   if (!createBuffers() || !createDescriptors() || !createPipelines()) return false;
+  if (!createFrameResources()) return false;
 
-  commandBuffers_.resize(swapchain_.imageCount());
-  VkCommandBufferAllocateInfo allocInfo{};
-  allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-  allocInfo.commandPool = commandPool_;
-  allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-  allocInfo.commandBufferCount = static_cast<uint32_t>(commandBuffers_.size());
-  if (vkAllocateCommandBuffers(device_, &allocInfo, commandBuffers_.data()) != VK_SUCCESS) {
-    lastError_ = "vkAllocateCommandBuffers failed";
-    return false;
-  }
-
-  VkFenceCreateInfo fenceInfo{};
-  fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-  fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-  inFlightFences_.assign(kMaxFramesInFlight, VK_NULL_HANDLE);
-  for (auto& fence : inFlightFences_) {
-    if (vkCreateFence(device_, &fenceInfo, nullptr, &fence) != VK_SUCCESS) {
-      lastError_ = "vkCreateFence failed";
-      return false;
-    }
-  }
-  VkSemaphoreCreateInfo semaphoreInfo{};
-  semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-  for (uint32_t i = 0; i < kMaxFramesInFlight; i++) {
-    if (vkCreateSemaphore(device_, &semaphoreInfo, nullptr, &imageAvailable_[i]) != VK_SUCCESS) {
-      lastError_ = "vkCreateSemaphore failed";
-      return false;
-    }
-  }
-  // One signal semaphore per swapchain image (validation fix 5): indexed by
-  // the acquired imageIndex so reuse always follows re-acquire of that image.
-  renderFinished_.assign(swapchain_.imageCount(), VK_NULL_HANDLE);
-  for (auto& semaphore : renderFinished_) {
-    if (vkCreateSemaphore(device_, &semaphoreInfo, nullptr, &semaphore) != VK_SUCCESS) {
-      lastError_ = "vkCreateSemaphore failed";
-      return false;
-    }
-  }
   currentFrame_ = 0;
+  swapchainStale_ = false;
   LOGI("createSurface complete: swapchain=%p images=%u commandBuffers=%zu framesInFlight=%u "
        "acquireSemaphores=%u presentSemaphores=%zu",
        (void*)swapchain_.handle(), swapchain_.imageCount(), commandBuffers_.size(), kMaxFramesInFlight,
@@ -1096,8 +1138,15 @@ void VulkanRenderer::recordFrame(VkCommandBuffer cmd, uint32_t imageIndex, bool 
   // see terrainDrawSubmissionCount; both shapes are validation-clean).
   if (terrainDrawCount_ > 0 && terrainPipeline_ != VK_NULL_HANDLE) {
     vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, terrainPipeline_);
+    // TerrainPushConstants is the viewProj prefix of the scene block
+    // (static_asserted below), so the push covers exactly the 64 bytes
+    // terrain.vert declares.
+    static_assert(offsetof(GraphicsPushConstants, viewProj) == 0,
+                  "terrain push must be the viewProj prefix of the scene block");
+    static_assert(sizeof(TerrainPushConstants) <= sizeof(GraphicsPushConstants),
+                  "terrain push must fit inside the scene block prefix");
     vkCmdPushConstants(cmd, terrainPipelineLayout_, VK_SHADER_STAGE_VERTEX_BIT, 0,
-                       sizeof(GraphicsPushConstants), &graphicsConstants);
+                       sizeof(TerrainPushConstants), &graphicsConstants);
     VkDeviceSize terrainOffset = 0;
     vkCmdBindVertexBuffers(cmd, 0, 1, &terrainVertexBuffer_, &terrainOffset);
     vkCmdBindIndexBuffer(cmd, terrainIndexBuffer_, 0, VK_INDEX_TYPE_UINT16);
@@ -1181,6 +1230,18 @@ void VulkanRenderer::renderFrame() {
   static VkResult lastAcquire = VK_SUCCESS, lastSubmit = VK_SUCCESS, lastPresent = VK_SUCCESS;
   calls++;
   if (swapchain_.handle() == VK_NULL_HANDLE || commandBuffers_.empty()) {
+    // A failed recreate parks the renderer here (swapchainStale_): retry on a
+    // throttle so a transient failure (e.g. minimized window) recovers on its
+    // own instead of going dark until the activity restarts.
+    if (swapchainStale_ && window_ != nullptr && calls % 30 == 0) {
+      LOGI("renderFrame: retrying swapchain recreation");
+      if (recreateSwapchain()) {
+        LOGI("renderFrame: recreation retry succeeded");
+      } else {
+        LOGW("renderFrame: recreation retry failed: %s", lastError_.c_str());
+      }
+      return;
+    }
     static bool loggedGuard = false;
     if (!loggedGuard) {
       LOGI("renderFrame guard hit: swapchain=%p commandBuffers=%zu", (void*)swapchain_.handle(),
@@ -1194,15 +1255,33 @@ void VulkanRenderer::renderFrame() {
   // semaphore (renderFinished_[imageIndex]) is safe by construction — see
   // the member comment in vulkan_renderer.h.
   const uint32_t frame = currentFrame_ % kMaxFramesInFlight;
-  vkWaitForFences(device_, 1, &inFlightFences_[frame], VK_TRUE, UINT64_MAX);
+  const VkResult fenceWait =
+      vkWaitForFences(device_, 1, &inFlightFences_[frame], VK_TRUE, UINT64_MAX);
+  if (fenceWait != VK_SUCCESS) {
+    // Only reachable on device loss (infinite timeout otherwise): stop the
+    // hot loop instead of spinning acquire failures every frame.
+    static bool loggedFence = false;
+    if (!loggedFence) {
+      LOGE("vkWaitForFences failed: %d (device lost?)", static_cast<int>(fenceWait));
+      loggedFence = true;
+    }
+    lastError_ = "vkWaitForFences failed";
+    return;
+  }
 
   uint32_t imageIndex = 0;
   const VkResult acquire = acquireImage_(device_, swapchain_.handle(), UINT64_MAX,
                                          imageAvailable_[frame], VK_NULL_HANDLE, &imageIndex);
   lastAcquire = acquire;
   if (acquire == VK_ERROR_OUT_OF_DATE_KHR || acquire == VK_SUBOPTIMAL_KHR) {
+    // Immediate rebuild on both codes (one dropped frame): vkDeviceWaitIdle +
+    // destroying every sync object inside recreateSwapchain moots the
+    // signaled-acquire-semaphore question — SUBOPTIMAL does signal it, but
+    // the semaphore no longer exists once recreation runs.
+    LOGI("renderFrame: acquire returned %d — recreating swapchain", static_cast<int>(acquire));
     if (!recreateSwapchain()) {
       LOGE("swapchain recreation failed: %s", lastError_.c_str());
+      swapchainStale_ = true;
     }
     return;
   }
@@ -1253,8 +1332,10 @@ void VulkanRenderer::renderFrame() {
   const VkResult presented = queuePresent_(queue_, &present);
   lastPresent = presented;
   if (presented == VK_ERROR_OUT_OF_DATE_KHR || presented == VK_SUBOPTIMAL_KHR) {
+    LOGI("renderFrame: present returned %d — recreating swapchain", static_cast<int>(presented));
     if (!recreateSwapchain()) {
       LOGE("swapchain recreation failed after present: %s", lastError_.c_str());
+      swapchainStale_ = true;
     }
   } else if (presented != VK_SUCCESS) {
     LOGE("vkQueuePresentKHR failed: %d", static_cast<int>(presented));
@@ -1290,27 +1371,21 @@ void VulkanRenderer::renderFrame() {
 
 bool VulkanRenderer::recreateSwapchain() {
   if (device_ == VK_NULL_HANDLE || window_ == nullptr) return false;
+  if (surfaceWidth_ <= 0 || surfaceHeight_ <= 0) {
+    lastError_ = "surface has no area (minimized?) — skipping swapchain recreation";
+    return false;
+  }
   vkDeviceWaitIdle(device_);
 
-  // Tear down swapchain-dependent resources (scene/terrain buffers survive: they
-  // are independent of the swapchain; only the capture staging buffer is extent-bound).
-  for (auto& fence : inFlightFences_) {
-    if (fence != VK_NULL_HANDLE) vkDestroyFence(device_, fence, nullptr);
-    fence = VK_NULL_HANDLE;
-  }
-  for (uint32_t i = 0; i < kMaxFramesInFlight; i++) {
-    if (imageAvailable_[i] != VK_NULL_HANDLE) vkDestroySemaphore(device_, imageAvailable_[i], nullptr);
-    imageAvailable_[i] = VK_NULL_HANDLE;
-  }
-  for (auto semaphore : renderFinished_) {
-    if (semaphore != VK_NULL_HANDLE) vkDestroySemaphore(device_, semaphore, nullptr);
-  }
-  renderFinished_.clear();
-  if (!commandBuffers_.empty()) {
-    vkFreeCommandBuffers(device_, commandPool_, static_cast<uint32_t>(commandBuffers_.size()),
-                         commandBuffers_.data());
-    commandBuffers_.clear();
-  }
+  // Tear down swapchain-dependent resources ONLY. Scene/terrain/compute
+  // buffers, descriptors, and pipelines survive: they are independent of the
+  // swapchain. Pipelines in particular are NOT rebuilt — render-pass
+  // compatibility is structural (same single-color-attachment form), and
+  // recordFrame always begins against swapchain_.renderPass() fresh, so the
+  // surviving pipelines stay valid against the new pass. Only the capture
+  // staging buffer is extent-bound and gets rebuilt below.
+  destroyFrameResources();
+
   if (captureBuffer_ != VK_NULL_HANDLE) vkDestroyBuffer(device_, captureBuffer_, nullptr);
   captureBuffer_ = VK_NULL_HANDLE;
   if (captureMemory_ != VK_NULL_HANDLE) vkFreeMemory(device_, captureMemory_, nullptr);
@@ -1322,35 +1397,16 @@ bool VulkanRenderer::recreateSwapchain() {
   if (!swapchain_.create(instance_, physicalDevice_, device_, queueFamily_, window_, surfaceWidth_,
                          surfaceHeight_)) {
     lastError_ = swapchain_.lastError();
+    swapchainStale_ = true;
     return false;
   }
 
-  commandBuffers_.resize(swapchain_.imageCount());
-  VkCommandBufferAllocateInfo allocInfo{};
-  allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-  allocInfo.commandPool = commandPool_;
-  allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-  allocInfo.commandBufferCount = static_cast<uint32_t>(commandBuffers_.size());
-  if (vkAllocateCommandBuffers(device_, &allocInfo, commandBuffers_.data()) != VK_SUCCESS) {
-    lastError_ = "vkAllocateCommandBuffers failed during recreation";
+  if (!createFrameResources()) {
+    // Frame-resource failure after a fresh swapchain: tear the swapchain back
+    // down so the renderFrame guard (not a half-built state) owns the retry.
+    swapchain_.destroy(device_);
+    swapchainStale_ = true;
     return false;
-  }
-  VkFenceCreateInfo fenceInfo{};
-  fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-  fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-  inFlightFences_.assign(kMaxFramesInFlight, VK_NULL_HANDLE);
-  for (auto& fence : inFlightFences_) {
-    vkCreateFence(device_, &fenceInfo, nullptr, &fence);
-  }
-  VkSemaphoreCreateInfo semaphoreInfo{};
-  semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-  for (uint32_t i = 0; i < kMaxFramesInFlight; i++) {
-    vkCreateSemaphore(device_, &semaphoreInfo, nullptr, &imageAvailable_[i]);
-  }
-  // Per-image signal semaphores (validation fix 5), sized to the new image count.
-  renderFinished_.assign(swapchain_.imageCount(), VK_NULL_HANDLE);
-  for (auto& semaphore : renderFinished_) {
-    vkCreateSemaphore(device_, &semaphoreInfo, nullptr, &semaphore);
   }
 
   const VkExtent2D extent = swapchain_.extent();
@@ -1364,7 +1420,41 @@ bool VulkanRenderer::recreateSwapchain() {
   }
 
   currentFrame_ = 0;
+  swapchainStale_ = false;
   LOGI("swapchain recreated: %ux%u images=%u", extent.width, extent.height, swapchain_.imageCount());
+  return true;
+}
+
+bool VulkanRenderer::onSurfaceSizeChanged(int width, int height) {
+  if (width <= 0 || height <= 0) {
+    // Minimized/backgrounded: record and skip — recreating a 0-area
+    // swapchain can only fail.
+    surfaceWidth_ = width;
+    surfaceHeight_ = height;
+    return true;
+  }
+  if (!swapchain_policy::shouldRecreateOnSizeChange(static_cast<uint32_t>(surfaceWidth_),
+                                                    static_cast<uint32_t>(surfaceHeight_),
+                                                    static_cast<uint32_t>(width),
+                                                    static_cast<uint32_t>(height))) {
+    surfaceWidth_ = width;
+    surfaceHeight_ = height;
+    return true;
+  }
+  surfaceWidth_ = width;
+  surfaceHeight_ = height;
+  // No live swapchain yet (or torn down): nothing to rebuild — the next
+  // createSurface picks up the new dimensions.
+  if (device_ == VK_NULL_HANDLE || window_ == nullptr ||
+      swapchain_.handle() == VK_NULL_HANDLE) {
+    return true;
+  }
+  LOGI("surface size changed to %dx%d — recreating swapchain", width, height);
+  if (!recreateSwapchain()) {
+    LOGE("swapchain recreation failed after resize: %s", lastError_.c_str());
+    swapchainStale_ = true;
+    return false;
+  }
   return true;
 }
 
