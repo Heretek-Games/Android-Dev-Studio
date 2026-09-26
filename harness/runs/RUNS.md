@@ -959,3 +959,9 @@ Standing blockers (hardware-bound, unchanged): #1 physical arm64, #3 50k-instanc
 - Container `game/` bundle outputs stay out of git (build artifacts; the APK is git-ignored); the title flavor reproduces via `apk_builder --play tide`.
 
 Standing blockers (hardware-bound, unchanged): #1 physical arm64, #3/#7 Tier-2 device + readback.
+
+---
+
+## Run Block 33 — 2026-09-26, Issue #7 Live Proof (readback defect confirmed)
+
+Instrumented build (`frame capture checksum` FNV-1a in `writeCapturePpm`, kept permanently): the staged-frame checksum is **identical** (`14347412957071923911`) for the 13-mesh title scene and the 3,015-instance perf scene, and between both captures within a run. Buffer==file verified by independent reconstruction, so stale files are ruled out — the copy path stages fixed-pattern bytes regardless of scene contents. No static smoking gun (barrier/copy/fence/coherent-staging all read correct); device-side debugging stays under #6. Checksums make re-verification a logcat one-liner.

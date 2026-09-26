@@ -1101,7 +1101,8 @@ void VulkanRenderer::renderFrame() {
   if (captureRequested_) {
     vkWaitForFences(device_, 1, &inFlightFences_[frame], VK_TRUE, UINT64_MAX);
     const bool written = writeCapturePpm();
-    LOGI("frame capture %s: %s", written ? "written" : "FAILED", capturePath_.c_str());
+    LOGI("frame capture %s: %s (image=%u)", written ? "written" : "FAILED", capturePath_.c_str(),
+         imageIndex);
     captureRequested_ = false;
   }
 
@@ -1199,6 +1200,10 @@ bool VulkanRenderer::writeCapturePpm() {
 
   std::fprintf(file, "P6\n%u %u\n255\n", extent.width, extent.height);
   const auto* pixels = static_cast<const uint8_t*>(captureMapped_);
+  // Issue #7 diagnostic: FNV-1a over the staged frame so identical-pattern
+  // captures are detectable from logcat without pulling the file.
+  uint64_t fnv = 1469598103934665603ULL;
+  const size_t byteCount = static_cast<size_t>(extent.width) * extent.height * 4;
   const bool bgra = swapchain_.format().format == VK_FORMAT_B8G8R8A8_UNORM ||
                     swapchain_.format().format == VK_FORMAT_B8G8R8A8_SRGB;
   std::vector<uint8_t> row(static_cast<size_t>(extent.width) * 3);
@@ -1211,10 +1216,15 @@ bool VulkanRenderer::writeCapturePpm() {
       row[x * 3 + 0] = bgra ? b2 : b0;
       row[x * 3 + 1] = b1;
       row[x * 3 + 2] = bgra ? b0 : b2;
+      fnv ^= static_cast<uint64_t>(b0) | (static_cast<uint64_t>(b1) << 8) |
+             (static_cast<uint64_t>(b2) << 16) | (static_cast<uint64_t>(src[x * 4 + 3]) << 24);
+      fnv *= 1099511628211ULL;
     }
     std::fwrite(row.data(), 1, row.size(), file);
   }
   std::fclose(file);
+  LOGI("frame capture checksum: fnv1a=%llu bytes=%zu", static_cast<unsigned long long>(fnv),
+       byteCount);
   return true;
 }
 
