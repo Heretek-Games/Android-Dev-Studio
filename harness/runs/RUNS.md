@@ -936,3 +936,15 @@ Tier-2 APK built from a generated 3,016-object perf scene (2,400 instanced crowd
 Headless leg (same block): `perf_action.json` 9/9 SUCCEEDED — p95 sim-frame 0.21 ms, 36/100 draws, 8 melee kills + 8 reactions, VFX alive + budgeted (`f2d62e3`).
 
 Standing blockers (hardware-bound, unchanged): #1 physical arm64, #3 50k-instance on-device, #6 validation-layer soak.
+
+---
+
+## Run Block 31 — 2026-09-26, Tide and Cinder Title APK (E.6 shipping leg) ⚠️ readback defect
+
+Tier-2 APK built from `tide_cinder.json` (13 meshes, 3 lights, **77/100 draws**), installed and launched on the `xune-test` AVD (lavapipe, 2400×1080).
+
+- Valid emulator evidence: real swapchain + pipelines, scene-specific upload (`draws=77`, `terrainLeaves=64`), `instances=13 indirectCmds=2`, culling responds to scene contents (`sceneVisible=13` here vs 1860 in the perf scene), **1800+ frames presented** with `acquire=submit=present=VK_SUCCESS` throughout (~33 fps under software rendering — emulator evidence only, never device proof).
+- **DEFECT — in-renderer frame readback untrustworthy:** `native_frame.ppm` and `native_frame_late.ppm` are byte-identical (md5 `a1eab511…`) to each other AND to the perf-scene captures from Run Block 30, while `scene.native` differs per run. The capture path (barrier → `vkCmdCopyImageToBuffer` → fenced `writeCapturePpm`, host-coherent staging) reports success but delivers a fixed pattern, not the framebuffer. Static review found no smoking gun; device-side debugging (validation layers) required — tracked under renderer hardening (#6).
+- **RETRACTION:** the Run Block 30 "non-uniform PPM readback (1031 unique colors)" claim is withdrawn as rasterization proof — the colors are real bytes but a fixed pattern. The E.5 emulator leg rests on swapchain/visibility/present evidence only until the capture path is fixed and re-proven.
+
+Standing blockers (hardware-bound, unchanged): #1 physical arm64, #3 50k-instance on-device, #6 validation-layer soak (+ readback fix).
