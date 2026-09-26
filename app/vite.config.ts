@@ -177,11 +177,44 @@ function diffBridgePlugin(): Plugin {
     }
   };
 }
-// POST /api/spatial/ghost { placement, scene? } -> runs ghost_cli.py against
-// Dev-server bridge to the ghost placement probe (Track B.3):
+// Dev-server bridge to the agent activity feed (Track D.2):
+// GET /api/loop/feed -> summarize_runs() over harness/runs/loop_runs
+// (newest 5 runs, capped iteration rows). Read-only, user-expand gated.
+function feedBridgePlugin(): Plugin {
+  return {
+    name: 'heretek-feed-bridge',
+    configureServer(server) {
+      server.middlewares.use('/api/loop/feed', (req, res) => {
+        res.setHeader('Content-Type', 'application/json');
+        if (req.method !== 'GET') {
+          res.statusCode = 405;
+          res.end(JSON.stringify({ error: 'GET required' }));
+          return;
+        }
+        const repoRoot = path.resolve(__dirname, '..');
+        const script = [
+          'import json,sys; sys.path.insert(0, ".");',
+          'from harness.loop.feed import summarize_runs;',
+          'print(json.dumps(summarize_runs()))'
+        ].join('');
+        const proc = spawn('python3', ['-c', script], { cwd: repoRoot });
+        let out = '';
+        let err = '';
+        proc.stdout.on('data', d => { out += d; });
+        proc.stderr.on('data', d => { err += d; });
+        proc.on('close', code => {
+          res.statusCode = code === 0 && out ? 200 : 502;
+          res.end(out || JSON.stringify({ error: err.trim() || 'feed unavailable' }));
+        });
+      });
+    }
+  };
+}
 // POST /api/spatial/ghost { placement, scene? } -> runs ghost_cli.py against
 // the canonical scene (or a supplied scene) and returns the audit verdict
 // BEFORE anything is written. Nothing mutates; validity only.
+// Dev-server bridge to the ghost placement probe (Track B.3):
+// POST /api/spatial/ghost { placement, scene? } -> runs ghost_cli.py against
 function ghostBridgePlugin(): Plugin {
   return {
     name: 'heretek-ghost-bridge',
@@ -576,7 +609,7 @@ export default defineConfig({
   // Relative asset paths so the built bundle also works when mounted under a
   // sub-path (the Android WebView container serves it at /assets/game/).
   base: './',
-  plugins: [react(), sceneBridgePlugin(), qaBridgePlugin(), swarmBridgePlugin(), deviceBridgePlugin(), ghostBridgePlugin(), diffBridgePlugin()],
+  plugins: [react(), sceneBridgePlugin(), qaBridgePlugin(), swarmBridgePlugin(), deviceBridgePlugin(), ghostBridgePlugin(), diffBridgePlugin(), feedBridgePlugin()],
   define: {
     __LLM_MODEL__: JSON.stringify(llmModel)
   },
