@@ -53,8 +53,13 @@ ignored):
       Unlike the exclusions above, the canonicalizer NORMALIZES this
       (normalizeColliderShape, plane|torus -> box on both sides) because the
       Rapier init switch resolves unknown shapes to the box cuboid on both
-      paths — effective physics agrees. The parity probe carries a
-      plane-shaped slab to lock the rule in.
+      paths — effective physics agrees. The parity probe carries plane- and
+      torus-shaped slabs to lock the rule in.
+    event ids — the runner injects qa_ev_${i} fallbacks while the adapter
+      stores raw spec events verbatim; the canonicalizer therefore uses the
+      runner's qa_ev_${i} scheme for missing ids (see sceneGraphCanonical),
+      so id-less specs agree instead of skewing. The probe carries one
+      id-less event to lock the alignment in.
 
   Adapter-verified shared vocabulary (locked by test_parity_subset_extended):
   mesh/light kinds, physics + mass, controller, weapon, health, ai,
@@ -161,11 +166,13 @@ DIVERGENT_KEYS = frozenset(
 # subset (elemental auras, vehicle/weapon/ai/events, a day/night rig hosted
 # on a mesh object rather than a light), plus parameter-coverage choices that
 # prove pass-through rather than default-agreement: non-default health,
-# elemental, mass, day/night timing, a rotated object, and a plane-shaped
-# slab that locks in the normalizeColliderShape rule (adapter remaps
-# plane|torus colliders to box; the canonicalizer applies the remap both
-# sides). Values here must stay inside the shared vocabulary — no
-# RUNNER_ONLY_KEYS, no DIVERGENT_KEYS (enforced below).
+# elemental, mass, day/night timing, a rotated object, plane- and
+# torus-shaped slabs that lock in the normalizeColliderShape rule (adapter
+# remaps plane|torus colliders to box; the canonicalizer applies the remap
+# both sides), and one id-less event that locks in the qa_ev_${i} fallback
+# alignment (runner injects it, adapter stores raw, canonicalizer mirrors
+# the runner scheme). Values here must stay inside the shared vocabulary —
+# no RUNNER_ONLY_KEYS, no DIVERGENT_KEYS (enforced below).
 PARITY_PROBE_SPEC = {
     "name": "parity_probe",
     "goal": "parity subset probe",
@@ -187,6 +194,14 @@ PARITY_PROBE_SPEC = {
             "physics": "fixed",
         },
         {
+            "name": "Donut",
+            "shape": "torus",
+            "size": [2, 0.6, 2],
+            "position": [6, 0.3, -3],
+            "color": "#f472b6",
+            "physics": "fixed",
+        },
+        {
             "name": "Hero",
             "shape": "capsule",
             "size": [1, 1.5, 1],
@@ -202,6 +217,12 @@ PARITY_PROBE_SPEC = {
                     "id": "spin",
                     "conditions": [{"type": "EveryFrame"}],
                     "actions": [{"type": "Spin", "speed": 1.0}],
+                },
+                {
+                    # No id: exercises the qa_ev_${i} fallback alignment
+                    # (runner injects qa_ev_1, canonicalizer mirrors it).
+                    "conditions": [{"type": "EveryFrame"}],
+                    "actions": [{"type": "Spin", "speed": 0.5}],
                 }
             ],
         },
@@ -255,6 +276,20 @@ PARITY_PROBE_SPEC = {
             },
         },
     ],
+}
+
+
+# Shared spec registry: every parity spec lives here exactly once. The
+# hygiene test (test_parity_specs_use_shared_vocabulary) and the
+# hidden-children test iterate it, so registering a new parity spec is a
+# one-line addition here instead of another hardcoded dict per test.
+def _load_tide_cinder_spec():
+    return json.loads(TIDE_CINDER.read_text(encoding="utf-8"))
+
+
+SPEC_REGISTRY = {
+    "tide_cinder": _load_tide_cinder_spec,
+    "parity_probe": lambda: PARITY_PROBE_SPEC,
 }
 
 
@@ -329,7 +364,8 @@ class SceneParityTests(unittest.TestCase):
         Locks elemental auras, vehicle/weapon/ai/events, and a mesh-hosted
         day/night rig — the fields the adapter added for Tracks E.2/E.6 —
         down to PARAMETER level (non-default values prove pass-through, not
-        default-agreement), plus the plane-collider normalization rule.
+        default-agreement), plus the plane/torus-collider normalization rule
+        and the qa_ev_${i} event-id fallback alignment.
         """
         path = write_temp_spec(PARITY_PROBE_SPEC)
         try:
@@ -360,15 +396,21 @@ class SceneParityTests(unittest.TestCase):
         self.assertEqual(0.5, rover["VehicleController"]["throttle"])
         self.assertEqual(4, rover["VehicleController"]["wheels"])
         self.assertEqual(
-            [{"id": "spin", "conditions": ["EveryFrame"], "actions": ["Spin"]}],
+            [
+                {"id": "spin", "conditions": ["EveryFrame"], "actions": ["Spin"]},
+                {"id": "qa_ev_1", "conditions": ["EveryFrame"], "actions": ["Spin"]},
+            ],
             hero["EventSheet"]["events"],
         )
         self.assertEqual(120, by_name["Rig"]["params"]["DayNightCycle"]["dayLengthSeconds"])
         self.assertEqual(0.6, by_name["Rig"]["params"]["DayNightCycle"]["timeOfDay"])
-        # Collider normalization: the plane slab simulates a box on both sides.
+        # Collider normalization: plane AND torus slabs simulate boxes.
         mat = by_name["Mat"]["params"]
         self.assertEqual("plane", mat["MeshRenderer"]["shape"])
         self.assertEqual("box", mat["Collider3D"]["shape"])
+        donut = by_name["Donut"]["params"]
+        self.assertEqual("torus", donut["MeshRenderer"]["shape"])
+        self.assertEqual("box", donut["Collider3D"]["shape"])
 
     def test_parity_specs_use_shared_vocabulary(self):
         """Machine-checked gap documentation: parity specs avoid runner-only keys.
@@ -382,10 +424,7 @@ class SceneParityTests(unittest.TestCase):
         would PASS while the builders differ — this test closes that hole by
         forbidding them in parity specs outright.
         """
-        specs = {
-            "tide_cinder": json.loads(TIDE_CINDER.read_text(encoding="utf-8")),
-            "parity_probe": PARITY_PROBE_SPEC,
-        }
+        specs = {label: load() for label, load in SPEC_REGISTRY.items()}
         for label, spec in specs.items():
             for obj in spec.get("gameObjects", []):
                 self.assertNotEqual(
@@ -461,8 +500,7 @@ class SceneParityTests(unittest.TestCase):
         children in the runner — one reason streamer is runner-only).
         """
         specs = {
-            "tide_cinder": TIDE_CINDER,
-            "parity_probe": write_temp_spec(PARITY_PROBE_SPEC),
+            label: write_temp_spec(load()) for label, load in SPEC_REGISTRY.items()
         }
         try:
             for label, path in specs.items():
@@ -478,7 +516,8 @@ class SceneParityTests(unittest.TestCase):
                         f"objects, got {len(graph)}",
                     )
         finally:
-            specs["parity_probe"].unlink(missing_ok=True)
+            for path in specs.values():
+                path.unlink(missing_ok=True)
 
 
 if __name__ == "__main__":

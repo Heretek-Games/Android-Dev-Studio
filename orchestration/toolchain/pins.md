@@ -17,7 +17,7 @@ root); missing-binary reporting lives in `install.sh` (this directory).
 | rustc | `rustc 1.95.0 (59807616e 2026-04-14)` | same as cargo | same as cargo |
 | ruff | `ruff 0.16.1` | `/home/john/.local/bin/ruff` | `pip install --upgrade ruff` / `pipx install ruff` (already on PATH via `~/.local/bin`) |
 | mypy | `mypy 2.1.0 (compiled: yes)` | `/home/john/.local/bin/mypy` | `pip install --upgrade mypy` (already on PATH via `~/.local/bin`) |
-| python3 | `Python 3.14.7` | system `/usr/bin/python3` | Fedora system Python |
+| python3 | `Python 3.14.7` | PATH-resolved (`/usr/bin/python3` on the pinning machine) | Fedora system Python (any `PATH` python3 at a matching version satisfies the gates) |
 | cppcheck | **NOT INSTALLED** | — | see “cppcheck gap” below |
 
 Notes:

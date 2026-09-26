@@ -6,8 +6,10 @@
 # Safe to re-run any number of times (read-only: `command -v` + `--version`).
 #
 # Usage: bash orchestration/toolchain/install.sh
-# Exit 0 when every ENFORCING-gate binary is present (cppcheck/Rust may still
-#   warn — see below); exit 1 when an enforcing binary is missing.
+# Exit 0 when every ENFORCING-gate binary is present (cppcheck may still WARN
+#   and cargo/rustc are informational only — see below; note clang-format is
+#   presence-checked here although its lefthook job is warn-only); exit 1
+#   when an enforcing binary is missing.
 #
 # Exact pins: orchestration/toolchain/pins.md. Gates: lefthook.yml.
 
