@@ -1,0 +1,522 @@
+{
+  "name": "tide_cinder",
+  "goal": "E.6 title core: keeper blessing -> hydro melee waves -> Cinder Tyrant -> 5-stage quest, in a 3-biome dungeon with day/night and a collection route",
+  "game": {
+    "playerName": "Adventurer",
+    "totalWaves": 2,
+    "enemiesPerWave": [
+      2,
+      1
+    ],
+    "spawnRadius": 5,
+    "scorePerKill": 100,
+    "interWaveDelaySeconds": 0.5,
+    "melee": {
+      "damage": 40,
+      "range": 3.5,
+      "arcDegrees": 120,
+      "element": "Hydro",
+      "gauge": 1,
+      "swingEveryFrames": 15,
+      "invulnSeconds": 0.2
+    },
+    "enemy": {
+      "shape": "sphere",
+      "size": [
+        1.2,
+        1.2,
+        1.2
+      ],
+      "color": "#f97316",
+      "y": 0.8,
+      "elemental": {
+        "aura": "Pyro",
+        "maxHealth": 60
+      },
+      "ai": {
+        "targetName": "Adventurer",
+        "moveSpeed": 2.5,
+        "attackRange": 2.0,
+        "attackDamage": 6,
+        "attackIntervalSeconds": 1.2
+      }
+    },
+    "boss": {
+      "wave": 2,
+      "name": "Cinder Tyrant",
+      "health": 240,
+      "size": [
+        2.2,
+        2.8,
+        2.2
+      ],
+      "color": "#dc2626",
+      "telegraph": {
+        "windupSeconds": 0.6,
+        "strikeSeconds": 0.2,
+        "recoverSeconds": 0.8
+      },
+      "strikeDamage": 12,
+      "strikeRange": 4.0
+    }
+  },
+  "quest": {
+    "id": "tide_and_cinder",
+    "stages": [
+      {
+        "id": "audience",
+        "objectives": [
+          {
+            "id": "meet",
+            "kind": "flag",
+            "target": "greet"
+          }
+        ]
+      },
+      {
+        "id": "blessing",
+        "objectives": [
+          {
+            "id": "blessed",
+            "kind": "flag",
+            "target": "hydro_blessing"
+          }
+        ]
+      },
+      {
+        "id": "clear_hall",
+        "objectives": [
+          {
+            "id": "slay",
+            "kind": "kills",
+            "target": "any",
+            "count": 2
+          },
+          {
+            "id": "react",
+            "kind": "reactions",
+            "target": "any",
+            "count": 1
+          }
+        ]
+      },
+      {
+        "id": "slay_tyrant",
+        "objectives": [
+          {
+            "id": "boss",
+            "kind": "kills",
+            "target": "any",
+            "count": 3
+          }
+        ]
+      },
+      {
+        "id": "victory",
+        "objectives": [
+          {
+            "id": "won",
+            "kind": "phase",
+            "target": "won"
+          }
+        ]
+      }
+    ]
+  },
+  "gameObjects": [
+    {
+      "name": "Dungeon Floor",
+      "shape": "box",
+      "size": [
+        30,
+        1,
+        30
+      ],
+      "position": [
+        0,
+        -0.5,
+        0
+      ],
+      "color": "#1f1b16",
+      "physics": "fixed"
+    },
+    {
+      "name": "Adventurer",
+      "shape": "capsule",
+      "size": [
+        1,
+        1.5,
+        1
+      ],
+      "position": [
+        0,
+        1.5,
+        0
+      ],
+      "color": "#38bdf8",
+      "physics": "none",
+      "controller": true,
+      "health": {
+        "maxHealth": 100,
+        "destroyOnDeath": false
+      }
+    },
+    {
+      "name": "Torch Light",
+      "kind": "light",
+      "lightType": "directional",
+      "color": "#ffb066",
+      "intensity": 2.2,
+      "position": [
+        6,
+        10,
+        4
+      ]
+    },
+    {
+      "name": "Sun",
+      "kind": "light",
+      "lightType": "directional",
+      "color": "#fff7ed",
+      "intensity": 2.0,
+      "position": [
+        10,
+        30,
+        8
+      ],
+      "daynight": {
+        "dayLengthSeconds": 240,
+        "startTimeOfDay": 0.3,
+        "sun": "Sun",
+        "ambient": "Sky"
+      }
+    },
+    {
+      "name": "Sky",
+      "kind": "light",
+      "lightType": "ambient",
+      "color": "#93c5fd",
+      "intensity": 0.5,
+      "position": [
+        0.0,
+        10,
+        6.0
+      ]
+    },
+    {
+      "name": "Meadow Grass West",
+      "shape": "box",
+      "size": [
+        3,
+        0.6,
+        3
+      ],
+      "position": [
+        -9,
+        0.3,
+        2
+      ],
+      "color": "#4ade80",
+      "biome": "meadow"
+    },
+    {
+      "name": "Meadow Grass East",
+      "shape": "box",
+      "size": [
+        3,
+        0.6,
+        3
+      ],
+      "position": [
+        -6,
+        0.3,
+        -3
+      ],
+      "color": "#4ade80",
+      "biome": "meadow"
+    },
+    {
+      "name": "Cinder Rock Alpha",
+      "shape": "box",
+      "size": [
+        3,
+        2.5,
+        3
+      ],
+      "position": [
+        -2,
+        1.25,
+        7
+      ],
+      "color": "#7c2d12",
+      "biome": "ember"
+    },
+    {
+      "name": "Cinder Rock Beta",
+      "shape": "box",
+      "size": [
+        2,
+        2,
+        2
+      ],
+      "position": [
+        3,
+        1,
+        8
+      ],
+      "color": "#9a3412",
+      "biome": "ember"
+    },
+    {
+      "name": "Frost Shard North",
+      "shape": "box",
+      "size": [
+        1,
+        3.5,
+        1
+      ],
+      "position": [
+        8,
+        1.75,
+        -2
+      ],
+      "color": "#bae6fd",
+      "biome": "frost"
+    },
+    {
+      "name": "Frost Shard South",
+      "shape": "box",
+      "size": [
+        1,
+        2.5,
+        1
+      ],
+      "position": [
+        6,
+        1.25,
+        3
+      ],
+      "color": "#e0f2fe",
+      "biome": "frost"
+    },
+    {
+      "name": "Emberbloom 1",
+      "shape": "sphere",
+      "size": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "position": [
+        -10,
+        0.5,
+        -8
+      ],
+      "color": "#fbbf24"
+    },
+    {
+      "name": "Emberbloom 2",
+      "shape": "sphere",
+      "size": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "position": [
+        -5,
+        0.5,
+        -8
+      ],
+      "color": "#fbbf24"
+    },
+    {
+      "name": "Emberbloom 3",
+      "shape": "sphere",
+      "size": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "position": [
+        0,
+        0.5,
+        -8
+      ],
+      "color": "#fbbf24"
+    },
+    {
+      "name": "Emberbloom 4",
+      "shape": "sphere",
+      "size": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "position": [
+        5,
+        0.5,
+        -8
+      ],
+      "color": "#fbbf24"
+    },
+    {
+      "name": "Emberbloom 5",
+      "shape": "sphere",
+      "size": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "position": [
+        10,
+        0.5,
+        -8
+      ],
+      "color": "#fbbf24"
+    }
+  ],
+  "dialogues": {
+    "DungeonKeeper": {
+      "id": "DungeonKeeper",
+      "title": "The Dungeon Keeper",
+      "startNodeId": "greet",
+      "nodes": {
+        "greet": {
+          "id": "greet",
+          "type": "choice",
+          "speaker": "Dungeon Keeper",
+          "text": "A tyrant of cinder nests below. Take the Hydro blessing, or fight it bare-handed?",
+          "choices": [
+            {
+              "id": "bless",
+              "text": "Take the Hydro blessing",
+              "nextNodeId": "blessed"
+            },
+            {
+              "id": "refuse",
+              "text": "Fight unaided",
+              "nextNodeId": "refused"
+            }
+          ]
+        },
+        "blessed": {
+          "id": "blessed",
+          "type": "action",
+          "speaker": "Dungeon Keeper",
+          "text": "May the tide guide your blade.",
+          "action": {
+            "setVariables": {
+              "hydroBlessing": true
+            },
+            "emitEvent": {
+              "eventName": "hydro_blessing"
+            },
+            "nextNodeId": "farewell"
+          }
+        },
+        "refused": {
+          "id": "refused",
+          "type": "text",
+          "speaker": "Dungeon Keeper",
+          "text": "Stubborn. The tyrant will enjoy that.",
+          "nextNodeId": "farewell"
+        },
+        "farewell": {
+          "id": "farewell",
+          "type": "end",
+          "speaker": "Dungeon Keeper",
+          "text": "Clear the hall, slay the tyrant, and the gate opens."
+        }
+      }
+    }
+  },
+  "traversal": {
+    "grid": 7
+  },
+  "rules": [
+    {
+      "id": "blessing_reached",
+      "type": "dialogue_reaches",
+      "tree": "DungeonKeeper",
+      "node": "blessed"
+    },
+    {
+      "id": "blessing_fired",
+      "type": "dialogue_event_fired",
+      "tree": "DungeonKeeper",
+      "event": "hydro_blessing"
+    },
+    {
+      "id": "quest_stages",
+      "type": "quest_stage_min",
+      "min": 5
+    },
+    {
+      "id": "quest_done",
+      "type": "quest_complete"
+    },
+    {
+      "id": "tyrant_slain",
+      "type": "game_melee_kills_min",
+      "min": 3
+    },
+    {
+      "id": "reactions_fired",
+      "type": "game_melee_reactions_min",
+      "min": 2
+    },
+    {
+      "id": "boss_telegraphs_live",
+      "type": "game_boss_strikes_min",
+      "min": 1
+    },
+    {
+      "id": "run_won",
+      "type": "game_phase",
+      "phase": "won"
+    },
+    {
+      "id": "finite_transforms",
+      "type": "no_nan_transforms"
+    },
+    {
+      "id": "mobile_draw_budget",
+      "type": "draw_call_budget",
+      "max": 100
+    },
+    {
+      "id": "sim_performance",
+      "type": "fps_min",
+      "min": 30
+    },
+    {
+      "id": "title_walkable",
+      "type": "traversal_coverage_min",
+      "min": 1.0
+    },
+    {
+      "id": "ember_flavor",
+      "type": "biome_coverage_min",
+      "biome": "ember",
+      "min": 2
+    },
+    {
+      "id": "meadow_flavor",
+      "type": "biome_coverage_min",
+      "biome": "meadow",
+      "min": 2
+    },
+    {
+      "id": "frost_flavor",
+      "type": "biome_coverage_min",
+      "biome": "frost",
+      "min": 2
+    },
+    {
+      "id": "sun_cycles",
+      "type": "entity_component",
+      "target": "Sun",
+      "component": "DayNightCycle"
+    }
+  ]
+}
