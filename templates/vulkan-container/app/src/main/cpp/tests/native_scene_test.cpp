@@ -1,8 +1,7 @@
 // Host-side test for the Tier 2 native scene core (no Vulkan/Android needed).
 //
 // Build & run:
-//   g++ -std=c++17 scene_loader.cpp culling.cpp tests/native_scene_test.cpp -o /tmp/native_scene_test
-//   /tmp/native_scene_test /path/to/scene.native
+//   g++ -std=c++17 -Wall -Wextra scene_loader.cpp culling.cpp terrain_mesh.cpp nav_bake.cpp tests/native_scene_test.cpp -o /tmp/native_scene_test && /tmp/native_scene_test ../assets/scene.native
 
 #include <cassert>
 #include <cmath>
