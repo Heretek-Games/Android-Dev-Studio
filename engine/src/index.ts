@@ -27,6 +27,7 @@ export * from './game/WaveSpawner.js';
 export * from './ui/GameShell.js';
 export * from './ui/Localization.js';
 export * from './game/DamageRouter.js';
+export * from './game/Party.js';
 export * from './game/GameSession.js';
 export * from './game/GameRuntime.js';
 export * from './simulation/Settlement.js';
