@@ -42,8 +42,10 @@ struct GraphicsPushConstants {
   float viewProj[16];
   float time;              // seconds; drives foliage wind
   uint32_t foliageVisibleBase;
+  // std430 aligns vec3 to 16 bytes: 8 bytes of explicit pad so camPos
+  // lands at offset 80 exactly like the GLSL struct layout.
+  float camPad[2];
   float camPos[3];         // world-space camera eye (PBR view vector)
-  float camPad = 0.0f;
 };
 
 /** Unit cube (24 vertices: position + normal), scaled per-instance in the shader. */
