@@ -1,0 +1,16 @@
+{
+  "title": "Tide and Cinder",
+  "shortDescription": "Bless your blades, melt the slimes, slay the Cinder Tyrant.",
+  "fullDescription": "Tide and Cinder is a single-player elemental action quest built on the Heretek engine. Take the Dungeon Keeper's Hydro blessing, carve through waves of Pyro slimes with animation-driven melee, trigger Vaporize reactions, swap between two heroes mid-fight, and bring down the Cinder Tyrant — telegraphed slam and all. One hand-authored dungeon, a three-biome floor, a day/night rig, a five-stage quest chain, and a second commission for the road. No accounts, no network, no ads: just you, two blades, and sixty seconds of bad decisions.",
+  "category": "Action",
+  "contentRating": "Everyone 10+ (fantasy violence, no blood)",
+  "targetApi": 36,
+  "version": "0.1.0",
+  "package": "com.heretek.gamestudio.tier2",
+  "assets": {
+    "icon": "icon-512.png",
+    "featureGraphic": "feature-graphic.jpg",
+    "screenshots": ["screenshot-1.jpg", "screenshot-2.jpg", "screenshot-3.jpg", "screenshot-4.jpg"]
+  },
+  "notes": "Screenshots are unedited renderer captures from a real playthrough (menu, keeper briefing, wave combat, victory). Icon and feature graphic are original PIL compositions for this title."
+}
