@@ -711,6 +711,15 @@ bool VulkanRenderer::createPipelines() {
   }
 
   // ---- Terrain pipeline (no descriptor sets; push-constant viewProj) ------
+  // Validation defect class 3 (VUID-vkCmdPushConstants-offset-01796): the
+  // terrain layout reused the scene graphicsRange (VERTEX|FRAGMENT), but the
+  // terrain push call is VERTEX-only. Terrain shaders consume push constants
+  // in the vertex stage alone (terrain.frag declares none), so the terrain
+  // layout gets its own VERTEX-only range that the call matches exactly.
+  VkPushConstantRange terrainRange{};
+  terrainRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+  terrainRange.offset = 0;
+  terrainRange.size = sizeof(GraphicsPushConstants);
   VkShaderModule terrainVertexModule = loadShader(shaderDir_ + "/terrain.vert.spv");
   VkShaderModule terrainFragmentModule = loadShader(shaderDir_ + "/terrain.frag.spv");
   if (terrainVertexModule == VK_NULL_HANDLE || terrainFragmentModule == VK_NULL_HANDLE) return false;
@@ -728,7 +737,7 @@ bool VulkanRenderer::createPipelines() {
   VkPipelineLayoutCreateInfo terrainLayout{};
   terrainLayout.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
   terrainLayout.pushConstantRangeCount = 1;
-  terrainLayout.pPushConstantRanges = &graphicsRange;
+  terrainLayout.pPushConstantRanges = &terrainRange;
   if (vkCreatePipelineLayout(device_, &terrainLayout, nullptr, &terrainPipelineLayout_) ==
       VK_SUCCESS) {
     VkGraphicsPipelineCreateInfo terrainInfo = graphicsInfo;
