@@ -170,8 +170,11 @@ class TranscodeTests(unittest.TestCase):
 
     def test_fake_transcoder_round_trip(self):
         sidecar = transcode_texture(
-            _png_bytes(64, 64), name="brick", preset="mobile",
-            assets_dir=self.dir, transcoder=_fake_transcoder,
+            _png_bytes(64, 64),
+            name="brick",
+            preset="mobile",
+            assets_dir=self.dir,
+            transcoder=_fake_transcoder,
         )
         self.assertEqual(sidecar["outputs"]["texture"], f"{sidecar['uid']}.ktx2")
         self.assertEqual(sidecar["transcode"]["format"], "ktx2-etc1s")
@@ -191,30 +194,48 @@ class TranscodeTests(unittest.TestCase):
             return _fake_transcoder(basisu_bin, src_png, out_dir)
 
         sidecar = transcode_texture(
-            _png_bytes(2048, 1024), name="big", preset="mobile",
-            assets_dir=self.dir, transcoder=spy,
+            _png_bytes(2048, 1024),
+            name="big",
+            preset="mobile",
+            assets_dir=self.dir,
+            transcoder=spy,
         )
         self.assertLessEqual(max(seen["size"]), 1024)
         self.assertEqual(sidecar["transcode"]["outWidth"], seen["size"][0])
 
     def test_missing_binary_is_explicit(self):
-        with self.assertRaises(TranscodeError):
-            transcode_texture(
-                _png_bytes(16, 16), name="x", assets_dir=self.dir,
-                basisu_bin="/nonexistent/basisu",
-            )
-        self.assertIsNone(find_basisu("/nonexistent/basisu"))
+        import unittest.mock as mock
+
+        with mock.patch.dict(os.environ, {"PATH": "/nonexistent", "BASISU_BIN": ""}):
+            with self.assertRaises(TranscodeError):
+                transcode_texture(
+                    _png_bytes(16, 16),
+                    name="x",
+                    assets_dir=self.dir,
+                    basisu_bin="/nonexistent/basisu",
+                )
+            self.assertIsNone(find_basisu("/nonexistent/basisu"))
 
     def test_bad_payloads_rejected(self):
         with self.assertRaises(TranscodeError):
-            transcode_texture(b"", name="x", assets_dir=self.dir,
-                              transcoder=_fake_transcoder)
+            transcode_texture(
+                b"", name="x", assets_dir=self.dir, transcoder=_fake_transcoder
+            )
         with self.assertRaises(TranscodeError):
-            transcode_texture(b"not-an-image", name="x", assets_dir=self.dir,
-                              transcoder=_fake_transcoder)
+            transcode_texture(
+                b"not-an-image",
+                name="x",
+                assets_dir=self.dir,
+                transcoder=_fake_transcoder,
+            )
         with self.assertRaises(TranscodeError):
-            transcode_texture(_png_bytes(8, 8), name="x", preset="nope",
-                              assets_dir=self.dir, transcoder=_fake_transcoder)
+            transcode_texture(
+                _png_bytes(8, 8),
+                name="x",
+                preset="nope",
+                assets_dir=self.dir,
+                transcoder=_fake_transcoder,
+            )
 
     def test_bad_magic_rejected(self):
         def liar(basisu_bin, src_png, out_dir):
@@ -224,5 +245,6 @@ class TranscodeTests(unittest.TestCase):
             return out
 
         with self.assertRaises(TranscodeError):
-            transcode_texture(_png_bytes(8, 8), name="x", assets_dir=self.dir,
-                              transcoder=liar)
+            transcode_texture(
+                _png_bytes(8, 8), name="x", assets_dir=self.dir, transcoder=liar
+            )
