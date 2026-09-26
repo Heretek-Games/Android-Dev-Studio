@@ -832,15 +832,25 @@ bool VulkanRenderer::createSurface(ANativeWindow* window, int width, int height)
   VkSemaphoreCreateInfo semaphoreInfo{};
   semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
   for (uint32_t i = 0; i < kMaxFramesInFlight; i++) {
-    if (vkCreateSemaphore(device_, &semaphoreInfo, nullptr, &imageAvailable_[i]) != VK_SUCCESS ||
-        vkCreateSemaphore(device_, &semaphoreInfo, nullptr, &renderFinished_[i]) != VK_SUCCESS) {
+    if (vkCreateSemaphore(device_, &semaphoreInfo, nullptr, &imageAvailable_[i]) != VK_SUCCESS) {
+      lastError_ = "vkCreateSemaphore failed";
+      return false;
+    }
+  }
+  // One signal semaphore per swapchain image (validation fix 5): indexed by
+  // the acquired imageIndex so reuse always follows re-acquire of that image.
+  renderFinished_.assign(swapchain_.imageCount(), VK_NULL_HANDLE);
+  for (auto& semaphore : renderFinished_) {
+    if (vkCreateSemaphore(device_, &semaphoreInfo, nullptr, &semaphore) != VK_SUCCESS) {
       lastError_ = "vkCreateSemaphore failed";
       return false;
     }
   }
   currentFrame_ = 0;
-  LOGI("createSurface complete: swapchain=%p images=%u commandBuffers=%zu framesInFlight=%u",
-       (void*)swapchain_.handle(), swapchain_.imageCount(), commandBuffers_.size(), kMaxFramesInFlight);
+  LOGI("createSurface complete: swapchain=%p images=%u commandBuffers=%zu framesInFlight=%u "
+       "acquireSemaphores=%u presentSemaphores=%zu",
+       (void*)swapchain_.handle(), swapchain_.imageCount(), commandBuffers_.size(), kMaxFramesInFlight,
+       kMaxFramesInFlight, renderFinished_.size());
   return true;
 }
 
@@ -1180,8 +1190,9 @@ void VulkanRenderer::renderFrame() {
     return;
   }
 
-  // Each in-flight slot owns its synchronisation objects; wait for that slot's
-  // fence before reusing its semaphores (the previous frame may still signal them).
+  // Slot fence gates the per-slot acquire semaphore; the per-image signal
+  // semaphore (renderFinished_[imageIndex]) is safe by construction — see
+  // the member comment in vulkan_renderer.h.
   const uint32_t frame = currentFrame_ % kMaxFramesInFlight;
   vkWaitForFences(device_, 1, &inFlightFences_[frame], VK_TRUE, UINT64_MAX);
 
@@ -1220,7 +1231,7 @@ void VulkanRenderer::renderFrame() {
   submit.pWaitDstStageMask = waitStages;
   submit.commandBufferCount = 1;
   submit.pCommandBuffers = &cmd;
-  VkSemaphore signalSemaphores[] = {renderFinished_[frame]};
+  VkSemaphore signalSemaphores[] = {renderFinished_[imageIndex]};
   submit.signalSemaphoreCount = 1;
   submit.pSignalSemaphores = signalSemaphores;
 
@@ -1290,9 +1301,11 @@ bool VulkanRenderer::recreateSwapchain() {
   for (uint32_t i = 0; i < kMaxFramesInFlight; i++) {
     if (imageAvailable_[i] != VK_NULL_HANDLE) vkDestroySemaphore(device_, imageAvailable_[i], nullptr);
     imageAvailable_[i] = VK_NULL_HANDLE;
-    if (renderFinished_[i] != VK_NULL_HANDLE) vkDestroySemaphore(device_, renderFinished_[i], nullptr);
-    renderFinished_[i] = VK_NULL_HANDLE;
   }
+  for (auto semaphore : renderFinished_) {
+    if (semaphore != VK_NULL_HANDLE) vkDestroySemaphore(device_, semaphore, nullptr);
+  }
+  renderFinished_.clear();
   if (!commandBuffers_.empty()) {
     vkFreeCommandBuffers(device_, commandPool_, static_cast<uint32_t>(commandBuffers_.size()),
                          commandBuffers_.data());
@@ -1333,7 +1346,11 @@ bool VulkanRenderer::recreateSwapchain() {
   semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
   for (uint32_t i = 0; i < kMaxFramesInFlight; i++) {
     vkCreateSemaphore(device_, &semaphoreInfo, nullptr, &imageAvailable_[i]);
-    vkCreateSemaphore(device_, &semaphoreInfo, nullptr, &renderFinished_[i]);
+  }
+  // Per-image signal semaphores (validation fix 5), sized to the new image count.
+  renderFinished_.assign(swapchain_.imageCount(), VK_NULL_HANDLE);
+  for (auto& semaphore : renderFinished_) {
+    vkCreateSemaphore(device_, &semaphoreInfo, nullptr, &semaphore);
   }
 
   const VkExtent2D extent = swapchain_.extent();
@@ -1414,9 +1431,11 @@ void VulkanRenderer::destroySurface() {
   for (uint32_t i = 0; i < kMaxFramesInFlight; i++) {
     if (imageAvailable_[i] != VK_NULL_HANDLE) vkDestroySemaphore(device_, imageAvailable_[i], nullptr);
     imageAvailable_[i] = VK_NULL_HANDLE;
-    if (renderFinished_[i] != VK_NULL_HANDLE) vkDestroySemaphore(device_, renderFinished_[i], nullptr);
-    renderFinished_[i] = VK_NULL_HANDLE;
   }
+  for (auto semaphore : renderFinished_) {
+    if (semaphore != VK_NULL_HANDLE) vkDestroySemaphore(device_, semaphore, nullptr);
+  }
+  renderFinished_.clear();
   window_ = nullptr;
   currentFrame_ = 0;
 
