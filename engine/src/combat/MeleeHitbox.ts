@@ -2,12 +2,17 @@ import * as THREE from 'three';
 import type { GameObject } from '../core/GameObject.js';
 import { Component } from '../core/Component.js';
 import { Hurtbox } from './Hurtbox.js';
+import type { ElementType } from './ElementalSystem.js';
 
 export interface MeleeHit {
   targetName: string;
   damage: number;
   applied: number;
   point: [number, number, number];
+  /** Non-'None' when the strike triggered an elemental reaction. */
+  reaction: string;
+  /** True when the strike killed the target. */
+  fatal: boolean;
 }
 
 export interface MeleeHitboxOptions {
@@ -16,6 +21,10 @@ export interface MeleeHitboxOptions {
   range?: number;
   /** Full arc in degrees around facing (360 = radial). */
   arcDegrees?: number;
+  /** Element carried by the strike (infusion); drives auras/reactions. */
+  element?: ElementType;
+  /** Elemental gauge units applied per strike (default 1.0). */
+  gaugeUnits?: number;
 }
 
 /**
@@ -30,6 +39,8 @@ export class MeleeHitbox extends Component {
   public damage: number = 25;
   public range: number = 2.5;
   public arcDegrees: number = 120;
+  public element?: ElementType;
+  public gaugeUnits: number = 1;
 
   private hitListeners: Set<(hit: MeleeHit) => void> = new Set();
   private swungTargets: Set<string> = new Set();
@@ -40,6 +51,8 @@ export class MeleeHitbox extends Component {
     if (options?.damage !== undefined) this.damage = options.damage;
     if (options?.range !== undefined) this.range = options.range;
     if (options?.arcDegrees !== undefined) this.arcDegrees = options.arcDegrees;
+    if (options?.element !== undefined) this.element = options.element;
+    if (options?.gaugeUnits !== undefined) this.gaugeUnits = options.gaugeUnits;
   }
 
   public onHit(listener: (hit: MeleeHit) => void): () => void {
@@ -78,14 +91,16 @@ export class MeleeHitbox extends Component {
           Math.min(1, Math.max(-1, (dx * this.forward.x + dz * this.forward.z) / dist)));
         if (angle > halfArc) continue;
       }
-      const result = hurt.takeHit(this.damage, this.gameObject);
+      const result = hurt.takeHit(this.damage, this.gameObject, this.element, this.gaugeUnits);
       if (result.blocked) continue;
       this.swungTargets.add(target.name);
       const hit: MeleeHit = {
         targetName: target.name,
         damage: this.damage,
         applied: result.applied,
-        point: [target.transform.position.x, target.transform.position.y, target.transform.position.z]
+        point: [target.transform.position.x, target.transform.position.y, target.transform.position.z],
+        reaction: result.reaction,
+        fatal: result.fatal
       };
       hits.push(hit);
       for (const listener of this.hitListeners) {
@@ -105,7 +120,9 @@ export class MeleeHitbox extends Component {
       enabled: this.enabled,
       damage: this.damage,
       range: this.range,
-      arcDegrees: this.arcDegrees
+      arcDegrees: this.arcDegrees,
+      ...(this.element !== undefined ? { element: this.element } : {}),
+      gaugeUnits: this.gaugeUnits
     };
   }
 
@@ -113,5 +130,7 @@ export class MeleeHitbox extends Component {
     if (data.damage !== undefined) this.damage = data.damage;
     if (data.range !== undefined) this.range = data.range;
     if (data.arcDegrees !== undefined) this.arcDegrees = data.arcDegrees;
+    if (data.element !== undefined) this.element = data.element;
+    if (data.gaugeUnits !== undefined) this.gaugeUnits = data.gaugeUnits;
   }
 }
