@@ -340,7 +340,10 @@ export const GameView: React.FC = () => {
         squire.addComponent(squireBrain);
         squire.addComponent(new HealthComponent({ maxHealth: 100, destroyOnDeath: false }));
         // Each hero carries their own blade; swings resolve from the active hero.
-        const squireBlade = new MeleeHitbox(bladeOpts);
+        // Fixed hero elements (Genshin core loop): the Squire is innate Cryo,
+        // the Adventurer fights bare until the Hydro blessing. Swapping swaps
+        // elements — Vaporize vs Melt is a party decision, not a menu.
+        const squireBlade = new MeleeHitbox({ ...bladeOpts, element: 'Cryo' as never });
         squireBlade.onHit((hit) => feedDamage(hit.targetName, hit.applied, hit.point));
         squire.addComponent(squireBlade);
         squire.addComponent(new Hurtbox({ invulnSeconds: 0.5, faction: 'ally' }));
@@ -361,12 +364,11 @@ export const GameView: React.FC = () => {
         for (const tree of Object.values(dialogueTrees)) dialogue.registerTree(tree);
         dialogue.addEventListener((eventName) => {
           if (eventName === 'hydro_blessing' && !isTide) runtime!.setHitElement('Hydro');
-          // Tide: the blessing infuses every party blade.
+          // Tide: the blessing infuses the Adventurer's blade only — the
+          // Squire stays innate Cryo, so swapping swaps elements.
           if (eventName === 'hydro_blessing' && isTide) {
-            for (const member of [player, squire]) {
-              const memberBlade = member?.getComponent(MeleeHitbox) ?? null;
-              if (memberBlade) memberBlade.element = 'Hydro' as never;
-            }
+            const heroBlade = player?.getComponent(MeleeHitbox) ?? null;
+            if (heroBlade) heroBlade.element = 'Hydro' as never;
           }
           if (isTide) questFlags.add(eventName);
         });
@@ -419,7 +421,7 @@ export const GameView: React.FC = () => {
             if (blade) blade.element = undefined;
             if (squire) {
               const squireBlade = squire.getComponent(MeleeHitbox) ?? null;
-              if (squireBlade) squireBlade.element = undefined;
+              if (squireBlade) squireBlade.element = 'Cryo' as never;
             }
             // Replay the keeper audience so the blessing (and its quest flag)
             // is earnable again; history resets on startConversation.
