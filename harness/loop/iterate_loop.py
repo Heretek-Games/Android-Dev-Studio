@@ -27,6 +27,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from harness.loop.action_applier import ApplyResult, apply_actions
+from harness.loop.frame_preview import frame_metadata, render_frame_png
 from harness.loop.llm_client import LlmClient, LlmError, LlmResponse
 from harness.loop.prompts import generation_messages, repair_messages
 from harness.loop.vision import VisionResult
@@ -298,7 +299,9 @@ class IterateLoop:
             "attempts": response.attempts,
         }
 
-    def _write_run_log(self, result: LoopResult) -> None:
+    def _write_run_log(
+        self, result: LoopResult, frames: Optional[List[Dict[str, Any]]] = None
+    ) -> None:
         self.runs_dir.mkdir(parents=True, exist_ok=True)
         stamp = time.strftime("%Y%m%d-%H%M%S")
         slug = re.sub(r"[^a-z0-9]+", "-", self.goal.lower())[:40].strip("-") or "run"
@@ -313,6 +316,7 @@ class IterateLoop:
             "finalReport": result.final_report,
             "error": result.error,
             "workScene": str(self.work_scene_path),
+            "frames": frames or [],
         }
         log_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
         result.run_log_path = str(log_path)
@@ -346,6 +350,12 @@ class IterateLoop:
         final_report: Optional[Dict[str, Any]] = None
         rejected: List[str] = []
         consecutive_noops = 0
+        # A.1: one gameplay-camera frame per iteration, stored with run evidence.
+        run_stamp = time.strftime("%Y%m%d-%H%M%S")
+        run_slug = (
+            re.sub(r"[^a-z0-9]+", "-", self.goal.lower())[:40].strip("-") or "run"
+        )
+        frames: List[Dict[str, Any]] = []
 
         for iteration in range(1, self.max_iterations + 1):
             phase = "generate" if iteration == 1 else "repair"
@@ -414,6 +424,23 @@ class IterateLoop:
 
             scene, apply_result = apply_actions(scene, actions)
             record["apply"] = apply_result.as_dict()
+            # A.1 frame artifact: capture AFTER apply so the image reflects the
+            # scene QA evaluates. Advisory-only; a render failure must never
+            # break the loop or mask the QA verdict.
+            try:
+                png = render_frame_png(scene)
+                self.runs_dir.mkdir(parents=True, exist_ok=True)
+                frame_name = f"{run_stamp}-{run_slug}-iter{iteration}.png"
+                frame_path = self.runs_dir / frame_name
+                frame_path.write_bytes(png)
+                meta = frame_metadata(scene)
+                meta.update(
+                    {"iteration": iteration, "path": str(frame_path), "bytes": len(png)}
+                )
+                frames.append(meta)
+                record["frame"] = meta
+            except Exception as error:  # Pillow missing / degenerate scene
+                record["frame"] = {"error": str(error)[:200]}
             # A repair round that applies nothing cannot move QA: two in a row
             # (empty responses, all-rejected patches) means the loop is stalled,
             # so stop early with a precise verdict instead of burning budget.
@@ -521,7 +548,7 @@ class IterateLoop:
                 break
 
         result.final_report = final_report
-        self._write_run_log(result)
+        self._write_run_log(result, frames)
         return result
 
 
