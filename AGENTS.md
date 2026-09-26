@@ -11,13 +11,13 @@ This document is the single source of truth for AI agents (Antigravity, Claude C
 All four genre milestone sets, the autonomous harness, both Android containers,
 and the Perception & Coherence program (Tracks A.1→B.3) are implemented and verified:
 
-- **Engine** — 450 tests / 90 suites green (`npm test`); every logic source file has a companion
+- **Engine** — 451 tests / 90 suites green (`npm test`); every logic source file has a companion
   headless `.test.ts` (Zero Untested Code).
 - **Harness** — 24 MCP tools behind the transactional 7-point invariant gate; Artemis QA with
   scenario-keyed regression baselines; 50 Python tests (invariants, exporter, apk_builder,
   cross-tier quadtree parity); an **autonomous iterate-until-green loop** (`harness/loop/`)
   that drives generated scenes to QA-verified green with vision critique, regression bisect,
-  and a cost/latency dashboard (219 loop tests).
+  and a cost/latency dashboard (234 loop tests).
 - **Perception** — gameplay-camera frame capture per iteration, 4-axis visual rubric +
   deterministic aesthetic proxies (`visual_quality_min` gate), genre UI themes + kits +
   GameShell token plumbing, taste memory + Artemis diff view, unified spatial index +
