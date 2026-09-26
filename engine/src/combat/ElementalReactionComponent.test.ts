@@ -48,3 +48,42 @@ describe('ElementalReactionComponent — auras, reactions, and status effects', 
     assert.strictEqual(json.type, 'ElementalReactionComponent');
   });
 });
+
+describe('ElementalReactionComponent — innate re-pulse (E.2 live fix)', () => {
+  test('consumed innate auras re-assert on ICD cadence', () => {
+    const go = new GameObject('Pyro Slime');
+    const slime = go.addComponent(
+      new ElementalReactionComponent({ baseElement: 'Pyro', maxHealth: 500 })
+    );
+    slime.receiveElementalAttack('Hydro', 20, 1); // Vaporize consumes the aura
+    assert.strictEqual(slime.currentAura, null);
+    slime.update(1.0); // half the ICD: still bare
+    assert.strictEqual(slime.currentAura, null);
+    slime.update(1.5); // past the 2s ICD: affinity re-asserts
+    // (read through toJSON: strictEqual(null) above narrows the field type)
+    const reseeded = (slime.toJSON() as { aura: { element: string } | null }).aura;
+    assert.strictEqual(reseeded && reseeded.element, 'Pyro');
+    const second = slime.receiveElementalAttack('Hydro', 20, 1);
+    assert.strictEqual(second.reaction, 'Vaporize'); // reacts again
+  });
+
+  test('non-innate victims stay bare after consumption', () => {
+    const go = new GameObject('Bare');
+    const bare = go.addComponent(new ElementalReactionComponent({ maxHealth: 500 }));
+    bare.receiveElementalAttack('Pyro', 0, 1); // applied seed, no innate
+    assert.notStrictEqual(bare.currentAura, null);
+    bare.update(20); // applied aura decays and never returns
+    assert.strictEqual(bare.currentAura, null);
+  });
+
+  test('innate element round-trips through JSON', () => {
+    const go = new GameObject('Pyro Slime');
+    const slime = go.addComponent(new ElementalReactionComponent({ baseElement: 'Pyro' }));
+    const restored = new ElementalReactionComponent();
+    restored.fromJSON(JSON.parse(JSON.stringify(slime.toJSON())));
+    assert.strictEqual(restored.innateElement, 'Pyro');
+    restored.update(3);
+    const restoredAura = restored.currentAura;
+    assert.strictEqual(restoredAura && restoredAura.element, 'Pyro');
+  });
+});

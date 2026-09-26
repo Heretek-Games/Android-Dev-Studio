@@ -167,3 +167,43 @@ describe('Elemental melee — infusion strikes through the Hurtbox', () => {
     assert.strictEqual(hits[0].applied, 10); // clamped to remaining health
   });
 });
+
+describe('Combat factions — blades spare allies', () => {
+  test('foe-filtered blade strikes foes and spares the ally beside them', () => {
+    const scene = new Scene('Factions');
+    const hero = new GameObject('Hero');
+    hero.transform.setPosition(0, 0, 0);
+    scene.addGameObject(hero);
+    const ally = new GameObject('Squire');
+    ally.transform.setPosition(0, 0, -1.5);
+    ally.addComponent(new HealthComponent({ maxHealth: 100 }));
+    ally.addComponent(new Hurtbox({ invulnSeconds: 0, faction: 'ally' }));
+    scene.addGameObject(ally);
+    const foe = new GameObject('Slime');
+    foe.transform.setPosition(0, 0, -2);
+    foe.addComponent(new HealthComponent({ maxHealth: 100 }));
+    foe.addComponent(new Hurtbox({ invulnSeconds: 0, faction: 'foe' }));
+    scene.addGameObject(foe);
+    const blade = hero.addComponent(
+      new MeleeHitbox({ damage: 25, range: 2.5, arcDegrees: 360, foeFactions: ['foe'] })
+    );
+    blade.beginSwing();
+    const hits = blade.tryHit();
+    assert.deepStrictEqual(hits.map(h => h.targetName), ['Slime']);
+    assert.strictEqual(ally.getComponent(HealthComponent)!.health, 100);
+  });
+
+  test('legacy blades without a filter still strike everything', () => {
+    const scene = new Scene('Legacy');
+    const hero = new GameObject('Hero');
+    scene.addGameObject(hero);
+    const ally = new GameObject('Squire');
+    ally.transform.setPosition(0, 0, -2);
+    ally.addComponent(new HealthComponent({ maxHealth: 100 }));
+    ally.addComponent(new Hurtbox({ invulnSeconds: 0, faction: 'ally' }));
+    scene.addGameObject(ally);
+    const blade = hero.addComponent(new MeleeHitbox({ damage: 10, range: 3, arcDegrees: 360 }));
+    blade.beginSwing();
+    assert.strictEqual(blade.tryHit().length, 1);
+  });
+});

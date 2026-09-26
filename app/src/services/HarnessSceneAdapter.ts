@@ -20,6 +20,8 @@ import {
   HealthComponent,
   EnemyAI,
   VehicleController,
+  ElementalReactionComponent,
+  DayNightCycle,
   type PrimitiveShape
 } from '@heretek/engine';
 import type { HarnessScene, HarnessSceneObject } from './SceneStore';
@@ -79,6 +81,19 @@ export function buildEngineScene(spec: HarnessScene): Scene {
       if (obj.ai) {
         go.addComponent(new EnemyAI(obj.ai as never));
       }
+      if ((obj as { elemental?: { aura?: string; maxHealth?: number } }).elemental) {
+        // Track E.6: innate auras are permanent (baseElement path); a
+        // decaying 0-damage seed expires during real-time play.
+        const elementalSpec = (obj as { elemental?: { aura?: string; maxHealth?: number } }).elemental!;
+        const elemental = new ElementalReactionComponent(
+          elementalSpec.aura ? { baseElement: elementalSpec.aura as never } : undefined
+        );
+        if (elementalSpec.maxHealth !== undefined) {
+          elemental.maxHealth = elementalSpec.maxHealth;
+          elemental.health = elementalSpec.maxHealth;
+        }
+        go.addComponent(elemental);
+      }
       if (obj.vehicle) {
         const vehicle = new VehicleController(obj.vehicle as never);
         const config = obj.vehicle as { throttle?: number; steering?: number; brake?: number };
@@ -92,6 +107,21 @@ export function buildEngineScene(spec: HarnessScene): Scene {
       }
     }
     scene.addGameObject(go);
+  }
+  // Track E.6: day/night rigs bind by name after all objects exist
+  // (mirrors qa_scenario_runner; order-independent).
+  for (const obj of spec.gameObjects || []) {
+    const daynight = (obj as { daynight?: { sun?: string; ambient?: string; dayLengthSeconds?: number; startTimeOfDay?: number } }).daynight;
+    if (!daynight) continue;
+    const host = scene.findByName(obj.name || 'Object');
+    const cycle = new DayNightCycle({
+      dayLengthSeconds: daynight.dayLengthSeconds,
+      startTimeOfDay: daynight.startTimeOfDay
+    });
+    host?.addComponent(cycle);
+    const sunLight = daynight.sun ? scene.findByName(daynight.sun)?.getComponent(LightComponent) ?? null : null;
+    const ambientLight = daynight.ambient ? scene.findByName(daynight.ambient)?.getComponent(LightComponent) ?? null : null;
+    cycle.bind(sunLight, ambientLight);
   }
   return scene;
 }

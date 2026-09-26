@@ -25,6 +25,11 @@ export interface MeleeHitboxOptions {
   element?: ElementType;
   /** Elemental gauge units applied per strike (default 1.0). */
   gaugeUnits?: number;
+  /**
+   * Faction filter (Godot-layers canon): when set, only Hurtboxes whose
+   * faction is listed are struck (allies spared). Unset hits everything.
+   */
+  foeFactions?: string[];
 }
 
 /**
@@ -41,6 +46,7 @@ export class MeleeHitbox extends Component {
   public arcDegrees: number = 120;
   public element?: ElementType;
   public gaugeUnits: number = 1;
+  public foeFactions?: string[];
 
   private hitListeners: Set<(hit: MeleeHit) => void> = new Set();
   private swungTargets: Set<string> = new Set();
@@ -53,6 +59,7 @@ export class MeleeHitbox extends Component {
     if (options?.arcDegrees !== undefined) this.arcDegrees = options.arcDegrees;
     if (options?.element !== undefined) this.element = options.element;
     if (options?.gaugeUnits !== undefined) this.gaugeUnits = options.gaugeUnits;
+    if (options?.foeFactions !== undefined) this.foeFactions = [...options.foeFactions];
   }
 
   public onHit(listener: (hit: MeleeHit) => void): () => void {
@@ -82,6 +89,9 @@ export class MeleeHitbox extends Component {
       if (this.swungTargets.has(target.name)) continue;
       const hurt = target.getComponent(Hurtbox);
       if (!hurt) continue;
+      if (this.foeFactions !== undefined && !this.foeFactions.includes(hurt.faction as string)) {
+        continue;
+      }
       const dx = target.transform.position.x - owner.x;
       const dz = target.transform.position.z - owner.z;
       const dist = Math.hypot(dx, dz);
@@ -122,7 +132,8 @@ export class MeleeHitbox extends Component {
       range: this.range,
       arcDegrees: this.arcDegrees,
       ...(this.element !== undefined ? { element: this.element } : {}),
-      gaugeUnits: this.gaugeUnits
+      gaugeUnits: this.gaugeUnits,
+      ...(this.foeFactions !== undefined ? { foeFactions: [...this.foeFactions] } : {})
     };
   }
 
@@ -132,5 +143,6 @@ export class MeleeHitbox extends Component {
     if (data.arcDegrees !== undefined) this.arcDegrees = data.arcDegrees;
     if (data.element !== undefined) this.element = data.element;
     if (data.gaugeUnits !== undefined) this.gaugeUnits = data.gaugeUnits;
+    if (data.foeFactions !== undefined) this.foeFactions = [...data.foeFactions];
   }
 }

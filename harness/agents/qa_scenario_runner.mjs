@@ -413,17 +413,17 @@ function buildScene(spec, engine) {
 /** Adds an ElementalReactionComponent from a spec ({aura, maxHealth}). */
 function addElementalComponent(go, spec, engine) {
   if (!spec) return;
-  const elemental = new engine.ElementalReactionComponent();
+  // Innate auras (slime affinity) are permanent: seed through the
+  // baseElement constructor path, not a decaying 0-damage application —
+  // real-time play outlasts applied-aura durations.
+  const elemental = new engine.ElementalReactionComponent(
+    spec.aura ? { baseElement: spec.aura } : undefined
+  );
   if (spec.maxHealth !== undefined) {
     elemental.maxHealth = spec.maxHealth;
     elemental.health = spec.maxHealth;
   }
-  // Attach before seeding: receiveElementalAttack touches gameObject (visual tint).
   go.addComponent(elemental);
-  if (spec.aura) {
-    // Seed the aura without damage so reactions fire on the first hit.
-    elemental.receiveElementalAttack(spec.aura, 0, 1);
-  }
 }
 
 /**
@@ -995,7 +995,10 @@ function setupGame(spec, scene, engine) {
         bossName = enemy.name;
       }
       if (meleeCfg) {
-        const hurt = new engine.Hurtbox({ invulnSeconds: meleeCfg.invulnSeconds ?? 0.3 });
+        const hurt = new engine.Hurtbox({
+          invulnSeconds: meleeCfg.invulnSeconds ?? 0.3,
+          faction: 'foe'
+        });
         hurt.onResolved(resolution => {
           if (resolution.fatal) meleeKills += 1;
           if (resolution.reaction && resolution.reaction !== 'None') meleeReactions += 1;
@@ -1020,7 +1023,8 @@ function setupGame(spec, scene, engine) {
         range: meleeCfg.range ?? 3,
         arcDegrees: meleeCfg.arcDegrees ?? 120,
         element: meleeCfg.element,
-        gaugeUnits: meleeCfg.gauge ?? 1
+        gaugeUnits: meleeCfg.gauge ?? 1,
+        foeFactions: ['foe']
       }));
     }
   }

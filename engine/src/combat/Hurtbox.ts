@@ -7,6 +7,12 @@ import type { ElementType } from './ElementalSystem.js';
 export interface HurtboxOptions {
   /** Invulnerability duration in seconds after a hit lands (i-frames). */
   invulnSeconds?: number;
+  /**
+   * Collision faction (Godot-layers canon): blades declaring foeFactions
+   * only strike matching factions. Undefined (default) is neutral ground —
+   * hittable by every blade, preserving legacy behavior.
+   */
+  faction?: string;
 }
 
 export interface HurtResult {
@@ -39,6 +45,7 @@ export interface HurtResolution {
  */
 export class Hurtbox extends Component {
   public invulnSeconds: number = 0.5;
+  public faction?: string;
 
   private invulnUntil: number = -Infinity;
   private time: number = 0;
@@ -47,6 +54,7 @@ export class Hurtbox extends Component {
   constructor(options?: HurtboxOptions) {
     super();
     if (options?.invulnSeconds !== undefined) this.invulnSeconds = options.invulnSeconds;
+    if (options?.faction !== undefined) this.faction = options.faction;
   }
 
   /** Subscribe to landed-hit resolutions (game-layer kill/reaction accounting). */
@@ -142,10 +150,16 @@ export class Hurtbox extends Component {
   }
 
   public override toJSON(): Record<string, any> {
-    return { type: 'Hurtbox', enabled: this.enabled, invulnSeconds: this.invulnSeconds };
+    return {
+      type: 'Hurtbox',
+      enabled: this.enabled,
+      invulnSeconds: this.invulnSeconds,
+      ...(this.faction !== undefined ? { faction: this.faction } : {})
+    };
   }
 
   public override fromJSON(data: Record<string, any>): void {
     if (data.invulnSeconds !== undefined) this.invulnSeconds = data.invulnSeconds;
+    if (data.faction !== undefined) this.faction = data.faction;
   }
 }

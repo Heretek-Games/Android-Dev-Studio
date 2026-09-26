@@ -27,6 +27,12 @@ import {
   GameObject,
   ElementalReactionComponent,
   DialogueManager,
+  MobileController,
+  MeleeHitbox,
+  Hurtbox,
+  Telegraph,
+  Quest,
+  Party,
   Settlement,
   BUILDINGS,
   type BuildingType,
@@ -39,9 +45,10 @@ import fpsArenaSpec from '../../../harness/config/scenarios/fps_arena.json';
 import drivingSliceSpec from '../../../harness/config/scenarios/driving_slice.json';
 import dungeonSliceSpec from '../../../harness/config/scenarios/dungeon_slice.json';
 import citySliceSpec from '../../../harness/config/scenarios/city_slice.json';
+import tideSliceSpec from '../../../harness/config/scenarios/tide_cinder.json';
 
-/** `?play=driving|dungeon|city` boots those slices; anything else boots the arena. */
-type GameKind = 'arena' | 'driving' | 'dungeon' | 'city';
+/** `?play=driving|dungeon|city|tide` boots those slices; anything else boots the arena. */
+type GameKind = 'arena' | 'driving' | 'dungeon' | 'city' | 'tide';
 
 const gameKindFromUrl = (): GameKind => {
   if (typeof window === 'undefined') return 'arena';
@@ -49,6 +56,7 @@ const gameKindFromUrl = (): GameKind => {
   if (play === 'driving') return 'driving';
   if (play === 'dungeon') return 'dungeon';
   if (play === 'city') return 'city';
+  if (play === 'tide') return 'tide';
   return 'arena';
 };
 
@@ -64,10 +72,30 @@ interface ArenaGameConfig {
   targetScore?: number;
   timeLimitSeconds?: number;
   totalWaves?: number;
-  enemiesPerWave?: number;
+  enemiesPerWave?: number | number[];
   spawnRadius?: number;
   scorePerKill?: number;
   interWaveDelaySeconds?: number;
+  hitElement?: string;
+  melee?: {
+    damage?: number;
+    range?: number;
+    arcDegrees?: number;
+    element?: string;
+    gauge?: number;
+    swingEveryFrames?: number;
+    invulnSeconds?: number;
+  };
+  boss?: {
+    wave?: number;
+    name?: string;
+    health?: number;
+    size?: number[];
+    color?: string;
+    telegraph?: { windupSeconds?: number; strikeSeconds?: number; recoverSeconds?: number };
+    strikeDamage?: number;
+    strikeRange?: number;
+  };
   enemy?: {
     shape?: string;
     size?: number[];
@@ -95,11 +123,15 @@ export const GameView: React.FC = () => {
           ? dungeonSliceSpec
           : kind === 'city'
             ? citySliceSpec
-            : fpsArenaSpec;
+            : kind === 'tide'
+              ? tideSliceSpec
+              : fpsArenaSpec;
     const spec = rawSpec as unknown as HarnessScene;
     const gameConfig = (rawSpec as unknown as { game?: ArenaGameConfig }).game ?? {};
+    const questSpec = (rawSpec as unknown as { quest?: { id: string; stages: never[] } }).quest ?? null;
     const playerName = gameConfig.playerName ?? (kind === 'driving' ? 'Player Car' : 'Player Hero');
     const isCity = kind === 'city';
+    const isTide = kind === 'tide';
 
     let disposed = false;
     let renderer: THREE.WebGLRenderer | null = null;
@@ -132,6 +164,13 @@ export const GameView: React.FC = () => {
 
       const enemySpec = gameConfig.enemy ?? {};
       const enemyHealth = enemySpec.health ?? { maxHealth: 50, destroyOnDeath: true };
+      const meleeSpec = gameConfig.melee ?? null;
+      const bossSpec = gameConfig.boss ?? null;
+      // Tide slice: melee kill/reaction tallies off Hurtbox resolutions.
+      let meleeKills = 0;
+      let meleeReactions = 0;
+      // Tide slice: 2-hero single-player party (declared before buildEnemy).
+      let party: Party | null = null;
 
       // City mode starts with an empty settlement on a wide founding grid: the
       // player founds the town. (The QA scenario ships its own small gridSize plus
@@ -155,38 +194,71 @@ export const GameView: React.FC = () => {
         targetScore: gameConfig.targetScore,
         timeLimitSeconds: gameConfig.timeLimitSeconds,
         totalWaves: gameConfig.totalWaves ?? 2,
-        enemiesPerWave: () => gameConfig.enemiesPerWave ?? 1,
+        enemiesPerWave: (wave) =>
+          Array.isArray(gameConfig.enemiesPerWave)
+            ? (gameConfig.enemiesPerWave[Math.min(wave - 1, gameConfig.enemiesPerWave.length - 1)] ?? 1)
+            : (gameConfig.enemiesPerWave ?? 1),
         spawnRadius: gameConfig.spawnRadius ?? 8,
         scorePerKill: gameConfig.scorePerKill ?? 100,
         interWaveDelaySeconds: gameConfig.interWaveDelaySeconds ?? 1,
         weapon: kind === 'driving' ? undefined : weapon ?? undefined,
         hitElement: (gameConfig as { hitElement?: string }).hitElement as never,
-        buildEnemy: kind === 'driving' ? undefined : ({ name, position }) => {
-          const enemy = new GameObject(name);
+        buildEnemy: kind === 'driving' ? undefined : ({ name, position, wave }) => {
+          // Tide slice: per-wave boss override (pool, frame, live telegraph).
+          const boss = isTide && bossSpec && wave === bossSpec.wave ? bossSpec : null;
+          const enemy = new GameObject(boss?.name ?? name);
           enemy.transform.setPosition(position[0], position[1] + (enemySpec.y ?? 0.8), position[2]);
           enemy.addComponent(
             new MeshRenderer({
               shape: (enemySpec.shape as 'box') ?? 'box',
-              size: (enemySpec.size as [number, number, number]) ?? [1, 1.5, 1],
-              color: enemySpec.color ?? '#ef4444',
+              size: ((boss?.size ?? enemySpec.size) as [number, number, number]) ?? [1, 1.5, 1],
+              color: boss?.color ?? enemySpec.color ?? '#ef4444',
               roughness: 0.5
             })
           );
           const elementalSpec = (enemySpec as { elemental?: { aura?: string; maxHealth?: number } }).elemental;
+          const elementalHealth = boss?.health ?? elementalSpec?.maxHealth;
           if (elementalSpec) {
-            const elemental = new ElementalReactionComponent();
-            if (elementalSpec.maxHealth !== undefined) {
-              elemental.maxHealth = elementalSpec.maxHealth;
-              elemental.health = elementalSpec.maxHealth;
-            }
+            const elemental = new ElementalReactionComponent(
+              elementalSpec.aura ? { baseElement: elementalSpec.aura as never } : undefined
+            );
+            elemental.maxHealth = elementalHealth ?? 80;
+            elemental.health = elemental.maxHealth;
             enemy.addComponent(elemental);
             scene.addGameObject(enemy);
-            if (elementalSpec.aura) {
-              elemental.receiveElementalAttack(elementalSpec.aura as never, 0, 1);
-            }
           } else {
-            enemy.addComponent(new HealthComponent(enemyHealth));
+            enemy.addComponent(
+              new HealthComponent({ maxHealth: boss?.health ?? enemyHealth.maxHealth ?? 50, destroyOnDeath: true })
+            );
             scene.addGameObject(enemy);
+          }
+          if (isTide && meleeSpec) {
+            const hurt = new Hurtbox({ invulnSeconds: meleeSpec.invulnSeconds ?? 0.2, faction: 'foe' });
+            hurt.onResolved((resolution) => {
+              if (resolution.fatal) meleeKills += 1;
+              if (resolution.reaction && resolution.reaction !== 'None') meleeReactions += 1;
+            });
+            enemy.addComponent(hurt);
+          }
+          if (boss?.telegraph) {
+            const tell = new Telegraph(boss.telegraph);
+            const bossMesh = enemy.getComponent(MeshRenderer);
+            const baseColor = bossMesh?.color ?? '#dc2626';
+            tell.onTelegraph(() => {
+              if (bossMesh) bossMesh.color = '#7f1d1d';
+            });
+            tell.onStrike(() => {
+              if (bossMesh) bossMesh.color = baseColor;
+              const hero = party?.active() ?? player;
+              const heroHurt = hero?.getComponent(Hurtbox) ?? null;
+              if (!hero || !heroHurt) return;
+              const dx = hero.transform.position.x - enemy.transform.position.x;
+              const dz = hero.transform.position.z - enemy.transform.position.z;
+              if (Math.hypot(dx, dz) <= (boss.strikeRange ?? 4)) {
+                heroHurt.takeHit(boss.strikeDamage ?? 10, enemy);
+              }
+            });
+            enemy.addComponent(tell);
           }
           enemy.addComponent(new EnemyAI({ targetName: playerName, ...(enemySpec.ai ?? {}) }));
           return enemy;
@@ -208,6 +280,14 @@ export const GameView: React.FC = () => {
         player!.transform.setRotation(0, 0, 0);
         playerBody?.setPosition(PLAYER_START[0], PLAYER_START[1], PLAYER_START[2]);
         health?.heal(health.maxHealth);
+        if (isTide && squire) {
+          squire.transform.setPosition(2, 1.5, 2);
+          squire.getComponent(HealthComponent)?.heal(100);
+          if (party) {
+            party.update(10); // expire any swap cooldown, then restore lead
+            if (party.activeIndex !== 0) party.swapTo(0);
+          }
+        }
         if (vehicle) {
           vehicle.throttle = 0;
           vehicle.steering = 0;
@@ -216,16 +296,60 @@ export const GameView: React.FC = () => {
       };
 
       const saveSystem = new SaveSystem();
-      const SAVE_SLOT = 'arena';
+      const SAVE_SLOT = isTide ? 'tide' : 'arena';
       runtime.prepare();
 
+      // Tide and Cinder: hero blade (uninfused until the blessing), hurtbox,
+      // AI companion squire, and the 2-hero single-player party.
+      let blade: MeleeHitbox | null = null;
+      let squire: GameObject | null = null;
+      let quest: Quest | null = null;
+      const questFlags = new Set<string>();
+      if (isTide && player && meleeSpec) {
+        const bladeOpts = {
+          damage: meleeSpec.damage ?? 40,
+          range: meleeSpec.range ?? 3.5,
+          arcDegrees: meleeSpec.arcDegrees ?? 120,
+          gaugeUnits: meleeSpec.gauge ?? 1,
+          foeFactions: ['foe']
+        };
+        blade = new MeleeHitbox(bladeOpts);
+        player.addComponent(blade);
+        player.addComponent(new Hurtbox({ invulnSeconds: 0.5, faction: 'ally' }));
+        squire = new GameObject('Squire');
+        squire.transform.setPosition(2, 1.5, 2);
+        squire.addComponent(new MeshRenderer({ shape: 'capsule', size: [1, 1.5, 1], color: '#a78bfa', roughness: 0.5 }));
+        const squireBrain = new MobileController();
+        squireBrain.enabled = false;
+        squire.addComponent(squireBrain);
+        squire.addComponent(new HealthComponent({ maxHealth: 100, destroyOnDeath: false }));
+        // Each hero carries their own blade; swings resolve from the active hero.
+        squire.addComponent(new MeleeHitbox(bladeOpts));
+        squire.addComponent(new Hurtbox({ invulnSeconds: 0.5, faction: 'ally' }));
+        scene.addGameObject(squire);
+        party = new Party({ swapCooldownSeconds: 1.0 });
+        party.setMembers([player, squire]);
+      }
+      if (isTide && questSpec) {
+        quest = new Quest(questSpec as unknown as { id: string; stages: never[] });
+      }
+
       // Dungeon dialogue: the keeper offers a Hydro blessing (drives hitElement).
-      const dialogue = kind === 'dungeon' ? new DialogueManager() : null;
+      // Tide dialogue: the same blessing infuses the hero blade instead.
+      const dialogue = kind === 'dungeon' || isTide ? new DialogueManager() : null;
       const dialogueTrees = (rawSpec as unknown as { dialogues?: Record<string, DialogueTree> }).dialogues;
       if (dialogue && dialogueTrees) {
         for (const tree of Object.values(dialogueTrees)) dialogue.registerTree(tree);
         dialogue.addEventListener((eventName) => {
-          if (eventName === 'hydro_blessing') runtime!.setHitElement('Hydro');
+          if (eventName === 'hydro_blessing' && !isTide) runtime!.setHitElement('Hydro');
+          // Tide: the blessing infuses every party blade.
+          if (eventName === 'hydro_blessing' && isTide) {
+            for (const member of [player, squire]) {
+              const memberBlade = member?.getComponent(MeleeHitbox) ?? null;
+              if (memberBlade) memberBlade.element = 'Hydro' as never;
+            }
+          }
+          if (isTide) questFlags.add(eventName);
         });
       }
 
@@ -239,13 +363,17 @@ export const GameView: React.FC = () => {
               ? 'Heretek Dungeon — Slime Hall'
               : isCity
                 ? 'Heretek City — Founding'
-                : 'Heretek Arena — Wave Defense',
+                : isTide
+                  ? 'Tide and Cinder'
+                  : 'Heretek Arena — Wave Defense',
         hud:
           kind === 'driving'
             ? { scoreLabel: 'Distance', scoreSuffix: 'm', showWave: false, showKills: false, showHealth: false }
             : isCity
               ? { scoreLabel: 'Pop', showWave: false, showKills: false, showHealth: false }
-              : undefined,
+              : isTide
+                ? { scoreLabel: 'Score', showWave: true, showKills: false, showHealth: true }
+                : undefined,
         root: container,
         getHealthFraction: () => (health ? health.healthFraction : 1),
         onStart: () => {
@@ -258,6 +386,28 @@ export const GameView: React.FC = () => {
         },
         onRestart: () => {
           resetArena();
+          if (isTide) {
+            meleeKills = 0;
+            meleeReactions = 0;
+            questFlags.clear();
+            if (questSpec) quest = new Quest(questSpec as unknown as { id: string; stages: never[] });
+            lastQuestStage = -1;
+            lastQuestKills = -1;
+            lastQuestReactions = -1;
+            questBar.style.display = 'none';
+            if (blade) blade.element = undefined;
+            if (squire) {
+              const squireBlade = squire.getComponent(MeleeHitbox) ?? null;
+              if (squireBlade) squireBlade.element = undefined;
+            }
+            // Replay the keeper audience so the blessing (and its quest flag)
+            // is earnable again; history resets on startConversation.
+            if (dialogue) {
+              dialogue.endConversation();
+              const node = dialogue.startConversation('DungeonKeeper');
+              if (node) showDialogueNode(node);
+            }
+          }
           runtime!.restart();
         },
         onQuit: () => {
@@ -269,7 +419,11 @@ export const GameView: React.FC = () => {
         hasSave: () => !isCity && saveSystem.load(SAVE_SLOT) !== null,
         onSave: () => {
           if (isCity) return;
-          saveSystem.save(SAVE_SLOT, runtime!.session.snapshot());
+          saveSystem.save(
+            SAVE_SLOT,
+            runtime!.session.snapshot(),
+            isTide && quest ? { quest: quest.toJSON() } : undefined
+          );
         },
         onLoad: () => {
           if (isCity) return;
@@ -277,6 +431,11 @@ export const GameView: React.FC = () => {
           if (!envelope) return;
           resetArena();
           runtime!.session.restore(envelope.session);
+          if (isTide && quest && envelope.data && (envelope.data as { quest?: unknown }).quest) {
+            const restored = Quest.fromJSON((envelope.data as { quest: Record<string, unknown> }).quest as never);
+            quest.completedStageIds = restored.completedStageIds;
+            quest.complete = restored.complete;
+          }
           if (runtime!.flow.getPhase() === 'menu') {
             runtime!.flow.transition('start');
           }
@@ -406,7 +565,73 @@ export const GameView: React.FC = () => {
         });
       };
 
-      // Debug/QA surface (mirrors the studio's __STUDIO_DEBUG__ pattern).
+      // Tide and Cinder: quest tracker, attack + party-swap touch buttons.
+      // Tagged for cleanup: StrictMode/HMR remounts must not stack buttons.
+      container.querySelectorAll('[data-tide-ui]').forEach((node) => node.remove());
+      const questBar = document.createElement('div');
+      questBar.setAttribute('data-tide-ui', '1');
+      questBar.style.cssText =
+        'position:absolute;left:12px;top:12px;padding:8px 12px;border-radius:8px;background:rgba(9,9,12,0.85);' +
+        'border:1px solid #6d28d9;color:#ede9fe;font-size:12px;font-family:system-ui,sans-serif;display:none;' +
+        'z-index:60;max-width:280px;';
+      if (isTide) container.append(questBar);
+      let lastQuestStage = -1;
+      let lastQuestKills = -1;
+      let lastQuestReactions = -1;
+
+      const tideButton = (label: string, right: string, onTap: () => void): void => {
+        const button = document.createElement('button');
+        button.setAttribute('data-tide-ui', '1');
+        button.textContent = label;
+        button.style.cssText =
+          `position:absolute;right:${right};bottom:24px;width:76px;height:76px;border-radius:50%;` +
+          'border:2px solid #6d28d9;background:rgba(76,29,149,0.9);color:#fff;font-size:13px;' +
+          'cursor:pointer;z-index:60;font-family:system-ui,sans-serif;';
+        button.addEventListener('pointerdown', (event) => {
+          event.stopPropagation();
+          onTap();
+        });
+        container.append(button);
+      };
+
+      let lastSwingAt = 0;
+      const trySwing = (): void => {
+        if (!isTide || !runtime || !player) return;
+        if (!runtime.flow.isPlaying()) return;
+        const now = performance.now();
+        if (now - lastSwingAt < 450) return;
+        lastSwingAt = now;
+        // Soft lock-on: face the nearest living enemy, then resolve the
+        // ACTIVE hero's swing from their own position.
+        const hero = party?.active() ?? player;
+        const heroBlade = hero.getComponent(MeleeHitbox) ?? blade;
+        if (!heroBlade) return;
+        let nearest: GameObject | null = null;
+        let best = Number.POSITIVE_INFINITY;
+        for (const name of runtime.spawner.getSpawnedNames()) {
+          const enemy = scene.findByName(name);
+          if (!enemy) continue;
+          const distance = hero.transform.position.distanceTo(enemy.transform.position);
+          if (distance < best) {
+            best = distance;
+            nearest = enemy;
+          }
+        }
+        if (nearest) {
+          const p = hero.transform.position;
+          const e = nearest.transform.position;
+          hero.transform.setRotation(0, Math.atan2(-(e.x - p.x), -(e.z - p.z)), 0);
+        }
+        heroBlade.beginSwing();
+        heroBlade.tryHit();
+      };
+
+      if (isTide) {
+        tideButton('⚔', '24px', trySwing);
+        tideButton('⇄', '112px', () => {
+          if (party && runtime?.flow.isPlaying()) party.swapTo((party.activeIndex + 1) % party.size);
+        });
+      }
       (window as unknown as Record<string, unknown>).__GAME_DEBUG__ = {
         phase: () => runtime!.flow.getPhase(),
         score: () => runtime!.session.getScore(),
@@ -433,6 +658,24 @@ export const GameView: React.FC = () => {
         reactions: () => runtime!.getReactionCount(),
         /** Active dialogue node id (dungeon slice). */
         dialogueNode: () => (dialogue?.getCurrentNode()?.id ?? null),
+        /** Tide and Cinder: quest stage, melee tallies, party state. */
+        quest: () =>
+          quest
+            ? { stage: quest.currentStage()?.id ?? null, stageIndex: quest.stageIndex, complete: quest.complete }
+            : null,
+        melee: () => (isTide ? { kills: meleeKills, reactions: meleeReactions } : null),
+        party: () =>
+          party
+            ? { active: party.active()?.name ?? null, activeIndex: party.activeIndex, swaps: party.swapsTaken }
+            : null,
+        swing: () => {
+          trySwing();
+          return isTide ? { kills: meleeKills, reactions: meleeReactions } : null;
+        },
+        swap: () => {
+          if (party) party.swapTo((party.activeIndex + 1) % party.size);
+          return party?.active()?.name ?? null;
+        },
         /** Driving telemetry (vehicle input + solver state). */
         vehicle: () =>
           vehicle
@@ -590,8 +833,58 @@ export const GameView: React.FC = () => {
         if (runtime.flow.isPlaying()) {
           if (kind === 'driving') {
             updateDrivingInput();
-          } else if (!isCity) {
+          } else if (!isCity && !isTide) {
             aimAndFire();
+          }
+          if (isTide) {
+            // Companion AI: the inactive hero trails the active one; the
+            // active hero drives the camera and the quest snapshot.
+            party?.update(dt);
+            const hero = party?.active() ?? player;
+            const other = party && hero && squire
+              ? (hero === player ? squire : player)
+              : null;
+            if (other && hero) {
+              const target = hero.transform.position;
+              const pos = other.transform.position;
+              const dx = target.x - pos.x;
+              const dz = target.z - pos.z;
+              const dist = Math.hypot(dx, dz);
+              if (dist > 3) {
+                const step = Math.min(dist - 2, 6 * dt);
+                pos.x += (dx / dist) * step;
+                pos.z += (dz / dist) * step;
+              }
+            }
+            if (quest && dialogue) {
+              for (const id of dialogue.getHistory()) questFlags.add(id);
+              quest.update({
+                flags: [...questFlags],
+                kills: meleeKills,
+                reactions: meleeReactions,
+                phase: runtime.flow.getPhase()
+              });
+              if (
+                quest.stageIndex !== lastQuestStage ||
+                meleeKills !== lastQuestKills ||
+                meleeReactions !== lastQuestReactions
+              ) {
+                lastQuestStage = quest.stageIndex;
+                lastQuestKills = meleeKills;
+                lastQuestReactions = meleeReactions;
+                const squireHealth = squire?.getComponent(HealthComponent) ?? null;
+                const squireLine = squireHealth
+                  ? ` · Squire ${Math.ceil(squireHealth.health)}/${squireHealth.maxHealth}`
+                  : '';
+                const stage = quest.currentStage();
+                questBar.style.display = 'block';
+                questBar.textContent =
+                  (quest.complete
+                    ? `✔ ${quest.id} complete`
+                    : `Quest: ${stage?.id ?? '—'} (${quest.stageIndex + 1}/${quest.stages.length})`) +
+                  ` · Foes ${meleeKills} · Reactions ${meleeReactions}${squireLine}`;
+              }
+            }
           }
           context.step(dt);
         }
@@ -630,7 +923,9 @@ export const GameView: React.FC = () => {
           camera.position.lerp(new THREE.Vector3(0, 26, 30), 0.08);
           cameraTarget.lerp(new THREE.Vector3(0, 0, 0), 0.1);
         } else if (player) {
-          const p = player.transform.position;
+          // Tide camera trails the active party hero.
+          const focus = isTide ? (party?.active() ?? player) : player;
+          const p = focus.transform.position;
           if (kind === 'driving') {
             camera.position.lerp(new THREE.Vector3(p.x, p.y + 4.5, p.z + 9), 0.18);
             cameraTarget.lerp(new THREE.Vector3(p.x, p.y + 0.8, p.z - 4), 0.25);
@@ -644,9 +939,16 @@ export const GameView: React.FC = () => {
       });
 
       const onKeyDown = (event: KeyboardEvent) => {
-        if (event.key !== 'Escape') return;
-        if (runtime!.flow.isPlaying()) runtime!.flow.transition('pause');
-        else if (runtime!.flow.getPhase() === 'paused') runtime!.flow.transition('resume');
+        if (event.key === 'Escape') {
+          if (runtime!.flow.isPlaying()) runtime!.flow.transition('pause');
+          else if (runtime!.flow.getPhase() === 'paused') runtime!.flow.transition('resume');
+          return;
+        }
+        // Tide and Cinder: Space swings the active hero blade.
+        if (isTide && (event.key === ' ' || event.code === 'Space')) {
+          event.preventDefault();
+          trySwing();
+        }
       };
       window.addEventListener('keydown', onKeyDown);
 

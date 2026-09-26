@@ -24,13 +24,24 @@ export class ElementalReactionComponent extends Component {
   public isFrozen: boolean = false;
   public freezeTimer: number = 0;
   public lastReaction: ReactionResult | null = null;
+  /**
+   * Innate element (Track E.2-live-fix): slimes re-assert their affinity on
+   * a pulse cadence after reactions consume it (Genshin aura ICD), so long
+   * real-time fights never degrade into reaction-less sponges.
+   */
+  public innateElement: ElementType | null = null;
+  /** Seconds between innate re-seeds (default 2.0, Genshin ICD cadence). */
+  public innatePulseSeconds: number = 2.0;
 
   private originalColor: string = '';
+  // Start at a full ICD so the first re-seed waits the whole cadence.
+  private innatePulseLeft: number = 2.0;
 
   constructor(options?: ElementalReactionOptions) {
     super();
     if (options) {
       if (options.baseElement) {
+        this.innateElement = options.baseElement;
         this.currentAura = {
           element: options.baseElement,
           gaugeUnits: 2.0,
@@ -42,6 +53,7 @@ export class ElementalReactionComponent extends Component {
         this.health = options.maxHealth;
         this.maxHealth = options.maxHealth;
       }
+      this.innatePulseLeft = this.innatePulseSeconds;
     }
   }
 
@@ -67,6 +79,21 @@ export class ElementalReactionComponent extends Component {
       if (this.currentAura.duration <= 0) {
         this.currentAura = null;
         this.restoreVisualTint();
+      }
+    }
+
+    // 3. Innate re-pulse: consumed affinities re-assert on ICD cadence.
+    if (!this.currentAura && this.innateElement) {
+      this.innatePulseLeft -= deltaTime;
+      if (this.innatePulseLeft <= 0) {
+        this.innatePulseLeft = this.innatePulseSeconds;
+        this.currentAura = {
+          element: this.innateElement,
+          gaugeUnits: 2.0,
+          duration: 9999.0,
+          maxDuration: 9999.0
+        };
+        this.updateVisualTint();
       }
     }
   }
@@ -118,6 +145,7 @@ export class ElementalReactionComponent extends Component {
       enabled: this.enabled,
       health: this.health,
       maxHealth: this.maxHealth,
+      ...(this.innateElement ? { innateElement: this.innateElement } : {}),
       aura: this.currentAura
         ? {
             element: this.currentAura.element,
@@ -133,6 +161,9 @@ export class ElementalReactionComponent extends Component {
     if (data.enabled !== undefined) this.enabled = data.enabled;
     if (data.maxHealth !== undefined) this.maxHealth = data.maxHealth;
     if (data.health !== undefined) this.health = data.health;
+    if (typeof data.innateElement === 'string') {
+      this.innateElement = data.innateElement as ElementType;
+    }
     // Restore the aura directly: re-seeding through receiveElementalAttack
     // would re-trigger reactions and damage, corrupting the snapshot.
     const aura = data.aura;
