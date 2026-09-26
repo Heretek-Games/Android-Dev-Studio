@@ -8,6 +8,14 @@ android {
     namespace = "com.heretek.gamestudio.tier2"
     compileSdk = 35
 
+    // apk_builder --debug-layers passes -PheretekForceValidationLayers=true
+    // (or set env HERETEK_FORCE_VALIDATION_LAYERS=1): forces the
+    // VK_LAYER_KHRONOS_validation lookup on even in NDEBUG builds.
+    // Default: untouched — Release builds skip the lookup entirely.
+    val forceValidationLayers =
+        (project.findProperty("heretekForceValidationLayers") as String?) == "true" ||
+            System.getenv("HERETEK_FORCE_VALIDATION_LAYERS") == "1"
+
     defaultConfig {
         applicationId = "com.heretek.gamestudio.tier2"
         minSdk = 24
@@ -25,6 +33,9 @@ android {
         externalNativeBuild {
             cmake {
                 cppFlags += listOf("-std=c++17", "-fno-exceptions", "-fno-rtti")
+                if (forceValidationLayers) {
+                    arguments += "-DHERETEK_FORCE_VALIDATION_LAYERS=ON"
+                }
             }
         }
     }

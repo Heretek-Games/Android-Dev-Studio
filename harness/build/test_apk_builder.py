@@ -128,7 +128,18 @@ class TierDispatchTests(unittest.TestCase):
         with mock.patch.object(builder, "build_tier2", return_value=sentinel) as tier2:
             res = builder.build_and_deploy(dry_run=True, tier=2)
         self.assertIs(res, sentinel)
-        tier2.assert_called_once_with(dry_run=True, scene_path=None, quadtree=True)
+        tier2.assert_called_once_with(
+            dry_run=True, scene_path=None, quadtree=True, debug_layers=False
+        )
+
+    def test_tier2_dispatch_passes_debug_layers_flag(self):
+        builder = AndroidApkBuilder(debug_layers=True)
+        sentinel = {"success": True, "tier": 2}
+        with mock.patch.object(builder, "build_tier2", return_value=sentinel) as tier2:
+            builder.build_and_deploy(dry_run=True, tier=2)
+        tier2.assert_called_once_with(
+            dry_run=True, scene_path=None, quadtree=True, debug_layers=True
+        )
 
     def test_default_tier_is_webview(self):
         builder = AndroidApkBuilder()
@@ -197,3 +208,332 @@ class PlayBootTargetTests(unittest.TestCase):
                 mock.patch("harness.build.apk_builder.APP_DIST_DIR", dist),
             ):
                 self.assertFalse(builder.sync_assets_to_container())
+
+
+class DebugLayersFlagTests(unittest.TestCase):
+    """apk_builder --debug-layers forces the validation-layer lookup on."""
+
+    def test_accepts_bool_values(self):
+        self.assertFalse(AndroidApkBuilder().debug_layers)
+        self.assertTrue(AndroidApkBuilder(debug_layers=True).debug_layers)
+        self.assertFalse(AndroidApkBuilder(debug_layers=False).debug_layers)
+
+    def test_constructor_rejects_non_bool(self):
+        for bad in ("yes", 1, None, ["true"]):
+            with self.assertRaises(TypeError, msg=f"debug_layers={bad!r}"):
+                AndroidApkBuilder(debug_layers=bad)
+
+    def test_build_tier2_rejects_non_bool(self):
+        builder = AndroidApkBuilder()
+        # None is the valid "fall back to self.debug_layers" sentinel.
+        for bad in ("yes", 1, ["true"]):
+            with self.assertRaises(TypeError, msg=f"debug_layers={bad!r}"):
+                builder.build_tier2(dry_run=True, debug_layers=bad)
+
+    def test_build_tier2_none_falls_back_to_constructor(self):
+        # None is the valid "fall back to self.debug_layers" sentinel.
+        import json as _json
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            scene = Path(tmp) / "scene.json"
+            scene.write_text(_json.dumps({"entities": []}))
+            builder = AndroidApkBuilder(debug_layers=True)
+            fake = mock.Mock()
+            fake.returncode = 0
+            fake.stdout = ""
+            fake.stderr = ""
+            with (
+                mock.patch(
+                    "harness.build.apk_builder.subprocess.run", return_value=fake
+                ),
+                mock.patch.object(AndroidApkBuilder, "find_ndk", return_value=None),
+                mock.patch.object(
+                    AndroidApkBuilder,
+                    "stage_validation_layers",
+                    return_value=(True, "staged (mock)"),
+                ),
+                mock.patch("harness.build.apk_builder.VULKAN_ASSETS_DIR", Path(tmp)),
+            ):
+                res = builder.build_tier2(scene_path=str(scene), debug_layers=None)
+            # No ValueError: None resolved to the constructor's True.
+            self.assertTrue(res["debug_layers"])
+
+    def _tier2_configure_cmd(self, debug_layers):
+        """Run build_tier2 with mocked toolchains; return cmake argv + mocks."""
+        import json as _json
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            scene = Path(tmp) / "scene.json"
+            scene.write_text(_json.dumps({"entities": [], "quadtree": {}}))
+            builder = AndroidApkBuilder()
+            calls = []
+
+            def fake_run(cmd, **kwargs):
+                calls.append(list(cmd) if isinstance(cmd, list) else cmd)
+                fake = mock.Mock()
+                fake.returncode = 0
+                fake.stdout = ""
+                fake.stderr = ""
+                return fake
+
+            with (
+                mock.patch(
+                    "harness.build.apk_builder.subprocess.run", side_effect=fake_run
+                ),
+                mock.patch.object(
+                    AndroidApkBuilder, "find_ndk", return_value=Path("/fake/ndk")
+                ),
+                mock.patch.object(
+                    AndroidApkBuilder,
+                    "stage_validation_layers",
+                    return_value=(True, "staged (mock)"),
+                ) as stage,
+                mock.patch.object(
+                    AndroidApkBuilder,
+                    "clear_staged_validation_layers",
+                    return_value=[],
+                ) as clear,
+                mock.patch("harness.build.apk_builder.VULKAN_ASSETS_DIR", Path(tmp)),
+                mock.patch(
+                    "harness.build.apk_builder.VULKAN_CONTAINER_DIR",
+                    Path(tmp) / "no-gradle",
+                ),
+            ):
+                res = builder.build_tier2(
+                    scene_path=str(scene), debug_layers=debug_layers
+                )
+            configure = next(c for c in calls if c[0] == "cmake" and "-S" in c)
+            return configure, stage, clear, res
+
+    def test_debug_layers_selects_relwithdebinfo_and_define(self):
+        configure, stage, clear, res = self._tier2_configure_cmd(True)
+        self.assertIn("-DCMAKE_BUILD_TYPE=RelWithDebInfo", configure)
+        self.assertIn("-DHERETEK_FORCE_VALIDATION_LAYERS=ON", configure)
+        stage.assert_called_once_with()
+        clear.assert_not_called()
+        self.assertTrue(res["validation_layers_staged"])
+
+    def test_default_release_unchanged(self):
+        configure, stage, clear, res = self._tier2_configure_cmd(False)
+        self.assertIn("-DCMAKE_BUILD_TYPE=Release", configure)
+        # OFF must be explicit: the reused CMake cache would otherwise leak a
+        # previous ON from a --debug-layers run into a plain Release build.
+        self.assertIn("-DHERETEK_FORCE_VALIDATION_LAYERS=OFF", configure)
+        self.assertNotIn("-DHERETEK_FORCE_VALIDATION_LAYERS=ON", configure)
+        stage.assert_not_called()
+        clear.assert_called_once_with()
+        self.assertFalse(res["validation_layers_staged"])
+
+    def test_debug_layers_reaches_gradle_property(self):
+        import json as _json
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            scene = Path(tmp) / "scene.json"
+            scene.write_text(_json.dumps({"entities": []}))
+            container = Path(tmp) / "container"
+            (container).mkdir()
+            (container / "gradlew").write_text("#!/bin/sh\n")
+            import os as _os
+
+            _os.chmod(container / "gradlew", 0o755)
+            builder = AndroidApkBuilder()
+            gradle_cmds = []
+
+            def fake_run(cmd, **kwargs):
+                if isinstance(cmd, list) and cmd and str(cmd[0]).endswith("gradlew"):
+                    gradle_cmds.append([str(c) for c in cmd])
+                fake = mock.Mock()
+                fake.returncode = 0
+                fake.stdout = ""
+                fake.stderr = ""
+                return fake
+
+            with (
+                mock.patch(
+                    "harness.build.apk_builder.subprocess.run", side_effect=fake_run
+                ),
+                mock.patch.object(
+                    AndroidApkBuilder, "find_ndk", return_value=Path("/fake/ndk")
+                ),
+                mock.patch.object(
+                    AndroidApkBuilder,
+                    "stage_validation_layers",
+                    return_value=(True, "staged (mock)"),
+                ),
+                mock.patch.object(
+                    AndroidApkBuilder, "find_jdk", return_value=Path("/fake/jdk")
+                ),
+                mock.patch("harness.build.apk_builder.VULKAN_ASSETS_DIR", Path(tmp)),
+                mock.patch("harness.build.apk_builder.VULKAN_CONTAINER_DIR", container),
+                mock.patch(
+                    "harness.build.apk_builder.VULKAN_BUILD_DIR", Path(tmp) / "build"
+                ),
+            ):
+                (Path(tmp) / "build" / "libheretek_native.so").parent.mkdir(
+                    exist_ok=True
+                )
+                (Path(tmp) / "build" / "libheretek_native.so").write_bytes(b"so")
+                builder.build_tier2(scene_path=str(scene), debug_layers=True)
+            self.assertEqual(len(gradle_cmds), 1)
+            self.assertIn("-PheretekForceValidationLayers=true", gradle_cmds[0])
+
+    def test_dry_run_skips_staging(self):
+        import json as _json
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            scene = Path(tmp) / "scene.json"
+            scene.write_text(_json.dumps({"entities": []}))
+            builder = AndroidApkBuilder()
+            fake = mock.Mock()
+            fake.returncode = 0
+            fake.stdout = ""
+            fake.stderr = ""
+            with (
+                mock.patch(
+                    "harness.build.apk_builder.subprocess.run", return_value=fake
+                ),
+                mock.patch.object(
+                    AndroidApkBuilder,
+                    "stage_validation_layers",
+                    return_value=(True, "staged (mock)"),
+                ) as stage,
+                mock.patch("harness.build.apk_builder.VULKAN_ASSETS_DIR", Path(tmp)),
+            ):
+                res = builder.build_tier2(
+                    scene_path=str(scene), dry_run=True, debug_layers=True
+                )
+            stage.assert_not_called()
+            self.assertTrue(res["success"])
+            self.assertTrue(res["debug_layers"])
+            self.assertFalse(res["validation_layers_staged"])
+
+    def test_release_clears_stale_staged_layers_only(self):
+        import json as _json
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            scene = Path(tmp) / "scene.json"
+            scene.write_text(_json.dumps({"entities": []}))
+            jni = Path(tmp) / "jniLibs"
+            stale = jni / "arm64-v8a" / "libVkLayer_khronos_validation.so"
+            stale.parent.mkdir(parents=True)
+            stale.write_bytes(b"stale")
+            other = jni / "arm64-v8a" / "libother.so"
+            other.write_bytes(b"keep me")
+            builder = AndroidApkBuilder()
+            fake = mock.Mock()
+            fake.returncode = 0
+            fake.stdout = ""
+            fake.stderr = ""
+            with (
+                mock.patch(
+                    "harness.build.apk_builder.subprocess.run", return_value=fake
+                ),
+                mock.patch.object(AndroidApkBuilder, "find_ndk", return_value=None),
+                mock.patch("harness.build.apk_builder.TIER2_JNILIBS_DIR", jni),
+                mock.patch("harness.build.apk_builder.VULKAN_ASSETS_DIR", Path(tmp)),
+            ):
+                builder.build_tier2(scene_path=str(scene), debug_layers=False)
+            self.assertFalse(stale.exists())
+            self.assertTrue(other.exists())
+            self.assertEqual(other.read_bytes(), b"keep me")
+
+
+class LayerCacheTests(unittest.TestCase):
+    """Download cache: location, retry, corruption handling."""
+
+    def _fake_layer_zip(self) -> bytes:
+        import io
+        import zipfile as _zf
+
+        buf = io.BytesIO()
+        with _zf.ZipFile(buf, "w") as archive:
+            for abi in ("arm64-v8a", "x86_64"):
+                archive.writestr(
+                    f"android-binaries-1.4.357.0/{abi}/"
+                    "libVkLayer_khronos_validation.so",
+                    b"fake-layer-so",
+                )
+        return buf.getvalue()
+
+    def test_cache_dir_env_override(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            with mock.patch.dict(os.environ, {"HERETEK_VALIDATION_LAYER_CACHE": tmp}):
+                self.assertEqual(AndroidApkBuilder._layer_cache_dir(), Path(tmp))
+
+    def test_cache_default_is_gitignored(self):
+        import subprocess as _sp
+
+        default = AndroidApkBuilder._layer_cache_dir() / "probe.zip"
+        out = _sp.run(
+            ["git", "check-ignore", "-v", str(default)],
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(
+            out.returncode,
+            0,
+            f"default layer cache {default} is not gitignored",
+        )
+
+    def test_corrupt_cache_redownloads_and_stages(self):
+        import io
+        import tempfile
+        import urllib.error
+
+        with tempfile.TemporaryDirectory() as tmp:
+            cache = Path(tmp) / "cache"
+            cache.mkdir()
+            (cache / "android-binaries-1.4.357.0.zip").write_bytes(b"corrupt")
+            jni = Path(tmp) / "jniLibs"
+            resp = mock.MagicMock()
+            resp.__enter__.return_value = io.BytesIO(self._fake_layer_zip())
+            builder = AndroidApkBuilder()
+            with (
+                mock.patch.dict(
+                    os.environ, {"HERETEK_VALIDATION_LAYER_CACHE": str(cache)}
+                ),
+                mock.patch(
+                    "harness.build.apk_builder.urllib.request.urlopen",
+                    side_effect=[
+                        urllib.error.URLError("flaky network"),
+                        resp,
+                    ],
+                ),
+                mock.patch("harness.build.apk_builder.TIER2_JNILIBS_DIR", jni),
+            ):
+                ok, msg = builder.stage_validation_layers()
+            self.assertTrue(ok, msg)
+            for abi in ("arm64-v8a", "x86_64"):
+                staged = jni / abi / "libVkLayer_khronos_validation.so"
+                self.assertTrue(staged.is_file())
+                self.assertEqual(staged.read_bytes(), b"fake-layer-so")
+
+    def test_download_failure_cleans_partial_cache(self):
+        import tempfile
+        import urllib.error
+
+        with tempfile.TemporaryDirectory() as tmp:
+            cache = Path(tmp) / "cache"
+            builder = AndroidApkBuilder()
+            with (
+                mock.patch.dict(
+                    os.environ, {"HERETEK_VALIDATION_LAYER_CACHE": str(cache)}
+                ),
+                mock.patch(
+                    "harness.build.apk_builder.urllib.request.urlopen",
+                    side_effect=urllib.error.URLError("offline"),
+                ),
+                mock.patch("harness.build.apk_builder.LAYER_DOWNLOAD_ATTEMPTS", 2),
+            ):
+                ok, msg = builder.stage_validation_layers()
+            self.assertFalse(ok)
+            self.assertIn("2 attempts", msg)
+            leftovers = list(cache.rglob("*")) if cache.exists() else []
+            self.assertEqual(leftovers, [])
