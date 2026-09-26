@@ -295,6 +295,14 @@ int main(int argc, char** argv) {
     CHECK(stub.syncInstances(slots, xyz, -1) == 0, "stub syncInstances rejects negative count");
   }
 
+  // ---- Validation fix 4: multi-draw vs per-leaf submission shape ----
+  CHECK(terrainDrawSubmissionCount(0, true) == 0, "draw shape: empty terrain submits nothing");
+  CHECK(terrainDrawSubmissionCount(0, false) == 0, "draw shape: empty terrain submits nothing (fallback)");
+  CHECK(terrainDrawSubmissionCount(64, true) == 1, "draw shape: feature on -> 1 multi-draw for 64 leaves");
+  CHECK(terrainDrawSubmissionCount(64, false) == 64,
+        "draw shape: feature off -> 64 single draws (valid without the feature)");
+  CHECK(terrainDrawSubmissionCount(1, false) == 1, "draw shape: single leaf needs one call either way");
+
   // ---- Validation fix 1: compositeAlpha preference ladder ----
   // (VUID-VkSwapchainCreateInfoKHR-compositeAlpha-01280: OPAQUE was hardcoded
   // but the lavapipe emulator advertises INHERIT alone.)

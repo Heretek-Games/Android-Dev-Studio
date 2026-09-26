@@ -102,6 +102,9 @@ class VulkanRenderer {
   VkDescriptorPool descriptorPool_ = VK_NULL_HANDLE;
   VkDescriptorSet computeSet_ = VK_NULL_HANDLE;
   VkDescriptorSet graphicsSet_ = VK_NULL_HANDLE;
+  // Set in createDevice: whether the multiDrawIndirect feature was enabled
+  // (single terrain multi-draw) or the per-leaf fallback applies.
+  bool multiDrawIndirect_ = false;
 
   // Host-visible buffers (scaffold keeps everything mappable; device-local
   // staging is the documented next optimization).

@@ -278,6 +278,22 @@ bool VulkanRenderer::createDevice() {
   queueInfo.pQueuePriorities = &priority;
 
   VkPhysicalDeviceFeatures features{};
+  // Validation defect class 4 (VUID-vkCmdDrawIndexedIndirect-drawCount-02718):
+  // the terrain pass issues ONE indirect call with drawCount == leaf count
+  // (64 here), which requires the multiDrawIndirect feature. Enable it when
+  // the device supports it (universal on real hardware; keeps the intended
+  // single-call path); otherwise recordFrame falls back to per-leaf single
+  // draws, which are valid without the feature.
+  VkPhysicalDeviceFeatures supported{};
+  vkGetPhysicalDeviceFeatures(physicalDevice_, &supported);
+  if (supported.multiDrawIndirect) {
+    features.multiDrawIndirect = VK_TRUE;
+    multiDrawIndirect_ = true;
+    LOGI("device feature enabled: multiDrawIndirect (single terrain multi-draw)");
+  } else {
+    multiDrawIndirect_ = false;
+    LOGW("device lacks multiDrawIndirect — terrain falls back to per-leaf single draws");
+  }
 
   VkDeviceCreateInfo createInfo{};
   createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -1066,6 +1082,8 @@ void VulkanRenderer::recordFrame(VkCommandBuffer cmd, uint32_t imageIndex, bool 
   // correct long-term fix (renderer hardening #6); until then this order is
   // load-bearing — do not move terrain last without re-proving readback.
   // ---- Terrain: one indirect call renders every LOD leaf ------------------
+  // (or one single-draw per leaf where multiDrawIndirect is unavailable —
+  // see terrainDrawSubmissionCount; both shapes are validation-clean).
   if (terrainDrawCount_ > 0 && terrainPipeline_ != VK_NULL_HANDLE) {
     vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, terrainPipeline_);
     vkCmdPushConstants(cmd, terrainPipelineLayout_, VK_SHADER_STAGE_VERTEX_BIT, 0,
@@ -1073,8 +1091,16 @@ void VulkanRenderer::recordFrame(VkCommandBuffer cmd, uint32_t imageIndex, bool 
     VkDeviceSize terrainOffset = 0;
     vkCmdBindVertexBuffers(cmd, 0, 1, &terrainVertexBuffer_, &terrainOffset);
     vkCmdBindIndexBuffer(cmd, terrainIndexBuffer_, 0, VK_INDEX_TYPE_UINT16);
-    vkCmdDrawIndexedIndirect(cmd, terrainIndirectBuffer_, 0, terrainDrawCount_,
-                             sizeof(TerrainDrawCommand));
+    if (multiDrawIndirect_) {
+      vkCmdDrawIndexedIndirect(cmd, terrainIndirectBuffer_, 0, terrainDrawCount_,
+                               sizeof(TerrainDrawCommand));
+    } else {
+      for (uint32_t leaf = 0; leaf < terrainDrawCount_; leaf++) {
+        vkCmdDrawIndexedIndirect(cmd, terrainIndirectBuffer_,
+                                 static_cast<VkDeviceSize>(leaf) * sizeof(TerrainDrawCommand),
+                                 1, sizeof(TerrainDrawCommand));
+      }
+    }
   }
 
   vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, scenePipeline_);
