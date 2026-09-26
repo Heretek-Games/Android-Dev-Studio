@@ -17,6 +17,7 @@ CLI:
 """
 
 import argparse
+import copy
 import json
 import re
 import subprocess
@@ -31,6 +32,7 @@ from harness.loop.aesthetic import evaluate_visual_rule
 from harness.loop.frame_preview import frame_metadata, render_frame_png
 from harness.loop.llm_client import LlmClient, LlmError, LlmResponse
 from harness.spatial.spatial_audit import evaluate_spatial_rule
+from harness.spatial.spatial_diff import summarize_diff
 from harness.loop.prompts import generation_messages, repair_messages
 from harness.loop.vision import VisionResult
 from harness.validation.scene_invariants import validate_scene_invariants
@@ -451,6 +453,8 @@ class IterateLoop:
         frames: List[Dict[str, Any]] = []
         # A.4: past-green looks for this genre, fetched once (guarded).
         taste_notes = self._taste_notes()
+        # B.3: one-line summary of the previous iteration's mutation.
+        last_diff_note = ""
 
         for iteration in range(1, self.max_iterations + 1):
             phase = "generate" if iteration == 1 else "repair"
@@ -486,6 +490,7 @@ class IterateLoop:
                     iteration,
                     vision_notes,
                     rejected,
+                    spatial_diff=last_diff_note or None,
                 )
 
             record: Dict[str, Any] = {
@@ -520,8 +525,21 @@ class IterateLoop:
                 "error": parse_error,
             }
 
+            pre_apply_scene = copy.deepcopy(scene)
             scene, apply_result = apply_actions(scene, actions)
             record["apply"] = apply_result.as_dict()
+            # B.3 mutation diff: name WHAT moved where this iteration, so the
+            # next repair prompt sees the patch's spatial effect (pure dict
+            # compare — a failure here must never break the loop either).
+            try:
+                from harness.spatial.spatial_diff import diff_scenes
+
+                mutation = diff_scenes(pre_apply_scene, scene)
+                if not mutation.get("empty"):
+                    record["spatialDiff"] = mutation
+                    last_diff_note = summarize_diff(mutation)
+            except Exception:
+                pass
             # A.1 frame artifact: capture AFTER apply so the image reflects the
             # scene QA evaluates. Advisory-only; a render failure must never
             # break the loop or mask the QA verdict.

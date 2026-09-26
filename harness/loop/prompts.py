@@ -417,6 +417,7 @@ def repair_messages(
     iteration: int,
     vision_notes: List[str] | None = None,
     rejected: List[str] | None = None,
+    spatial_diff: str | None = None,
 ) -> List[Dict[str, str]]:
     """Repair prompt: minimal corrective actions for the observed failures.
 
@@ -476,12 +477,17 @@ def repair_messages(
             + "\n"
         )
 
+    # B.3 mutation line: what the last patch moved, so the model sees the
+    # spatial effect of its own actions without re-deriving it.
+    diff_note = f"\n{spatial_diff}\n" if spatial_diff else ""
+
     user = (
         f"Goal:\n{goal}\n\n"
         f"Iteration {iteration} QA failures:\n{failures}\n\n"
         f"Telemetry: {json.dumps(metrics)}\n"
         f"{vision_note}\n"
         f"{rejected_note}"
+        f"{diff_note}"
         f"{digest_note}"
         "Current scene (JSON):\n"
         f"{json.dumps(scene, separators=(',', ':'))}\n\n"
