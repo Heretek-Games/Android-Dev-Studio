@@ -726,6 +726,13 @@ bool VulkanRenderer::createSurface(ANativeWindow* window, int width, int height)
 
 void VulkanRenderer::uploadScene(const NativeScene& scene) {
   drawCallEstimate_ = scene.drawCallEstimate();
+  // Track C.6 strangler seam: native walkability bake at upload (logged,
+  // no behavior change — the future native nav runtime consumes the grid).
+  const NavBakeResult navGrid = scene.bakeNavGrid();
+  LOGI("uploadScene: nav bake %dx%d origin (%g, %g), %d/%d cells blocked",
+       navGrid.width, navGrid.height, navGrid.originX, navGrid.originZ,
+       navGrid.blockedCount(),
+       navGrid.width * navGrid.height);
   const uint32_t maxDepth = scene.terrainMaxDepth > 0 ? scene.terrainMaxDepth : 4;
   terrainPlan_ = planTerrainMeshes(scene.terrainLod, maxDepth, 1337, 12.0f);
   instanceCount_ = 0;
