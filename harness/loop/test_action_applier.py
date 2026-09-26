@@ -2342,3 +2342,31 @@ class MeleeQuestBossTests(unittest.TestCase):
         )
         self.assertEqual(result.applied, 1)
         self.assertEqual(scene["game"]["enemiesPerWave"], 3.0)
+
+
+class EnemyHealthShorthandTests(unittest.TestCase):
+    """Repair ergonomics: scalar enemy health coerces to {maxHealth}."""
+
+    def test_scalar_health_coerces(self):
+        scene, result = apply_actions(
+            base_scene(),
+            [{"type": "game", "config": {"mode": "waves", "playerName": "H", "enemy": {"health": 60}}}],
+        )
+        self.assertEqual(result.applied, 1)
+        self.assertEqual(scene["game"]["enemy"]["health"], {"maxHealth": 60.0})
+
+    def test_object_health_still_applies(self):
+        scene, result = apply_actions(
+            base_scene(),
+            [{"type": "game", "config": {"mode": "waves", "playerName": "H", "enemy": {"health": {"maxHealth": 80, "destroyOnDeath": True}}}}],
+        )
+        self.assertEqual(result.applied, 1)
+        self.assertEqual(scene["game"]["enemy"]["health"]["maxHealth"], 80.0)
+
+    def test_nonpositive_health_rejected(self):
+        for bad in (0, -5, "lots"):
+            _, result = apply_actions(
+                base_scene(),
+                [{"type": "game", "config": {"mode": "waves", "playerName": "H", "enemy": {"health": bad}}}],
+            )
+            self.assertEqual(result.invalid, 1, f"should reject {bad!r}")

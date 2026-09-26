@@ -1,0 +1,86 @@
+{
+  "title": "Frost Hollow Commission",
+  "fantasy": {
+    "genre": "elemental action quest",
+    "inspirations": ["genshin daily commissions", "dungeon_slice"],
+    "tone": "crisp, brisk monster-clearing errand",
+    "loop": "Take the commission from the warden, clear cryo slimes with a hydro blade, report back."
+  },
+  "experience": {
+    "beats": ["warden briefing", "first vaporize... melt reaction", "final slime slain"],
+    "feedback": ["damage numbers per hit", "reaction flash on melt"],
+    "inputs": ["touch move stick", "attack button"]
+  },
+  "world": {
+    "areaKm2": 0.001,
+    "biomes": ["frost hollow"],
+    "poiDensityPerKm2": 500,
+    "traversalSpeedsMps": {"walk": 4},
+    "streamingRadiusM": 60
+  },
+  "systems": {
+    "components": ["MobileController", "HealthComponent", "EnemyAI", "ElementalReactionComponent", "MeleeHitbox", "Hurtbox"],
+    "physics": ["static ground collider"],
+    "ai": ["chase player", "melee attack"],
+    "dialogue": ["warden briefing tree with melt-plot flag"],
+    "inventory": [],
+    "questStates": ["not-started", "briefed", "cleared", "complete"],
+    "saveSchema": {}
+  },
+  "lookdev": {"theme": "frost hollow", "palette": ["#e0f2fe", "#38bdf8", "#f97316"]},
+  "performance": {
+    "deviceProfile": "android16-snapdragon8elite",
+    "targetFps": 60,
+    "maxDrawCalls": 100,
+    "maxTrisPerChunk": 150000,
+    "maxTrisPerScene": 1200000,
+    "maxTextureMb": 256,
+    "maxPhysicsBodies": 256,
+    "maxApkMb": 200,
+    "maxLoadSeconds": 8.0
+  },
+  "acceptance": [
+    {
+      "id": "warden-briefing",
+      "axis": "Functional",
+      "description": "warden dialogue reaches the briefing node",
+      "qaRule": {"type": "dialogue_reaches", "tree": "Warden", "node": "briefed"}
+    },
+    {
+      "id": "commission-flag",
+      "axis": "Functional",
+      "description": "briefing fires the commission event",
+      "qaRule": {"type": "dialogue_event_fired", "tree": "Warden", "event": "commission_taken"}
+    },
+    {
+      "id": "slimes-cleared",
+      "axis": "Playable",
+      "description": "melee clears at least 2 cryo slimes",
+      "qaRule": {"type": "game_melee_kills_min", "min": 2}
+    },
+    {
+      "id": "melt-reactions",
+      "axis": "Playable",
+      "description": "hydro-on-cryo melt reactions fire",
+      "qaRule": {"type": "game_melee_reactions_min", "min": 1}
+    },
+    {
+      "id": "quest-complete",
+      "axis": "Playable",
+      "description": "commission quest chain completes",
+      "qaRule": {"type": "quest_complete"}
+    },
+    {
+      "id": "draw-budget",
+      "axis": "Performant",
+      "description": "scene stays within the mobile draw-call budget",
+      "qaRule": {"type": "draw_call_budget", "max": 100}
+    },
+    {
+      "id": "sim-fps",
+      "axis": "Performant",
+      "description": "headless simulation holds interactive frame rates",
+      "qaRule": {"type": "fps_min", "min": 30}
+    }
+  ]
+}

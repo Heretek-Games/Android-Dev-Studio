@@ -152,7 +152,8 @@ ACTION_SCHEMA = """Action vocabulary (a JSON array named "actions"):
      "totalWaves": 2, "enemiesPerWave": 2, "hitDamage": 50} (quest/combat setup: spawns a
      GameRuntime that runs wave defense or settlement-build around the named player object;
      the optional "enemy" block takes ONLY shape, color, size, y, health, ai, elemental
-     (no physics/mass/position keys — enemies spawn from the runtime); hitElement goes
+     (no physics/mass/position keys — enemies spawn from the runtime); health takes
+     {"maxHealth": 60} or the scalar shorthand 60; hitElement goes
      beside "enemy", never inside it.
      "mode": "build" with a "settlement" block runs the settlement path instead.
      Settlement blocks take ONLY gridSize, targetPopulation, startingGold, startingFood,

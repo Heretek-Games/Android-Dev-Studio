@@ -1506,8 +1506,15 @@ def _validate_game_enemy(
                 return None
             normalized[key] = float(item)
         elif key == "health":
+            if _is_finite_number(item) and item > 0:
+                # Track E.4 repair ergonomics: scalar shorthand coerces to
+                # {maxHealth} (the loop's most common first-pass offense).
+                normalized[key] = {"maxHealth": float(item)}
+                continue
             if not isinstance(item, dict):
-                fail("game enemy 'health' must be an object")
+                fail(
+                    "game enemy 'health' must be an object {maxHealth} or a positive number"
+                )
                 return None
             health: Dict[str, Any] = {}
             for hkey, hitem in item.items():
