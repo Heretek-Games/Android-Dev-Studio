@@ -22,6 +22,19 @@ VkSurfaceFormatKHR chooseFormat(const std::vector<VkSurfaceFormatKHR>& formats) 
   return formats[0];
 }
 
+// The host-testable policy constants must stay bit-identical to the Vulkan
+// header (vulkan_swapchain.h documents the mirror).
+static_assert(VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR == swapchain_policy::kCompositeAlphaOpaque,
+              "compositeAlpha policy mirror drifted (OPAQUE)");
+static_assert(VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR ==
+                  swapchain_policy::kCompositeAlphaPreMultiplied,
+              "compositeAlpha policy mirror drifted (PRE_MULTIPLIED)");
+static_assert(VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR ==
+                  swapchain_policy::kCompositeAlphaPostMultiplied,
+              "compositeAlpha policy mirror drifted (POST_MULTIPLIED)");
+static_assert(VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR == swapchain_policy::kCompositeAlphaInherit,
+              "compositeAlpha policy mirror drifted (INHERIT)");
+
 }  // namespace
 
 bool VulkanSwapchain::create(VkInstance instance, VkPhysicalDevice physical, VkDevice device,
@@ -106,7 +119,21 @@ bool VulkanSwapchain::create(VkInstance instance, VkPhysicalDevice physical, VkD
   }
   swapInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
   swapInfo.preTransform = caps.currentTransform;
-  swapInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+  // Validation defect class 1 (VUID-VkSwapchainCreateInfoKHR-compositeAlpha-01280):
+  // OPAQUE was hardcoded, but the implementation only promises the flags in
+  // supportedCompositeAlpha (the lavapipe emulator advertises INHERIT alone).
+  // Query the mask and walk the preference ladder instead of assuming.
+  const uint32_t compositeAlpha =
+      swapchain_policy::chooseCompositeAlpha(caps.supportedCompositeAlpha);
+  if (compositeAlpha == 0) {
+    SW_LOGE("no supported compositeAlpha flag (supportedCompositeAlpha=0x%x)",
+            caps.supportedCompositeAlpha);
+    lastError_ = "no supported compositeAlpha flag";
+    return false;
+  }
+  SW_LOGI("chosen compositeAlpha: 0x%x (supported mask 0x%x)", compositeAlpha,
+          caps.supportedCompositeAlpha);
+  swapInfo.compositeAlpha = static_cast<VkCompositeAlphaFlagBitsKHR>(compositeAlpha);
   swapInfo.presentMode = VK_PRESENT_MODE_FIFO_KHR;
   swapInfo.clipped = VK_TRUE;
   const VkResult swapResult = createSwapchain_(device, &swapInfo, nullptr, &swapchain_);
