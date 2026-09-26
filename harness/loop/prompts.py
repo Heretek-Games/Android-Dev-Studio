@@ -84,6 +84,12 @@ RULE_DESCRIPTIONS = {
         f"'{r.get('target')}' must reach speed >= {r.get('minSpeed')}"
     ),
     "no_nan_transforms": lambda r: "no transform may become NaN/Infinity",
+    "visual_quality_min": lambda r: (
+        f"visual quality must score >= {r.get('minScore', 3)}/5 on "
+        f"{', '.join(r.get('axes', ['composition', 'color_harmony', 'readability', 'ui_alignment']))} "
+        "(deterministic proxies: grounding/spread/clutter, palette + WCAG contrast, "
+        "prop legibility; recolor/spread/trim props to fix — never restyle blindly)"
+    ),
     "draw_call_budget": lambda r: (
         f"draw calls must stay <= {r.get('maxDrawCalls', 100)}"
     ),

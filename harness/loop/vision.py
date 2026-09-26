@@ -1,11 +1,18 @@
 """
-Vision critique for the iterate-until-green loop.
+Vision critique for the iterate-until-green loop (Track A.2: rubric layer).
 
-Sends an image of the current scene to the multimodal model route and turns the
-response into short, actionable notes for the repair prompt. The image is either
-the deterministic top-down layout preview (`scene_preview.render_layout_png`) or
-any rendered frame (studio screenshot / emulator frame readback) supplied by the
-caller — the critique logic is identical.
+Two critique paths share one telemetry envelope (`VisionResult`):
+
+- layout critique: the deterministic top-down diagram (spawn overlaps, missing
+  ground, unreachable props) — unchanged from Phase 0.
+- frame rubric critique: the A.1 gameplay-camera frame scored 1-5 on four axes
+  (composition, color_harmony, readability, ui_alignment) with actionable
+  defects. VLM scores are LOGGED calibration evidence and never gate anything:
+  gameplay verdicts stay machine-ruled and look-dev gating runs on the
+  deterministic proxies in `harness/loop/aesthetic.py` (see `visual_quality_min`
+  with enforce:true). VLM noise rationale: JudgeFit-style per-model calibration
+  plus judge-without-seeing grounding risk — promote to blocking only with
+  logged human agreement behind it.
 
 Critique calls carry their own telemetry (`VisionResult`) so the loop can include
 vision tokens/latency in the run dashboard.
@@ -24,6 +31,8 @@ from harness.loop.scene_preview import render_layout_png
 DEFAULT_VISION_MAX_TOKENS = 6000
 VISION_RETRY_MAX_TOKENS = 12000
 
+RUBRIC_AXES = ("composition", "color_harmony", "readability", "ui_alignment")
+
 CRITIQUE_PROMPT = """You are the visual QA reviewer for a mobile 3D game scene under construction.
 
 The attached image is a TOP-DOWN layout diagram of the generated scene:
@@ -41,6 +50,30 @@ Respond with a single JSON object and nothing else:
 {"issues": ["..."], "suggestions": ["..."]}
 """
 
+FRAME_RUBRIC_PROMPT = """You are the visual QA reviewer for a mobile 3D game scene under construction.
+
+The attached image is a GAMEPLAY-CAMERA view of the generated scene (a low-fidelity
+software preview: flat-shaded boxes, painter-sorted, sky gradient background).
+Judge what is visible — layout, color, and legibility — not the preview fidelity.
+
+Score each axis 1-5 (anchors: 1 broken/unusable, 2 poor, 3 acceptable, 4 good, 5 excellent):
+- composition: is the scene framed as a playable space (ground present, subject
+  visible, props spread so each reads as collectible/avoidable, no clutter pile-ups)?
+- color_harmony: does the palette cohere (2-3 genre hues, intentional accents)
+  instead of random rainbow or mud-on-mud?
+- readability: can each prop be told apart from the ground and its neighbors at
+  a glance (contrast, separation)?
+- ui_alignment: only score above 1 if visible UI/text/HUD is present AND aligned
+  and legible; with no UI visible, score 3 and note "no UI in frame".
+
+Every defect must be concrete and repairable: name the object/region and the fix
+("move X", "recolor Y toward Z", "delete N"). Never write "make it prettier".
+
+Respond with a single JSON object and nothing else:
+{"scores": {"composition": 3, "color_harmony": 2, "readability": 4, "ui_alignment": 3},
+ "defects": [{"axis": "color_harmony", "defect": "...", "repair": "..."}]}
+"""
+
 
 @dataclass
 class VisionResult:
@@ -53,10 +86,20 @@ class VisionResult:
     latency_seconds: float = 0.0
     error: Optional[str] = None
     detail: str = ""
+    #: Rubric layer (A.2): axis scores + structured defects. Empty when the
+    #: response carried no parseable rubric (layout critiques, garbage).
+    rubric_scores: Dict[str, int] = field(default_factory=dict)
+    rubric_defects: List[Dict[str, str]] = field(default_factory=list)
 
     @property
     def total_tokens(self) -> int:
         return self.prompt_tokens + self.completion_tokens
+
+    @property
+    def rubric_overall(self) -> Optional[int]:
+        if not self.rubric_scores:
+            return None
+        return min(self.rubric_scores.values())
 
 
 def parse_critique(text: str) -> List[str]:
@@ -85,6 +128,82 @@ def parse_critique(text: str) -> List[str]:
                 notes.append(f"Suggestion: {suggestion.strip()}")
         return notes
     return []
+
+
+def parse_rubric(text: str) -> Dict[str, Any]:
+    """Extract {scores, defects} from a rubric response (tolerant parse).
+
+    Returns {} when nothing rubric-shaped parses. Scores are clamped to 1-5
+    and restricted to known axes; defects keep only entries with a known axis
+    and non-empty defect text. Legacy issues/suggestions payloads return {}
+    (they are not rubrics) — use parse_critique for those.
+    """
+    candidates: List[str] = []
+    closed = re.search(r"```(?:json)?\s*([\s\S]*?)\s*```", text)
+    if closed:
+        candidates.append(closed.group(1).strip())
+    candidates.append(text.strip())
+
+    for payload in candidates:
+        try:
+            data = json.loads(payload)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(data, dict) or not isinstance(data.get("scores"), dict):
+            continue
+        scores: Dict[str, int] = {}
+        for axis in RUBRIC_AXES:
+            value = data["scores"].get(axis)
+            try:
+                number = int(value)
+            except (TypeError, ValueError):
+                continue
+            scores[axis] = max(1, min(5, number))
+        if not scores:
+            continue
+        defects: List[Dict[str, str]] = []
+        raw_defects = data.get("defects")
+        if isinstance(raw_defects, list):
+            for entry in raw_defects:
+                if not isinstance(entry, dict):
+                    continue
+                axis = entry.get("axis")
+                defect = entry.get("defect")
+                if (
+                    axis not in RUBRIC_AXES
+                    or not isinstance(defect, str)
+                    or not defect.strip()
+                ):
+                    continue
+                item = {"axis": axis, "defect": defect.strip()}
+                repair = entry.get("repair")
+                if isinstance(repair, str) and repair.strip():
+                    item["repair"] = repair.strip()
+                defects.append(item)
+        return {"scores": scores, "defects": defects}
+    return {}
+
+
+def defects_to_notes(
+    scores: Dict[str, int], defects: List[Dict[str, str]], max_notes: int = 6
+) -> List[str]:
+    """Compile rubric defects into repair-prompt notes (actionable, never vibes)."""
+    notes: List[str] = []
+    for entry in defects:
+        axis = entry.get("axis", "?")
+        score = scores.get(axis, "?")
+        text = f"[{axis} {score}/5] {entry.get('defect', '').strip()}"
+        repair = (
+            entry.get("repair", "").strip()
+            if isinstance(entry.get("repair"), str)
+            else ""
+        )
+        if repair:
+            text += f" → repair: {repair}"
+        notes.append(text)
+        if len(notes) >= max_notes:
+            break
+    return notes
 
 
 def _failure_context(failed_rules: Optional[List[Dict[str, Any]]]) -> str:
@@ -140,6 +259,14 @@ def _critique_call(
         latency_seconds=latency,
         detail=detail,
     )
+    # Rubric layer: when the response carries axis scores, attach them as
+    # calibration evidence and compile defects into repair notes. Scores never
+    # gate — see module docstring.
+    rubric = parse_rubric(response.text)
+    if rubric:
+        result.rubric_scores = rubric["scores"]
+        result.rubric_defects = rubric["defects"]
+        result.notes = defects_to_notes(rubric["scores"], rubric["defects"])
     if not response.text.strip():
         result.error = f"vision model returned no content (finish_reason={response.finish_reason or 'unknown'})"
     return result
@@ -191,3 +318,54 @@ def critique_frame(
     )
     result.notes = result.notes[:max_notes]
     return result
+
+
+def critique_frame_rubric(
+    client: LlmClient,
+    frame_bytes: bytes,
+    mime: str = "image/png",
+    model: Optional[str] = None,
+    max_notes: int = 6,
+    failed_rules: Optional[List[Dict[str, Any]]] = None,
+) -> VisionResult:
+    """Score a gameplay frame on the 4-axis rubric (calibration evidence only).
+
+    The returned notes are repair-actionable defect strings; rubric_scores holds
+    the raw axis scores for calibration logging. Never gates — enforcement runs
+    on the deterministic proxies (`aesthetic.evaluate_visual_rule`).
+    """
+    prompt = FRAME_RUBRIC_PROMPT + _failure_context(failed_rules)
+    result = _critique_call(
+        client,
+        prompt,
+        frame_bytes,
+        model or DEFAULT_VISION_MODEL,
+        DEFAULT_VISION_MAX_TOKENS,
+        mime=mime,
+    )
+    result.notes = result.notes[:max_notes]
+    return result
+
+
+def make_frame_critique(
+    client: LlmClient,
+    model: Optional[str] = None,
+    max_notes: int = 6,
+) -> Callable[..., VisionResult]:
+    """Build a `(scene, failed_rules) -> VisionResult` rubric critique over A.1 frames."""
+    from harness.loop.frame_preview import render_frame_png
+
+    def critique(
+        scene: Dict[str, Any],
+        failed_rules: Optional[List[Dict[str, Any]]] = None,
+    ) -> VisionResult:
+        png = render_frame_png(scene)
+        return critique_frame_rubric(
+            client,
+            png,
+            model=model or DEFAULT_VISION_MODEL,
+            max_notes=max_notes,
+            failed_rules=failed_rules,
+        )
+
+    return critique

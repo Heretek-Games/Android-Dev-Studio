@@ -27,6 +27,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from harness.loop.action_applier import ApplyResult, apply_actions
+from harness.loop.aesthetic import evaluate_visual_rule
 from harness.loop.frame_preview import frame_metadata, render_frame_png
 from harness.loop.llm_client import LlmClient, LlmError, LlmResponse
 from harness.loop.prompts import generation_messages, repair_messages
@@ -195,19 +196,30 @@ def default_qa_runner(
 def _normalize_vision(value: Any) -> Tuple[List[str], Optional[Dict[str, Any]]]:
     """Accept a `VisionResult` or a plain notes list; return (notes, telemetry)."""
     if isinstance(value, VisionResult):
-        return (
-            list(value.notes),
-            {
-                "model": value.model,
-                "promptTokens": value.prompt_tokens,
-                "completionTokens": value.completion_tokens,
-                "totalTokens": value.total_tokens,
-                "latencySeconds": round(value.latency_seconds, 3),
-            },
-        )
+        telemetry = {
+            "model": value.model,
+            "promptTokens": value.prompt_tokens,
+            "completionTokens": value.completion_tokens,
+            "totalTokens": value.total_tokens,
+            "latencySeconds": round(value.latency_seconds, 3),
+        }
+        if value.rubric_scores:
+            telemetry["rubricScores"] = dict(value.rubric_scores)
+            telemetry["rubricOverall"] = value.rubric_overall
+            telemetry["rubricDefects"] = [dict(d) for d in value.rubric_defects]
+        return (list(value.notes), telemetry)
     if isinstance(value, list):
         return [str(v) for v in value], None
     return [], None
+
+
+def _visual_rules(rules: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Scenario rules of type visual_quality_min (A.2 look-dev gate)."""
+    return [
+        r
+        for r in rules
+        if isinstance(r, dict) and r.get("type") == "visual_quality_min"
+    ]
 
 
 # --------------------------------------------------------------------------- loop
@@ -499,13 +511,47 @@ class IterateLoop:
                     ]
                     metrics = report.get("metrics", {})
 
+                    # A.2 look-dev gate: deterministic visual proxies run on every
+                    # QA-passing iteration and are logged either way (calibration
+                    # evidence). Only rules carrying enforce:true block green —
+                    # VLM rubric scores never do (see vision.py docstring).
+                    visual_audits = [
+                        evaluate_visual_rule(scene, rule)
+                        for rule in _visual_rules(self.rules)
+                    ]
+                    if visual_audits:
+                        record["visual"] = visual_audits
+                    blocking = [
+                        a for a in visual_audits if not a["pass"] and a["enforce"]
+                    ]
                     if report.get("verdict") in ("SUCCEEDED",) or (
                         report.get("total")
                         and report.get("passed") == report.get("total")
                     ):
-                        result.iterations.append(record)
-                        result.verdict = "green"
-                        break
+                        if blocking:
+                            failed_rules = [
+                                {
+                                    "id": a["id"],
+                                    "type": "visual_quality_min",
+                                    "detail": (
+                                        f"visual gate {a['overall']}/{a['minScore']} on "
+                                        + ", ".join(
+                                            f"{f['axis']}={f['score']}"
+                                            for f in a["failingAxes"]
+                                        )
+                                        + "".join(
+                                            f"; {d['axis']}: {d['defect']}"[:220]
+                                            for d in a["defects"][:3]
+                                        )
+                                    ),
+                                }
+                                for a in blocking
+                            ]
+                            metrics = {}
+                        else:
+                            result.iterations.append(record)
+                            result.verdict = "green"
+                            break
             else:
                 # Gate violation: skip QA, feed the violations back as failures.
                 failed_rules = [
