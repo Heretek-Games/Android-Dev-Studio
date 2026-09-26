@@ -31,6 +31,7 @@ import {
   MeleeHitbox,
   Hurtbox,
   Telegraph,
+  DodgeRoll,
   Quest,
   Party,
   Settlement,
@@ -326,6 +327,7 @@ export const GameView: React.FC = () => {
         blade = new MeleeHitbox(bladeOpts);
         player.addComponent(blade);
         player.addComponent(new Hurtbox({ invulnSeconds: 0.5, faction: 'ally' }));
+        player.addComponent(new DodgeRoll({ distance: 4, duration: 0.3, cooldownSeconds: 0.8 }));
         squire = new GameObject('Squire');
         squire.transform.setPosition(2, 1.5, 2);
         squire.addComponent(new MeshRenderer({ shape: 'capsule', size: [1, 1.5, 1], color: '#a78bfa', roughness: 0.5 }));
@@ -336,6 +338,7 @@ export const GameView: React.FC = () => {
         // Each hero carries their own blade; swings resolve from the active hero.
         squire.addComponent(new MeleeHitbox(bladeOpts));
         squire.addComponent(new Hurtbox({ invulnSeconds: 0.5, faction: 'ally' }));
+        squire.addComponent(new DodgeRoll({ distance: 4, duration: 0.3, cooldownSeconds: 0.8 }));
         scene.addGameObject(squire);
         party = new Party({ swapCooldownSeconds: 1.0 });
         party.setMembers([player, squire]);
@@ -605,6 +608,7 @@ export const GameView: React.FC = () => {
       };
 
       let lastSwingAt = 0;
+      let bloomPickups = 0;
       const trySwing = (): void => {
         if (!isTide || !runtime || !player) return;
         if (!runtime.flow.isPlaying()) return;
@@ -636,10 +640,26 @@ export const GameView: React.FC = () => {
         heroBlade.tryHit();
       };
 
+      // Dodge roll: burst along the active hero's facing with i-frames
+      // (boss strikes and contact resolve through the Hurtbox, so the
+      // invulnerability window protects for real).
+      const tryDodge = (): boolean => {
+        if (!isTide || !runtime || !player) return false;
+        if (!runtime.flow.isPlaying()) return false;
+        const hero = party?.active() ?? player;
+        const roller = hero.getComponent(DodgeRoll) ?? null;
+        if (!roller) return false;
+        const yaw = hero.transform.rotation.y;
+        return roller.dodge(-Math.sin(yaw), -Math.cos(yaw));
+      };
+
       if (isTide) {
         tideButton('⚔', '24px', trySwing);
         tideButton('⇄', '112px', () => {
           if (party && runtime?.flow.isPlaying()) party.swapTo((party.activeIndex + 1) % party.size);
+        });
+        tideButton('💨', '200px', () => {
+          tryDodge();
         });
       }
       (window as unknown as Record<string, unknown>).__GAME_DEBUG__ = {
@@ -688,6 +708,13 @@ export const GameView: React.FC = () => {
           trySwing();
           return isTide ? { kills: meleeKills, reactions: meleeReactions } : null;
         },
+        dodge: () => {
+          const dodged = tryDodge();
+          const hero = party?.active() ?? player;
+          const hurt = hero?.getComponent(Hurtbox) ?? null;
+          return isTide ? { dodged, invulnerable: hurt ? hurt.invulnerable : null } : null;
+        },
+        pickups: () => (isTide ? bloomPickups : null),
         swap: () => {
           if (party) party.swapTo((party.activeIndex + 1) % party.size);
           return party?.active()?.name ?? null;
@@ -879,6 +906,23 @@ export const GameView: React.FC = () => {
                 pos.z += (dz / dist) * step;
               }
             }
+            // Emberbloom pickups: the collection route is mechanics — a living
+            // hero walking within reach consumes the bloom and restores 25 HP.
+            if (hero) {
+              const heroHealth = hero.getComponent(HealthComponent) ?? null;
+              if (heroHealth && !heroHealth.isDead) {
+                for (const go of [...scene.gameObjects]) {
+                  if (!go.name.startsWith('Emberbloom')) continue;
+                  const bp = go.transform.position;
+                  const hp = hero.transform.position;
+                  if (Math.hypot(bp.x - hp.x, bp.z - hp.z) <= 1.5) {
+                    heroHealth.heal(25);
+                    go.destroy();
+                    bloomPickups += 1;
+                  }
+                }
+              }
+            }
             // Quest snapshot + tracker (shared with the post-win poll below).
             const pollQuest = (): void => {
               if (!quest || !dialogue) return;
@@ -991,10 +1035,14 @@ export const GameView: React.FC = () => {
           else if (runtime!.flow.getPhase() === 'paused') runtime!.flow.transition('resume');
           return;
         }
-        // Tide and Cinder: Space swings the active hero blade.
+        // Tide and Cinder: Space swings the active hero blade, Shift dodges.
         if (isTide && (event.key === ' ' || event.code === 'Space')) {
           event.preventDefault();
           trySwing();
+          return;
+        }
+        if (isTide && (event.key === 'Shift' || event.code === 'ShiftLeft' || event.code === 'ShiftRight')) {
+          tryDodge();
         }
       };
       window.addEventListener('keydown', onKeyDown);
