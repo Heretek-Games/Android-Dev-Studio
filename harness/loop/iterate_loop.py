@@ -315,6 +315,37 @@ class IterateLoop:
             )
         return notes
 
+    def _log_calibration(self, result: LoopResult, run_slug: str) -> None:
+        """Compare VLM rubric vs deterministic proxies per iteration (guarded).
+
+        Writes one calibration sample per axis into the taste store when it
+        supports record_calibration, and embeds the comparison in the record.
+        Evidence only — never affects verdicts (see calibration.py).
+        """
+        store = self.taste_store
+        if store is None or not hasattr(store, "record_calibration"):
+            return
+        try:
+            from harness.loop.calibration import (
+                compare_rubric,
+                extract_proxy_scores,
+                extract_vlm_scores,
+            )
+
+            for record in result.iterations:
+                proxy = extract_proxy_scores(record)
+                vlm = extract_vlm_scores(record)
+                if not proxy or not vlm:
+                    continue
+                comparison = compare_rubric(proxy, vlm)
+                if not comparison["compared"]:
+                    continue
+                record["calibration"] = comparison
+                source = f"{run_slug}-iter{record.get('iteration', '?')}"
+                store.record_calibration(source, comparison)
+        except Exception:
+            pass
+
     def _record_taste(self, scene: Dict[str, Any]) -> None:
         """Persist this green run's look (guarded: memory never breaks the loop)."""
         if self.taste_store is None:
@@ -726,6 +757,7 @@ class IterateLoop:
                 break
 
         result.final_report = final_report
+        self._log_calibration(result, run_slug)
         self._write_run_log(result, frames)
         return result
 

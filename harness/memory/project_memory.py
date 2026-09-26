@@ -135,6 +135,21 @@ class ProjectMemory:
                 )
             """)
 
+            # 7. Calibration log: VLM rubric vs deterministic proxy samples.
+            # Advisory scores graduate to blocking only on logged evidence.
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS calibration_log (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    source TEXT NOT NULL DEFAULT '',
+                    axis TEXT NOT NULL,
+                    proxy INTEGER NOT NULL,
+                    vlm INTEGER NOT NULL,
+                    delta INTEGER NOT NULL,
+                    agree INTEGER NOT NULL DEFAULT 0,
+                    created_at REAL NOT NULL
+                )
+            """)
+
             conn.commit()
 
     # --- ADR Management ---
@@ -457,6 +472,56 @@ class ProjectMemory:
                     }
                 )
             return out
+
+    # --- Calibration log (VLM rubric vs proxy agreement) ---
+    def record_calibration(self, source: str, comparison: Dict[str, Any]) -> int:
+        """Append one iteration's per-axis samples. Returns rows written."""
+        axes = (comparison or {}).get("axes") or {}
+        now = time.time()
+        written = 0
+        with self._get_connection() as conn:
+            for axis, sample in axes.items():
+                if not isinstance(sample, dict):
+                    continue
+                conn.execute(
+                    """INSERT INTO calibration_log
+                       (source, axis, proxy, vlm, delta, agree, created_at)
+                       VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                    (
+                        str(source or ""),
+                        str(axis),
+                        int(sample.get("proxy", 0)),
+                        int(sample.get("vlm", 0)),
+                        int(sample.get("delta", 0)),
+                        1 if sample.get("agree") else 0,
+                        now,
+                    ),
+                )
+                written += 1
+            conn.commit()
+        return written
+
+    def calibration_summary(self) -> Dict[str, Any]:
+        """Per-axis agreement stats over all logged samples."""
+        with self._get_connection() as conn:
+            rows = conn.execute(
+                "SELECT axis, proxy, vlm, delta, agree FROM calibration_log"
+            ).fetchall()
+        per_axis: Dict[str, Dict[str, Any]] = {}
+        total = 0
+        for row in rows:
+            stats = per_axis.setdefault(
+                row["axis"], {"samples": 0, "agreed": 0, "absDeltaSum": 0}
+            )
+            stats["samples"] += 1
+            stats["agreed"] += 1 if row["agree"] else 0
+            stats["absDeltaSum"] += abs(row["delta"])
+            total += 1
+        for stats in per_axis.values():
+            stats["agreementRate"] = round(stats["agreed"] / stats["samples"], 3)
+            stats["meanAbsDelta"] = round(stats["absDeltaSum"] / stats["samples"], 3)
+            del stats["absDeltaSum"]
+        return {"perAxis": per_axis, "samples": total}
 
     # --- Project Summary ---
     def get_project_summary(self) -> Dict[str, Any]:
