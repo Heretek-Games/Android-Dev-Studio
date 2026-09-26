@@ -99,4 +99,38 @@ describe('AnimFSM — states, transitions, triggers', () => {
     assert.strictEqual(other.getFloat('speed'), 5);
     assert.strictEqual(other.transitionsTaken, 1);
   });
+
+  test('attack combo chains through a cancel window (Track E.1)', () => {
+    const f = fsm({
+      states: {
+        Idle: { clip: 'idle', clipLength: 2.0 },
+        Attack1: { clip: 'attack1', clipLength: 0.5, loop: false },
+        Attack2: { clip: 'attack2', clipLength: 0.5, loop: false }
+      },
+      initial: 'Idle',
+      transitions: [
+        { from: 'Idle', to: 'Attack1', conditions: [{ param: 'attack', op: 'trigger' }] },
+        // Cancel window: combo input during the last 60% of Attack1 chains.
+        { from: 'Attack1', to: 'Attack2', exitTime: 0.4, conditions: [{ param: 'combo', op: 'trigger' }] },
+        { from: 'Attack1', to: 'Idle', exitTime: 1.0, conditions: [] },
+        { from: 'Attack2', to: 'Idle', exitTime: 1.0, conditions: [] }
+      ]
+    });
+    f.setTrigger('attack');
+    f.update(DT);
+    assert.strictEqual(f.current, 'Attack1');
+    // Too early: exitTime blocks the cancel.
+    f.setTrigger('combo');
+    f.update(DT);
+    assert.strictEqual(f.current, 'Attack1');
+    // Past the cancel window with a fresh trigger: chains into Attack2.
+    for (let i = 0; i < 15; i++) f.update(DT);
+    f.setTrigger('combo');
+    f.update(DT);
+    assert.strictEqual(f.current, 'Attack2');
+    // Chain resolves back to Idle.
+    for (let i = 0; i < 40; i++) f.update(DT);
+    assert.strictEqual(f.current, 'Idle');
+    assert.strictEqual(f.transitionsTaken, 3);
+  });
 });

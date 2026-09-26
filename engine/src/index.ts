@@ -46,6 +46,7 @@ export * from './physics/PhysicsWorld.js';
 // AAA Engine Systems (Genshin, COD Mobile, Doom scope)
 export * from './animation/BlendTree.js';
 export * from './animation/GlbRig.js';
+export * from './animation/RigRetarget.js';
 export * from './shaders/CelShader.js';
 export * from './shaders/AnimeCelShader.js';
 export * from './ai/BehaviorTree.js';

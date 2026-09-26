@@ -438,6 +438,21 @@ function setupInput(spec, engine) {
         }
       }
     },
+    /** Track E.1: scenario animTriggers route pressed input actions to
+     * AnimFSM triggers ({target, action, trigger} entries). */
+    fireAnimTriggers(scene) {
+      const routes = Array.isArray(spec.animTriggers) ? spec.animTriggers : [];
+      for (const route of routes) {
+        if (!route || typeof route.action !== 'string') continue;
+        const action = map.actions.get(route.action);
+        if (!action || !map.getButton(route.action)) continue;
+        const go = scene.findByName(route.target);
+        const fsm = go ? go.components.find(c => c.constructor.name === 'AnimFSM') : null;
+        if (fsm && typeof route.trigger === 'string' && route.trigger) {
+          fsm.setTrigger(route.trigger);
+        }
+      }
+    },
     peak
   };
 }
@@ -1023,6 +1038,14 @@ function evaluateRules(spec, ctxData) {
         detail = `"${rule.target}" anim state=${fsm.current} (want ${rule.state}, transitions=${fsm.transitionsTaken})`;
         break;
       }
+      case 'anim_transitions_min': {
+        const go = scene.findByName(rule.target);
+        const fsm = go ? go.components.find(c => c.constructor.name === 'AnimFSM') : null;
+        if (!fsm) { pass = false; detail = `no AnimFSM on "${rule.target}"`; break; }
+        pass = fsm.transitionsTaken >= (rule.min ?? 1);
+        detail = `"${rule.target}" transitions=${fsm.transitionsTaken} (min=${rule.min ?? 1})`;
+        break;
+      }
       case 'timeline_finished': {
         const go = scene.findByName(rule.target);
         const tl = go ? go.components.find(c => c.constructor.name === 'TimelineLite') : null;
@@ -1538,6 +1561,7 @@ async function main() {
   for (let frame = 0; frame < args.frames; frame++) {
     const t0 = performance.now();
     if (input) input.beginFrame(frame);
+    if (input) input.fireAnimTriggers(scene);
     ctx.step(args.dt);
     if (input) input.sampleFrame(frame);
     if (game) {
