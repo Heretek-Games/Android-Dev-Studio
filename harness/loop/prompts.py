@@ -59,6 +59,12 @@ RULE_DESCRIPTIONS = {
     ),
     "probe_budget_max": lambda r: "probe count must stay within budget",
     "lut_present": lambda r: "a valid grading LUT must be registered",
+    "telemetry_events_min": lambda r: (
+        f"telemetry event '{r.get('event')}' must fire at least {r.get('min', 1)}x"
+    ),
+    "remoteconfig_get": lambda r: (
+        f"remote config '{r.get('key')}' must resolve to {r.get('expected')!r}"
+    ),
     "object_count": lambda r: (
         f"the scene must contain exactly {r.get('count')} objects"
     ),
@@ -174,6 +180,9 @@ ACTION_SCHEMA = """Action vocabulary (a JSON array named "actions"):
   - {"type": "lightrig", "config": {"probes": [{"position": [0, 3, 0], "radius": 10}], "lut": {"preset": "sunset", "amount": 0.6}}}}
     (registers the stylized lighting rig for the probe/lut audits; LUT data arrays must
     hold size^3*3 numbers when given instead of a preset)
+  - {"type": "operate", "config": {"telemetry": {"enabled": true, "build": "1.0"}, "remoteConfig": {"defaults": {"doubleXp": false}, "values": {"doubleXp": true}}}}
+    (registers operate telemetry (phase-transition events) plus remote config for the
+    telemetry_events_min/remoteconfig_get audits; telemetry off by default engine-side)
   - Camera clips ride the timeline vocabulary: {"type": "timeline", ... "clips": [{"id": "wide", "start": 0, "dur": 2, "type": "camera", "data": {"shot": "wide", "to": [0, 2, 8], "cut": true}}]}
     (cinematic data keys: shot id, cut bool, blend seconds, lookTarget name + deadzone/
     lookahead/smoothTime, dolly|crane {path, ease}, shake {trauma, decay, freq, ampPos,

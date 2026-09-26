@@ -2603,6 +2603,117 @@ def _validate_audio(
     return normalized
 
 
+def _validate_operate(
+    value: Any, errors: Optional[List[str]] = None
+) -> Optional[Dict[str, Any]]:
+    """Operate specs pass straight to the QA runner (spec.operate).
+
+    Returns the normalized {telemetry?, remoteConfig?}, or None when
+    malformed. Telemetry takes enabled/kidsMode/build flags; remoteConfig
+    takes string-keyed defaults plus an optional activated values map.
+    """
+
+    def fail(reason: str) -> None:
+        if errors is not None:
+            errors.append(reason)
+        return None
+
+    if not isinstance(value, dict):
+        fail("operate 'config' must be an object")
+        return None
+    normalized: Dict[str, Any] = {}
+    if "telemetry" in value:
+        tele = value["telemetry"]
+        if not isinstance(tele, dict):
+            fail("operate config 'telemetry' must be an object")
+            return None
+        entry: Dict[str, Any] = {}
+        for flag in ("enabled", "kidsMode"):
+            if flag in tele:
+                if not isinstance(tele[flag], bool):
+                    fail(f"operate telemetry '{flag}' must be true/false")
+                    return None
+                entry[flag] = tele[flag]
+        if "build" in tele:
+            if not isinstance(tele["build"], str) or not tele["build"].strip():
+                fail("operate telemetry 'build' must be a non-empty string")
+                return None
+            entry["build"] = tele["build"].strip()
+        for key in tele:
+            if key not in ("enabled", "kidsMode", "build"):
+                fail(f"unknown operate telemetry key '{key}'")
+                return None
+        normalized["telemetry"] = entry
+    if "remoteConfig" in value:
+        remote = value["remoteConfig"]
+        if not isinstance(remote, dict):
+            fail("operate config 'remoteConfig' must be an object")
+            return None
+        entry_r: Dict[str, Any] = {}
+        for section in ("defaults", "values"):
+            if section in remote:
+                block = remote[section]
+                if not isinstance(block, dict) or not block:
+                    fail(
+                        f"operate remoteConfig '{section}' must be a non-empty key map"
+                    )
+                    return None
+                clean: Dict[str, Any] = {}
+                for key, item in block.items():
+                    if not isinstance(key, str) or not key.strip():
+                        fail(
+                            f"operate remoteConfig '{section}' keys must be non-empty strings"
+                        )
+                        return None
+                    if (
+                        isinstance(item, bool)
+                        or isinstance(item, (int, float))
+                        and _is_finite_number(item)
+                        or isinstance(item, str)
+                    ):
+                        clean[key.strip()] = item
+                    else:
+                        fail(
+                            f"operate remoteConfig '{section}.{key}' must be bool, finite number, or string"
+                        )
+                        return None
+                entry_r[section] = clean
+        for key in remote:
+            if key not in ("defaults", "values"):
+                fail(f"unknown operate remoteConfig key '{key}'")
+                return None
+        normalized["remoteConfig"] = entry_r
+    if not normalized:
+        fail("operate config must define at least one of telemetry/remoteConfig")
+        return None
+    for key in value:
+        if key not in ("telemetry", "remoteConfig"):
+            fail(f"unknown operate config key '{key}'")
+            return None
+    return normalized
+
+
+def _apply_operate(
+    scene: Dict[str, Any], action: Dict[str, Any], result: ApplyResult, index: int
+) -> None:
+    reasons: List[str] = []
+    config = _validate_operate(action.get("config"), reasons)
+    if config is None:
+        detail = reasons[0] if reasons else "malformed config"
+        return _outcome(
+            result, index, "operate", "invalid", f"operate config rejected — {detail}"
+        )
+    scene["operate"] = config
+    parts = sorted(config.keys())
+    _outcome(
+        result,
+        index,
+        "operate",
+        "applied",
+        f"Registered operate config ({', '.join(parts)})",
+    )
+
+
 def _validate_lightrig(
     value: Any, errors: Optional[List[str]] = None
 ) -> Optional[Dict[str, Any]]:
@@ -3551,6 +3662,7 @@ _HANDLERS = {
     "mixer": _apply_mixer,
     "navgrid": _apply_navgrid,
     "lightrig": _apply_lightrig,
+    "operate": _apply_operate,
 }
 
 

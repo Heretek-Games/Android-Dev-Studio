@@ -598,6 +598,35 @@ function setupDestruction(spec, scene, engine, physicsWorld) {
   return { pool };
 }
 /**
+ * Operate telemetry (Track 3): session-scoped event log tapped into game
+ * phase transitions plus an optional RemoteConfig (defaults + activated
+ * values). Headless-deterministic (fixed session id, ticked clock).
+ */
+function setupOperate(spec, game, engine) {
+  if (!spec.operate || typeof spec.operate !== 'object') return null;
+  const cfg = spec.operate;
+  const telemetry = new engine.Telemetry({
+    enabled: cfg.telemetry?.enabled ?? true,
+    kidsMode: cfg.telemetry?.kidsMode ?? false,
+    build: cfg.telemetry?.build ?? 'qa',
+    sessionId: 'qa-run'
+  });
+  telemetry.record('session_start');
+  if (game && game.runtime && game.runtime.flow) {
+    game.runtime.flow.onPhaseChange(change => {
+      telemetry.record(`phase_${change.to}`, { from: change.from });
+    });
+  }
+  let remoteConfig = null;
+  if (cfg.remoteConfig && typeof cfg.remoteConfig === 'object') {
+    remoteConfig = new engine.RemoteConfig({ defaults: cfg.remoteConfig.defaults || {} });
+    if (cfg.remoteConfig.values && typeof cfg.remoteConfig.values === 'object') {
+      remoteConfig.fromJSON({ defaults: cfg.remoteConfig.defaults || {}, active: cfg.remoteConfig.values });
+    }
+  }
+  return { telemetry, remoteConfig };
+}
+/**
  * Dialogue auto-play: register every spec.dialogues tree and walk each one
  * deterministically (first available choice, bounded steps), recording stable
  * node visits plus emitted events. Action/condition nodes self-resolve inside
@@ -846,7 +875,7 @@ function placementNote(game) {
 }
 
 function evaluateRules(spec, ctxData) {
-  const { scene, samples, firstSamples, metrics, dt, game, dialogue, input, audio, nav, lighting, destruction } = ctxData;
+  const { scene, samples, firstSamples, metrics, dt, game, dialogue, input, audio, nav, lighting, destruction, operate } = ctxData;
   const results = [];
 
   for (const rule of spec.rules || []) {
@@ -1055,6 +1084,20 @@ function evaluateRules(spec, ctxData) {
         const merged = destruction.pool.mergedShards;
         pass = live <= (rule.max ?? 24);
         detail = `live shards=${live} merged=${merged} (max=${rule.max ?? 24})`;
+        break;
+      }
+      case 'telemetry_events_min': {
+        if (!operate) { pass = false; detail = 'no spec.operate present'; break; }
+        const count = operate.telemetry.countOf(rule.event);
+        pass = count >= (rule.min ?? 1);
+        detail = `telemetry '${rule.event}' x${count} (min=${rule.min ?? 1})`;
+        break;
+      }
+      case 'remoteconfig_get': {
+        if (!operate || !operate.remoteConfig) { pass = false; detail = 'no spec.operate.remoteConfig present'; break; }
+        const resolved = operate.remoteConfig.get(rule.key);
+        pass = JSON.stringify(resolved) === JSON.stringify(rule.expected);
+        detail = `remoteconfig '${rule.key}'=${JSON.stringify(resolved)} (want ${JSON.stringify(rule.expected)})`;
         break;
       }
       case 'object_count': {
@@ -1354,6 +1397,7 @@ async function main() {
   const nav = setupNav(spec, scene, engine);
   const lighting = setupLighting(spec, scene, engine);
   const destruction = setupDestruction(spec, scene, engine, physicsWorld);
+  const operate = setupOperate(spec, game, engine);
 
   const eventCount = scene.gameObjects.reduce(
     (n, go) => n + go.components.filter(c => c.constructor.name === 'EventSheet').reduce((m, es) => m + es.events.length, 0), 0
@@ -1398,6 +1442,7 @@ async function main() {
     if (input) input.map.endFrame();
     if (audio) audio.manager.update(args.dt);
     if (destruction) destruction.pool.update(args.dt);
+    if (operate) operate.telemetry.tick(args.dt);
   }
 
   const sorted = [...times].sort((a, b) => a - b);
@@ -1454,7 +1499,7 @@ async function main() {
     }
   }
 
-  const ruleResults = evaluateRules(spec, { scene, samples, firstSamples, metrics, dt: args.dt, game, dialogue, input, audio, nav, lighting, destruction });
+  const ruleResults = evaluateRules(spec, { scene, samples, firstSamples, metrics, dt: args.dt, game, dialogue, input, audio, nav, lighting, destruction, operate });
   const passed = ruleResults.filter(r => r.pass).length;
   const total = ruleResults.length;
   const allPass = total > 0 && passed === total;

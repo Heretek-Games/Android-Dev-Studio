@@ -1782,6 +1782,58 @@ class DestructActionTests(unittest.TestCase):
             self.assertIn(hint, result.outcomes[0]["detail"])
 
 
+class OperateActionTests(unittest.TestCase):
+    def test_operate_action_registers_telemetry_and_config(self):
+        scene, result = apply_actions(
+            base_scene(),
+            [
+                {
+                    "type": "operate",
+                    "config": {
+                        "telemetry": {"enabled": True, "build": "1.0"},
+                        "remoteConfig": {
+                            "defaults": {"doubleXp": False, "enemySpeed": 1.0},
+                            "values": {"doubleXp": True},
+                        },
+                    },
+                }
+            ],
+        )
+        self.assertEqual(result.applied, 1)
+        self.assertEqual(scene["operate"]["telemetry"]["build"], "1.0")
+        self.assertEqual(scene["operate"]["remoteConfig"]["values"]["doubleXp"], True)
+
+    def test_operate_rejects_malformed(self):
+        for action, hint in (
+            ({"type": "operate", "config": {}}, "at least one"),
+            (
+                {"type": "operate", "config": {"telemetry": {"enabled": "yes"}}},
+                "true/false",
+            ),
+            (
+                {"type": "operate", "config": {"remoteConfig": {"defaults": {}}}},
+                "non-empty",
+            ),
+            (
+                {
+                    "type": "operate",
+                    "config": {"remoteConfig": {"defaults": {"a": [1]}}},
+                },
+                "bool, finite number, or string",
+            ),
+            (
+                {
+                    "type": "operate",
+                    "config": {"sentry": {}, "telemetry": {"enabled": True}},
+                },
+                "sentry",
+            ),
+        ):
+            _, result = apply_actions(base_scene(), [action])
+            self.assertEqual(result.invalid, 1, f"should reject {action!r}")
+            self.assertIn(hint, result.outcomes[0]["detail"])
+
+
 class PrefabActionTests(unittest.TestCase):
     def test_prefab_define_registers_template(self):
         scene, result = apply_actions(

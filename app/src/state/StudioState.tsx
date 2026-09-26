@@ -30,6 +30,9 @@ import {
   probeTransformFeedback,
   Destructible,
   getDestructionPool,
+  Telemetry,
+  CrashReportCollector,
+  RemoteConfig,
   type PrefabStore
 } from '@heretek/engine';
 
@@ -282,6 +285,38 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           live: pool.liveShards,
           merged: pool.mergedShards
         };
+      },
+      probeOperate: () => {
+        // Operate stack through the real bundled engine: events (PII drop +
+        // kids gate), scrubbed crash capture, staged remote config + cohort.
+        const tele = new Telemetry({ enabled: true, build: 'probe' });
+        tele.record('level_complete', { score: 900 });
+        tele.record('signup', { email: 'a@b.com', nick: 'hero' });
+        const kids = new Telemetry({ enabled: true, kidsMode: true });
+        const kidsKept = kids.record('level_complete', { score: 1 });
+        const kidsErr = kids.record('error', { code: 7 });
+        const crashes = new CrashReportCollector({ enabled: true });
+        crashes.leaveBreadcrumb('scene: probe');
+        const report = crashes.captureException(
+          new Error('boom at /home/john/studio/main.js')
+        );
+        const rc = new RemoteConfig({ defaults: { doubleXp: false }, build: 12 });
+        const before = rc.getBool('doubleXp');
+        const staged = rc.fetch(() => ({ doubleXp: true }));
+        return staged.then((ok: boolean) => ({
+          events: tele.countOf('level_complete'),
+          piiDropped: tele.droppedPii,
+          kidsKept,
+          kidsErr,
+          kidsDropped: kids.droppedKids,
+          crashMsg: report ? report.message : null,
+          crashClean: report ? !report.stack?.includes('/home/john') : false,
+          flagBefore: before,
+          fetched: ok,
+          staged: rc.hasStaged,
+          flagAfter: (rc.activate(), rc.getBool('doubleXp')),
+          cohort: rc.gated('doubleXp', 50)
+        }));
       },
       spawnWreckProbe: () => {
         undoService.checkpoint(scene);
