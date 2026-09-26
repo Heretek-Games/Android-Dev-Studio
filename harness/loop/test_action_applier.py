@@ -715,12 +715,37 @@ class CelShadingTests(unittest.TestCase):
             ({"baseColor": "blue"}, "baseColor"),
             ({"rimPower": -1}, "rimPower"),
             ({"lightDirection": [0, 1, 0]}, "lightDirection"),
+            ({"dissolve": 2}, "dissolve"),
+            ({"dissolve": -0.5}, "dissolve"),
+            ({"dissolveEdgeColor": "pink"}, "dissolveEdgeColor"),
         ):
             _, result = apply_actions(
                 base_scene(), [{"type": "spawn", "name": "Hero", "cel": bad}]
             )
             self.assertEqual(result.invalid, 1, f"should reject {bad!r}")
             self.assertIn(hint, result.outcomes[0]["detail"])
+
+    def test_spawn_cel_dissolve_applies(self):
+        scene, result = apply_actions(
+            base_scene(),
+            [
+                {
+                    "type": "spawn",
+                    "name": "Wraith",
+                    "shape": "capsule",
+                    "cel": {
+                        "baseColor": "#a5b4fc",
+                        "dissolve": 0.35,
+                        "dissolveEdgeColor": "#f472b6",
+                    },
+                }
+            ],
+        )
+        self.assertEqual(result.applied, 1)
+        self.assertEqual(
+            scene["gameObjects"][1]["cel"],
+            {"baseColor": "#a5b4fc", "dissolve": 0.35, "dissolveEdgeColor": "#f472b6"},
+        )
 
     def test_modify_cel_replaces_config(self):
         scene, result = apply_actions(

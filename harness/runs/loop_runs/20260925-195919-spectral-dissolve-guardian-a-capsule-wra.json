@@ -1,0 +1,183 @@
+{
+  "goal": "Spectral dissolve guardian: a capsule wraith with violet anime cel shading, pink dissolve edge at 0.35 threshold, standing on a dark ground disc under a warm sunset directional light",
+  "rules": [
+    {
+      "id": "wraith_exists",
+      "type": "entity_exists",
+      "target": "Wraith"
+    },
+    {
+      "id": "wraith_cel",
+      "type": "entity_component",
+      "target": "Wraith",
+      "component": "AnimeCelShader"
+    },
+    {
+      "id": "budget",
+      "type": "draw_call_budget",
+      "max": 100
+    },
+    {
+      "id": "clean",
+      "type": "no_nan_transforms"
+    }
+  ],
+  "verdict": "green",
+  "iterations": [
+    {
+      "iteration": 1,
+      "phase": "generate",
+      "visionNotes": [],
+      "llm": {
+        "model": "mimo-v2.6-flash",
+        "promptTokens": 4567,
+        "completionTokens": 521,
+        "totalTokens": 5088,
+        "latencySeconds": 14.586,
+        "finishReason": "stop",
+        "attempts": 1
+      },
+      "parse": {
+        "strategy": "raw",
+        "actionCount": 6,
+        "summary": "A violet cel-shaded capsule wraith with a pink 0.35 dissolve edge stands on a dark ground disc under a warm sunset directional light, with minimal props to stay within the draw budget.",
+        "error": null
+      },
+      "apply": {
+        "applied": 6,
+        "targetMissing": 0,
+        "invalid": 0,
+        "failed": 0,
+        "outcomes": [
+          {
+            "index": 0,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Ground Disc (cylinder) at [0.0, -0.15, 0.0]",
+            "target": "Ground Disc"
+          },
+          {
+            "index": 1,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Wraith (capsule) at [0.0, 1.1, 0.0]",
+            "target": "Wraith"
+          },
+          {
+            "index": 2,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Rune Stone (box) at [-3.5, 0.8, -2.5]",
+            "target": "Rune Stone"
+          },
+          {
+            "index": 3,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Rune Stone B (box) at [3.5, 0.7, -3.0]",
+            "target": "Rune Stone B"
+          },
+          {
+            "index": 4,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added directional light 'Sunset Key' (intensity 2.2)",
+            "target": "Sunset Key"
+          },
+          {
+            "index": 5,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added ambient light 'Ambient Fill' (intensity 0.6)",
+            "target": "Ambient Fill"
+          }
+        ],
+        "appliedDescriptions": [
+          "Spawned Ground Disc (cylinder) at [0.0, -0.15, 0.0]",
+          "Spawned Wraith (capsule) at [0.0, 1.1, 0.0]",
+          "Spawned Rune Stone (box) at [-3.5, 0.8, -2.5]",
+          "Spawned Rune Stone B (box) at [3.5, 0.7, -3.0]",
+          "Added directional light 'Sunset Key' (intensity 2.2)",
+          "Added ambient light 'Ambient Fill' (intensity 0.6)"
+        ]
+      },
+      "gate": {
+        "valid": true,
+        "violations": []
+      },
+      "qa": {
+        "verdict": "SUCCEEDED",
+        "passed": 4,
+        "total": 4,
+        "failedRules": [],
+        "metrics": {
+          "avgFrameTimeMs": 0.0776,
+          "p95FrameTimeMs": 0.0822,
+          "maxFrameTimeMs": 21.4157,
+          "simFpsEstimate": 12892.38,
+          "drawCallEstimate": 4,
+          "instancedBatches": 0,
+          "memoryHeapMb": 15.22,
+          "objectCount": 6,
+          "physicsBodyCount": 3,
+          "eventCount": 0
+        }
+      }
+    }
+  ],
+  "totalTokens": 5088,
+  "totalLatencySeconds": 14.586,
+  "finalReport": {
+    "schemaVersion": 1,
+    "runner": "qa_scenario_runner.mjs",
+    "scenario": "loop_work_scene.json",
+    "goal": "Spectral dissolve guardian: a capsule wraith with violet anime cel shading, pink dissolve edge at 0.35 threshold, standing on a dark ground disc under a warm sunset directional light",
+    "timestamp": 1790380759.612,
+    "frames": 600,
+    "fixedDeltaSeconds": 0.016666666666666666,
+    "metrics": {
+      "avgFrameTimeMs": 0.0776,
+      "p95FrameTimeMs": 0.0822,
+      "maxFrameTimeMs": 21.4157,
+      "simFpsEstimate": 12892.38,
+      "drawCallEstimate": 4,
+      "instancedBatches": 0,
+      "memoryHeapMb": 15.22,
+      "objectCount": 6,
+      "physicsBodyCount": 3,
+      "eventCount": 0
+    },
+    "rules": [
+      {
+        "id": "wraith_exists",
+        "type": "entity_exists",
+        "pass": true,
+        "detail": "found \"Wraith\""
+      },
+      {
+        "id": "wraith_cel",
+        "type": "entity_component",
+        "pass": true,
+        "detail": "Wraith components: [MeshRenderer, AnimeCelShader, Tween]"
+      },
+      {
+        "id": "budget",
+        "type": "draw_call_budget",
+        "pass": true,
+        "detail": "drawCallEstimate=4 (budget 100)"
+      },
+      {
+        "id": "clean",
+        "type": "no_nan_transforms",
+        "pass": true,
+        "detail": "all 6 transforms finite"
+      }
+    ],
+    "passed": 4,
+    "total": 4,
+    "verdict": "SUCCEEDED",
+    "confidence": 1
+  },
+  "error": null,
+  "workScene": "/home/john/Projects/Android-Dev-Studio/harness/scenes/loop_work_scene.json"
+}

@@ -246,8 +246,15 @@ def _validate_ai(value: Any) -> Optional[Dict[str, Any]]:
     return normalized
 
 
-CEL_COLORS = {"baseColor", "shadowColor", "rimColor", "outlineColor"}
-CEL_NUMERICS = {"outlineThickness", "rimPower"}
+CEL_COLORS = {
+    "baseColor",
+    "shadowColor",
+    "rimColor",
+    "outlineColor",
+    "dissolveEdgeColor",
+}
+CEL_NUMERICS = {"outlineThickness", "rimPower", "dissolveEdge", "dissolveScale"}
+CEL_UNIT = {"dissolve"}
 
 #: Behaviors the loop may attach via the `behaviors` array (mirrors the engine
 #: BuiltinComponents registry; Tween options pass through unvalidated since
@@ -272,9 +279,10 @@ def _validate_cel(
     """AnimeCelShader calibration passes straight to the QA runner (objSpec.cel).
 
     Returns the normalized options, or None when malformed. Color stops must
-    be #rgb/#rrggbb; outlineThickness/rimPower finite and non-negative;
-    unknown keys (incl. lightDirection — the engine default stands headless)
-    are rejected so typos surface as repair input instead of silent no-ops.
+    be #rgb/#rrggbb; outlineThickness/rimPower/dissolveEdge/dissolveScale
+    finite and non-negative; dissolve is 0..1; unknown keys (incl.
+    lightDirection — the engine default stands headless) are rejected so
+    typos surface as repair input instead of silent no-ops.
     """
 
     def fail(reason: str) -> None:
@@ -297,9 +305,14 @@ def _validate_cel(
                 fail(f"cel '{key}' must be a non-negative finite number (got {item!r})")
                 return None
             normalized[key] = float(item)
+        elif key in CEL_UNIT:
+            if not _is_finite_number(item) or not 0 <= item <= 1:
+                fail(f"cel '{key}' must be 0..1 (got {item!r})")
+                return None
+            normalized[key] = float(item)
         else:
             fail(
-                f"unknown cel key '{key}' (allowed: {sorted(CEL_COLORS | CEL_NUMERICS)})"
+                f"unknown cel key '{key}' (allowed: {sorted(CEL_COLORS | CEL_NUMERICS | CEL_UNIT)})"
             )
             return None
     return normalized

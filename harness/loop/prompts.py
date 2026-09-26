@@ -104,7 +104,7 @@ ACTION_SCHEMA = """Action vocabulary (a JSON array named "actions"):
      "health": {"maxHealth": 100} (optional: adds a HealthComponent; destroyOnDeath defaults true),
      "ai": {"targetName": "Player Hero", "moveSpeed": 2.5} (optional: adds an EnemyAI NPC routine that chases/attacks the named target),
      "elemental": {"aura": "Pyro", "maxHealth": 80} (optional: seeds an elemental aura for reaction quests; aura is one of Pyro|Hydro|Cryo|Electro|Anemo|Geo|Dendro),
-     "cel": {"baseColor": "#38bdf8", "shadowColor": "#1e3a8a", "rimPower": 3.5} (optional: calibrates an AnimeCelShader look-dev pass; colors #rgb/#rrggbb, outlineThickness/rimPower non-negative numbers),
+     "cel": {"baseColor": "#38bdf8", "shadowColor": "#1e3a8a", "rimPower": 3.5, "dissolve": 0.35, "dissolveEdgeColor": "#f472b6"} (optional: calibrates an AnimeCelShader look-dev pass; colors #rgb/#rrggbb, outlineThickness/rimPower/dissolveEdge/dissolveScale non-negative numbers, dissolve 0..1),
      "behaviors": [{"type": "TopDownMovement", "options": {"moveSpeed": 5}}] (optional: attaches behavior components; Tween takes play-spec options, TopDownMovement takes moveSpeed/allowDiagonals/rotateToHeading/simulate),
      "particle": {"rate": 60, "maxParticles": 200, "shape": "sphere", "direction": [0,1,0], "speedMin": 2, "speedMax": 5, "lifetimeMin": 0.5, "lifetimeMax": 1.5, "startColor": "#ffaa00", "endColor": "#ff0000", "seed": 7, "tier": "A"} (optional: adds a CPU-sim ParticleSystem, one draw; shape point|box|sphere, blending additive|normal, tier S|A|X scalability),
      "anim": {"states": {"Idle": {"clip": "idle", "clipLength": 2}, "Run": {"clip": "run", "clipLength": 1}}, "initial": "Idle", "transitions": [{"from": "Idle", "to": "Run", "conditions": [{"param": "speed", "op": ">", "value": 0.5}]}]} (optional: adds an AnimFSM state machine; ops ==,!=,>,<,>=,<=,trigger; from "*" matches any state),
@@ -216,7 +216,8 @@ How acceptance rules map onto the schema (the QA runner checks these exact compo
     its own quest enemies reads as 'missing "Hero"'. Give the hero generous maxHealth
     (or weaker/slower attackers) with margin, e.g. "health": {"maxHealth": 500}.
   - "AnimeCelShader" component (look-dev calibration) -> the spawn (or a "modify") has
-    "cel", e.g. "cel": {"baseColor": "#38bdf8", "shadowColor": "#1e3a8a", "rimPower": 3.5}.
+    "cel", e.g. "cel": {"baseColor": "#38bdf8", "shadowColor": "#1e3a8a", "rimPower": 3.5,
+    "dissolve": 0.35, "dissolveEdgeColor": "#f472b6"} for spectral dissolve looks.
     Headless QA verifies calibration presence + budget, never taste — true aesthetics
     stay critic-owned.
   - "Tween"/"TopDownMovement" behavior components -> the spawn (or a "modify") has

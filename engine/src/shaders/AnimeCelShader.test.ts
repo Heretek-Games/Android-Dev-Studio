@@ -32,4 +32,19 @@ describe('AnimeCelShader — multi-pass anime shading parameters', () => {
     shader.applyShader(); // must not throw without a gameObject/mesh
     assert.strictEqual(shader.customMaterial, null);
   });
+
+  test('dissolve defaults off and clamps to unit range', () => {
+    const plain = new AnimeCelShader();
+    assert.strictEqual(plain.dissolve, 0);
+    const hot = new AnimeCelShader({ dissolve: 5, dissolveEdgeColor: '#f472b6', dissolveScale: 4 });
+    assert.strictEqual(hot.dissolve, 1);
+    assert.strictEqual(`#${hot.dissolveEdgeColor.getHexString()}`, '#f472b6');
+    assert.strictEqual(hot.dissolveScale, 4);
+    const json = hot.toJSON();
+    assert.strictEqual(json.dissolve, 1);
+    const restored = new AnimeCelShader();
+    restored.fromJSON(JSON.parse(JSON.stringify(json)));
+    assert.strictEqual(restored.dissolve, 1);
+    assert.strictEqual(`#${restored.dissolveEdgeColor.getHexString()}`, '#f472b6');
+  });
 });

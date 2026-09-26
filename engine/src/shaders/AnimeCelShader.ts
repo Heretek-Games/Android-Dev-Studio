@@ -11,6 +11,14 @@ export interface AnimeCelShaderOptions {
   lightDirection?: THREE.Vector3;
   /** Probe-baked bounce tint added to the diffuse (Track 2.1). Default black. */
   ambient?: [number, number, number];
+  /** Spectral dissolve threshold 0..1, 0 = off (Track 2.5 JSON-params gate). */
+  dissolve?: number;
+  /** Dissolve edge width. Default 0.08. */
+  dissolveEdge?: number;
+  /** Dissolve edge glow color. Default '#f472b6'. */
+  dissolveEdgeColor?: string;
+  /** Object-space noise frequency. Default 3. */
+  dissolveScale?: number;
 }
 
 /**
@@ -27,6 +35,10 @@ export class AnimeCelShader extends Component {
   public rimPower: number;
   public lightDirection: THREE.Vector3;
   public ambient: THREE.Color;
+  public dissolve: number;
+  public dissolveEdge: number;
+  public dissolveEdgeColor: THREE.Color;
+  public dissolveScale: number;
 
   public customMaterial: THREE.ShaderMaterial | null = null;
   public outlineMesh: THREE.Mesh | null = null;
@@ -42,6 +54,10 @@ export class AnimeCelShader extends Component {
     this.lightDirection = options?.lightDirection ?? new THREE.Vector3(0.5, 1.0, 0.75).normalize();
     const ambient = options?.ambient ?? [0, 0, 0];
     this.ambient = new THREE.Color(ambient[0], ambient[1], ambient[2]);
+    this.dissolve = Math.min(1, Math.max(0, options?.dissolve ?? 0));
+    this.dissolveEdge = Math.max(0.001, options?.dissolveEdge ?? 0.08);
+    this.dissolveEdgeColor = new THREE.Color(options?.dissolveEdgeColor ?? '#f472b6');
+    this.dissolveScale = Math.max(0.1, options?.dissolveScale ?? 3);
   }
 
   public override start(): void {
@@ -63,16 +79,22 @@ export class AnimeCelShader extends Component {
         uRimColor: { value: this.rimColor },
         uRimPower: { value: this.rimPower },
         uLightDir: { value: this.lightDirection },
-        uAmbient: { value: this.ambient }
+        uAmbient: { value: this.ambient },
+        uDissolve: { value: this.dissolve },
+        uDissolveEdge: { value: this.dissolveEdge },
+        uDissolveEdgeColor: { value: this.dissolveEdgeColor },
+        uDissolveScale: { value: this.dissolveScale }
       },
       vertexShader: `
         varying vec3 vNormal;
         varying vec3 vViewDir;
+        varying vec3 vLocalPos;
 
         void main() {
           vNormal = normalize(normalMatrix * normal);
           vec4 worldPos = modelMatrix * vec4(position, 1.0);
           vViewDir = normalize(cameraPosition - worldPos.xyz);
+          vLocalPos = position;
           gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
         }
       `,
@@ -83,11 +105,25 @@ export class AnimeCelShader extends Component {
         uniform float uRimPower;
         uniform vec3 uLightDir;
         uniform vec3 uAmbient;
+        uniform float uDissolve;
+        uniform float uDissolveEdge;
+        uniform vec3 uDissolveEdgeColor;
+        uniform float uDissolveScale;
 
         varying vec3 vNormal;
         varying vec3 vViewDir;
+        varying vec3 vLocalPos;
+
+        // Texture-free hash dissolve (no sampler: headless-testable uniforms).
+        float dissolveHash(vec3 p) {
+          vec3 cell = floor(p * uDissolveScale);
+          return fract(sin(dot(cell, vec3(12.9898, 78.233, 37.719))) * 43758.5453);
+        }
 
         void main() {
+          float hash = dissolveHash(vLocalPos);
+          if (hash < uDissolve) discard;
+
           // Diffuse lighting
           float nDotL = dot(vNormal, normalize(uLightDir));
           
@@ -99,6 +135,10 @@ export class AnimeCelShader extends Component {
           float rim = 1.0 - max(0.0, dot(vNormal, vViewDir));
           float rimFactor = pow(rim, uRimPower) * diffuseFactor;
           vec3 finalColor = diffuse + uRimColor * rimFactor;
+
+          // Spectral edge glow near the dissolve front (off when uDissolve=0).
+          float edge = (1.0 - smoothstep(uDissolve, uDissolve + uDissolveEdge, hash)) * step(0.001, uDissolve);
+          finalColor = mix(finalColor, uDissolveEdgeColor, edge);
 
           gl_FragColor = vec4(finalColor, 1.0);
         }
@@ -161,7 +201,11 @@ export class AnimeCelShader extends Component {
       outlineColor: '#' + this.outlineColor.getHexString(),
       outlineThickness: this.outlineThickness,
       rimPower: this.rimPower,
-      ambient: [this.ambient.r, this.ambient.g, this.ambient.b]
+      ambient: [this.ambient.r, this.ambient.g, this.ambient.b],
+      dissolve: this.dissolve,
+      dissolveEdge: this.dissolveEdge,
+      dissolveEdgeColor: '#' + this.dissolveEdgeColor.getHexString(),
+      dissolveScale: this.dissolveScale
     };
   }
 
@@ -173,6 +217,10 @@ export class AnimeCelShader extends Component {
     if (typeof data.outlineColor === 'string') this.outlineColor.set(data.outlineColor);
     if (data.outlineThickness !== undefined) this.outlineThickness = data.outlineThickness;
     if (data.rimPower !== undefined) this.rimPower = data.rimPower;
+    if (typeof data.dissolve === 'number') this.dissolve = Math.min(1, Math.max(0, data.dissolve));
+    if (typeof data.dissolveEdge === 'number') this.dissolveEdge = data.dissolveEdge;
+    if (typeof data.dissolveEdgeColor === 'string') this.dissolveEdgeColor.set(data.dissolveEdgeColor);
+    if (typeof data.dissolveScale === 'number') this.dissolveScale = data.dissolveScale;
     if (Array.isArray(data.ambient) && data.ambient.length >= 3) {
       this.ambient.setRGB(Number(data.ambient[0]) || 0, Number(data.ambient[1]) || 0, Number(data.ambient[2]) || 0);
     }
