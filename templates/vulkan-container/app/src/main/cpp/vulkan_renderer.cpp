@@ -967,7 +967,9 @@ void VulkanRenderer::recordFrame(VkCommandBuffer cmd, uint32_t imageIndex, bool 
   // slower than the frame loop, the next frame's reset zeroed the current
   // frame's cull output before its draw consumed it, so scene draws executed
   // with instanceCount 0 (terrain-only captures on-display and in readback).
-  // GPU-ordered fills cannot race: the barrier chains fill -> cull -> draw.
+  // Intra-submission ordering comes from the barrier chain (fill -> cull -> draw);
+  // the cross-submission race is fixed by moving the reset into queue-ordered work
+  // (same-queue submissions execute in order), so a later frame cannot zero an earlier one.
   // Layout pinned by host test + static_asserts below (VkDrawIndexedIndirectCommand).
   static_assert(sizeof(IndirectDrawCommand) == 20, "indirect stride must be 20 bytes");
   static_assert(offsetof(IndirectDrawCommand, instanceCount) == 4,
@@ -982,15 +984,17 @@ void VulkanRenderer::recordFrame(VkCommandBuffer cmd, uint32_t imageIndex, bool 
     VkBufferMemoryBarrier fillBarrier{};
     fillBarrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
     fillBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    fillBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+    fillBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT |
+                                    VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
     fillBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     fillBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     fillBarrier.buffer = indirectBuffer_;
     fillBarrier.offset = 0;
     fillBarrier.size = VK_WHOLE_SIZE;
     vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT,
-                         VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, 1, &fillBarrier,
-                         0, nullptr);
+                         VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT |
+                             VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT,
+                         0, 0, nullptr, 1, &fillBarrier, 0, nullptr);
   }
 
   vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, cullPipeline_);
