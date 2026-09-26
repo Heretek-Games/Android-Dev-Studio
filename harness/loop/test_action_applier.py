@@ -2256,3 +2256,89 @@ class PurityAndGateTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class MeleeQuestBossTests(unittest.TestCase):
+    """Track E.4: the loop speaks Genshin commissions (melee + boss + quest)."""
+
+    def test_game_melee_boss_quest_apply(self):
+        scene, result = apply_actions(
+            base_scene(),
+            [
+                {
+                    "type": "game",
+                    "config": {
+                        "mode": "waves",
+                        "playerName": "Hero",
+                        "totalWaves": 2,
+                        "enemiesPerWave": [2, 1],
+                        "melee": {
+                            "damage": 40,
+                            "range": 3.5,
+                            "arcDegrees": 120,
+                            "element": "Hydro",
+                            "swingEveryFrames": 15,
+                        },
+                        "boss": {
+                            "wave": 2,
+                            "name": "Tyrant",
+                            "health": 240,
+                            "telegraph": {"windupSeconds": 0.6},
+                        },
+                        "quest": {
+                            "id": "q",
+                            "stages": [
+                                {
+                                    "id": "audience",
+                                    "objectives": [
+                                        {"id": "meet", "kind": "flag", "target": "greet"}
+                                    ],
+                                },
+                                {
+                                    "id": "slay",
+                                    "objectives": [
+                                        {"id": "k", "kind": "kills", "target": "any", "count": 3}
+                                    ],
+                                },
+                            ],
+                        },
+                    },
+                }
+            ],
+        )
+        self.assertEqual(result.applied, 1)
+        game = scene["game"]
+        self.assertEqual(game["enemiesPerWave"], [2, 1])
+        self.assertEqual(game["melee"]["element"], "Hydro")
+        self.assertEqual(game["boss"]["name"], "Tyrant")
+        self.assertEqual(len(game["quest"]["stages"]), 2)
+
+    def test_game_melee_quest_boss_rejections(self):
+        for bad, hint in (
+            ({"mode": "waves", "melee": {"element": "Fire"}}, "element"),
+            ({"mode": "waves", "melee": {"damage": -5}}, "damage"),
+            ({"mode": "waves", "melee": {"frobnicate": 1}}, "frobnicate"),
+            ({"mode": "waves", "boss": {"name": "NoWave"}}, "wave"),
+            ({"mode": "waves", "boss": {"wave": 0}}, "wave"),
+            ({"mode": "waves", "boss": {"wave": 2, "size": [1, -1, 1]}}, "size"),
+            ({"mode": "waves", "boss": {"wave": 2, "telegraph": {"windupSeconds": -1}}}, "windupSeconds"),
+            ({"mode": "waves", "quest": {"id": "q", "stages": []}}, "stages"),
+            ({"mode": "waves", "quest": {"id": "q", "stages": [{"id": "a", "objectives": []}]}}, "objectives"),
+            (
+                {"mode": "waves", "quest": {"id": "q", "stages": [{"id": "a", "objectives": [{"id": "x", "kind": "vibes", "target": "y"}]}]}},
+                "kind",
+            ),
+            ({"mode": "waves", "enemiesPerWave": [2, 0]}, "enemiesPerWave"),
+            ({"mode": "waves", "enemiesPerWave": []}, "enemiesPerWave"),
+        ):
+            _, result = apply_actions(base_scene(), [{"type": "game", "config": bad}])
+            self.assertEqual(result.invalid, 1, f"should reject {bad!r}")
+            self.assertIn(hint, result.outcomes[0]["detail"], bad)
+
+    def test_scalar_enemies_per_wave_still_applies(self):
+        scene, result = apply_actions(
+            base_scene(),
+            [{"type": "game", "config": {"mode": "waves", "playerName": "H", "enemiesPerWave": 3}}],
+        )
+        self.assertEqual(result.applied, 1)
+        self.assertEqual(scene["game"]["enemiesPerWave"], 3.0)

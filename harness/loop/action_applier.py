@@ -1408,6 +1408,16 @@ def _validate_game(
                 fail(f"game 'playerName' must be a non-empty string (got {item!r})")
                 return None
             normalized[key] = item.strip()
+        elif key == "enemiesPerWave" and isinstance(item, list):
+            # Track E.4: per-wave counts (boss waves spawn a single tyrant).
+            # Carved out BEFORE the GAME_NUMERICS branch, which takes scalars.
+            if not item or not all(isinstance(n, int) and n >= 1 for n in item):
+                fail(
+                    "game 'enemiesPerWave' array must be non-empty positive integers "
+                    f"(got {item!r})"
+                )
+                return None
+            normalized[key] = list(item)
         elif key in GAME_NUMERICS:
             if not _is_finite_number(item) or item <= 0:
                 fail(f"game '{key}' must be a positive finite number (got {item!r})")
@@ -1420,6 +1430,21 @@ def _validate_game(
                 )
                 return None
             normalized[key] = item
+        elif key == "melee":
+            melee = _validate_game_melee(item, errors)
+            if melee is None:
+                return None
+            normalized[key] = melee
+        elif key == "boss":
+            boss = _validate_game_boss(item, errors)
+            if boss is None:
+                return None
+            normalized[key] = boss
+        elif key == "quest":
+            quest = _validate_game_quest(item, errors)
+            if quest is None:
+                return None
+            normalized[key] = quest
         elif key == "enemy":
             enemy = _validate_game_enemy(item, errors)
             if enemy is None:
@@ -1437,7 +1462,8 @@ def _validate_game(
         else:
             fail(
                 f"unknown game key '{key}' (allowed: mode, playerName, "
-                f"{sorted(GAME_NUMERICS)}, hitElement, enemy, settlement)"
+                f"{sorted(GAME_NUMERICS)}, hitElement, enemy, settlement, "
+                "enemiesPerWave array, melee, boss, quest)"
             )
             return None
     return normalized
@@ -1522,6 +1548,201 @@ def _validate_game_enemy(
             )
             return None
     return normalized
+
+
+def _validate_game_melee(
+    value: Any, errors: Optional[List[str]] = None
+) -> Optional[Dict[str, Any]]:
+    """Melee configs pass to the QA runner (spec.game.melee): the player swings
+    a real MeleeHitbox instead of hitscan fire. All fields optional; numerics
+    must be positive finite, element a Genshin type. Unknown keys rejected."""
+
+    def fail(reason: str) -> None:
+        if errors is not None:
+            errors.append(reason)
+        return None
+
+    if not isinstance(value, dict):
+        fail("game 'melee' must be an object")
+        return None
+    normalized: Dict[str, Any] = {}
+    for key, item in value.items():
+        if key in (
+            "damage",
+            "range",
+            "arcDegrees",
+            "gauge",
+            "swingEveryFrames",
+            "invulnSeconds",
+        ):
+            if not _is_finite_number(item) or item <= 0:
+                fail(
+                    f"game melee '{key}' must be a positive finite number (got {item!r})"
+                )
+                return None
+            normalized[key] = float(item)
+        elif key == "element":
+            if item not in GAME_ELEMENTS:
+                fail(
+                    f"game melee 'element' must be one of {sorted(GAME_ELEMENTS)} (got {item!r})"
+                )
+                return None
+            normalized[key] = item
+        else:
+            fail(
+                "unknown game melee key "
+                f"'{key}' (allowed: damage, range, arcDegrees, element, gauge, swingEveryFrames, invulnSeconds)"
+            )
+            return None
+    return normalized
+
+
+def _validate_game_boss(
+    value: Any, errors: Optional[List[str]] = None
+) -> Optional[Dict[str, Any]]:
+    """Wave-boss overrides pass to the QA runner (spec.game.boss): tougher pool,
+    bigger frame, live telegraph. `wave` (1-based) is required; everything else
+    optional. Unknown keys rejected."""
+
+    def fail(reason: str) -> None:
+        if errors is not None:
+            errors.append(reason)
+        return None
+
+    if not isinstance(value, dict):
+        fail("game 'boss' must be an object")
+        return None
+    if not isinstance(value.get("wave"), int) or value["wave"] < 1:
+        fail(f"game boss 'wave' must be a positive integer (got {value.get('wave')!r})")
+        return None
+    normalized: Dict[str, Any] = {"wave": value["wave"]}
+    for key, item in value.items():
+        if key == "wave":
+            continue
+        if key == "name":
+            if not isinstance(item, str) or not item.strip():
+                fail(f"game boss 'name' must be a non-empty string (got {item!r})")
+                return None
+            normalized[key] = item.strip()
+        elif key in ("health", "strikeDamage", "strikeRange"):
+            if not _is_finite_number(item) or item <= 0:
+                fail(
+                    f"game boss '{key}' must be a positive finite number (got {item!r})"
+                )
+                return None
+            normalized[key] = float(item)
+        elif key == "size":
+            vec = _vec3(item)
+            if vec is None or any(v <= 0 for v in vec):
+                fail(f"game boss 'size' must be 3 positive numbers (got {item!r})")
+                return None
+            normalized[key] = vec
+        elif key == "color":
+            if not _is_color(item):
+                fail(f"game boss 'color' must be #rgb or #rrggbb (got {item!r})")
+                return None
+            normalized[key] = item
+        elif key == "telegraph":
+            if not isinstance(item, dict):
+                fail("game boss 'telegraph' must be an object")
+                return None
+            tell: Dict[str, Any] = {}
+            for tkey, titem in item.items():
+                if tkey not in ("windupSeconds", "strikeSeconds", "recoverSeconds"):
+                    fail(
+                        "unknown game boss telegraph key "
+                        f"'{tkey}' (allowed: windupSeconds, strikeSeconds, recoverSeconds)"
+                    )
+                    return None
+                if not _is_finite_number(titem) or titem < 0:
+                    fail(
+                        f"game boss telegraph '{tkey}' must be a non-negative number (got {titem!r})"
+                    )
+                    return None
+                tell[tkey] = float(titem)
+            normalized[key] = tell
+        else:
+            fail(
+                "unknown game boss key "
+                f"'{key}' (allowed: wave, name, health, size, color, telegraph, strikeDamage, strikeRange)"
+            )
+            return None
+    return normalized
+
+
+QUEST_OBJECTIVE_KINDS = {"flag", "kills", "reactions", "phase", "stage"}
+
+
+def _validate_game_quest(
+    value: Any, errors: Optional[List[str]] = None
+) -> Optional[Dict[str, Any]]:
+    """Quest chains pass to the QA runner (spec.quest) and engine.Quest: ordered
+    stages of objectives over flags/kills/reactions/phase. Unknown kinds and
+    empty ids/targets are rejected so repair sees the cause."""
+
+    def fail(reason: str) -> None:
+        if errors is not None:
+            errors.append(reason)
+        return None
+
+    if not isinstance(value, dict):
+        fail("game 'quest' must be an object with id + stages")
+        return None
+    quest_id = value.get("id")
+    if not isinstance(quest_id, str) or not quest_id.strip():
+        fail("game quest 'id' must be a non-empty string")
+        return None
+    stages = value.get("stages")
+    if not isinstance(stages, list) or not stages:
+        fail("game quest 'stages' must be a non-empty array")
+        return None
+    out_stages = []
+    for stage in stages:
+        if not isinstance(stage, dict):
+            fail("game quest stages must be objects")
+            return None
+        stage_id = stage.get("id")
+        if not isinstance(stage_id, str) or not stage_id.strip():
+            fail("game quest stage 'id' must be a non-empty string")
+            return None
+        objectives = stage.get("objectives")
+        if not isinstance(objectives, list) or not objectives:
+            fail(f"game quest stage '{stage_id}' needs a non-empty 'objectives' array")
+            return None
+        out_objectives = []
+        for objective in objectives:
+            if not isinstance(objective, dict):
+                fail("game quest objectives must be objects")
+                return None
+            if objective.get("kind") not in QUEST_OBJECTIVE_KINDS:
+                fail(
+                    "game quest objective 'kind' must be one of "
+                    f"{sorted(QUEST_OBJECTIVE_KINDS)} (got {objective.get('kind')!r})"
+                )
+                return None
+            for req in ("id", "target"):
+                if (
+                    not isinstance(objective.get(req), str)
+                    or not objective[req].strip()
+                ):
+                    fail(f"game quest objective '{req}' must be a non-empty string")
+                    return None
+            out_objective = {
+                "id": objective["id"].strip(),
+                "kind": objective["kind"],
+                "target": objective["target"].strip(),
+            }
+            if "count" in objective:
+                if not _is_finite_number(objective["count"]) or objective["count"] < 1:
+                    fail(
+                        "game quest objective 'count' must be >= 1 "
+                        f"(got {objective['count']!r})"
+                    )
+                    return None
+                out_objective["count"] = objective["count"]
+            out_objectives.append(out_objective)
+        out_stages.append({"id": stage_id.strip(), "objectives": out_objectives})
+    return {"id": quest_id.strip(), "stages": out_stages}
 
 
 def _validate_elemental(

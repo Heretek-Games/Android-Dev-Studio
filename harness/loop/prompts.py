@@ -164,6 +164,18 @@ ACTION_SCHEMA = """Action vocabulary (a JSON array named "actions"):
      every placement plus margin (e.g. 2 houses + 1 farm needs startingGold >= 190),
      and include startingFood (farms take steps to produce). Underfunded charters
      stall at 1 placed plot with 0 population — the classic first-pass failure.
+     MELEE quests (Genshin-style): add "melee": {"damage": 40, "range": 3.5,
+     "arcDegrees": 120, "element": "Hydro", "swingEveryFrames": 15} — the hero
+     swings a real MeleeHitbox with soft lock-on instead of hitscan fire;
+     "enemiesPerWave" takes an ARRAY for per-wave counts (e.g. [2, 1]);
+     "boss": {"wave": 2, "name": "Cinder Tyrant", "health": 240,
+     "size": [2.2, 2.8, 2.2], "telegraph": {"windupSeconds": 0.6}} spawns a
+     live-telegraph boss on that wave; "quest": {"id": "q", "stages":
+     [{"id": "audience", "objectives": [{"id": "meet", "kind": "flag",
+     "target": "greet"}]}]} tracks ordered stages over flags/kills/reactions/
+     phase (kinds flag|kills|reactions|phase|stage; kills/reactions take
+     "count"). Pair quest flag targets with dialogue emitEvent eventNames or
+     visited node ids — the quest only reads what dialogue/combat produce.)
   - {"type": "dialogue", "tree": {"id": "Keeper", "startNodeId": "greet", "nodes": {
      "greet": {"id": "greet", "type": "choice", "speaker": "Keeper", "text": "...",
       "choices": [{"id": "bless", "text": "...", "nextNodeId": "blessed"}]},
