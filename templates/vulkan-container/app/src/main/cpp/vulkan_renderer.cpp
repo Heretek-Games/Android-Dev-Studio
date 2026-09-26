@@ -120,10 +120,33 @@ bool VulkanRenderer::createInstance() {
     }
   }
   if (!layers.empty()) {
-    LOGI("Vulkan validation layers: ENABLED (VK_LAYER_KHRONOS_validation found)");
     // The debug-utils extension carries the messenger that routes validation
-    // messages to logcat; without it the layer stays silent.
-    extensionList.push_back("VK_EXT_debug_utils");
+    // messages to logcat; without it the layer stays silent. Guard the
+    // enable on the extension actually being present — a layer we cannot
+    // observe is worse than none (silent false confidence).
+    uint32_t extCount = 0;
+    bool haveDebugUtils = false;
+    if (vkEnumerateInstanceExtensionProperties(nullptr, &extCount, nullptr) == VK_SUCCESS &&
+        extCount > 0) {
+      std::vector<VkExtensionProperties> exts(extCount);
+      if (vkEnumerateInstanceExtensionProperties(nullptr, &extCount, exts.data()) ==
+          VK_SUCCESS) {
+        for (const auto& ext : exts) {
+          if (std::strcmp(ext.extensionName, "VK_EXT_debug_utils") == 0) {
+            haveDebugUtils = true;
+            break;
+          }
+        }
+      }
+    }
+    if (haveDebugUtils) {
+      LOGI("Vulkan validation layers: ENABLED (VK_LAYER_KHRONOS_validation found)");
+      extensionList.push_back("VK_EXT_debug_utils");
+    } else {
+      LOGI("Vulkan validation layers: PRESENT but VK_EXT_debug_utils is missing "
+           "(layer left disabled: output could not flow)");
+      layers.clear();
+    }
   } else {
     LOGI("Vulkan validation layers: ABSENT (VK_LAYER_KHRONOS_validation not present)");
   }

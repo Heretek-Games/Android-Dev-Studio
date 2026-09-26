@@ -36,7 +36,14 @@ VALIDATION_LAYERS_URL = (
 VALIDATION_LAYER_LIB = "libVkLayer_khronos_validation.so"
 # Staged ABIs must stay in sync with abiFilters in the Tier 2 build.gradle.kts.
 VALIDATION_LAYER_ABIS = ("arm64-v8a", "x86_64")
-LAYER_CACHE_DIR = PROJECT_ROOT / "harness" / "build" / ".layer-cache"
+# Layer-download cache. The default lives under harness/build/tier2-build/
+# (covered by the root .gitignore), overridable per-run via
+# HERETEK_VALIDATION_LAYER_CACHE. Resolved at call time — not import time —
+# so tests can redirect it with the env var.
+LAYER_CACHE_ENV_VAR = "HERETEK_VALIDATION_LAYER_CACHE"
+LAYER_ARCHIVE_NAME = "android-binaries-1.4.357.0.zip"
+LAYER_DOWNLOAD_TIMEOUT_S = 60
+LAYER_DOWNLOAD_ATTEMPTS = 3
 TIER2_JNILIBS_DIR = VULKAN_CONTAINER_DIR / "app" / "src" / "main" / "jniLibs"
 
 
@@ -358,26 +365,91 @@ class AndroidApkBuilder:
                 return candidate
         return None
 
+    @staticmethod
+    def _layer_cache_dir() -> Path:
+        """Download-cache dir: env override or the (gitignored) tier2-build dir."""
+        override = os.environ.get(LAYER_CACHE_ENV_VAR)
+        if override:
+            return Path(override)
+        return VULKAN_BUILD_DIR / ".layer-cache"
+
+    def _download_layer_archive(self, dest: Path) -> Tuple[bool, str]:
+        """Fetch the layer zip with timeout + retries; cleans partial artifacts."""
+        last_error = "unknown error"
+        for attempt in range(1, LAYER_DOWNLOAD_ATTEMPTS + 1):
+            try:
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                with (
+                    urllib.request.urlopen(
+                        VALIDATION_LAYERS_URL, timeout=LAYER_DOWNLOAD_TIMEOUT_S
+                    ) as src,
+                    open(dest, "wb") as dst,
+                ):
+                    shutil.copyfileobj(src, dst)
+                if zipfile.is_zipfile(dest):
+                    return True, f"downloaded on attempt {attempt}"
+                last_error = "downloaded file is not a valid zip"
+            except Exception as e:  # network error or timeout
+                last_error = str(e) or type(e).__name__
+            try:
+                dest.unlink(missing_ok=True)
+            except OSError:
+                pass
+            self.log(
+                "Validation-layer download attempt "
+                f"{attempt}/{LAYER_DOWNLOAD_ATTEMPTS} failed "
+                f"({last_error}); retrying..."
+            )
+        return (
+            False,
+            f"Validation-layer download failed after {LAYER_DOWNLOAD_ATTEMPTS} "
+            f"attempts ({last_error}); continuing without bundled layers.",
+        )
+
+    @staticmethod
+    def clear_staged_validation_layers() -> List[str]:
+        """
+        Remove previously staged layer libraries from the Tier 2 jniLibs tree.
+        Only the exact staged filenames are touched — never anything else.
+        Returns the ABIs that had a stale file removed.
+        """
+        removed: List[str] = []
+        for abi in VALIDATION_LAYER_ABIS:
+            staged = TIER2_JNILIBS_DIR / abi / VALIDATION_LAYER_LIB
+            try:
+                if staged.is_file():
+                    staged.unlink()
+                    removed.append(abi)
+            except OSError:
+                pass
+        return removed
+
     def stage_validation_layers(self) -> Tuple[bool, str]:
         """
-        Fetch the Khronos prebuilt Android validation-layer binaries (cached
-        under harness/build/.layer-cache) and stage libVkLayer_khronos_\
-        validation.so into the Tier 2 jniLibs tree. The Android loader picks
-        up app-bundled layers automatically — no manifest needed.
+        Fetch the Khronos prebuilt Android validation-layer binaries (cached)
+        and stage libVkLayer_khronos_validation.so into the Tier 2 jniLibs
+        tree. The Android loader picks up app-bundled layers automatically —
+        no manifest needed.
 
         Returns (staged, message). A False result is non-fatal: the forced
         lookup is still compiled in and the runtime status line reports
         ABSENT, so the failure mode is observable, not silent.
         """
         try:
-            cache_zip = LAYER_CACHE_DIR / "android-binaries-1.4.357.0.zip"
+            cache_zip = self._layer_cache_dir() / LAYER_ARCHIVE_NAME
+            if cache_zip.exists() and not zipfile.is_zipfile(cache_zip):
+                self.log(
+                    "Cached validation-layer archive is corrupt; re-downloading..."
+                )
+                cache_zip.unlink(missing_ok=True)
             if not cache_zip.exists():
-                LAYER_CACHE_DIR.mkdir(parents=True, exist_ok=True)
                 self.log(
                     "Downloading Khronos validation-layer binaries "
                     f"({VALIDATION_LAYERS_URL})..."
                 )
-                urllib.request.urlretrieve(VALIDATION_LAYERS_URL, str(cache_zip))
+                ok, msg = self._download_layer_archive(cache_zip)
+                if not ok:
+                    return False, msg
             with zipfile.ZipFile(cache_zip) as archive:
                 names = set(archive.namelist())
                 staged: List[str] = []
@@ -395,6 +467,16 @@ class AndroidApkBuilder:
                         shutil.copyfileobj(src, dst)
                     staged.append(f"{abi} ({dest.stat().st_size} bytes)")
             return True, f"Staged validation layers: {', '.join(staged)}."
+        except zipfile.BadZipFile as e:
+            try:
+                (self._layer_cache_dir() / LAYER_ARCHIVE_NAME).unlink(missing_ok=True)
+            except OSError:
+                pass
+            return (
+                False,
+                f"Validation-layer archive unreadable ({e}); corrupt cache "
+                "removed, continuing without bundled layers.",
+            )
         except Exception as e:
             return (
                 False,
@@ -420,7 +502,9 @@ class AndroidApkBuilder:
         jniLibs and forces the VK_LAYER_KHRONOS_validation lookup on
         (HERETEK_FORCE_VALIDATION_LAYERS) independent of NDEBUG, building the
         native lib as RelWithDebInfo. Default False leaves the Release build
-        untouched.
+        untouched: the define is passed as OFF explicitly (the reused CMake
+        cache would otherwise leak a previous ON) and any stale staged layer
+        libraries are removed from jniLibs. Dry runs skip download/staging.
         """
         if debug_layers is None:
             debug_layers = self.debug_layers
@@ -489,17 +573,34 @@ class AndroidApkBuilder:
 
         # 2. NDK cross-compile (+ optional validation-layer staging)
         cmake_build_type = "Release"
-        cmake_force_layers: List[str] = []
         gradle_extra_args: List[str] = []
+        # Always passed explicitly: VULKAN_BUILD_DIR is reused across runs and
+        # a CMake option() never overrides an existing cache entry, so omitting
+        # the -D on the Release path would leak a previous ON into Release.
+        cmake_force_layers = [
+            "-DHERETEK_FORCE_VALIDATION_LAYERS=" + ("ON" if debug_layers else "OFF")
+        ]
         if debug_layers:
-            staged, stage_msg = self.stage_validation_layers()
-            result["validation_layers_staged"] = staged
-            self.log(stage_msg)
+            if dry_run:
+                self.log("Dry-run: skipping validation-layer download/staging.")
+            else:
+                staged, stage_msg = self.stage_validation_layers()
+                result["validation_layers_staged"] = staged
+                self.log(stage_msg)
             # RelWithDebInfo keeps NDEBUG defined (like Release) while adding
             # symbols — proving the forced lookup works independent of NDEBUG.
             cmake_build_type = "RelWithDebInfo"
-            cmake_force_layers = ["-DHERETEK_FORCE_VALIDATION_LAYERS=ON"]
             gradle_extra_args = ["-PheretekForceValidationLayers=true"]
+        elif not dry_run:
+            # A previous --debug-layers run stages layer .so files into
+            # jniLibs; a plain Release build must not silently bundle them.
+            removed = self.clear_staged_validation_layers()
+            if removed:
+                self.log(
+                    "Removed stale staged validation layers: "
+                    + ", ".join(removed)
+                    + "."
+                )
         ndk = self.find_ndk()
         if ndk is None:
             result["message"] = (
