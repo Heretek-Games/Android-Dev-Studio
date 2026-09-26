@@ -97,6 +97,15 @@ git worktree remove $WORKTREE --force
 git worktree prune
 ```
 
+### Post-merge engine-dist rebuild (on main, after the merge lands)
+
+On your `main` checkout after the merge lands, if the node touched
+`engine/src/**` and you invoke `npm --workspace=app run build` directly,
+run `npm --workspace=engine run build` first — the app typechecks against
+local `engine/dist/` (untracked), so a stale dist fails with phantom
+`TS2339`s. Root `npm run build` already sequences engine-then-app, so no
+extra step there.
+
 ## 5. Failed runs committed as evidence
 
 A node that never goes green is still committed on its branch with a
@@ -111,7 +120,9 @@ next-step) and reference it from the commit body.
 Critic sign-off (different session) + clean `rebase onto origin/main` +
 FULL suites fresh and green (`npm test` 513/108, agents 65, loop 249,
 validation/build, native host checks 66, `npm run build`). One red ⇒ no
-merge; failed runs committed as evidence with defect reports.
+merge; failed runs committed as evidence with defect reports. Post-merge:
+on `main` after an `engine/src/**` merge, see the §4 rebuild note before
+direct app builds.
 
 ## Evidence format
 
