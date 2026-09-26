@@ -50,7 +50,7 @@
 ### 2. Installation
 ```bash
 # Clone repository
-git clone https://github.com/Heretek-Games/Android-Dev-Studio.git
+git clone https://github.com/Heretek-Games/Heretek-Engine.git
 cd Android-Dev-Studio
 
 # Install monorepo dependencies

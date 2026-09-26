@@ -74,7 +74,7 @@ export const CommandPalette: React.FC<{
         hint: go.id,
         run: () => setSelectedId(go.id)
       })),
-      { id: 'docs-engine', category: 'Docs', label: 'Open engine parity program', run: () => window.open('https://github.com/Heretek-Games/Android-Dev-Studio', '_blank') },
+      { id: 'docs-engine', category: 'Docs', label: 'Open engine parity program', run: () => window.open('https://github.com/Heretek-Games/Heretek-Engine', '_blank') },
       ...(extraCommands ?? [])
     ];
     return list;
