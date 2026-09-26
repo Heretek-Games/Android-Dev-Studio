@@ -107,7 +107,7 @@ C++ touched ⇒ also the native host checks:
 
 ```bash
 cd templates/vulkan-container/app/src/main/cpp && \
-  g++ -std=c++17 -Wall -Wextra scene_loader.cpp culling.cpp terrain_mesh.cpp tests/native_scene_test.cpp \
+  g++ -std=c++17 -Wall -Wextra scene_loader.cpp culling.cpp terrain_mesh.cpp nav_bake.cpp tests/native_scene_test.cpp \
   -o /tmp/native_scene_test && /tmp/native_scene_test ../assets/scene.native
 ```
 
