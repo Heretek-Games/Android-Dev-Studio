@@ -1,0 +1,704 @@
+{
+  "goal": "Ember Camp Commission",
+  "rules": [
+    {
+      "type": "dialogue_reaches",
+      "tree": "Sergeant",
+      "node": "ordered",
+      "id": "order-briefing"
+    },
+    {
+      "type": "dialogue_event_fired",
+      "tree": "Sergeant",
+      "event": "commission_taken",
+      "id": "order-flag"
+    },
+    {
+      "type": "game_melee_kills_min",
+      "min": 2,
+      "id": "camp-cleared"
+    },
+    {
+      "type": "game_melee_reactions_min",
+      "min": 1,
+      "id": "melt-reactions"
+    },
+    {
+      "type": "quest_complete",
+      "id": "quest-complete"
+    },
+    {
+      "type": "draw_call_budget",
+      "max": 100,
+      "id": "draw-budget"
+    },
+    {
+      "type": "fps_min",
+      "min": 30,
+      "id": "sim-fps"
+    }
+  ],
+  "verdict": "unresolved",
+  "iterations": [
+    {
+      "iteration": 1,
+      "phase": "generate",
+      "visionNotes": [],
+      "llm": {
+        "model": "mimo-v2.6-flash",
+        "promptTokens": 6375,
+        "completionTokens": 4636,
+        "totalTokens": 11011,
+        "latencySeconds": 240.628,
+        "finishReason": "stop",
+        "attempts": 2
+      },
+      "parse": {
+        "strategy": "salvaged",
+        "actionCount": 19,
+        "summary": "An ember-lit military camp where the player takes Sergeant's commission via dialogue, then clears two Pyro-aura bandits with Hydro melee swings (Vaporize reactions) to complete the quest.",
+        "error": "primary parse failed (raw: Expecting ',' delimiter: line 1 column 4334 (char 4333)); salvaged complete actions"
+      },
+      "apply": {
+        "applied": 19,
+        "targetMissing": 0,
+        "invalid": 0,
+        "failed": 0,
+        "outcomes": [
+          {
+            "index": 0,
+            "type": "place",
+            "status": "applied",
+            "detail": "Place 'ember hearth' defined"
+          },
+          {
+            "index": 1,
+            "type": "place",
+            "status": "applied",
+            "detail": "Place 'north gate' defined"
+          },
+          {
+            "index": 2,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Ember Ground (box) at [0.0, -0.5, 0.0]",
+            "target": "Ember Ground"
+          },
+          {
+            "index": 3,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Player Hero (capsule) at [0.0, 0.9, 4.0]",
+            "target": "Player Hero"
+          },
+          {
+            "index": 4,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Sergeant (capsule) at [-4.0, 0.9, -2.0]",
+            "target": "Sergeant"
+          },
+          {
+            "index": 5,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Hearth Flame (cylinder) at [0.0, 1.1, 0.0]",
+            "target": "Hearth Flame"
+          },
+          {
+            "index": 6,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Hearth Stone (cylinder) at [0.0, 0.35, 0.0]",
+            "target": "Hearth Stone"
+          },
+          {
+            "index": 7,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Hearth Ring (torus) at [0.0, 0.3, 0.0]",
+            "target": "Hearth Ring"
+          },
+          {
+            "index": 8,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Field Tent A (box) at [-7.0, 1.1, -7.0]",
+            "target": "Field Tent A"
+          },
+          {
+            "index": 9,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Field Tent B (box) at [7.0, 1.0, -7.5]",
+            "target": "Field Tent B"
+          },
+          {
+            "index": 10,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Supply Crate A (box) at [6.0, 0.8, -3.0]",
+            "target": "Supply Crate A"
+          },
+          {
+            "index": 11,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Supply Crate B (box) at [7.4, 0.67, -4.4]",
+            "target": "Supply Crate B"
+          },
+          {
+            "index": 12,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Palisade Wall (box) at [0.0, 1.5, -13.0]",
+            "target": "Palisade Wall"
+          },
+          {
+            "index": 13,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Banner Pole (cylinder) at [-3.5, 2.0, -12.4]",
+            "target": "Banner Pole"
+          },
+          {
+            "index": 14,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Banner Cloth (box) at [-2.7, 3.2, -12.4]",
+            "target": "Banner Cloth"
+          },
+          {
+            "index": 15,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added directional light 'Sun' (intensity 1.7)",
+            "target": "Sun"
+          },
+          {
+            "index": 16,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added point light 'Hearth Glow' (intensity 3.5)",
+            "target": "Hearth Glow"
+          },
+          {
+            "index": 17,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added ambient light 'Sky Fill' (intensity 0.55)",
+            "target": "Sky Fill"
+          },
+          {
+            "index": 18,
+            "type": "game",
+            "status": "applied",
+            "detail": "Set waves-mode quest config for player 'Player Hero'"
+          }
+        ],
+        "appliedDescriptions": [
+          "Place 'ember hearth' defined",
+          "Place 'north gate' defined",
+          "Spawned Ember Ground (box) at [0.0, -0.5, 0.0]",
+          "Spawned Player Hero (capsule) at [0.0, 0.9, 4.0]",
+          "Spawned Sergeant (capsule) at [-4.0, 0.9, -2.0]",
+          "Spawned Hearth Flame (cylinder) at [0.0, 1.1, 0.0]",
+          "Spawned Hearth Stone (cylinder) at [0.0, 0.35, 0.0]",
+          "Spawned Hearth Ring (torus) at [0.0, 0.3, 0.0]",
+          "Spawned Field Tent A (box) at [-7.0, 1.1, -7.0]",
+          "Spawned Field Tent B (box) at [7.0, 1.0, -7.5]",
+          "Spawned Supply Crate A (box) at [6.0, 0.8, -3.0]",
+          "Spawned Supply Crate B (box) at [7.4, 0.67, -4.4]",
+          "Spawned Palisade Wall (box) at [0.0, 1.5, -13.0]",
+          "Spawned Banner Pole (cylinder) at [-3.5, 2.0, -12.4]",
+          "Spawned Banner Cloth (box) at [-2.7, 3.2, -12.4]",
+          "Added directional light 'Sun' (intensity 1.7)",
+          "Added point light 'Hearth Glow' (intensity 3.5)",
+          "Added ambient light 'Sky Fill' (intensity 0.55)",
+          "Set waves-mode quest config for player 'Player Hero'"
+        ]
+      },
+      "spatialDiff": {
+        "added": [
+          "Banner Cloth",
+          "Banner Pole",
+          "Ember Ground",
+          "Field Tent A",
+          "Field Tent B",
+          "Hearth Flame",
+          "Hearth Glow",
+          "Hearth Ring",
+          "Hearth Stone",
+          "Palisade Wall",
+          "Player Hero",
+          "Sergeant",
+          "Sky Fill",
+          "Sun",
+          "Supply Crate A",
+          "Supply Crate B"
+        ],
+        "removed": [],
+        "moved": [],
+        "resized": [],
+        "physics_changed": [],
+        "ui_changed": false,
+        "places_changed": [
+          "ember hearth",
+          "north gate"
+        ],
+        "theme_changed": false,
+        "empty": false
+      },
+      "frame": {
+        "cameraSource": "chase",
+        "cameraName": "Player Hero",
+        "cameraPosition": [
+          0.0,
+          4.4,
+          10.0
+        ],
+        "fov": 60.0,
+        "objectCount": 16,
+        "iteration": 1,
+        "path": "/home/john/Projects/Android-Dev-Studio/harness/runs/loop_runs/20260926-115144-ember-camp-commission-iter1.png",
+        "bytes": 12920
+      },
+      "gate": {
+        "valid": true,
+        "violations": []
+      },
+      "qa": {
+        "verdict": "FAILED",
+        "passed": 4,
+        "total": 7,
+        "failedRules": [
+          {
+            "id": "order-briefing",
+            "type": "dialogue_reaches",
+            "detail": "no dialogue transcript for tree \"Sergeant\""
+          },
+          {
+            "id": "order-flag",
+            "type": "dialogue_event_fired",
+            "detail": "no dialogue transcript for tree \"Sergeant\""
+          },
+          {
+            "id": "quest-complete",
+            "type": "quest_complete",
+            "detail": "no quest config in scenario"
+          }
+        ],
+        "metrics": {
+          "avgFrameTimeMs": 0.1605,
+          "p95FrameTimeMs": 0.2406,
+          "maxFrameTimeMs": 24.8416,
+          "simFpsEstimate": 6230.79,
+          "drawCallEstimate": 13,
+          "instancedBatches": 0,
+          "instancedEntities": 0,
+          "memoryHeapMb": 18.92,
+          "objectCount": 16,
+          "physicsBodyCount": 9,
+          "eventCount": 0
+        }
+      }
+    },
+    {
+      "iteration": 2,
+      "phase": "repair",
+      "visionNotes": [],
+      "llm": {
+        "model": "mimo-v2.6-flash",
+        "promptTokens": 8280,
+        "completionTokens": 2327,
+        "totalTokens": 10607,
+        "latencySeconds": 124.759,
+        "finishReason": "stop",
+        "attempts": 1
+      },
+      "parse": {
+        "strategy": "raw",
+        "actionCount": 1,
+        "summary": "Register the missing Sergeant dialogue tree whose auto-play path visits node \"ordered\" and fires emitEvent commission_taken, which also makes the quest's flag objective resolvable so the quest config is accepted.",
+        "error": null
+      },
+      "apply": {
+        "applied": 1,
+        "targetMissing": 0,
+        "invalid": 0,
+        "failed": 0,
+        "outcomes": [
+          {
+            "index": 0,
+            "type": "dialogue",
+            "status": "applied",
+            "detail": "Registered dialogue tree 'Sergeant' (4 nodes from 'greet')"
+          }
+        ],
+        "appliedDescriptions": [
+          "Registered dialogue tree 'Sergeant' (4 nodes from 'greet')"
+        ]
+      },
+      "frame": {
+        "cameraSource": "chase",
+        "cameraName": "Player Hero",
+        "cameraPosition": [
+          0.0,
+          4.4,
+          10.0
+        ],
+        "fov": 60.0,
+        "objectCount": 16,
+        "iteration": 2,
+        "path": "/home/john/Projects/Android-Dev-Studio/harness/runs/loop_runs/20260926-115144-ember-camp-commission-iter2.png",
+        "bytes": 12920
+      },
+      "gate": {
+        "valid": true,
+        "violations": []
+      },
+      "qa": {
+        "verdict": "FAILED",
+        "passed": 6,
+        "total": 7,
+        "failedRules": [
+          {
+            "id": "quest-complete",
+            "type": "quest_complete",
+            "detail": "no quest config in scenario"
+          }
+        ],
+        "metrics": {
+          "avgFrameTimeMs": 0.1281,
+          "p95FrameTimeMs": 0.1994,
+          "maxFrameTimeMs": 21.761,
+          "simFpsEstimate": 7806.11,
+          "drawCallEstimate": 13,
+          "instancedBatches": 0,
+          "instancedEntities": 0,
+          "memoryHeapMb": 17.7,
+          "objectCount": 16,
+          "physicsBodyCount": 9,
+          "eventCount": 0
+        }
+      }
+    },
+    {
+      "iteration": 3,
+      "phase": "repair",
+      "visionNotes": [],
+      "llm": {
+        "model": "mimo-v2.6-flash",
+        "promptTokens": 8342,
+        "completionTokens": 569,
+        "totalTokens": 8911,
+        "latencySeconds": 124.27,
+        "finishReason": "stop",
+        "attempts": 1
+      },
+      "parse": {
+        "strategy": "raw",
+        "actionCount": 1,
+        "summary": "Re-emit the full game config as a 'game' action so the scenario registers the quest block (the rule reads spec-level quest config, which only exists when the game action is in the patch).",
+        "error": null
+      },
+      "apply": {
+        "applied": 1,
+        "targetMissing": 0,
+        "invalid": 0,
+        "failed": 0,
+        "outcomes": [
+          {
+            "index": 0,
+            "type": "game",
+            "status": "applied",
+            "detail": "Set waves-mode quest config for player 'Player Hero'"
+          }
+        ],
+        "appliedDescriptions": [
+          "Set waves-mode quest config for player 'Player Hero'"
+        ]
+      },
+      "frame": {
+        "cameraSource": "chase",
+        "cameraName": "Player Hero",
+        "cameraPosition": [
+          0.0,
+          4.4,
+          10.0
+        ],
+        "fov": 60.0,
+        "objectCount": 16,
+        "iteration": 3,
+        "path": "/home/john/Projects/Android-Dev-Studio/harness/runs/loop_runs/20260926-115144-ember-camp-commission-iter3.png",
+        "bytes": 12920
+      },
+      "gate": {
+        "valid": true,
+        "violations": []
+      },
+      "qa": {
+        "verdict": "FAILED",
+        "passed": 6,
+        "total": 7,
+        "failedRules": [
+          {
+            "id": "quest-complete",
+            "type": "quest_complete",
+            "detail": "no quest config in scenario"
+          }
+        ],
+        "metrics": {
+          "avgFrameTimeMs": 0.1274,
+          "p95FrameTimeMs": 0.1899,
+          "maxFrameTimeMs": 21.2607,
+          "simFpsEstimate": 7849.94,
+          "drawCallEstimate": 13,
+          "instancedBatches": 0,
+          "instancedEntities": 0,
+          "memoryHeapMb": 18.03,
+          "objectCount": 16,
+          "physicsBodyCount": 9,
+          "eventCount": 0
+        }
+      }
+    },
+    {
+      "iteration": 4,
+      "phase": "repair",
+      "visionNotes": [],
+      "llm": {
+        "model": "mimo-v2.6-flash",
+        "promptTokens": 8344,
+        "completionTokens": 1831,
+        "totalTokens": 10175,
+        "latencySeconds": 75.474,
+        "finishReason": "stop",
+        "attempts": 1
+      },
+      "parse": {
+        "strategy": "raw",
+        "actionCount": 1,
+        "summary": "Re-emit the game runtime config with a fully-formed quest block (stages/objectives) so the quest_complete audit finds a quest in the scenario.",
+        "error": null
+      },
+      "apply": {
+        "applied": 1,
+        "targetMissing": 0,
+        "invalid": 0,
+        "failed": 0,
+        "outcomes": [
+          {
+            "index": 0,
+            "type": "game",
+            "status": "applied",
+            "detail": "Set waves-mode quest config for player 'Player Hero'"
+          }
+        ],
+        "appliedDescriptions": [
+          "Set waves-mode quest config for player 'Player Hero'"
+        ]
+      },
+      "frame": {
+        "cameraSource": "chase",
+        "cameraName": "Player Hero",
+        "cameraPosition": [
+          0.0,
+          4.4,
+          10.0
+        ],
+        "fov": 60.0,
+        "objectCount": 16,
+        "iteration": 4,
+        "path": "/home/john/Projects/Android-Dev-Studio/harness/runs/loop_runs/20260926-115144-ember-camp-commission-iter4.png",
+        "bytes": 12920
+      },
+      "gate": {
+        "valid": true,
+        "violations": []
+      },
+      "qa": {
+        "verdict": "FAILED",
+        "passed": 6,
+        "total": 7,
+        "failedRules": [
+          {
+            "id": "quest-complete",
+            "type": "quest_complete",
+            "detail": "no quest config in scenario"
+          }
+        ],
+        "metrics": {
+          "avgFrameTimeMs": 0.1283,
+          "p95FrameTimeMs": 0.2033,
+          "maxFrameTimeMs": 21.549,
+          "simFpsEstimate": 7792.51,
+          "drawCallEstimate": 13,
+          "instancedBatches": 0,
+          "instancedEntities": 0,
+          "memoryHeapMb": 23.74,
+          "objectCount": 16,
+          "physicsBodyCount": 9,
+          "eventCount": 0
+        }
+      }
+    }
+  ],
+  "totalTokens": 40704,
+  "totalLatencySeconds": 565.131,
+  "finalReport": {
+    "schemaVersion": 1,
+    "runner": "qa_scenario_runner.mjs",
+    "scenario": "loop_work_scene.json",
+    "goal": "Ember Camp Commission",
+    "timestamp": 1790438470.936,
+    "frames": 600,
+    "fixedDeltaSeconds": 0.016666666666666666,
+    "metrics": {
+      "avgFrameTimeMs": 0.1283,
+      "p95FrameTimeMs": 0.2033,
+      "maxFrameTimeMs": 21.549,
+      "simFpsEstimate": 7792.51,
+      "drawCallEstimate": 13,
+      "instancedBatches": 0,
+      "instancedEntities": 0,
+      "memoryHeapMb": 23.74,
+      "objectCount": 16,
+      "physicsBodyCount": 9,
+      "eventCount": 0
+    },
+    "game": {
+      "mode": "waves",
+      "phase": "won",
+      "score": 0,
+      "kills": 0,
+      "wave": 2,
+      "traveledDistance": 0,
+      "settlement": null,
+      "reactions": 0,
+      "shots": 0,
+      "maxEnemyDisplacement": 6.967
+    },
+    "dialogue": {
+      "Sergeant": {
+        "visited": [
+          "greet",
+          "ordered",
+          "dispatch"
+        ],
+        "events": [
+          "commission_taken"
+        ],
+        "error": null
+      }
+    },
+    "rules": [
+      {
+        "id": "order-briefing",
+        "type": "dialogue_reaches",
+        "pass": true,
+        "detail": "dialogue \"Sergeant\" visited \"ordered\" (path: greet -> ordered -> dispatch)"
+      },
+      {
+        "id": "order-flag",
+        "type": "dialogue_event_fired",
+        "pass": true,
+        "detail": "dialogue \"Sergeant\" fired \"commission_taken\""
+      },
+      {
+        "id": "camp-cleared",
+        "type": "game_melee_kills_min",
+        "pass": true,
+        "detail": "melee kills=3 (min 2, swings=40)"
+      },
+      {
+        "id": "melt-reactions",
+        "type": "game_melee_reactions_min",
+        "pass": true,
+        "detail": "melee reactions=3 (min 1)"
+      },
+      {
+        "id": "quest-complete",
+        "type": "quest_complete",
+        "pass": false,
+        "detail": "no quest config in scenario"
+      },
+      {
+        "id": "draw-budget",
+        "type": "draw_call_budget",
+        "pass": true,
+        "detail": "drawCallEstimate=13 (budget 100)"
+      },
+      {
+        "id": "sim-fps",
+        "type": "fps_min",
+        "pass": true,
+        "detail": "simFpsEstimate=7792.5 (min 30)"
+      }
+    ],
+    "passed": 6,
+    "total": 7,
+    "verdict": "FAILED",
+    "confidence": 0.857
+  },
+  "error": "token budget exhausted (40704 >= 40000)",
+  "workScene": "/home/john/Projects/Android-Dev-Studio/harness/scenes/loop_work_scene.json",
+  "frames": [
+    {
+      "cameraSource": "chase",
+      "cameraName": "Player Hero",
+      "cameraPosition": [
+        0.0,
+        4.4,
+        10.0
+      ],
+      "fov": 60.0,
+      "objectCount": 16,
+      "iteration": 1,
+      "path": "/home/john/Projects/Android-Dev-Studio/harness/runs/loop_runs/20260926-115144-ember-camp-commission-iter1.png",
+      "bytes": 12920
+    },
+    {
+      "cameraSource": "chase",
+      "cameraName": "Player Hero",
+      "cameraPosition": [
+        0.0,
+        4.4,
+        10.0
+      ],
+      "fov": 60.0,
+      "objectCount": 16,
+      "iteration": 2,
+      "path": "/home/john/Projects/Android-Dev-Studio/harness/runs/loop_runs/20260926-115144-ember-camp-commission-iter2.png",
+      "bytes": 12920
+    },
+    {
+      "cameraSource": "chase",
+      "cameraName": "Player Hero",
+      "cameraPosition": [
+        0.0,
+        4.4,
+        10.0
+      ],
+      "fov": 60.0,
+      "objectCount": 16,
+      "iteration": 3,
+      "path": "/home/john/Projects/Android-Dev-Studio/harness/runs/loop_runs/20260926-115144-ember-camp-commission-iter3.png",
+      "bytes": 12920
+    },
+    {
+      "cameraSource": "chase",
+      "cameraName": "Player Hero",
+      "cameraPosition": [
+        0.0,
+        4.4,
+        10.0
+      ],
+      "fov": 60.0,
+      "objectCount": 16,
+      "iteration": 4,
+      "path": "/home/john/Projects/Android-Dev-Studio/harness/runs/loop_runs/20260926-115144-ember-camp-commission-iter4.png",
+      "bytes": 12920
+    }
+  ]
+}

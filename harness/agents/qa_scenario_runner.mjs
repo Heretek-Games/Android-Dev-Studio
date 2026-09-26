@@ -801,8 +801,16 @@ function setupDialogue(spec, engine) {
  * session flow phase. Content stays data; the quest only reads.
  */
 function setupQuest(spec, engine) {
-  if (!spec.quest || typeof spec.quest !== 'object') return null;
-  const quest = new engine.Quest(spec.quest);
+  // Quest content arrives top-level (hand-authored specs) or nested under
+  // spec.game.quest (loop-generated commissions: the game action carries the
+  // chain atomically with its combat config). Both shapes feed engine.Quest.
+  const questSpec = (spec.quest && typeof spec.quest === 'object')
+    ? spec.quest
+    : (spec.game && spec.game.quest && typeof spec.game.quest === 'object'
+      ? spec.game.quest
+      : null);
+  if (!questSpec) return null;
+  const quest = new engine.Quest(questSpec);
   const stagesSeen = [];
   quest.onStage(id => stagesSeen.push(id));
   return {

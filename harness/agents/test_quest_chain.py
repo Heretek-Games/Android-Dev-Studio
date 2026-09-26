@@ -55,6 +55,17 @@ class QuestChainTests(unittest.TestCase):
         failed = [r for r in report.get("rules", []) if not r.get("pass")]
         self.assertTrue(any(r["id"] == "quest_stages" for r in failed), report)
 
+    def test_nested_game_quest_shape_completes(self):
+        # Loop-generated commissions nest the chain under game.quest; the
+        # runner must honor it exactly like top-level spec.quest.
+        spec = copy.deepcopy(load_spec())
+        spec["game"]["quest"] = spec.pop("quest")
+        proc = run_scenario(spec, extra_args=("--frames", "600"))
+        report = json.loads(proc.stdout)
+        self.assertEqual(report.get("verdict"), "SUCCEEDED", report)
+        by_id = {r["id"]: r for r in report.get("rules", [])}
+        self.assertTrue(by_id["quest_done"]["pass"], by_id["quest_done"])
+
 
 if __name__ == "__main__":
     unittest.main()
