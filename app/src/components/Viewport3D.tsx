@@ -29,7 +29,8 @@ export const Viewport3D: React.FC = () => {
     gizmoMode,
     setGizmoMode,
     snapping,
-    setCameraPosition
+    setCameraPosition,
+    setViewportFps
   } = useStudio();
   const [showDeviceFrame, setShowDeviceFrame] = useState(false);
   const [joystickActive, setJoystickActive] = useState(false);
@@ -371,8 +372,21 @@ export const Viewport3D: React.FC = () => {
     let animId: number;
     let lastCoordUpdate = 0;
     let lastCamReport = { x: 0, y: 0, z: 0 };
+    let lastFpsUpdate = 0;
+    let frameCounter = 0;
     const animate = (timestamp: number) => {
       animId = requestAnimationFrame(animate);
+      frameCounter++;
+
+      // Report viewport FPS to studio state (2 Hz) for the status bar.
+      if (timestamp - lastFpsUpdate > 500) {
+        const elapsed = (timestamp - lastFpsUpdate) / 1000;
+        if (elapsed > 0 && lastFpsUpdate > 0) {
+          setViewportFps(Math.round(frameCounter / elapsed));
+        }
+        frameCounter = 0;
+        lastFpsUpdate = timestamp;
+      }
 
       // Report camera position to studio state (throttled) for LOD/A-Life analysis
       const cam = camera.position;

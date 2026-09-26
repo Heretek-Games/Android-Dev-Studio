@@ -68,6 +68,9 @@ interface StudioStateContextType {
   /** Live viewport camera position (world units), used by LOD/A-Life analysis. */
   cameraPosition: { x: number; y: number; z: number };
   setCameraPosition: (x: number, y: number, z: number) => void;
+  /** Live viewport FPS (rounded, throttled at the source). 0 = unknown. */
+  viewportFps: number;
+  setViewportFps: (fps: number) => void;
   startPlayMode: () => void;
   pausePlayMode: () => void;
   stopPlayMode: () => void;
@@ -116,6 +119,7 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     );
   };
   const [tick, setTick] = useState<number>(0);
+  const [viewportFps, setViewportFps] = useState<number>(0);
   const [devices, setDevices] = useState<DeviceInfo[]>([]);
   const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
   const [logs, setLogs] = useState<StudioLog[]>([]);
@@ -1114,6 +1118,8 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         isPaused,
         cameraPosition,
         setCameraPosition,
+        viewportFps,
+        setViewportFps,
         startPlayMode,
         pausePlayMode,
         stopPlayMode,

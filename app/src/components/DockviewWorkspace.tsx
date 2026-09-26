@@ -9,6 +9,8 @@ import 'dockview-react/dist/styles/dockview.css';
 
 import { useStudio } from '../state/StudioState';
 import { StudioHeader } from './StudioHeader';
+import { StatusBar } from './StatusBar';
+import { CommandPalette } from './CommandPalette';
 import { Viewport3D } from './Viewport3D';
 import { Hierarchy } from './Hierarchy';
 import { Inspector } from './Inspector';
@@ -50,6 +52,21 @@ export const DockviewWorkspace: React.FC = () => {
   const { addLog } = useStudio();
   const apiRef = useRef<DockviewApi | null>(null);
   const [activePreset, setActivePreset] = useState<WorkspacePreset>('default');
+  const [paletteOpen, setPaletteOpen] = useState(false);
+
+  // Ctrl+K command palette (Track D.1); ignored inside text inputs.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const tag = (document.activeElement?.tagName || '').toLowerCase();
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        if (tag === 'input' || tag === 'textarea') return;
+        e.preventDefault();
+        setPaletteOpen(open => !open);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   // Apply workspace layout presets
   const applyPreset = useCallback((preset: WorkspacePreset, api: DockviewApi) => {
@@ -344,7 +361,17 @@ export const DockviewWorkspace: React.FC = () => {
           components={components}
           onReady={onReady}
         />
+        <CommandPalette
+          open={paletteOpen}
+          onClose={() => setPaletteOpen(false)}
+          onSelectPreset={(p) => {
+            if (apiRef.current) applyPreset(p, apiRef.current);
+          }}
+        />
       </main>
+
+      {/* Track D.1 status bar: workspace left, selection right */}
+      <StatusBar />
     </div>
   );
 };
