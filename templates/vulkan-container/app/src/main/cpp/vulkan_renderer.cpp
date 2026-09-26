@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <cstddef>
 #include <cstdio>
 #include <cstring>
 #include <fstream>
@@ -369,7 +370,8 @@ bool VulkanRenderer::createBuffers() {
     return false;
   }
   if (!createBuffer(indirectBytes,
-                    VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT,
+                    VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT |
+                        VK_BUFFER_USAGE_TRANSFER_DST_BIT,
                     &indirectBuffer_, &indirectMemory_, &indirectMapped_)) {
     return false;
   }
@@ -959,15 +961,36 @@ void VulkanRenderer::recordFrame(VkCommandBuffer cmd, uint32_t imageIndex, bool 
   cullConstants.visibleBase0 = 0;
   cullConstants.visibleBase1 = kFoliageVisibleBase;
 
-  // Reset the per-category visible counts before the culling dispatch. The
-  // indirect buffer is host-visible/mapped, so the host writes below are visible
-  // to this submission; without the reset, atomicAdd accumulates across frames
-  // and the draws reference stale/garbage visible slots.
-  if (indirectMapped_ != nullptr && indirectCommandCount_ > 0) {
-    auto* counts = static_cast<IndirectDrawCommand*>(indirectMapped_);
+  // Reset the per-category visible counts on the GPU timeline (fill + barrier
+  // ahead of the cull dispatch). Issue #7 root cause: the previous host-side
+  // memset raced with the other in-flight frame sharing this buffer — on a GPU
+  // slower than the frame loop, the next frame's reset zeroed the current
+  // frame's cull output before its draw consumed it, so scene draws executed
+  // with instanceCount 0 (terrain-only captures on-display and in readback).
+  // GPU-ordered fills cannot race: the barrier chains fill -> cull -> draw.
+  // Layout pinned by host test + static_asserts below (VkDrawIndexedIndirectCommand).
+  static_assert(sizeof(IndirectDrawCommand) == 20, "indirect stride must be 20 bytes");
+  static_assert(offsetof(IndirectDrawCommand, instanceCount) == 4,
+                "instanceCount fill offset must be 4");
+  if (indirectCommandCount_ > 0) {
     for (uint32_t i = 0; i < indirectCommandCount_; i++) {
-      counts[i].instanceCount = 0;
+      vkCmdFillBuffer(cmd, indirectBuffer_,
+                      static_cast<VkDeviceSize>(i) * sizeof(IndirectDrawCommand) +
+                          offsetof(IndirectDrawCommand, instanceCount),
+                      sizeof(uint32_t), 0);
     }
+    VkBufferMemoryBarrier fillBarrier{};
+    fillBarrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+    fillBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    fillBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+    fillBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    fillBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    fillBarrier.buffer = indirectBuffer_;
+    fillBarrier.offset = 0;
+    fillBarrier.size = VK_WHOLE_SIZE;
+    vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                         VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr, 1, &fillBarrier,
+                         0, nullptr);
   }
 
   vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, cullPipeline_);
@@ -1009,9 +1032,6 @@ void VulkanRenderer::recordFrame(VkCommandBuffer cmd, uint32_t imageIndex, bool 
   vkCmdSetViewport(cmd, 0, 1, &viewport);
   vkCmdSetScissor(cmd, 0, 1, &scissor);
 
-  vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, scenePipeline_);
-  vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipelineLayout_, 0, 1,
-                          &graphicsSet_, 0, nullptr);
   GraphicsPushConstants graphicsConstants{};
   graphicsConstants.time = timeSeconds_;                        // drives foliage wind
   graphicsConstants.foliageVisibleBase = kFoliageVisibleBase;   // category-1 slot base
@@ -1019,6 +1039,34 @@ void VulkanRenderer::recordFrame(VkCommandBuffer cmd, uint32_t imageIndex, bool 
   graphicsConstants.camPos[1] = 30.0f;
   graphicsConstants.camPos[2] = 44.0f;
   std::memcpy(graphicsConstants.viewProj, viewProj.m, sizeof(float) * 16);
+
+  // Terrain first (painter's order). This render pass has a single color
+  // attachment and no depth buffer (vulkan_swapchain.cpp: one color
+  // attachment; the graphics pipelines set no pDepthStencilState), so the
+  // last opaque draw wins every pixel it covers. Drawing terrain last buried
+  // every scene/foliage draw under identical terrain pixels, and the
+  // in-renderer readback then staged byte-identical frames across scenes
+  // (issue #7: fixed-pattern checksum 14347412957071923911 for both the
+  // 13-mesh title scene and the 3,001-instance perf scene). Background-first
+  // restores scene-dependent frames (proven on-emulator: per-scene checksums
+  // plus in-run variance from foliage wind). A depth attachment is the
+  // correct long-term fix (renderer hardening #6); until then this order is
+  // load-bearing — do not move terrain last without re-proving readback.
+  // ---- Terrain: one indirect call renders every LOD leaf ------------------
+  if (terrainDrawCount_ > 0 && terrainPipeline_ != VK_NULL_HANDLE) {
+    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, terrainPipeline_);
+    vkCmdPushConstants(cmd, terrainPipelineLayout_, VK_SHADER_STAGE_VERTEX_BIT, 0,
+                       sizeof(GraphicsPushConstants), &graphicsConstants);
+    VkDeviceSize terrainOffset = 0;
+    vkCmdBindVertexBuffers(cmd, 0, 1, &terrainVertexBuffer_, &terrainOffset);
+    vkCmdBindIndexBuffer(cmd, terrainIndexBuffer_, 0, VK_INDEX_TYPE_UINT16);
+    vkCmdDrawIndexedIndirect(cmd, terrainIndirectBuffer_, 0, terrainDrawCount_,
+                             sizeof(TerrainDrawCommand));
+  }
+
+  vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, scenePipeline_);
+  vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipelineLayout_, 0, 1,
+                          &graphicsSet_, 0, nullptr);
   vkCmdPushConstants(cmd, graphicsPipelineLayout_, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0,
                      sizeof(GraphicsPushConstants), &graphicsConstants);
 
@@ -1036,18 +1084,6 @@ void VulkanRenderer::recordFrame(VkCommandBuffer cmd, uint32_t imageIndex, bool 
                        sizeof(GraphicsPushConstants), &graphicsConstants);
     vkCmdDrawIndexedIndirect(cmd, indirectBuffer_, sizeof(IndirectDrawCommand), 1,
                              sizeof(IndirectDrawCommand));
-  }
-
-  // ---- Terrain: one indirect call renders every LOD leaf ------------------
-  if (terrainDrawCount_ > 0 && terrainPipeline_ != VK_NULL_HANDLE) {
-    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, terrainPipeline_);
-    vkCmdPushConstants(cmd, terrainPipelineLayout_, VK_SHADER_STAGE_VERTEX_BIT, 0,
-                       sizeof(GraphicsPushConstants), &graphicsConstants);
-    VkDeviceSize terrainOffset = 0;
-    vkCmdBindVertexBuffers(cmd, 0, 1, &terrainVertexBuffer_, &terrainOffset);
-    vkCmdBindIndexBuffer(cmd, terrainIndexBuffer_, 0, VK_INDEX_TYPE_UINT16);
-    vkCmdDrawIndexedIndirect(cmd, terrainIndirectBuffer_, 0, terrainDrawCount_,
-                             sizeof(TerrainDrawCommand));
   }
 
   vkCmdEndRenderPass(cmd);

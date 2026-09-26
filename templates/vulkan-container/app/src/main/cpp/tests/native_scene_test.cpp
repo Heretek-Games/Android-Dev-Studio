@@ -7,6 +7,7 @@
 #include <cassert>
 #include <cmath>
 #include <array>
+#include <cstddef>
 #include <cstdio>
 #include <string>
 
@@ -237,6 +238,18 @@ int main(int argc, char** argv) {
   CHECK(megaPlan.commands[0].instanceCount == 25000, "first batch instance count");
   CHECK(megaPlan.commands[0].firstInstance == 0, "first batch starts at instance 0");
   CHECK(megaPlan.commands[1].firstInstance == 25000, "second batch offsets past the first");
+
+  // ---- Issue #7: the GPU-timeline count reset (vkCmdFillBuffer in
+  // recordFrame) addresses instanceCount by byte offset, so this layout is
+  // load-bearing — a struct change must break here, not silently fill garbage.
+  CHECK(sizeof(IndirectDrawCommand) == 20,
+        "indirect command stride is 20 bytes (VkDrawIndexedIndirectCommand)");
+  CHECK(offsetof(IndirectDrawCommand, indexCount) == 0, "indexCount leads the command");
+  CHECK(offsetof(IndirectDrawCommand, instanceCount) == 4,
+        "instanceCount fill offset is 4 (GPU reset target)");
+  CHECK(offsetof(IndirectDrawCommand, firstIndex) == 8, "firstIndex offset is 8");
+  CHECK(offsetof(IndirectDrawCommand, vertexOffset) == 12, "vertexOffset offset is 12");
+  CHECK(offsetof(IndirectDrawCommand, firstInstance) == 16, "firstInstance offset is 16");
 
   // ---- Malformed input is rejected with a line number ----
   NativeScene broken;
