@@ -17,11 +17,17 @@
  *     [--runner <qa_scenario_runner.mjs>] [--engine <engine/dist/index.js>]
  *
  * Output: canonical JSON graph on stdout (see sceneGraphCanonical.ts).
+ *
+ * DE-DUPLICATION: this script imports the SINGLE shared canonicalizer
+ * (sceneGraphCanonical.ts — the same module dumpAdapterGraph.ts uses), so the
+ * canonical form cannot drift between dumpers. If the canonical form must
+ * change, change it there; both dumpers pick it up together.
  */
 
 import { readFileSync, realpathSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { canonicalSceneGraph } from './sceneGraphCanonical.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, '../../..');
@@ -71,11 +77,8 @@ const engine = await import(pathToFileURL(realpathSync(enginePath)).href);
 const spec = JSON.parse(readFileSync(scenarioPath, 'utf8'));
 const scene = runnerModule.buildScene(spec, engine);
 
-const graph = scene.gameObjects
-  .map((go) => ({
-    name: go.name,
-    components: go.components.map((c) => c.constructor.name).sort(),
-  }))
-  .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+// Shared canonicalizer (see sceneGraphCanonical.ts) — identical to the
+// adapter dumper's form, including normalized params.
+const graph = canonicalSceneGraph(scene);
 
 console.log(JSON.stringify(graph));
