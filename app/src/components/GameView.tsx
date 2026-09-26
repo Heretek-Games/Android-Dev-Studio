@@ -818,12 +818,17 @@ export const GameView: React.FC = () => {
         // (6) Keeper audience. Loud paths (Start/Restart) end + restart
         // the audience so the blessing (and its quest flag) is earnable
         // again; history resets on startConversation. Silent paths
-        // (Quit-to-menu, Load) end any live conversation and hide the
-        // panel instead — quitting must never pop the keeper over the
-        // menu, and loading re-applies its own saved state right after.
+        // (Quit-to-menu, Load) end any live conversation, wipe the backlog,
+        // and hide the panel instead — quitting must never pop the keeper
+        // over the menu, and loading re-applies its own saved state right
+        // after. The wipe matters: pollQuest unions getHistory() into
+        // questFlags every frame, so a stale backlog would re-add a prior
+        // run's blessing flag onto a zeroed (uninfused) blade after an
+        // older save loads.
         if (dialogue) {
           dialogue.endConversation();
           if (opts?.silent) {
+            dialogue.clearHistory();
             dialoguePanel.style.display = 'none';
           } else {
             const node = dialogue.startConversation('DungeonKeeper');

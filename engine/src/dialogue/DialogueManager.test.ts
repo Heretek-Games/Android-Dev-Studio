@@ -309,7 +309,7 @@ describe('DialogueManager — conversation history (E.4 backlog)', () => {
     dm.endConversation();
   });
 
-  it('history resets on each new conversation', () => {
+  it('endConversation preserves history; clearHistory wipes it; startConversation still resets', () => {
     const dm = new DialogueManager();
     dm.registerTree({
       id: 't',
@@ -322,7 +322,13 @@ describe('DialogueManager — conversation history (E.4 backlog)', () => {
     });
     dm.startConversation('t');
     assert.deepStrictEqual(dm.getHistory(), ['a']);
+    // Normal conversation end keeps the backlog for the per-frame quest union.
     dm.endConversation();
+    assert.deepStrictEqual(dm.getHistory(), ['a']);
+    // Explicit clear wipes it (silent Quit/Load resets).
+    dm.clearHistory();
+    assert.deepStrictEqual(dm.getHistory(), []);
+    // A fresh audience still resets as before.
     dm.startConversation('t');
     assert.deepStrictEqual(dm.getHistory(), ['a']);
     dm.endConversation();

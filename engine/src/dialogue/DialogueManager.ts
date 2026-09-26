@@ -247,6 +247,17 @@ export class DialogueManager {
     this.currentNodeId = null;
   }
 
+  /**
+   * Explicitly wipes the conversation backlog. endConversation() keeps
+   * history (quest flags union it per-frame after the audience ends), so
+   * run resets that must not inherit prior-run flags — Quit-to-menu and
+   * Load silent resets — call this. startConversation() still resets on
+   * each new audience.
+   */
+  public clearHistory(): void {
+    this.history = [];
+  }
+
   private stepToNode(nodeId: string): DialogueNode | null {
     if (!this.activeTreeId) return null;
     const tree = this.trees.get(this.activeTreeId);
