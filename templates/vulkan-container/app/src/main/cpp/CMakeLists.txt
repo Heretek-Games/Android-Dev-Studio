@@ -25,6 +25,15 @@ if(ANDROID)
 
   target_compile_definitions(heretek_native PRIVATE HERETEK_ENABLE_VULKAN)
 
+  # apk_builder --debug-layers passes -DHERETEK_FORCE_VALIDATION_LAYERS=ON so
+  # the VK_LAYER_KHRONOS_validation lookup runs even in NDEBUG builds.
+  # Default OFF: Release builds skip the lookup entirely (unchanged behavior).
+  option(HERETEK_FORCE_VALIDATION_LAYERS
+    "Force the Vulkan validation-layer lookup even in release (NDEBUG) builds" OFF)
+  if(HERETEK_FORCE_VALIDATION_LAYERS)
+    target_compile_definitions(heretek_native PRIVATE HERETEK_FORCE_VALIDATION_LAYERS)
+  endif()
+
   find_library(log-lib log)
   target_link_libraries(heretek_native PRIVATE ${log-lib} vulkan android)
 endif()

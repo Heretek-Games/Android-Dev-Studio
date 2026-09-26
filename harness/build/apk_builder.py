@@ -10,8 +10,10 @@ import json
 import shutil
 import subprocess
 import argparse
+import urllib.request
+import zipfile
 from pathlib import Path
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Tuple
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 APP_DIR = PROJECT_ROOT / "app"
@@ -23,6 +25,20 @@ VULKAN_CPP_DIR = VULKAN_CONTAINER_DIR / "app" / "src" / "main" / "cpp"
 VULKAN_ASSETS_DIR = VULKAN_CONTAINER_DIR / "app" / "src" / "main" / "assets"
 VULKAN_BUILD_DIR = PROJECT_ROOT / "harness" / "build" / "tier2-build"
 
+# Khronos prebuilt Android validation-layer binaries (delivery path (a)).
+# The release publishes only the .zip/.tar.gz (no checksums — verified
+# 2026-09-26), so integrity is checked structurally after download: every
+# staged ABI must contain libVkLayer_khronos_validation.so.
+VALIDATION_LAYERS_URL = (
+    "https://github.com/KhronosGroup/Vulkan-ValidationLayers/releases/download/"
+    "vulkan-sdk-1.4.357.0/android-binaries-1.4.357.0.zip"
+)
+VALIDATION_LAYER_LIB = "libVkLayer_khronos_validation.so"
+# Staged ABIs must stay in sync with abiFilters in the Tier 2 build.gradle.kts.
+VALIDATION_LAYER_ABIS = ("arm64-v8a", "x86_64")
+LAYER_CACHE_DIR = PROJECT_ROOT / "harness" / "build" / ".layer-cache"
+TIER2_JNILIBS_DIR = VULKAN_CONTAINER_DIR / "app" / "src" / "main" / "jniLibs"
+
 
 class AndroidApkBuilder:
     def __init__(
@@ -31,11 +47,17 @@ class AndroidApkBuilder:
         scene_path: Optional[str] = None,
         quadtree: bool = True,
         play: Optional[str] = None,
+        debug_layers: bool = False,
     ):
+        if not isinstance(debug_layers, bool):
+            raise TypeError(
+                f"debug_layers must be bool, got {type(debug_layers).__name__}"
+            )
         self.verbose = verbose
         self.scene_path = scene_path
         self.quadtree = quadtree
         self.play = play
+        self.debug_layers = debug_layers
 
     def log(self, msg: str):
         # MCP stdio framing owns stdout; all human-readable logs go to stderr.
@@ -135,7 +157,10 @@ class AndroidApkBuilder:
         """
         if tier == 2:
             return self.build_tier2(
-                dry_run=dry_run, scene_path=self.scene_path, quadtree=self.quadtree
+                dry_run=dry_run,
+                scene_path=self.scene_path,
+                quadtree=self.quadtree,
+                debug_layers=self.debug_layers,
             )
 
         result = {
@@ -333,11 +358,56 @@ class AndroidApkBuilder:
                 return candidate
         return None
 
+    def stage_validation_layers(self) -> Tuple[bool, str]:
+        """
+        Fetch the Khronos prebuilt Android validation-layer binaries (cached
+        under harness/build/.layer-cache) and stage libVkLayer_khronos_\
+        validation.so into the Tier 2 jniLibs tree. The Android loader picks
+        up app-bundled layers automatically — no manifest needed.
+
+        Returns (staged, message). A False result is non-fatal: the forced
+        lookup is still compiled in and the runtime status line reports
+        ABSENT, so the failure mode is observable, not silent.
+        """
+        try:
+            cache_zip = LAYER_CACHE_DIR / "android-binaries-1.4.357.0.zip"
+            if not cache_zip.exists():
+                LAYER_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+                self.log(
+                    "Downloading Khronos validation-layer binaries "
+                    f"({VALIDATION_LAYERS_URL})..."
+                )
+                urllib.request.urlretrieve(VALIDATION_LAYERS_URL, str(cache_zip))
+            with zipfile.ZipFile(cache_zip) as archive:
+                names = set(archive.namelist())
+                staged: List[str] = []
+                for abi in VALIDATION_LAYER_ABIS:
+                    member = f"android-binaries-1.4.357.0/{abi}/{VALIDATION_LAYER_LIB}"
+                    if member not in names:
+                        return (
+                            False,
+                            f"Validation-layer archive has no {abi} entry "
+                            f"({member}); continuing without bundled layers.",
+                        )
+                    dest = TIER2_JNILIBS_DIR / abi / VALIDATION_LAYER_LIB
+                    dest.parent.mkdir(parents=True, exist_ok=True)
+                    with archive.open(member) as src, open(dest, "wb") as dst:
+                        shutil.copyfileobj(src, dst)
+                    staged.append(f"{abi} ({dest.stat().st_size} bytes)")
+            return True, f"Staged validation layers: {', '.join(staged)}."
+        except Exception as e:
+            return (
+                False,
+                f"Validation-layer staging failed ({e}); "
+                "continuing without bundled layers.",
+            )
+
     def build_tier2(
         self,
         dry_run: bool = False,
         scene_path: Optional[str] = None,
         quadtree: bool = True,
+        debug_layers: Optional[bool] = None,
     ) -> Dict[str, Any]:
         """
         Tier 2 native Vulkan container pipeline:
@@ -345,7 +415,19 @@ class AndroidApkBuilder:
            into the container assets
         2. Cross-compile libheretek_native.so for arm64-v8a with the NDK toolchain
         3. Attempt APK assembly when the Gradle wrapper is present
+
+        debug_layers=True stages the Khronos validation-layer binaries into
+        jniLibs and forces the VK_LAYER_KHRONOS_validation lookup on
+        (HERETEK_FORCE_VALIDATION_LAYERS) independent of NDEBUG, building the
+        native lib as RelWithDebInfo. Default False leaves the Release build
+        untouched.
         """
+        if debug_layers is None:
+            debug_layers = self.debug_layers
+        if not isinstance(debug_layers, bool):
+            raise TypeError(
+                f"debug_layers must be bool, got {type(debug_layers).__name__}"
+            )
         result = {
             "success": False,
             "tier": 2,
@@ -353,6 +435,8 @@ class AndroidApkBuilder:
             "scene_summary": None,
             "native_library": None,
             "apk_path": None,
+            "debug_layers": debug_layers,
+            "validation_layers_staged": False,
             "message": "",
         }
 
@@ -403,7 +487,19 @@ class AndroidApkBuilder:
             except Exception:
                 pass
 
-        # 2. NDK cross-compile
+        # 2. NDK cross-compile (+ optional validation-layer staging)
+        cmake_build_type = "Release"
+        cmake_force_layers: List[str] = []
+        gradle_extra_args: List[str] = []
+        if debug_layers:
+            staged, stage_msg = self.stage_validation_layers()
+            result["validation_layers_staged"] = staged
+            self.log(stage_msg)
+            # RelWithDebInfo keeps NDEBUG defined (like Release) while adding
+            # symbols — proving the forced lookup works independent of NDEBUG.
+            cmake_build_type = "RelWithDebInfo"
+            cmake_force_layers = ["-DHERETEK_FORCE_VALIDATION_LAYERS=ON"]
+            gradle_extra_args = ["-PheretekForceValidationLayers=true"]
         ndk = self.find_ndk()
         if ndk is None:
             result["message"] = (
@@ -434,8 +530,9 @@ class AndroidApkBuilder:
                 f"-DCMAKE_TOOLCHAIN_FILE={toolchain}",
                 "-DANDROID_ABI=arm64-v8a",
                 "-DANDROID_PLATFORM=android-24",
-                "-DCMAKE_BUILD_TYPE=Release",
-            ],
+                f"-DCMAKE_BUILD_TYPE={cmake_build_type}",
+            ]
+            + cmake_force_layers,
             capture_output=True,
             text=True,
         )
@@ -475,7 +572,7 @@ class AndroidApkBuilder:
             env["PATH"] = str(jdk / "bin") + os.pathsep + env.get("PATH", "")
             try:
                 subprocess.run(
-                    [str(gradlew), ":app:assembleDebug"],
+                    [str(gradlew), ":app:assembleDebug"] + gradle_extra_args,
                     cwd=str(VULKAN_CONTAINER_DIR),
                     check=True,
                     capture_output=True,
@@ -547,6 +644,13 @@ def main():
         help="Skip the terrain quadtree export (demo scenes without terrain occlusion)",
     )
     parser.add_argument(
+        "--debug-layers",
+        action="store_true",
+        help="Tier 2 only: stage the Khronos validation-layer binaries and force "
+        "the VK_LAYER_KHRONOS_validation lookup on (RelWithDebInfo native lib). "
+        "Release default is untouched.",
+    )
+    parser.add_argument(
         "--play",
         default=None,
         help="Tier 1 title boot slice (e.g. tide): ships assets/game/boot.txt "
@@ -560,6 +664,7 @@ def main():
         scene_path=args.scene,
         quadtree=not args.no_quadtree,
         play=args.play,
+        debug_layers=args.debug_layers,
     )
     res = builder.build_and_deploy(
         device_serial=args.device,

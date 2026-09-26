@@ -16,6 +16,7 @@
 #include "terrain_mesh.h"
 
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, "HeretekTier2", __VA_ARGS__)
+#define LOGW(...) __android_log_print(ANDROID_LOG_WARN, "HeretekTier2", __VA_ARGS__)
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "HeretekTier2", __VA_ARGS__)
 
 namespace heretek {
@@ -93,12 +94,20 @@ bool VulkanRenderer::createInstance() {
   appInfo.pEngineName = "HeretekNative";
   appInfo.apiVersion = VK_API_VERSION_1_1;
 
-  const char* extensions[] = {"VK_KHR_surface", "VK_KHR_android_surface"};
-
-  // Opt-in validation layers: enabled automatically in debug builds when the
-  // layer is present on the device (release builds skip the lookup entirely).
+  // Opt-in validation layers. The lookup runs in debug builds, and in ANY
+  // build when HERETEK_FORCE_VALIDATION_LAYERS is defined (apk_builder
+  // --debug-layers forces it on independent of NDEBUG). Release builds skip
+  // the lookup entirely by default. Every path emits a one-line status report
+  // so an emulator run proves whether validation output is flowing or
+  // precisely why it is absent.
   std::vector<const char*> layers;
-#ifndef NDEBUG
+  std::vector<const char*> extensionList = {"VK_KHR_surface", "VK_KHR_android_surface"};
+#if !defined(NDEBUG) || defined(HERETEK_FORCE_VALIDATION_LAYERS)
+#if defined(HERETEK_FORCE_VALIDATION_LAYERS)
+  LOGI("Vulkan validation layers: lookup FORCED on (HERETEK_FORCE_VALIDATION_LAYERS)");
+#else
+  LOGI("Vulkan validation layers: lookup enabled (debug build)");
+#endif
   uint32_t layerCount = 0;
   if (vkEnumerateInstanceLayerProperties(&layerCount, nullptr) == VK_SUCCESS && layerCount > 0) {
     std::vector<VkLayerProperties> available(layerCount);
@@ -106,18 +115,28 @@ bool VulkanRenderer::createInstance() {
     for (const auto& layer : available) {
       if (std::strcmp(layer.layerName, "VK_LAYER_KHRONOS_validation") == 0) {
         layers.push_back("VK_LAYER_KHRONOS_validation");
-        LOGI("Vulkan validation layer enabled (debug build)");
         break;
       }
     }
   }
+  if (!layers.empty()) {
+    LOGI("Vulkan validation layers: ENABLED (VK_LAYER_KHRONOS_validation found)");
+    // The debug-utils extension carries the messenger that routes validation
+    // messages to logcat; without it the layer stays silent.
+    extensionList.push_back("VK_EXT_debug_utils");
+  } else {
+    LOGI("Vulkan validation layers: ABSENT (VK_LAYER_KHRONOS_validation not present)");
+  }
+#else
+  LOGI("Vulkan validation layers: lookup skipped (release build; rebuild with "
+       "HERETEK_FORCE_VALIDATION_LAYERS=ON to force)");
 #endif
 
   VkInstanceCreateInfo createInfo{};
   createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
   createInfo.pApplicationInfo = &appInfo;
-  createInfo.enabledExtensionCount = 2;
-  createInfo.ppEnabledExtensionNames = extensions;
+  createInfo.enabledExtensionCount = static_cast<uint32_t>(extensionList.size());
+  createInfo.ppEnabledExtensionNames = extensionList.data();
   createInfo.enabledLayerCount = static_cast<uint32_t>(layers.size());
   createInfo.ppEnabledLayerNames = layers.empty() ? nullptr : layers.data();
 
@@ -125,6 +144,57 @@ bool VulkanRenderer::createInstance() {
     lastError_ = "vkCreateInstance failed";
     return false;
   }
+  if (!layers.empty()) {
+    // A missing/broken messenger must not fail init — the renderer still runs,
+    // it just cannot report validation output (the log line says so).
+    createDebugMessenger();
+  }
+  return true;
+}
+
+namespace {
+
+// Debug-messenger callback: routes validation messages to logcat under the
+// renderer tag so `adb logcat -s HeretekTier2` captures them.
+VKAPI_ATTR VkBool32 VKAPI_CALL validationCallback(
+    VkDebugUtilsMessageSeverityFlagBitsEXT severity,
+    VkDebugUtilsMessageTypeFlagsEXT /*types*/,
+    const VkDebugUtilsMessengerCallbackDataEXT* data, void* /*user*/) {
+  if (data == nullptr || data->pMessage == nullptr) return VK_FALSE;
+  if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
+    LOGE("validation: %s", data->pMessage);
+  } else if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
+    LOGW("validation: %s", data->pMessage);
+  } else {
+    LOGI("validation: %s", data->pMessage);
+  }
+  return VK_FALSE;
+}
+
+}  // namespace
+
+bool VulkanRenderer::createDebugMessenger() {
+  const auto createFn = reinterpret_cast<PFN_vkCreateDebugUtilsMessengerEXT>(
+      vkGetInstanceProcAddr(instance_, "vkCreateDebugUtilsMessengerEXT"));
+  if (createFn == nullptr) {
+    LOGE("Vulkan validation layers: VK_EXT_debug_utils enabled but "
+         "vkCreateDebugUtilsMessengerEXT is missing (output will not flow)");
+    return false;
+  }
+  VkDebugUtilsMessengerCreateInfoEXT info{};
+  info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+  info.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
+                         VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+  info.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
+                     VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
+                     VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+  info.pfnUserCallback = validationCallback;
+  if (createFn(instance_, &info, nullptr, &debugMessenger_) != VK_SUCCESS) {
+    LOGE("Vulkan validation layers: messenger creation failed (output will not flow)");
+    debugMessenger_ = VK_NULL_HANDLE;
+    return false;
+  }
+  LOGI("Vulkan validation layers: debug messenger active (validation output flows to logcat)");
   return true;
 }
 
@@ -1327,6 +1397,12 @@ void VulkanRenderer::shutdown() {
   if (device_ != VK_NULL_HANDLE) vkDestroyDevice(device_, nullptr);
   device_ = VK_NULL_HANDLE;
   queue_ = VK_NULL_HANDLE;
+  if (debugMessenger_ != VK_NULL_HANDLE) {
+    const auto destroyFn = reinterpret_cast<PFN_vkDestroyDebugUtilsMessengerEXT>(
+        vkGetInstanceProcAddr(instance_, "vkDestroyDebugUtilsMessengerEXT"));
+    if (destroyFn != nullptr) destroyFn(instance_, debugMessenger_, nullptr);
+    debugMessenger_ = VK_NULL_HANDLE;
+  }
   if (instance_ != VK_NULL_HANDLE) vkDestroyInstance(instance_, nullptr);
   instance_ = VK_NULL_HANDLE;
   physicalDevice_ = VK_NULL_HANDLE;

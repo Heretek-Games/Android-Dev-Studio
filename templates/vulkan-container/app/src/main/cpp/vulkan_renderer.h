@@ -53,6 +53,8 @@ class VulkanRenderer {
 
  private:
   bool createInstance();
+  /** Creates the debug-utils messenger that routes validation output to logcat. */
+  bool createDebugMessenger();
   bool pickPhysicalDevice();
   bool createDevice();
   bool createCommandPool();
@@ -62,6 +64,9 @@ class VulkanRenderer {
   VkShaderModule loadShader(const std::string& path);
   void recordFrame(VkCommandBuffer cmd, uint32_t imageIndex, bool capture);
   bool createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkBuffer* buffer, VkDeviceMemory* memory, void** mapped);
+
+  // Validation debug messenger (destroyed before the instance it belongs to).
+  VkDebugUtilsMessengerEXT debugMessenger_ = VK_NULL_HANDLE;
 
   VkInstance instance_ = VK_NULL_HANDLE;
   VkPhysicalDevice physicalDevice_ = VK_NULL_HANDLE;
