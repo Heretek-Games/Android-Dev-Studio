@@ -30,6 +30,7 @@ from harness.loop.action_applier import ApplyResult, apply_actions
 from harness.loop.aesthetic import evaluate_visual_rule
 from harness.loop.frame_preview import frame_metadata, render_frame_png
 from harness.loop.llm_client import LlmClient, LlmError, LlmResponse
+from harness.spatial.spatial_audit import evaluate_spatial_rule
 from harness.loop.prompts import generation_messages, repair_messages
 from harness.loop.vision import VisionResult
 from harness.validation.scene_invariants import validate_scene_invariants
@@ -219,6 +220,13 @@ def _visual_rules(rules: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         r
         for r in rules
         if isinstance(r, dict) and r.get("type") == "visual_quality_min"
+    ]
+
+
+def _spatial_rules(rules: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Scenario rules of type spatial_audit (B.1 coherence gate)."""
+    return [
+        r for r in rules if isinstance(r, dict) and r.get("type") == "spatial_audit"
     ]
 
 
@@ -599,32 +607,59 @@ class IterateLoop:
                     ]
                     if visual_audits:
                         record["visual"] = visual_audits
+                    # B.1 coherence gate: the unified spatial audit, same
+                    # advisory-unless-enforced contract as the visual gate.
+                    spatial_audits = [
+                        evaluate_spatial_rule(scene, rule)
+                        for rule in _spatial_rules(self.rules)
+                    ]
+                    if spatial_audits:
+                        record["spatial"] = spatial_audits
                     blocking = [
                         a for a in visual_audits if not a["pass"] and a["enforce"]
+                    ]
+                    blocking += [
+                        {
+                            "id": a["id"],
+                            "type": "spatial_audit",
+                            "detail": (
+                                f"spatial gate {a['passed']}/{a['total']} checks; "
+                                + "; ".join(
+                                    f"{c['check']}: {c['detail']}"[:220]
+                                    for c in a["failedChecks"][:3]
+                                )
+                            ),
+                        }
+                        for a in spatial_audits
+                        if not a["pass"] and a["enforce"]
                     ]
                     if report.get("verdict") in ("SUCCEEDED",) or (
                         report.get("total")
                         and report.get("passed") == report.get("total")
                     ):
                         if blocking:
-                            failed_rules = [
-                                {
-                                    "id": a["id"],
-                                    "type": "visual_quality_min",
-                                    "detail": (
-                                        f"visual gate {a['overall']}/{a['minScore']} on "
-                                        + ", ".join(
-                                            f"{f['axis']}={f['score']}"
-                                            for f in a["failingAxes"]
-                                        )
-                                        + "".join(
-                                            f"; {d['axis']}: {d['defect']}"[:220]
-                                            for d in a["defects"][:3]
-                                        )
-                                    ),
-                                }
-                                for a in blocking
-                            ]
+                            failed_rules = []
+                            for a in blocking:
+                                if a["type"] == "spatial_audit":
+                                    failed_rules.append(a)  # pre-formatted
+                                    continue
+                                failed_rules.append(
+                                    {
+                                        "id": a["id"],
+                                        "type": "visual_quality_min",
+                                        "detail": (
+                                            f"visual gate {a['overall']}/{a['minScore']} on "
+                                            + ", ".join(
+                                                f"{f['axis']}={f['score']}"
+                                                for f in a["failingAxes"]
+                                            )
+                                            + "".join(
+                                                f"; {d['axis']}: {d['defect']}"[:220]
+                                                for d in a["defects"][:3]
+                                            )
+                                        ),
+                                    }
+                                )
                             metrics = {}
                         else:
                             result.iterations.append(record)
