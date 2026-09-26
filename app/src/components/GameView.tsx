@@ -280,7 +280,19 @@ export const GameView: React.FC = () => {
       }
 
       const buildingMeshes = new Map<number, GameObject>();
+      // NOTE: resetTideRun() is declared further below (after the tide HUD
+      // state it resets); this closure only runs on user actions, long after
+      // boot has initialized it.
       const resetArena = () => {
+        if (isTide) {
+          resetTideRun();
+          if (vehicle) {
+            vehicle.throttle = 0;
+            vehicle.steering = 0;
+            vehicle.brake = 0;
+          }
+          return;
+        }
         for (const name of runtime!.spawner.getSpawnedNames()) {
           scene.findByName(name)?.destroy();
         }
@@ -294,14 +306,6 @@ export const GameView: React.FC = () => {
         player!.transform.setRotation(0, 0, 0);
         playerBody?.setPosition(PLAYER_START[0], PLAYER_START[1], PLAYER_START[2]);
         health?.heal(health.maxHealth);
-        if (isTide && squire) {
-          squire.transform.setPosition(2, 1.5, 2);
-          squire.getComponent(HealthComponent)?.heal(100);
-          if (party) {
-            party.update(10); // expire any swap cooldown, then restore lead
-            if (party.activeIndex !== 0) party.swapTo(0);
-          }
-        }
         if (vehicle) {
           vehicle.throttle = 0;
           vehicle.steering = 0;
@@ -400,37 +404,19 @@ export const GameView: React.FC = () => {
         onStart: () => {
           resetArena();
           runtime!.start();
-          if (dialogue && dialogueTrees) {
+          // Tide keeper audience is replayed inside resetTideRun() (run via
+          // resetArena above); this block stays dungeon-only so the tide
+          // dialogue starts exactly once.
+          if (dialogue && dialogueTrees && !isTide) {
             const node = dialogue.startConversation('DungeonKeeper');
             if (node) showDialogueNode(node);
           }
         },
         onRestart: () => {
+          // Tide slice: resetArena's tide branch runs the single
+          // resetTideRun() path (counters, quest rebuild, blades, dialogue
+          // replay, quest-bar hide, party-lead restore included).
           resetArena();
-          if (isTide) {
-            meleeKills = 0;
-            meleeReactions = 0;
-            questFlags.clear();
-            comboStage = 0;
-            lastComboAt = 0;
-            if (questSpec) quest = new Quest(questSpec as unknown as { id: string; stages: never[] });
-            lastQuestStage = -1;
-            lastQuestKills = -1;
-            lastQuestReactions = -1;
-            questBar.style.display = 'none';
-            if (blade) blade.element = undefined;
-            if (squire) {
-              const squireBlade = squire.getComponent(MeleeHitbox) ?? null;
-              if (squireBlade) squireBlade.element = 'Cryo' as never;
-            }
-            // Replay the keeper audience so the blessing (and its quest flag)
-            // is earnable again; history resets on startConversation.
-            if (dialogue) {
-              dialogue.endConversation();
-              const node = dialogue.startConversation('DungeonKeeper');
-              if (node) showDialogueNode(node);
-            }
-          }
           runtime!.restart();
         },
         onQuit: () => {
@@ -729,6 +715,65 @@ export const GameView: React.FC = () => {
           tryDodge();
         });
       }
+
+      // Tide and Cinder: the SINGLE reset path for a run. resetArena's tide
+      // branch and onRestart's tide branch both delegate here, so a restart
+      // can never drift from a fresh start (past live-fire bugs came from
+      // this scatter: stale dialogue history, orphaned quest flags, stacked
+      // DOM buttons — the tide DOM buttons stay owned by boot, which dedups
+      // [data-tide-ui] on mount).
+      // Order: (1) destroy spawned enemies, (2) hero/squire transforms +
+      // health, (3) zero melee/quest/combo/pickup counters, (4) rebuild Quest
+      // from spec, (5) reset blade elements, (6) end + restart keeper
+      // dialogue, (7) hide the quest bar, (8) restore the party lead.
+      const resetTideRun = (): void => {
+        if (!isTide) return;
+        // (1) Destroy spawned enemies.
+        for (const name of runtime!.spawner.getSpawnedNames()) {
+          scene.findByName(name)?.destroy();
+        }
+        // (2) Reset hero/squire transforms + health.
+        player!.transform.setPosition(PLAYER_START[0], PLAYER_START[1], PLAYER_START[2]);
+        player!.transform.setRotation(0, 0, 0);
+        playerBody?.setPosition(PLAYER_START[0], PLAYER_START[1], PLAYER_START[2]);
+        health?.heal(health.maxHealth);
+        if (squire) {
+          squire.transform.setPosition(2, 1.5, 2);
+          squire.getComponent(HealthComponent)?.heal(100);
+        }
+        // (3) Zero melee/quest/combo/pickup counters.
+        meleeKills = 0;
+        meleeReactions = 0;
+        questFlags.clear();
+        comboStage = 0;
+        lastComboAt = 0;
+        bloomPickups = 0;
+        lastQuestStage = -1;
+        lastQuestKills = -1;
+        lastQuestReactions = -1;
+        // (4) Rebuild the Quest from the scenario spec.
+        if (questSpec) quest = new Quest(questSpec as unknown as { id: string; stages: never[] });
+        // (5) Reset blade elements (Adventurer uninfused, Squire innate Cryo).
+        if (blade) blade.element = undefined;
+        if (squire) {
+          const squireBlade = squire.getComponent(MeleeHitbox) ?? null;
+          if (squireBlade) squireBlade.element = 'Cryo' as never;
+        }
+        // (6) End + restart the keeper audience so the blessing (and its
+        // quest flag) is earnable again; history resets on startConversation.
+        if (dialogue) {
+          dialogue.endConversation();
+          const node = dialogue.startConversation('DungeonKeeper');
+          if (node) showDialogueNode(node);
+        }
+        // (7) Hide the quest bar until the next quest poll.
+        questBar.style.display = 'none';
+        // (8) Restore the party lead (expire any swap cooldown first).
+        if (squire && party) {
+          party.update(10); // expire any swap cooldown, then restore lead
+          if (party.activeIndex !== 0) party.swapTo(0);
+        }
+      };
       (window as unknown as Record<string, unknown>).__GAME_DEBUG__ = {
         phase: () => runtime!.flow.getPhase(),
         score: () => runtime!.session.getScore(),
