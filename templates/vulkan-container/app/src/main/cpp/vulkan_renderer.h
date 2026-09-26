@@ -76,13 +76,19 @@ class VulkanRenderer {
   VulkanSwapchain swapchain_;
   VkCommandPool commandPool_ = VK_NULL_HANDLE;
   std::vector<VkCommandBuffer> commandBuffers_;
-  // Canonical per-frame-in-flight synchronisation: semaphores must not be reused
-  // while a previous frame may still wait on them, so each in-flight slot owns a
-  // pair (fences are signalled on submit and waited before reuse).
+  // Canonical per-frame-in-flight synchronisation, refined by validation
+  // defect class 5 (swapchain semaphore reuse): the ACQUIRE semaphore is
+  // signalled by vkAcquireNextImageKHR and consumed by the same frame's
+  // submit, so one per in-flight slot (fence-gated) is safe. The SIGNAL
+  // semaphore is consumed by present, and the swapchain may still reference
+  // it after the slot cycles (4 images > 2 slots), so there is one per
+  // swapchain image, indexed by the acquired imageIndex — a semaphore is
+  // then only reused once its image is re-acquired. Fences stay per slot:
+  // one submit owns one fence.
   static constexpr uint32_t kMaxFramesInFlight = 2;
   std::vector<VkFence> inFlightFences_ = std::vector<VkFence>(kMaxFramesInFlight, VK_NULL_HANDLE);
   std::array<VkSemaphore, kMaxFramesInFlight> imageAvailable_{};
-  std::array<VkSemaphore, kMaxFramesInFlight> renderFinished_{};
+  std::vector<VkSemaphore> renderFinished_;
   // Surface identity for swapchain recreation (rotation/resize/OUT_OF_DATE).
   ANativeWindow* window_ = nullptr;
   int surfaceWidth_ = 0;
@@ -102,6 +108,9 @@ class VulkanRenderer {
   VkDescriptorPool descriptorPool_ = VK_NULL_HANDLE;
   VkDescriptorSet computeSet_ = VK_NULL_HANDLE;
   VkDescriptorSet graphicsSet_ = VK_NULL_HANDLE;
+  // Set in createDevice: whether the multiDrawIndirect feature was enabled
+  // (single terrain multi-draw) or the per-leaf fallback applies.
+  bool multiDrawIndirect_ = false;
 
   // Host-visible buffers (scaffold keeps everything mappable; device-local
   // staging is the documented next optimization).

@@ -14,6 +14,7 @@
 #include "../scene_loader.h"
 #include "../terrain_mesh.h"
 #include "../vulkan_renderer.h"
+#include "../vulkan_swapchain.h"
 
 using namespace heretek;
 
@@ -292,6 +293,36 @@ int main(int argc, char** argv) {
     CHECK(stub.syncInstances(slots, xyz, 3) == 3, "stub syncInstances accepts a batch");
     CHECK(stub.syncInstances(nullptr, nullptr, 0) == 0, "stub syncInstances rejects empty");
     CHECK(stub.syncInstances(slots, xyz, -1) == 0, "stub syncInstances rejects negative count");
+  }
+
+  // ---- Validation fix 4: multi-draw vs per-leaf submission shape ----
+  CHECK(terrainDrawSubmissionCount(0, true) == 0, "draw shape: empty terrain submits nothing");
+  CHECK(terrainDrawSubmissionCount(0, false) == 0, "draw shape: empty terrain submits nothing (fallback)");
+  CHECK(terrainDrawSubmissionCount(64, true) == 1, "draw shape: feature on -> 1 multi-draw for 64 leaves");
+  CHECK(terrainDrawSubmissionCount(64, false) == 64,
+        "draw shape: feature off -> 64 single draws (valid without the feature)");
+  CHECK(terrainDrawSubmissionCount(1, false) == 1, "draw shape: single leaf needs one call either way");
+
+  // ---- Validation fix 1: compositeAlpha preference ladder ----
+  // (VUID-VkSwapchainCreateInfoKHR-compositeAlpha-01280: OPAQUE was hardcoded
+  // but the lavapipe emulator advertises INHERIT alone.)
+  {
+    using namespace swapchain_policy;
+    CHECK(chooseCompositeAlpha(kCompositeAlphaOpaque) == kCompositeAlphaOpaque,
+          "compositeAlpha: lone OPAQUE selects OPAQUE");
+    CHECK(chooseCompositeAlpha(kCompositeAlphaInherit) == kCompositeAlphaInherit,
+          "compositeAlpha: lone INHERIT selects INHERIT (lavapipe case)");
+    CHECK(chooseCompositeAlpha(kCompositeAlphaOpaque | kCompositeAlphaInherit) ==
+              kCompositeAlphaOpaque,
+          "compositeAlpha: OPAQUE outranks INHERIT");
+    CHECK(chooseCompositeAlpha(kCompositeAlphaPreMultiplied | kCompositeAlphaPostMultiplied) ==
+              kCompositeAlphaPreMultiplied,
+          "compositeAlpha: PRE_MULTIPLIED outranks POST_MULTIPLIED");
+    CHECK(chooseCompositeAlpha(kCompositeAlphaOpaque | kCompositeAlphaPreMultiplied |
+                              kCompositeAlphaPostMultiplied | kCompositeAlphaInherit) ==
+              kCompositeAlphaOpaque,
+          "compositeAlpha: full mask still prefers OPAQUE");
+    CHECK(chooseCompositeAlpha(0) == 0, "compositeAlpha: empty mask fails loudly (returns 0)");
   }
 
   std::printf("\n%s (%d failure%s)\n", failures == 0 ? "NATIVE CORE TESTS PASSED" : "NATIVE CORE TESTS FAILED",

@@ -31,6 +31,8 @@ layout(location = 1) in vec3 inNormal;
 
 layout(location = 0) out vec3 outNormal;
 layout(location = 1) out vec3 outColor;
+layout(location = 2) out vec3 outMaterial;  // x = metallic, y = roughness, z = unlit
+layout(location = 3) out vec3 outWorldPos;
 
 void main() {
     const uint instanceId = visibleBuffer.visibleIndices[pc.foliageVisibleBase + gl_InstanceIndex];
@@ -56,4 +58,9 @@ void main() {
 
     outNormal = normalize(inNormal + vec3(bend * 0.8, 0.0, bend * 0.4));
     outColor = inst.color.rgb;
+    // Interface match for scene.frag: the PBR fragment stage reads material
+    // (loc 2) and world position (loc 3); unwritten locations are a
+    // VUID-RuntimeSpirv-OpEntryPoint-08743 validation error, not a default.
+    outMaterial = inst.material.xyz;
+    outWorldPos = worldPosition;
 }

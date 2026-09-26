@@ -278,6 +278,22 @@ bool VulkanRenderer::createDevice() {
   queueInfo.pQueuePriorities = &priority;
 
   VkPhysicalDeviceFeatures features{};
+  // Validation defect class 4 (VUID-vkCmdDrawIndexedIndirect-drawCount-02718):
+  // the terrain pass issues ONE indirect call with drawCount == leaf count
+  // (64 here), which requires the multiDrawIndirect feature. Enable it when
+  // the device supports it (universal on real hardware; keeps the intended
+  // single-call path); otherwise recordFrame falls back to per-leaf single
+  // draws, which are valid without the feature.
+  VkPhysicalDeviceFeatures supported{};
+  vkGetPhysicalDeviceFeatures(physicalDevice_, &supported);
+  if (supported.multiDrawIndirect) {
+    features.multiDrawIndirect = VK_TRUE;
+    multiDrawIndirect_ = true;
+    LOGI("device feature enabled: multiDrawIndirect (single terrain multi-draw)");
+  } else {
+    multiDrawIndirect_ = false;
+    LOGW("device lacks multiDrawIndirect — terrain falls back to per-leaf single draws");
+  }
 
   VkDeviceCreateInfo createInfo{};
   createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -711,6 +727,15 @@ bool VulkanRenderer::createPipelines() {
   }
 
   // ---- Terrain pipeline (no descriptor sets; push-constant viewProj) ------
+  // Validation defect class 3 (VUID-vkCmdPushConstants-offset-01796): the
+  // terrain layout reused the scene graphicsRange (VERTEX|FRAGMENT), but the
+  // terrain push call is VERTEX-only. Terrain shaders consume push constants
+  // in the vertex stage alone (terrain.frag declares none), so the terrain
+  // layout gets its own VERTEX-only range that the call matches exactly.
+  VkPushConstantRange terrainRange{};
+  terrainRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+  terrainRange.offset = 0;
+  terrainRange.size = sizeof(GraphicsPushConstants);
   VkShaderModule terrainVertexModule = loadShader(shaderDir_ + "/terrain.vert.spv");
   VkShaderModule terrainFragmentModule = loadShader(shaderDir_ + "/terrain.frag.spv");
   if (terrainVertexModule == VK_NULL_HANDLE || terrainFragmentModule == VK_NULL_HANDLE) return false;
@@ -728,7 +753,7 @@ bool VulkanRenderer::createPipelines() {
   VkPipelineLayoutCreateInfo terrainLayout{};
   terrainLayout.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
   terrainLayout.pushConstantRangeCount = 1;
-  terrainLayout.pPushConstantRanges = &graphicsRange;
+  terrainLayout.pPushConstantRanges = &terrainRange;
   if (vkCreatePipelineLayout(device_, &terrainLayout, nullptr, &terrainPipelineLayout_) ==
       VK_SUCCESS) {
     VkGraphicsPipelineCreateInfo terrainInfo = graphicsInfo;
@@ -807,15 +832,25 @@ bool VulkanRenderer::createSurface(ANativeWindow* window, int width, int height)
   VkSemaphoreCreateInfo semaphoreInfo{};
   semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
   for (uint32_t i = 0; i < kMaxFramesInFlight; i++) {
-    if (vkCreateSemaphore(device_, &semaphoreInfo, nullptr, &imageAvailable_[i]) != VK_SUCCESS ||
-        vkCreateSemaphore(device_, &semaphoreInfo, nullptr, &renderFinished_[i]) != VK_SUCCESS) {
+    if (vkCreateSemaphore(device_, &semaphoreInfo, nullptr, &imageAvailable_[i]) != VK_SUCCESS) {
+      lastError_ = "vkCreateSemaphore failed";
+      return false;
+    }
+  }
+  // One signal semaphore per swapchain image (validation fix 5): indexed by
+  // the acquired imageIndex so reuse always follows re-acquire of that image.
+  renderFinished_.assign(swapchain_.imageCount(), VK_NULL_HANDLE);
+  for (auto& semaphore : renderFinished_) {
+    if (vkCreateSemaphore(device_, &semaphoreInfo, nullptr, &semaphore) != VK_SUCCESS) {
       lastError_ = "vkCreateSemaphore failed";
       return false;
     }
   }
   currentFrame_ = 0;
-  LOGI("createSurface complete: swapchain=%p images=%u commandBuffers=%zu framesInFlight=%u",
-       (void*)swapchain_.handle(), swapchain_.imageCount(), commandBuffers_.size(), kMaxFramesInFlight);
+  LOGI("createSurface complete: swapchain=%p images=%u commandBuffers=%zu framesInFlight=%u "
+       "acquireSemaphores=%u presentSemaphores=%zu",
+       (void*)swapchain_.handle(), swapchain_.imageCount(), commandBuffers_.size(), kMaxFramesInFlight,
+       kMaxFramesInFlight, renderFinished_.size());
   return true;
 }
 
@@ -1057,6 +1092,8 @@ void VulkanRenderer::recordFrame(VkCommandBuffer cmd, uint32_t imageIndex, bool 
   // correct long-term fix (renderer hardening #6); until then this order is
   // load-bearing — do not move terrain last without re-proving readback.
   // ---- Terrain: one indirect call renders every LOD leaf ------------------
+  // (or one single-draw per leaf where multiDrawIndirect is unavailable —
+  // see terrainDrawSubmissionCount; both shapes are validation-clean).
   if (terrainDrawCount_ > 0 && terrainPipeline_ != VK_NULL_HANDLE) {
     vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, terrainPipeline_);
     vkCmdPushConstants(cmd, terrainPipelineLayout_, VK_SHADER_STAGE_VERTEX_BIT, 0,
@@ -1064,8 +1101,16 @@ void VulkanRenderer::recordFrame(VkCommandBuffer cmd, uint32_t imageIndex, bool 
     VkDeviceSize terrainOffset = 0;
     vkCmdBindVertexBuffers(cmd, 0, 1, &terrainVertexBuffer_, &terrainOffset);
     vkCmdBindIndexBuffer(cmd, terrainIndexBuffer_, 0, VK_INDEX_TYPE_UINT16);
-    vkCmdDrawIndexedIndirect(cmd, terrainIndirectBuffer_, 0, terrainDrawCount_,
-                             sizeof(TerrainDrawCommand));
+    if (multiDrawIndirect_) {
+      vkCmdDrawIndexedIndirect(cmd, terrainIndirectBuffer_, 0, terrainDrawCount_,
+                               sizeof(TerrainDrawCommand));
+    } else {
+      for (uint32_t leaf = 0; leaf < terrainDrawCount_; leaf++) {
+        vkCmdDrawIndexedIndirect(cmd, terrainIndirectBuffer_,
+                                 static_cast<VkDeviceSize>(leaf) * sizeof(TerrainDrawCommand),
+                                 1, sizeof(TerrainDrawCommand));
+      }
+    }
   }
 
   vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, scenePipeline_);
@@ -1145,8 +1190,9 @@ void VulkanRenderer::renderFrame() {
     return;
   }
 
-  // Each in-flight slot owns its synchronisation objects; wait for that slot's
-  // fence before reusing its semaphores (the previous frame may still signal them).
+  // Slot fence gates the per-slot acquire semaphore; the per-image signal
+  // semaphore (renderFinished_[imageIndex]) is safe by construction — see
+  // the member comment in vulkan_renderer.h.
   const uint32_t frame = currentFrame_ % kMaxFramesInFlight;
   vkWaitForFences(device_, 1, &inFlightFences_[frame], VK_TRUE, UINT64_MAX);
 
@@ -1185,7 +1231,7 @@ void VulkanRenderer::renderFrame() {
   submit.pWaitDstStageMask = waitStages;
   submit.commandBufferCount = 1;
   submit.pCommandBuffers = &cmd;
-  VkSemaphore signalSemaphores[] = {renderFinished_[frame]};
+  VkSemaphore signalSemaphores[] = {renderFinished_[imageIndex]};
   submit.signalSemaphoreCount = 1;
   submit.pSignalSemaphores = signalSemaphores;
 
@@ -1255,9 +1301,11 @@ bool VulkanRenderer::recreateSwapchain() {
   for (uint32_t i = 0; i < kMaxFramesInFlight; i++) {
     if (imageAvailable_[i] != VK_NULL_HANDLE) vkDestroySemaphore(device_, imageAvailable_[i], nullptr);
     imageAvailable_[i] = VK_NULL_HANDLE;
-    if (renderFinished_[i] != VK_NULL_HANDLE) vkDestroySemaphore(device_, renderFinished_[i], nullptr);
-    renderFinished_[i] = VK_NULL_HANDLE;
   }
+  for (auto semaphore : renderFinished_) {
+    if (semaphore != VK_NULL_HANDLE) vkDestroySemaphore(device_, semaphore, nullptr);
+  }
+  renderFinished_.clear();
   if (!commandBuffers_.empty()) {
     vkFreeCommandBuffers(device_, commandPool_, static_cast<uint32_t>(commandBuffers_.size()),
                          commandBuffers_.data());
@@ -1298,7 +1346,11 @@ bool VulkanRenderer::recreateSwapchain() {
   semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
   for (uint32_t i = 0; i < kMaxFramesInFlight; i++) {
     vkCreateSemaphore(device_, &semaphoreInfo, nullptr, &imageAvailable_[i]);
-    vkCreateSemaphore(device_, &semaphoreInfo, nullptr, &renderFinished_[i]);
+  }
+  // Per-image signal semaphores (validation fix 5), sized to the new image count.
+  renderFinished_.assign(swapchain_.imageCount(), VK_NULL_HANDLE);
+  for (auto& semaphore : renderFinished_) {
+    vkCreateSemaphore(device_, &semaphoreInfo, nullptr, &semaphore);
   }
 
   const VkExtent2D extent = swapchain_.extent();
@@ -1379,9 +1431,11 @@ void VulkanRenderer::destroySurface() {
   for (uint32_t i = 0; i < kMaxFramesInFlight; i++) {
     if (imageAvailable_[i] != VK_NULL_HANDLE) vkDestroySemaphore(device_, imageAvailable_[i], nullptr);
     imageAvailable_[i] = VK_NULL_HANDLE;
-    if (renderFinished_[i] != VK_NULL_HANDLE) vkDestroySemaphore(device_, renderFinished_[i], nullptr);
-    renderFinished_[i] = VK_NULL_HANDLE;
   }
+  for (auto semaphore : renderFinished_) {
+    if (semaphore != VK_NULL_HANDLE) vkDestroySemaphore(device_, semaphore, nullptr);
+  }
+  renderFinished_.clear();
   window_ = nullptr;
   currentFrame_ = 0;
 

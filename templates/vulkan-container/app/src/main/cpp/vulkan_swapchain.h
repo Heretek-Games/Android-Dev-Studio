@@ -56,3 +56,31 @@ class VulkanSwapchain {
 }  // namespace heretek
 
 #endif  // HERETEK_ENABLE_VULKAN
+
+// ---- Host-testable swapchain policy helpers (no Vulkan headers) ------------
+// Operates on the raw VkSurfaceCapabilitiesKHR::supportedCompositeAlpha mask
+// so the host unit test can pin the selection rule without NDK headers.
+// Bit values mirror VkCompositeAlphaFlagBitsKHR (vulkan_core.h); the NDK
+// translation unit re-verifies them with static_asserts below.
+namespace heretek {
+namespace swapchain_policy {
+
+constexpr uint32_t kCompositeAlphaOpaque = 0x1u;
+constexpr uint32_t kCompositeAlphaPreMultiplied = 0x2u;
+constexpr uint32_t kCompositeAlphaPostMultiplied = 0x4u;
+constexpr uint32_t kCompositeAlphaInherit = 0x8u;
+
+// Preference ladder: opaque first (no blending surprises on real hardware),
+// then pre/post-multiplied, then inherit (what the lavapipe emulator
+// reports). Returns 0 when the implementation advertises nothing — the
+// caller must fail loudly instead of passing an unsupported flag.
+inline uint32_t chooseCompositeAlpha(uint32_t supported) {
+  if (supported & kCompositeAlphaOpaque) return kCompositeAlphaOpaque;
+  if (supported & kCompositeAlphaPreMultiplied) return kCompositeAlphaPreMultiplied;
+  if (supported & kCompositeAlphaPostMultiplied) return kCompositeAlphaPostMultiplied;
+  if (supported & kCompositeAlphaInherit) return kCompositeAlphaInherit;
+  return 0;
+}
+
+}  // namespace swapchain_policy
+}  // namespace heretek

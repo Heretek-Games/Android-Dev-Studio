@@ -80,4 +80,16 @@ struct TerrainGpuData {
 TerrainGpuData packTerrainGpuData(const std::vector<TerrainLodRecord>& leaves, uint32_t maxDepth,
                                   uint32_t seed, float maxHeight);
 
+/**
+ * Validation fix 4 (VUID-vkCmdDrawIndexedIndirect-drawCount-02718): without
+ * the multiDrawIndirect device feature drawCount must be 0 or 1, so a device
+ * lacking the feature issues one single-draw per leaf instead of one
+ * multi-draw. Returns the number of vkCmdDrawIndexedIndirect submissions for
+ * a leaf count under the feature's availability.
+ */
+inline uint32_t terrainDrawSubmissionCount(uint32_t leafCount, bool multiDrawSupported) {
+  if (leafCount == 0) return 0;
+  return multiDrawSupported ? 1 : leafCount;
+}
+
 }  // namespace heretek
