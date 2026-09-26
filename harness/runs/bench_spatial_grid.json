@@ -1,0 +1,73 @@
+{
+ "tool": "engine/bench/spatial_grid.bench.mjs",
+ "platform": {
+  "platform": "linux",
+  "arch": "x64",
+  "node": "v26.9.0"
+ },
+ "runs": 5,
+ "cases": [
+  {
+   "entries": 10000,
+   "ops": {
+    "insert": {
+     "medianMs": 15.13,
+     "perEntryNs": 1513
+    },
+    "update": {
+     "medianMs": 7.72,
+     "perEntryNs": 772
+    },
+    "queryRadius": {
+     "medianMs": 0.143,
+     "lastResultSize": 0
+    },
+    "queryAABB": {
+     "medianMs": 0.308,
+     "lastResultSize": 0
+    },
+    "nearest": {
+     "medianMs": 3.933,
+     "lastResultSize": 1
+    }
+   },
+   "heapDeltaMb": 6.35,
+   "gridStats": {
+    "cells": 9996,
+    "entries": 10000,
+    "maxBucketSize": 2
+   }
+  },
+  {
+   "entries": 50000,
+   "ops": {
+    "insert": {
+     "medianMs": 83.49,
+     "perEntryNs": 1670
+    },
+    "update": {
+     "medianMs": 37.15,
+     "perEntryNs": 743
+    },
+    "queryRadius": {
+     "medianMs": 0.127,
+     "lastResultSize": 0
+    },
+    "queryAABB": {
+     "medianMs": 0.473,
+     "lastResultSize": 9
+    },
+    "nearest": {
+     "medianMs": 4.618,
+     "lastResultSize": 1
+    }
+   },
+   "heapDeltaMb": 6.44,
+   "gridStats": {
+    "cells": 49863,
+    "entries": 50000,
+    "maxBucketSize": 2
+   }
+  }
+ ]
+}
