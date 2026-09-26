@@ -1,0 +1,30 @@
+{
+ "tool": "engine/bench/scene_graph.bench.mjs",
+ "platform": {
+  "platform": "linux",
+  "arch": "x64",
+  "node": "v26.9.0"
+ },
+ "runs": 5,
+ "cases": [
+  {
+   "case": "scene.update transform-only",
+   "objects": 1000,
+   "medianMs": 0.34,
+   "perObjectNs": 340
+  },
+  {
+   "case": "scene.update transform-only",
+   "objects": 10000,
+   "medianMs": 0.51,
+   "perObjectNs": 51
+  },
+  {
+   "case": "scene.update 200 sheets x 20 EveryFrame events",
+   "objects": 200,
+   "events": 4000,
+   "medianMs": 1.58,
+   "perEventNs": 395
+  }
+ ]
+}
