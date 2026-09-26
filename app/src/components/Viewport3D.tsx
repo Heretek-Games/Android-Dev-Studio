@@ -467,7 +467,7 @@ export const Viewport3D: React.FC = () => {
       scene.threeScene.remove(transformHelper);
       scene.threeScene.remove(transformProxy);
     };
-  }, [isPlaying, selectedGameObject]);
+  }, [isPlaying, selectedGameObject, scene]);
 
   // Pointer-Captured Virtual Joystick Handlers
   const handleJoystickPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {

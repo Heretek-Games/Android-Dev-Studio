@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { isNativeContainer, nativeDeviceLabel, readNativeDeviceInfo } from '../services/NativeBridge';
 import { undoService } from '../services/UndoService';
+import { sceneStore } from '../services/SceneStore';
+import { buildEngineScene } from '../services/HarnessSceneAdapter';
 import {
   Scene,
   GameObject,
@@ -98,6 +100,25 @@ interface StudioStateContextType {
   setGizmoMode: (mode: GizmoMode) => void;
   snapping: boolean;
   setSnapping: React.Dispatch<React.SetStateAction<boolean>>;
+  /** Transient toast (auto-dismisses; optional action button). */
+  toast: StudioToast | null;
+  showToast: (msg: string, action?: ToastAction) => void;
+  dismissToast: () => void;
+  /** Reload the engine scene from the canonical store (external changes). */
+  reloadFromCanonical: () => Promise<boolean>;
+  /** Canonical rev seen by the poller; null when a dirty tree holds a newer external rev. */
+  pendingExternalRev: number | null;
+  dismissExternal: () => void;
+}
+
+export interface ToastAction {
+  label: string;
+  run: () => void;
+}
+
+export interface StudioToast {
+  msg: string;
+  action?: ToastAction;
 }
 
 const StudioStateContext = createContext<StudioStateContextType | null>(null);
@@ -647,6 +668,94 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return () => window.removeEventListener('keydown', onKey);
   }, [scene]);
 
+  // Track D.2 toast + external-change sync (Godot scan pattern, adapted).
+  const [toast, setToast] = useState<StudioToast | null>(null);
+  const [pendingExternalRev, setPendingExternalRev] = useState<number | null>(null);
+  const knownRev = useRef<number | null>(null);
+  const extRevRef = useRef<number | null>(null);
+  const toastTimer = useRef<number | null>(null);
+
+  const showToast = (msg: string, action?: ToastAction) => {
+    if (toastTimer.current) window.clearTimeout(toastTimer.current);
+    setToast({ msg, action });
+    toastTimer.current = window.setTimeout(() => setToast(null), 9000);
+  };
+  const dismissToast = () => {
+    if (toastTimer.current) window.clearTimeout(toastTimer.current);
+    setToast(null);
+  };
+
+  const reloadFromCanonical = async (): Promise<boolean> => {
+    try {
+      const spec = await sceneStore.fetchScene();
+      const prevName = selectedGameObject?.name ?? null;
+      const next = buildEngineScene(spec);
+      engineContext.setScene(next);
+      setScene(next);
+      undoService.clear();
+      setSelectedId(
+        prevName && next.gameObjects.some(g => g.name === prevName)
+          ? next.gameObjects.find(g => g.name === prevName)!.id
+          : null
+      );
+      refreshScene();
+      if (typeof spec.rev === 'number') knownRev.current = spec.rev;
+      setPendingExternalRev(null);
+      showToast('Scene reloaded from canonical store.');
+      return true;
+    } catch (err) {
+      showToast(`Reload failed: ${err instanceof Error ? err.message : String(err)}`);
+      return false;
+    }
+  };
+  const dismissExternal = () => {
+    // Keep local edits: adopt the external rev so the poller stops nagging.
+    if (pendingExternalRev !== null) knownRev.current = pendingExternalRev;
+    extRevRef.current = pendingExternalRev;
+    setPendingExternalRev(null);
+    dismissToast();
+  };
+  const showToastRef = useRef(showToast);
+  showToastRef.current = showToast;
+  const reloadRef = useRef(reloadFromCanonical);
+  reloadRef.current = reloadFromCanonical;
+
+  // Poll the canonical revision (3 s, paused in play mode): clean trees
+  // auto-refresh with a toast; dirty trees get Reload/Keep instead of a
+  // silent overwrite (non-clobber invariant).
+  useEffect(() => {
+    if (isPlaying) return;
+    const poll = async () => {
+      try {
+        const res = await fetch('/api/scene?rev=1');
+        if (!res.ok) return;
+        const data = await res.json();
+        const rev = typeof data.rev === 'number' ? data.rev : 0;
+        if (knownRev.current === null) {
+          knownRev.current = rev;
+          return;
+        }
+        if (rev === knownRev.current || rev === extRevRef.current) return;
+        if (undoService.canUndo) {
+          extRevRef.current = rev;
+          setPendingExternalRev(rev);
+          showToastRef.current(
+            `Scene changed externally (rev ${rev}) — your edits are preserved.`,
+            { label: 'Reload', run: () => reloadRef.current() }
+          );
+        } else {
+          knownRev.current = rev;
+          reloadRef.current().catch(() => {});
+        }
+      } catch {
+        // Dev-server bridge absent (packaged build): stay quiet.
+      }
+    };
+    const id = window.setInterval(poll, 3000);
+    return () => window.clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPlaying]);
+
   const isInitializedRef = useRef(false);
 
   // Initialize Default Starter Scene
@@ -1145,7 +1254,13 @@ export const StudioProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         gizmoMode,
         setGizmoMode,
         snapping,
-        setSnapping
+        setSnapping,
+        toast,
+        showToast,
+        dismissToast,
+        reloadFromCanonical,
+        pendingExternalRev,
+        dismissExternal
       }}
     >
       {children}

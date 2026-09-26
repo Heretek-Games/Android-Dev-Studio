@@ -11,6 +11,7 @@ import { useStudio } from '../state/StudioState';
 import { useWorkspaceLayouts } from '../state/useWorkspaceLayouts';
 import { StudioHeader } from './StudioHeader';
 import { StatusBar } from './StatusBar';
+import { Toast } from './Toast';
 import { CommandPalette } from './CommandPalette';
 import { Viewport3D } from './Viewport3D';
 import { Hierarchy } from './Hierarchy';
@@ -390,6 +391,9 @@ export const DockviewWorkspace: React.FC = () => {
 
       {/* Track D.1 status bar: workspace left, selection right */}
       <StatusBar />
+
+      {/* Track D.2 non-destructive toast (external scene changes) */}
+      <Toast />
     </div>
   );
 };

@@ -614,8 +614,18 @@ def load_active_scene() -> Dict[str, Any]:
 
 
 def save_active_scene(scene: Dict[str, Any]) -> None:
-    """Persist the scene to disk and synchronize the snapshot into project_memory."""
+    """Persist the scene to disk and synchronize the snapshot into project_memory.
+
+    Bumps the monotonic ``rev`` counter (Track D.2): every gated write —
+    MCP tools, /api/scene, direct saves, seed — advances the revision the
+    studio polls to detect external mutations.
+    """
     os.makedirs(SCENES_DIR, exist_ok=True)
+    try:
+        rev = int(scene.get("rev") or 0)
+    except (TypeError, ValueError):
+        rev = 0
+    scene["rev"] = rev + 1
     with open(ACTIVE_SCENE_PATH, "w", encoding="utf-8") as f:
         json.dump(scene, f, indent=2)
     try:

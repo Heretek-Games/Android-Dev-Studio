@@ -22,6 +22,7 @@ if (fs.existsSync(envProdPath)) {
 
 // Dev-server bridge to the harness scene store:
 // GET  /api/scene -> harness/scenes/active_scene.json (source of truth)
+// GET  /api/scene?rev=1 -> { rev } only (cheap poll for Track D.2 sync)
 // POST /api/scene -> validates through the transactional invariant gate,
 //                    persists, and syncs a project_memory snapshot.
 function sceneBridgePlugin(): Plugin {
@@ -34,6 +35,21 @@ function sceneBridgePlugin(): Plugin {
         res.setHeader('Content-Type', 'application/json');
 
         if (req.method === 'GET') {
+          const url = new URL(req.url || '/api/scene', 'http://localhost');
+          if (url.searchParams.get('rev') === '1') {
+            // Cheap revision probe: parse the canonical file directly.
+            try {
+              const raw = fs.readFileSync(
+                path.resolve(repoRoot, 'harness/scenes/active_scene.json'), 'utf8');
+              const rev = (JSON.parse(raw) || {}).rev;
+              res.statusCode = 200;
+              res.end(JSON.stringify({ rev: typeof rev === 'number' ? rev : 0 }));
+            } catch (err) {
+              res.statusCode = 502;
+              res.end(JSON.stringify({ error: String(err) }));
+            }
+            return;
+          }
           const proc = spawn('python3', [...cli, 'get'], { cwd: repoRoot });
           let out = '';
           let err = '';
