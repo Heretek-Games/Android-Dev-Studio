@@ -2370,3 +2370,28 @@ class EnemyHealthShorthandTests(unittest.TestCase):
                 [{"type": "game", "config": {"mode": "waves", "playerName": "H", "enemy": {"health": bad}}}],
             )
             self.assertEqual(result.invalid, 1, f"should reject {bad!r}")
+
+
+class QuestTargetCoercionTests(unittest.TestCase):
+    """Tally objectives coerce missing targets; flag/phase/stage stay strict."""
+
+    def test_kills_missing_target_coerces_to_any(self):
+        scene, result = apply_actions(
+            base_scene(),
+            [{"type": "game", "config": {"mode": "waves", "playerName": "H",
+              "quest": {"id": "q", "stages": [{"id": "s",
+                "objectives": [{"id": "k", "kind": "kills", "target": ""},
+                               {"id": "r", "kind": "reactions"}]}]}}}],
+        )
+        self.assertEqual(result.applied, 1)
+        objectives = scene["game"]["quest"]["stages"][0]["objectives"]
+        self.assertTrue(all(o["target"] == "any" for o in objectives))
+
+    def test_flag_empty_target_still_rejected(self):
+        _, result = apply_actions(
+            base_scene(),
+            [{"type": "game", "config": {"mode": "waves", "playerName": "H",
+              "quest": {"id": "q", "stages": [{"id": "s",
+                "objectives": [{"id": "f", "kind": "flag", "target": "  "}]}]}}}],
+        )
+        self.assertEqual(result.invalid, 1)

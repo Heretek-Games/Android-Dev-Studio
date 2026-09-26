@@ -175,8 +175,11 @@ ACTION_SCHEMA = """Action vocabulary (a JSON array named "actions"):
      [{"id": "audience", "objectives": [{"id": "meet", "kind": "flag",
      "target": "greet"}]}]} tracks ordered stages over flags/kills/reactions/
      phase (kinds flag|kills|reactions|phase|stage; kills/reactions take
-     "count"). Pair quest flag targets with dialogue emitEvent eventNames or
-     visited node ids — the quest only reads what dialogue/combat produce.)
+     "count" with target "any"; flag/phase/stage targets must be non-empty
+     and real — flag matches a dialogue emitEvent eventName or visited node
+     id, phase matches won/lost, stage matches an earlier stage id). Pair
+     quest flag targets with dialogue emitEvent eventNames or visited node
+     ids — the quest only reads what dialogue/combat produce.)
   - {"type": "dialogue", "tree": {"id": "Keeper", "startNodeId": "greet", "nodes": {
      "greet": {"id": "greet", "type": "choice", "speaker": "Keeper", "text": "...",
       "choices": [{"id": "bless", "text": "...", "nextNodeId": "blessed"}]},

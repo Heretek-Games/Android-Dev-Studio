@@ -1728,6 +1728,10 @@ def _validate_game_quest(
                 )
                 return None
             for req in ("id", "target"):
+                if req == "target" and objective.get("kind") in ("kills", "reactions"):
+                    # Repair ergonomics: the engine ignores target for tallies;
+                    # missing/empty coerces to "any" instead of failing repair.
+                    continue
                 if (
                     not isinstance(objective.get(req), str)
                     or not objective[req].strip()
@@ -1737,7 +1741,12 @@ def _validate_game_quest(
             out_objective = {
                 "id": objective["id"].strip(),
                 "kind": objective["kind"],
-                "target": objective["target"].strip(),
+                "target": (
+                    objective["target"].strip()
+                    if isinstance(objective.get("target"), str)
+                    and objective["target"].strip()
+                    else "any"
+                ),
             }
             if "count" in objective:
                 if not _is_finite_number(objective["count"]) or objective["count"] < 1:
