@@ -672,6 +672,7 @@ CC0_CATALOG = [
         "polyCount": "3.2k Tris",
         "format": "GLB",
         "category": "characters",
+           "license": "CC0-1.0",
     },
     {
         "name": "Heavy Mech Defender",
@@ -679,6 +680,7 @@ CC0_CATALOG = [
         "polyCount": "4.8k Tris",
         "format": "GLB",
         "category": "characters",
+           "license": "CC0-1.0",
     },
     {
         "name": "Aerodyne Hover Speedster",
@@ -686,6 +688,7 @@ CC0_CATALOG = [
         "polyCount": "1.8k Tris",
         "format": "GLB",
         "category": "vehicles",
+           "license": "CC0-1.0",
     },
     {
         "name": "Teleportation Warp Gate",
@@ -693,6 +696,7 @@ CC0_CATALOG = [
         "polyCount": "1.2k Tris",
         "format": "GLB",
         "category": "props",
+           "license": "CC0-1.0",
     },
     {
         "name": "Neo-Tokyo Sunset Skybox",
@@ -700,6 +704,7 @@ CC0_CATALOG = [
         "polyCount": "HDRI Cubemap",
         "format": "glTF 2.0",
         "category": "skyboxes",
+           "license": "CC0-1.0",
     },
     {
         "name": "Ancient Treasure Chest",
@@ -707,6 +712,7 @@ CC0_CATALOG = [
         "polyCount": "840 Tris",
         "format": "GLB",
         "category": "props",
+           "license": "CC0-1.0",
     },
     {
         "name": "Vortex Plasma Rifle",
@@ -714,6 +720,7 @@ CC0_CATALOG = [
         "polyCount": "980 Tris",
         "format": "GLB",
         "category": "weapons",
+           "license": "CC0-1.0",
     },
 ]
 
@@ -937,6 +944,7 @@ def handle_request(req: Dict[str, Any]) -> Dict[str, Any]:
             query = args.get("query", "").lower()
             category = args.get("category", "all")
             install = args.get("install_to_scene", True)
+            pos = args.get("position", [0, 2, 0])
 
             matched = [
                 a
@@ -950,17 +958,110 @@ def handle_request(req: Dict[str, Any]) -> Dict[str, Any]:
 
             installed_item = matched[0]
             if install:
+                # Track D.4: catalog entries need a registered download URL;
+                # entries without one fail explicitly (populating URLs is
+                # data work). The CDN-placeholder path is deleted.
+                url = installed_item.get("url", "")
+                if not url:
+                    return {
+                        "jsonrpc": "2.0",
+                        "id": req_id,
+                        "result": {
+                            "content": [
+                                {
+                                    "type": "text",
+                                    "text": f"Found {len(matched)} asset(s). '{installed_item['name']}' has no registered download URL — cannot install bytes that do not exist. Use studio_import_gdevelop_asset with a GDevelop asset id instead.",
+                                }
+                            ]
+                        },
+                    }
+                from .assets.store import (
+                    StoreError,
+                    download_bytes,
+                    install_store_asset,
+                )
+
+                try:
+                    data = download_bytes(url)
+                except StoreError as exc:
+                    return {
+                        "jsonrpc": "2.0",
+                        "id": req_id,
+                        "result": {
+                            "content": [
+                                {
+                                    "type": "text",
+                                    "text": f"Asset acquisition failed: {exc}",
+                                }
+                            ]
+                        },
+                    }
+                assets_dir = os.environ.get(
+                    "HERETEK_ASSETS_DIR",
+                    os.path.join(
+                        os.path.dirname(os.path.abspath(__file__)), "assets", "store"
+                    ),
+                )
+                try:
+                    sidecar = install_store_asset(
+                        name=installed_item["name"],
+                        model_url=url,
+                        data=data,
+                        license=installed_item.get("license", "CC0-1.0"),
+                        author=installed_item.get("author", ""),
+                        assets_dir=assets_dir,
+                    )
+                except ValueError as exc:
+                    return {
+                        "jsonrpc": "2.0",
+                        "id": req_id,
+                        "result": {
+                            "content": [
+                                {"type": "text", "text": f"Asset import failed: {exc}"}
+                            ]
+                        },
+                    }
+                uid = sidecar["uid"]
                 scene = load_active_scene()
-                spawned = {
-                    "name": installed_item["name"],
-                    "shape": "box",
-                    "position": [0, 2, 0],
-                    "physics": "dynamic",
-                    "modelUrl": f"https://resources.gdevelop-app.com/assets-database/assets/{installed_item['name']}.json",
-                    "source": f"CC0/{installed_item['author']}",
+                scene.setdefault("gameObjects", []).append(
+                    {
+                        "name": installed_item["name"],
+                        "shape": "box",
+                        "size": [1, 1, 1],
+                        "position": pos,
+                        "color": "#3b82f6",
+                        "modelUrl": f"uid://{uid}",
+                        "source": f"CC0/{installed_item['author']}",
+                        "license": installed_item.get("license", "CC0-1.0"),
+                        "physics": "dynamic",
+                    }
+                )
+                saved, err = save_active_scene_transactional(scene)
+                if not saved:
+                    return {
+                        "jsonrpc": "2.0",
+                        "id": req_id,
+                        "result": {
+                            "content": [
+                                {
+                                    "type": "text",
+                                    "text": f"Installed asset rejected by invariant gate: {err}",
+                                }
+                            ]
+                        },
+                    }
+                return {
+                    "jsonrpc": "2.0",
+                    "id": req_id,
+                    "result": {
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": f"Found {len(matched)} asset(s). Installed '{installed_item['name']}' (uid://{uid}, {installed_item.get('license', 'CC0-1.0')}) into active scene graph; gated save ok.",
+                            }
+                        ]
+                    },
                 }
-                scene.setdefault("gameObjects", []).append(spawned)
-                save_active_scene(scene)
 
             return {
                 "jsonrpc": "2.0",
@@ -969,7 +1070,7 @@ def handle_request(req: Dict[str, Any]) -> Dict[str, Any]:
                     "content": [
                         {
                             "type": "text",
-                            "text": f"Found {len(matched)} asset(s). Installed '{installed_item['name']}' ({installed_item['polyCount']}, {installed_item['format']}) into active scene graph.",
+                            "text": f"Found {len(matched)} asset(s). '{installed_item['name']}' ({installed_item['polyCount']}, {installed_item['format']}) matched (install_to_scene=false).",
                         }
                     ]
                 },
@@ -1176,17 +1277,84 @@ def handle_request(req: Dict[str, Any]) -> Dict[str, Any]:
             asset_id = args.get("asset_id", "")
             name = args.get("name", f"GDevelop_3D_{asset_id[:8]}")
             pos = args.get("position", [0, 1.5, 0])
+            # Track D.4: real bytes via importer (sidecar + UID), gated save.
+            # The old CDN-placeholder path is deleted, not deprecated.
+            from .assets.store import (
+                StoreError,
+                details_credit,
+                download_bytes,
+                install_store_asset,
+                resolve_gdevelop_glb,
+            )
+
+            try:
+                model_url, details = resolve_gdevelop_glb(asset_id)
+                data = download_bytes(model_url)
+            except StoreError as exc:
+                return {
+                    "jsonrpc": "2.0",
+                    "id": req_id,
+                    "result": {
+                        "content": [
+                            {"type": "text", "text": f"Asset acquisition failed: {exc}"}
+                        ]
+                    },
+                }
+            author, license = details_credit(details)
+            assets_dir = os.environ.get(
+                "HERETEK_ASSETS_DIR",
+                os.path.join(
+                    os.path.dirname(os.path.abspath(__file__)), "assets", "store"
+                ),
+            )
+            try:
+                sidecar = install_store_asset(
+                    name=name,
+                    model_url=model_url,
+                    data=data,
+                    license=license,
+                    author=author,
+                    assets_dir=assets_dir,
+                )
+            except ValueError as exc:
+                return {
+                    "jsonrpc": "2.0",
+                    "id": req_id,
+                    "result": {
+                        "content": [
+                            {"type": "text", "text": f"Asset import failed: {exc}"}
+                        ]
+                    },
+                }
+            uid = sidecar["uid"]
             scene = load_active_scene()
             scene.setdefault("gameObjects", []).append(
                 {
                     "name": name,
                     "shape": "box",
+                    "size": [1, 1, 1],
                     "position": pos,
-                    "modelUrl": f"https://resources.gdevelop-app.com/assets-database/assets/{asset_id}.json",
+                    "color": "#3b82f6",
+                    "modelUrl": f"uid://{uid}",
+                    "source": f"GDevelop/{asset_id}" + (f"/{author}" if author else ""),
+                    "license": license,
                     "physics": "dynamic",
                 }
             )
-            save_active_scene(scene)
+            saved, err = save_active_scene_transactional(scene)
+            if not saved:
+                return {
+                    "jsonrpc": "2.0",
+                    "id": req_id,
+                    "result": {
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": f"Installed asset rejected by invariant gate: {err}",
+                            }
+                        ]
+                    },
+                }
             return {
                 "jsonrpc": "2.0",
                 "id": req_id,
@@ -1194,7 +1362,7 @@ def handle_request(req: Dict[str, Any]) -> Dict[str, Any]:
                     "content": [
                         {
                             "type": "text",
-                            "text": f"Successfully imported GDevelop 3D asset '{name}' (ID: {asset_id}) at {pos} with ModelRenderer.",
+                            "text": f"Imported GDevelop 3D asset '{name}' (uid://{uid}, {license}) at {pos} with ModelRenderer; gated save ok.",
                         }
                     ]
                 },
