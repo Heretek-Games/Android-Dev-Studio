@@ -22,6 +22,7 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
 
     private external fun nativeInit(scenePath: String, shaderDir: String): Boolean
     private external fun nativeSurfaceCreated(surface: android.view.Surface, width: Int, height: Int): Boolean
+    private external fun nativeSurfaceChanged(width: Int, height: Int): Boolean
     private external fun nativeSurfaceDestroyed()
     private external fun nativeDrawCalls(): Int
     private external fun nativeInstanceCount(): Int
@@ -256,7 +257,26 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
         )
     }
 
-    override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {}
+    override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
+        if (!surfaceReady) {
+            android.util.Log.i(
+                "HeretekTier2",
+                "surfaceChanged ${width}x${height} ignored (surface not ready)"
+            )
+            return
+        }
+        android.util.Log.i(
+            "HeretekTier2",
+            "surfaceChanged hook: ${width}x${height} -> nativeSurfaceChanged"
+        )
+        surfaceReady = nativeSurfaceChanged(width, height)
+        if (!surfaceReady) {
+            android.util.Log.w(
+                "HeretekTier2",
+                "nativeSurfaceChanged failed; frame loop halted until surfaceCreated"
+            )
+        }
+    }
 
     override fun surfaceDestroyed(holder: SurfaceHolder) {
         surfaceView.removeCallbacks(frameLoop)

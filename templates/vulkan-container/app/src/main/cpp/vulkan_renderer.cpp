@@ -1358,11 +1358,20 @@ void VulkanRenderer::renderFrame() {
 
   // One-shot readback: the copy was recorded into this frame's command buffer,
   // so waiting on its fence guarantees the staging buffer holds the frame.
+  // Critic nit (phase2-swapchain): the wait result is checked like the
+  // per-frame one — an unsignaled fence means the staging buffer does not
+  // hold the frame, so the write must be skipped, not attempted blindly.
   if (captureRequested_) {
-    vkWaitForFences(device_, 1, &inFlightFences_[frame], VK_TRUE, UINT64_MAX);
-    const bool written = writeCapturePpm();
-    LOGI("frame capture %s: %s (image=%u)", written ? "written" : "FAILED", capturePath_.c_str(),
-         imageIndex);
+    const VkResult captureWait =
+        vkWaitForFences(device_, 1, &inFlightFences_[frame], VK_TRUE, UINT64_MAX);
+    if (captureWait != VK_SUCCESS) {
+      LOGE("capture vkWaitForFences failed: %d (device lost?)", static_cast<int>(captureWait));
+      lastError_ = "capture vkWaitForFences failed";
+    } else {
+      const bool written = writeCapturePpm();
+      LOGI("frame capture %s: %s (image=%u)", written ? "written" : "FAILED", capturePath_.c_str(),
+           imageIndex);
+    }
     captureRequested_ = false;
   }
 
@@ -1414,8 +1423,23 @@ bool VulkanRenderer::recreateSwapchain() {
     const VkDeviceSize captureBytes = static_cast<VkDeviceSize>(extent.width) * extent.height * 4;
     if (!createBuffer(captureBytes, VK_BUFFER_USAGE_TRANSFER_DST_BIT, &captureBuffer_, &captureMemory_,
                       &captureMapped_)) {
-      lastError_ = "capture buffer recreation failed";
-      return false;
+      // Critic nit (phase2-swapchain): capture-staging failure must not flag
+      // a valid swapchain stale, nor tear it back down. Choice: degrade
+      // functional — the swapchain and frame resources above are fully built,
+      // so frames present normally and only the debug readback is offline
+      // (captureNextFrame fails loudly on the null buffer). Returning true
+      // keeps the renderFrame retry guard parked instead of spinning on a
+      // healthy swapchain.
+      LOGW("capture buffer recreation failed — continuing without frame readback");
+      lastError_.clear();
+      // createBuffer can leave a half-built pair (buffer without memory):
+      // release either half before nulling so the degrade path leaks nothing.
+      if (captureBuffer_ != VK_NULL_HANDLE) vkDestroyBuffer(device_, captureBuffer_, nullptr);
+      if (captureMemory_ != VK_NULL_HANDLE) vkFreeMemory(device_, captureMemory_, nullptr);
+      captureBuffer_ = VK_NULL_HANDLE;
+      captureMemory_ = VK_NULL_HANDLE;
+      captureMapped_ = nullptr;
+      captureRequested_ = false;
     }
   }
 
@@ -1426,6 +1450,8 @@ bool VulkanRenderer::recreateSwapchain() {
 }
 
 bool VulkanRenderer::onSurfaceSizeChanged(int width, int height) {
+  LOGI("onSurfaceSizeChanged hook: new=%dx%d current=%dx%d swapchain=%p", width, height,
+       surfaceWidth_, surfaceHeight_, (void*)swapchain_.handle());
   if (width <= 0 || height <= 0) {
     // Minimized/backgrounded: record and skip — recreating a 0-area
     // swapchain can only fail.
@@ -1514,26 +1540,15 @@ void VulkanRenderer::destroySurface() {
   captureMapped_ = nullptr;
   captureRequested_ = false;
 
-  for (auto fence : inFlightFences_) {
-    if (fence != VK_NULL_HANDLE) vkDestroyFence(device_, fence, nullptr);
-  }
-  inFlightFences_.assign(kMaxFramesInFlight, VK_NULL_HANDLE);
-  for (uint32_t i = 0; i < kMaxFramesInFlight; i++) {
-    if (imageAvailable_[i] != VK_NULL_HANDLE) vkDestroySemaphore(device_, imageAvailable_[i], nullptr);
-    imageAvailable_[i] = VK_NULL_HANDLE;
-  }
-  for (auto semaphore : renderFinished_) {
-    if (semaphore != VK_NULL_HANDLE) vkDestroySemaphore(device_, semaphore, nullptr);
-  }
-  renderFinished_.clear();
+  // Critic nit (phase2-swapchain): the fence/semaphore/command-buffer
+  // teardown below used to duplicate destroyFrameResources line-for-line.
+  // It now routes through destroyFrameResources — one canonical teardown, no
+  // drift. Only the frame resources qualify: everything after this point is
+  // surface-lifetime state (pipelines, descriptors, scene/terrain buffers,
+  // swapchain) that recreateSwapchain deliberately preserves.
+  destroyFrameResources();
   window_ = nullptr;
   currentFrame_ = 0;
-
-  if (!commandBuffers_.empty()) {
-    vkFreeCommandBuffers(device_, commandPool_, static_cast<uint32_t>(commandBuffers_.size()),
-                         commandBuffers_.data());
-    commandBuffers_.clear();
-  }
 
   if (cullPipeline_ != VK_NULL_HANDLE) vkDestroyPipeline(device_, cullPipeline_, nullptr);
   cullPipeline_ = VK_NULL_HANDLE;
