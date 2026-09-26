@@ -10,6 +10,7 @@ import json
 import asyncio
 import os
 import subprocess
+import time
 from typing import Any, Dict, List, Optional, Tuple
 from .memory.project_memory import ProjectMemory
 from .orchestrator.agent_swarm import AgentSwarmOrchestrator
@@ -672,7 +673,7 @@ CC0_CATALOG = [
         "polyCount": "3.2k Tris",
         "format": "GLB",
         "category": "characters",
-           "license": "CC0-1.0",
+        "license": "CC0-1.0",
     },
     {
         "name": "Heavy Mech Defender",
@@ -680,7 +681,7 @@ CC0_CATALOG = [
         "polyCount": "4.8k Tris",
         "format": "GLB",
         "category": "characters",
-           "license": "CC0-1.0",
+        "license": "CC0-1.0",
     },
     {
         "name": "Aerodyne Hover Speedster",
@@ -688,7 +689,7 @@ CC0_CATALOG = [
         "polyCount": "1.8k Tris",
         "format": "GLB",
         "category": "vehicles",
-           "license": "CC0-1.0",
+        "license": "CC0-1.0",
     },
     {
         "name": "Teleportation Warp Gate",
@@ -696,7 +697,7 @@ CC0_CATALOG = [
         "polyCount": "1.2k Tris",
         "format": "GLB",
         "category": "props",
-           "license": "CC0-1.0",
+        "license": "CC0-1.0",
     },
     {
         "name": "Neo-Tokyo Sunset Skybox",
@@ -704,7 +705,7 @@ CC0_CATALOG = [
         "polyCount": "HDRI Cubemap",
         "format": "glTF 2.0",
         "category": "skyboxes",
-           "license": "CC0-1.0",
+        "license": "CC0-1.0",
     },
     {
         "name": "Ancient Treasure Chest",
@@ -712,7 +713,7 @@ CC0_CATALOG = [
         "polyCount": "840 Tris",
         "format": "GLB",
         "category": "props",
-           "license": "CC0-1.0",
+        "license": "CC0-1.0",
     },
     {
         "name": "Vortex Plasma Rifle",
@@ -720,7 +721,7 @@ CC0_CATALOG = [
         "polyCount": "980 Tris",
         "format": "GLB",
         "category": "weapons",
-           "license": "CC0-1.0",
+        "license": "CC0-1.0",
     },
 ]
 
@@ -1033,6 +1034,10 @@ def handle_request(req: Dict[str, Any]) -> Dict[str, Any]:
                         "modelUrl": f"uid://{uid}",
                         "source": f"CC0/{installed_item['author']}",
                         "license": installed_item.get("license", "CC0-1.0"),
+                        "provenance": {
+                            "addedBy": "mcp:studio_search_and_install_asset",
+                            "addedAt": time.time(),
+                        },
                         "physics": "dynamic",
                     }
                 )
@@ -1338,6 +1343,10 @@ def handle_request(req: Dict[str, Any]) -> Dict[str, Any]:
                     "modelUrl": f"uid://{uid}",
                     "source": f"GDevelop/{asset_id}" + (f"/{author}" if author else ""),
                     "license": license,
+                    "provenance": {
+                        "addedBy": "mcp:studio_import_gdevelop_asset",
+                        "addedAt": time.time(),
+                    },
                     "physics": "dynamic",
                 }
             )

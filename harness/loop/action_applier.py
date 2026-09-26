@@ -22,6 +22,7 @@ feed them straight back to the model as repair input.
 import copy
 import math
 import os
+import time
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -1864,6 +1865,11 @@ def _apply_spawn(
         obj["modelUrl"] = model_ref
         obj["source"] = str(model_entry.get("sourceName") or "imported")
         obj["license"] = str(model_entry.get("license") or "UNSPECIFIED")
+        # Track D.5 provenance stamp (SBOM-shaped: origin + timestamp).
+        obj["provenance"] = {
+            "addedBy": "loop",
+            "addedAt": time.time(),
+        }
     # Track C.3 PBR factors (glTF-shaped 0..1; default dielectric).
     for key, default in (("metallic", 0.0), ("roughness", 0.9)):
         value = action.get(key, default)

@@ -150,6 +150,22 @@ class ProjectMemory:
                 )
             """)
 
+            # 8. Asset provenance: SBOM-shaped per-model records (D.5).
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS asset_provenance (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    object_name TEXT NOT NULL DEFAULT '',
+                    uid TEXT NOT NULL DEFAULT '',
+                    license TEXT NOT NULL DEFAULT '',
+                    source TEXT NOT NULL DEFAULT '',
+                    added_by TEXT NOT NULL DEFAULT '',
+                    added_at REAL NOT NULL DEFAULT 0,
+                    draw_cost INTEGER NOT NULL DEFAULT 0,
+                    origin TEXT NOT NULL DEFAULT '',
+                    created_at REAL NOT NULL
+                )
+            """)
+
             conn.commit()
 
     # --- ADR Management ---
@@ -522,6 +538,57 @@ class ProjectMemory:
             stats["meanAbsDelta"] = round(stats["absDeltaSum"] / stats["samples"], 3)
             del stats["absDeltaSum"]
         return {"perAxis": per_axis, "samples": total}
+
+    # --- Asset provenance (Track D.5) ---
+    def record_provenance(self, rows: List[Dict[str, Any]], origin: str = "") -> int:
+        """Mirror audit rows into memory. Returns rows written."""
+        now = time.time()
+        written = 0
+        with self._get_connection() as conn:
+            for row in rows:
+                if not isinstance(row, dict):
+                    continue
+                conn.execute(
+                    """INSERT INTO asset_provenance
+                       (object_name, uid, license, source, added_by, added_at,
+                        draw_cost, origin, created_at)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    (
+                        str(row.get("object", "")),
+                        str(row.get("uid", "")),
+                        str(row.get("license", "")),
+                        str(row.get("source", "")),
+                        str(row.get("addedBy", "")),
+                        float(row.get("addedAt", 0.0)),
+                        int(row.get("drawCost", 0)),
+                        str(origin or ""),
+                        now,
+                    ),
+                )
+                written += 1
+            conn.commit()
+        return written
+
+    def query_provenance(
+        self, uid: Any = None, license: Any = None, limit: int = 50
+    ) -> List[Dict[str, Any]]:
+        """Answerable provenance: filter by uid and/or license, newest first."""
+        clauses: List[str] = []
+        params: List[str] = []
+        if uid is not None:
+            clauses.append("uid = ?")
+            params.append(str(uid))
+        if license is not None:
+            clauses.append("license = ?")
+            params.append(str(license))
+        where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+        with self._get_connection() as conn:
+            rows = conn.execute(
+                "SELECT * FROM asset_provenance "
+                f"{where} ORDER BY created_at DESC LIMIT ?",
+                (*params, max(1, int(limit or 50))),
+            ).fetchall()
+            return [dict(row) for row in rows]
 
     # --- Project Summary ---
     def get_project_summary(self) -> Dict[str, Any]:
