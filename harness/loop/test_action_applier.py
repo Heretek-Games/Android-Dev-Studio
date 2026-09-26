@@ -61,6 +61,75 @@ class SpawnTests(unittest.TestCase):
         )
         self.assertEqual(rejected.applied, 0)
 
+    def test_spawn_model_ref_resolves_through_manifest(self):
+        import os
+        import tempfile
+        from unittest import mock
+
+        from harness.assets.importer import import_asset
+
+        with tempfile.TemporaryDirectory() as assets_dir:
+            sidecar = import_asset(
+                b"glTF" + b"\x00" * 100,
+                name="Knight",
+                preset="mobile",
+                assets_dir=assets_dir,
+                license="CC0-1.0",
+            )
+            ref = f"uid://{sidecar['uid']}"
+            with mock.patch.dict(os.environ, {"HERETEK_ASSETS_DIR": assets_dir}):
+                scene, result = apply_actions(
+                    base_scene(),
+                    [
+                        {
+                            "type": "spawn",
+                            "name": "Knight",
+                            "size": [1, 2, 1],
+                            "position": [3, 1, 0],
+                            "physics": "none",
+                            "model": ref,
+                        }
+                    ],
+                )
+            self.assertEqual(result.applied, 1)
+            obj = scene["gameObjects"][1]
+            self.assertEqual(obj["modelUrl"], ref)
+            self.assertEqual(obj["license"], "CC0-1.0")
+            self.assertEqual(obj["source"], "Knight")
+
+    def test_spawn_model_rejections_are_outcomes(self):
+        import os
+        import tempfile
+        from unittest import mock
+
+        from harness.assets.importer import import_asset
+
+        with tempfile.TemporaryDirectory() as assets_dir:
+            with mock.patch.dict(os.environ, {"HERETEK_ASSETS_DIR": assets_dir}):
+                base = {"type": "spawn", "name": "X", "model": "uid://" + "0" * 32}
+                _, unknown = apply_actions(base_scene(), [base])
+                self.assertEqual(unknown.applied, 0)
+                _, bare = apply_actions(
+                    base_scene(),
+                    [
+                        {
+                            "type": "spawn",
+                            "name": "Y",
+                            "model": "https://example.com/x.glb",
+                        }
+                    ],
+                )
+                self.assertEqual(bare.applied, 0)
+            with mock.patch.dict(os.environ, {"HERETEK_ASSETS_DIR": ""}):
+                _, noenv = apply_actions(
+                    base_scene(),
+                    [{"type": "spawn", "name": "Z", "model": "uid://" + "1" * 32}],
+                )
+            self.assertEqual(noenv.applied, 0)
+            self.assertTrue(
+                all(o["status"] == "invalid" for o in noenv.as_dict()["outcomes"])
+            )
+
     def test_spawn_controller_flag_maps_to_mobile_controller(self):
         scene, result = apply_actions(
             base_scene(),

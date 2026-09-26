@@ -21,6 +21,7 @@ feed them straight back to the model as repair input.
 
 import copy
 import math
+import os
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -1812,6 +1813,45 @@ def _apply_spawn(
             f"unsupported physics '{physics}' (allowed: {sorted(SUPPORTED_PHYSICS)})",
         )
 
+    # Track D.3 asset refs (Unity GUID pattern): model must be a uid:// ref
+    # resolving through the importer manifest — never a bare URL.
+    model_ref = action.get("model")
+    model_entry = None
+    if model_ref is not None:
+        import re
+
+        if not isinstance(model_ref, str) or not re.fullmatch(
+            r"uid://[0-9a-fA-F]{32}", model_ref
+        ):
+            return _outcome(
+                result,
+                index,
+                "spawn",
+                "invalid",
+                f"spawn 'model' must be uid://<32-hex-uid> (got {model_ref!r})",
+            )
+        assets_dir = os.environ.get("HERETEK_ASSETS_DIR", "")
+        if not assets_dir:
+            return _outcome(
+                result,
+                index,
+                "spawn",
+                "invalid",
+                "spawn 'model' needs HERETEK_ASSETS_DIR pointing at an import sidecar directory",
+            )
+        from harness.assets.importer import build_manifest
+
+        manifest = build_manifest(assets_dir)
+        model_entry = manifest.get(model_ref[len("uid://") :])
+        if model_entry is None:
+            return _outcome(
+                result,
+                index,
+                "spawn",
+                "invalid",
+                f"spawn 'model' uid unknown to the manifest ({model_ref})",
+            )
+
     obj: Dict[str, Any] = {
         "name": name,
         "shape": shape,
@@ -1820,6 +1860,10 @@ def _apply_spawn(
         "color": color,
         "physics": physics,
     }
+    if model_entry is not None:
+        obj["modelUrl"] = model_ref
+        obj["source"] = str(model_entry.get("sourceName") or "imported")
+        obj["license"] = str(model_entry.get("license") or "UNSPECIFIED")
     # Track C.3 PBR factors (glTF-shaped 0..1; default dielectric).
     for key, default in (("metallic", 0.0), ("roughness", 0.9)):
         value = action.get(key, default)

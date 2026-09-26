@@ -76,12 +76,15 @@ def import_asset(
     preset: str = "mobile",
     assets_dir: str,
     source_hint: str = "",
+    license: str = "UNSPECIFIED",
 ) -> Dict[str, Any]:
     """Imports raw GLB bytes: stores content + writes the sidecar.
 
     Returns the sidecar dict. Raises ValueError on unknown preset or empty
     payload. The uid is allocated fresh per import (Godot parity: uid is
     stable across reimports of the same sidecar — see reimport_asset).
+    ``license`` is recorded verbatim (e.g. "CC0-1.0", "MIT") for the
+    asset_license QA rule and provenance (Track D.3/D.5).
     """
     if preset not in PRESETS:
         raise ValueError(
@@ -99,6 +102,7 @@ def import_asset(
         "uid": uid,
         "sourceName": name,
         "sourceHint": source_hint,
+        "license": license,
         "sha256": digest,
         "bytes": len(data),
         "preset": preset,

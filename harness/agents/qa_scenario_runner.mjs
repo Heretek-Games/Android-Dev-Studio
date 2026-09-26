@@ -269,13 +269,22 @@ function buildScene(spec, engine) {
       go.addComponent(new engine.CameraComponent(objSpec.cameraOptions || {}));
     } else {
       const size = objSpec.size || [1, 1, 1];
-      go.addComponent(new engine.MeshRenderer({
-        shape: objSpec.shape || 'box',
-        size,
-        color: objSpec.color || '#3b82f6',
-        roughness: objSpec.roughness ?? 0.4,
-        metalness: objSpec.metallic ?? objSpec.metalness ?? 0.0
-      }));
+      if (objSpec.modelUrl) {
+        // Track D.3 asset object: real model ref (one draw) + proxy
+        // collider from size when physics is set (presentation decoupled).
+        const model = new engine.ModelRenderer({ modelUrl: objSpec.modelUrl });
+        // License travels as a harness-side expando (no engine change).
+        model.license = objSpec.license || 'UNSPECIFIED';
+        go.addComponent(model);
+      } else {
+        go.addComponent(new engine.MeshRenderer({
+          shape: objSpec.shape || 'box',
+          size,
+          color: objSpec.color || '#3b82f6',
+          roughness: objSpec.roughness ?? 0.4,
+          metalness: objSpec.metallic ?? objSpec.metalness ?? 0.0
+        }));
+      }
       if (objSpec.physics && objSpec.physics !== 'none') {
         go.addComponent(new engine.RigidBody3D({
           bodyType: objSpec.physics,
@@ -1187,6 +1196,32 @@ function evaluateRules(spec, ctxData) {
         const n = scene.gameObjects.length;
         pass = (rule.min === undefined || n >= rule.min) && (rule.max === undefined || n <= rule.max);
         detail = `objectCount=${n} (min=${rule.min ?? '-'} max=${rule.max ?? '-'})`;
+        break;
+      }
+      case 'asset_count': {
+        // Track D.3: objects carrying a model ref (uid:// store assets).
+        const assets = scene.gameObjects.filter(go =>
+          go.components.some(c => c.constructor.name === 'ModelRenderer'));
+        const n = assets.length;
+        pass = (rule.min === undefined || n >= rule.min) && (rule.max === undefined || n <= rule.max);
+        detail = `assetCount=${n} (min=${rule.min ?? '-'} max=${rule.max ?? '-'})`;
+        break;
+      }
+      case 'asset_license': {
+        // Every model ref must carry an allowlisted license (provenance gate).
+        const allowed = new Set(
+          (Array.isArray(rule.allow) ? rule.allow : ['CC0-1.0', 'CC-BY-4.0', 'MIT', 'CC-BY-3.0'])
+            .map(s => String(s).toLowerCase()));
+        const bad = [];
+        for (const go of scene.gameObjects) {
+          for (const comp of go.components) {
+            if (comp.constructor.name !== 'ModelRenderer') continue;
+            const license = String(comp.license || 'UNSPECIFIED');
+            if (!allowed.has(license.toLowerCase())) bad.push(`${go.name}:${license}`);
+          }
+        }
+        pass = bad.length === 0;
+        detail = bad.length ? `unlicensed models: ${bad.join(', ')}` : 'all model licenses allowlisted';
         break;
       }
       case 'transform_changes': {

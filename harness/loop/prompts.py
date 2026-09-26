@@ -84,6 +84,14 @@ RULE_DESCRIPTIONS = {
         f"'{r.get('target')}' must reach speed >= {r.get('minSpeed')}"
     ),
     "no_nan_transforms": lambda r: "no transform may become NaN/Infinity",
+    "asset_count": lambda r: (
+        f"the scene must contain model-asset objects "
+        f"(min={r.get('min', '?')} max={r.get('max', '?')})"
+    ),
+    "asset_license": lambda r: (
+        f"every model asset license must be allowlisted "
+        f"({', '.join(r.get('allow', ['CC0-1.0', 'CC-BY-4.0', 'MIT', 'CC-BY-3.0']))})"
+    ),
     "spatial_audit": lambda r: (
         "cross-system spatial agreement must hold (nav targets walkable + reachable, "
         "spawns supported + clear, AI targets reachable, camera sight line clear; "
@@ -117,6 +125,7 @@ def format_rules(rules: List[Dict[str, Any]]) -> str:
 ACTION_SCHEMA = """Action vocabulary (a JSON array named "actions"):
   - {"type": "spawn", "name": "...", "shape": "box"|"sphere"|"cylinder"|"capsule"|"plane"|"torus",
      "size": [x,y,z], "position": [x,y,z], "color": "#rrggbb", "physics": "dynamic"|"fixed"|"none", "mass": 1.0,
+     "metallic": 0.0, "roughness": 0.9, "model": "uid://<32-hex>" (optional: real store asset — must resolve in the importer manifest via HERETEK_ASSETS_DIR; unknown uids and bare URLs are rejected; prefer kits/models over raw primitives where the brief wants props),
      "vehicle": {"throttle": 1.0, "wheels": [{"offset": [-0.8,0,1.2]}, {"offset": [0.8,0,1.2]}, {"offset": [-0.8,0,-1.2]}, {"offset": [0.8,0,-1.2]}]} (optional: adds a VehicleController; wheels is REQUIRED when vehicle is present),
      "streamer": {"chunkSize": 16, "renderDistance": 1, "resolution": 8} (optional: adds a WorldStreamer that generates terrain chunks around the object),
      "biome": "sand rim" (optional: tags the object for the biome_coverage_min composition audit),
