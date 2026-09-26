@@ -6,18 +6,19 @@ This document is the single source of truth for AI agents (Antigravity, Claude C
 
 ---
 
-## 📊 Project Status (last verified 2026-09-25)
+## 📊 Project Status (last verified 2026-09-26)
 
 All four genre milestone sets, the autonomous harness, both Android containers,
-and the Perception & Coherence program (Tracks A.1→B.3) are implemented and verified:
+the Perception & Coherence program (Tracks A.1→B.3), and the Elemental Open-Zone
+Action RPG program (Tracks E.1→E.6, machine side) are implemented and verified:
 
-- **Engine** — 458 tests / 92 suites green (`npm test`); every logic source file has a companion
+- **Engine** — 513 tests / 108 suites green (`npm test`); every logic source file has a companion
   headless `.test.ts` (Zero Untested Code).
 - **Harness** — 24 MCP tools behind the transactional 7-point invariant gate; Artemis QA with
-  scenario-keyed regression baselines; 50 Python tests (invariants, exporter, apk_builder,
-  cross-tier quadtree parity); an **autonomous iterate-until-green loop** (`harness/loop/`)
+  scenario-keyed regression baselines; 65 agent Python tests + 49 validation/build tests; an
+  **autonomous iterate-until-green loop** (`harness/loop/`)
   that drives generated scenes to QA-verified green with vision critique, regression bisect,
-  and a cost/latency dashboard (241 loop tests).
+  and a cost/latency dashboard (249 loop tests).
 - **Perception** — gameplay-camera frame capture per iteration, 4-axis visual rubric +
   deterministic aesthetic proxies (`visual_quality_min` gate), genre UI themes + kits +
   GameShell token plumbing, taste memory + Artemis diff view, unified spatial index +
@@ -32,8 +33,13 @@ and the Perception & Coherence program (Tracks A.1→B.3) are implemented and ve
 - **Containers** — both tiers assemble real debug APKs and deploy/launch on an attached device.
   Tier 2 is validated on an Android target (emulator): real swapchain, 3 instanced cubes +
   64 terrain LOD leaf draws, `VK_SUCCESS` acquire/submit/present at ~61.5 FPS, rendered output
-  confirmed on-display and via in-renderer frame readback — see
+  confirmed on-display — see
   [`harness/runs/RUNS.md`](file:///home/john/Projects/Android-Dev-Studio/harness/runs/RUNS.md) (Run Block 2).
+  Correction (2026-09-26, issue #7): the in-renderer frame readback delivers a fixed pattern,
+  not the framebuffer — earlier "confirmed by frame readback" claims are withdrawn; the
+  emulator leg rests on swapchain/visibility/present evidence only. Title APKs ship for both
+  tiers (Tier 2: `tide_cinder` scene, 77/100 draws, 1800+ clean frames; Tier 1:
+  `apk_builder --play tide` boots straight into the game, Wave-1 gameplay screencap-verified).
 - **Native host checks** — 66 checks (scene loader, culling, terrain meshing/packing, Vulkan projection).
 - **Playable slices** — `?play=1` (header **Game**) boots the arena run (menu → waves → HUD →
   win/lose → restart, audio, save/load, real weapon damage; on-device: Victory 200 points);
@@ -44,6 +50,22 @@ and the Perception & Coherence program (Tracks A.1→B.3) are implemented and ve
   dialogue + Victory 200 points, 2 kills);
   `?play=city` (header **City**) boots the city run (found the town by clicking plots,
   grow to the target population; QA 7/7; on-device: 3/3 placements, Victory Pop 6/6).
+  `?play=tide` (header **Tide**) boots Tide and Cinder, the elemental action title
+  (keeper blessing → Hydro melee waves → Cinder Tyrant → 5-stage quest, 2-hero party
+  with swap, quest tracker; QA 16/16; live victory 61.4s in chrome-devtools with zero
+  console errors; Tier-1 on-device: Wave-1 gameplay screencap-verified).
+- **Elemental Open-Zone Action RPG (E.1→E.6, machine side green)** — rigged-GLB import +
+  data-level retarget + combo AnimFSM (E.1); animation-driven hitboxes, Hurtbox i-frames,
+  hitstop clock, damage feed, telegraphs, dodge roll, 2-hero Party, elemental Hurtbox
+  resolution with innate re-pulse, collision factions, boss waves with live strikes
+  (E.2, scripted encounter 10/10); streaming region with 3-biome composition, day/night
+  rig, collection route, traversal + coherence audits (E.3, 12/12); Quest primitive +
+  dialogue history/backlog, loop commissions converging first-pass via the melee/boss/
+  quest action vocabulary (E.4, 11/11 + green commission); instanced crowd + actors +
+  VFX budgets headless plus emulator rasterization-at-load (E.5, 9/9); title core,
+  playable slice, both APK flavors, Play-2026 store listing with gated validator (E.6).
+  Human gates stay human: E.2 feel review + E.6 full human playthrough; device proofs
+  await hardware (#1/#3).
 
 Known gaps and follow-up work are tracked as GitHub issues on
 [`Heretek-Games/Android-Dev-Studio`](https://github.com/Heretek-Games/Android-Dev-Studio/issues):
@@ -56,6 +78,7 @@ Known gaps and follow-up work are tracked as GitHub issues on
 | [#4](https://github.com/Heretek-Games/Android-Dev-Studio/issues/4) | Tier 1 | In-APK device/QA bridge (packaged studio shows "No device detected") |
 | [#5](https://github.com/Heretek-Games/Android-Dev-Studio/issues/5) | Harness | ~~CI emulator smoke test~~ — **done**: `python3 harness/agents/emulator_smoke.py` (verified both tiers PASS) |
 | [#6](https://github.com/Heretek-Games/Android-Dev-Studio/issues/6) | Tier 2 | Renderer hardening: per-frame semaphores, swapchain recreation, validation layers |
+| [#7](https://github.com/Heretek-Games/Android-Dev-Studio/issues/7) | Tier 2 | Frame readback returns identical bytes across scenes (capture path untrustworthy; readback claims withdrawn) |
 
 ---
 
