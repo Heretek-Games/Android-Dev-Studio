@@ -948,3 +948,14 @@ Tier-2 APK built from `tide_cinder.json` (13 meshes, 3 lights, **77/100 draws**)
 - **RETRACTION:** the Run Block 30 "non-uniform PPM readback (1031 unique colors)" claim is withdrawn as rasterization proof — the colors are real bytes but a fixed pattern. The E.5 emulator leg rests on swapchain/visibility/present evidence only until the capture path is fixed and re-proven.
 
 Standing blockers (hardware-bound, unchanged): #1 physical arm64, #3 50k-instance on-device, #6 validation-layer soak (+ readback fix).
+
+---
+
+## Run Block 32 — 2026-09-26, Tier-1 Title Packaging (E.6 shipping leg) ✅
+
+`apk_builder --play <slice>` ships `assets/game/boot.txt` (`?play=<slice>`); `MainActivity` appends it to the bundle URL (absent = studio shell, unchanged default). Slice value allow-listed (alphanumeric, injection-tested).
+
+- Tide and Cinder Tier-1 APK: real build (Vite bundle + Gradle + JDK 21), installed and launched on the `xune-test` AVD: logcat shows the title boot URL (`index.html?play=tide`), WebGL renders the dungeon menu on-device, and injected taps reach gameplay (Wave 1, keeper briefing with both choices, quest tracker, both HP bars, approaching slimes, touch buttons) — screencap-verified, no fatal exceptions.
+- Container `game/` bundle outputs stay out of git (build artifacts; the APK is git-ignored); the title flavor reproduces via `apk_builder --play tide`.
+
+Standing blockers (hardware-bound, unchanged): #1 physical arm64, #3/#7 Tier-2 device + readback.

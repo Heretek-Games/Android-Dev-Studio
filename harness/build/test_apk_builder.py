@@ -62,11 +62,16 @@ class FindJdkTests(unittest.TestCase):
         real_java = good / "bin" / "java"
         with (
             mock.patch.object(
-                builder, "_jdk_candidates", return_value=[Path("/nonexistent/jbr"), good]
+                builder,
+                "_jdk_candidates",
+                return_value=[Path("/nonexistent/jbr"), good],
             ),
             mock.patch.object(builder, "_java_major", return_value=21) as major,
             mock.patch.object(
-                Path, "exists", autospec=True, side_effect=lambda self: self == real_java
+                Path,
+                "exists",
+                autospec=True,
+                side_effect=lambda self: self == real_java,
             ),
         ):
             jdk = builder.find_jdk()
@@ -82,7 +87,10 @@ class FindJdkTests(unittest.TestCase):
             mock.patch.object(builder, "_jdk_candidates", return_value=[too_new]),
             mock.patch.object(builder, "_java_major", return_value=25),
             mock.patch.object(
-                Path, "exists", autospec=True, side_effect=lambda self: self == real_java
+                Path,
+                "exists",
+                autospec=True,
+                side_effect=lambda self: self == real_java,
             ),
         ):
             self.assertIsNone(builder.find_jdk())
@@ -135,3 +143,57 @@ class TierDispatchTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class PlayBootTargetTests(unittest.TestCase):
+    """apk_builder --play ships a title boot target (E.6 shipping leg)."""
+
+    def test_play_writes_boot_txt(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            assets = Path(tmp) / "game"
+            assets.mkdir()
+            dist = Path(tmp) / "dist"
+            dist.mkdir()
+            (dist / "index.html").write_text("<html></html>")
+            builder = AndroidApkBuilder(play="tide")
+            with (
+                mock.patch("harness.build.apk_builder.CONTAINER_ASSETS_DIR", assets),
+                mock.patch("harness.build.apk_builder.APP_DIST_DIR", dist),
+            ):
+                self.assertTrue(builder.sync_assets_to_container())
+            self.assertEqual((assets / "boot.txt").read_text(), "?play=tide")
+
+    def test_no_play_writes_no_boot_txt(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            assets = Path(tmp) / "game"
+            assets.mkdir()
+            dist = Path(tmp) / "dist"
+            dist.mkdir()
+            (dist / "index.html").write_text("<html></html>")
+            builder = AndroidApkBuilder()
+            with (
+                mock.patch("harness.build.apk_builder.CONTAINER_ASSETS_DIR", assets),
+                mock.patch("harness.build.apk_builder.APP_DIST_DIR", dist),
+            ):
+                self.assertTrue(builder.sync_assets_to_container())
+            self.assertFalse((assets / "boot.txt").exists())
+
+    def test_play_rejects_query_injection(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            assets = Path(tmp) / "game"
+            assets.mkdir()
+            dist = Path(tmp) / "dist"
+            dist.mkdir()
+            (dist / "index.html").write_text("<html></html>")
+            builder = AndroidApkBuilder(play="tide&evil=1")
+            with (
+                mock.patch("harness.build.apk_builder.CONTAINER_ASSETS_DIR", assets),
+                mock.patch("harness.build.apk_builder.APP_DIST_DIR", dist),
+            ):
+                self.assertFalse(builder.sync_assets_to_container())

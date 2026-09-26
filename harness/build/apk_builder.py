@@ -26,11 +26,16 @@ VULKAN_BUILD_DIR = PROJECT_ROOT / "harness" / "build" / "tier2-build"
 
 class AndroidApkBuilder:
     def __init__(
-        self, verbose: bool = False, scene_path: Optional[str] = None, quadtree: bool = True
+        self,
+        verbose: bool = False,
+        scene_path: Optional[str] = None,
+        quadtree: bool = True,
+        play: Optional[str] = None,
     ):
         self.verbose = verbose
         self.scene_path = scene_path
         self.quadtree = quadtree
+        self.play = play
 
     def log(self, msg: str):
         # MCP stdio framing owns stdout; all human-readable logs go to stderr.
@@ -80,6 +85,17 @@ class AndroidApkBuilder:
                 shutil.copytree(item, dest)
             else:
                 shutil.copy2(item, dest)
+
+        # Per-title boot slice (apk_builder --play <slice>): boots straight
+        # into the game instead of the studio shell. Absent = studio default.
+        if self.play:
+            import re as _re
+
+            if not _re.fullmatch(r"[A-Za-z0-9_-]{1,32}", self.play):
+                self.log(f"Invalid --play slice {self.play!r} (alphanumeric only).")
+                return False
+            (CONTAINER_ASSETS_DIR / "boot.txt").write_text(f"?play={self.play}")
+            self.log(f"Title boot target written: ?play={self.play}")
 
         file_count = sum(1 for _ in CONTAINER_ASSETS_DIR.rglob("*") if _.is_file())
         self.log(f"Synced {file_count} web assets to Android container.")
@@ -318,7 +334,10 @@ class AndroidApkBuilder:
         return None
 
     def build_tier2(
-        self, dry_run: bool = False, scene_path: Optional[str] = None, quadtree: bool = True
+        self,
+        dry_run: bool = False,
+        scene_path: Optional[str] = None,
+        quadtree: bool = True,
     ) -> Dict[str, Any]:
         """
         Tier 2 native Vulkan container pipeline:
@@ -338,7 +357,11 @@ class AndroidApkBuilder:
         }
 
         # 1. Scene export — honor the scene's persisted terrain LOD config
-        source_scene = Path(scene_path) if scene_path else PROJECT_ROOT / "harness" / "scenes" / "active_scene.json"
+        source_scene = (
+            Path(scene_path)
+            if scene_path
+            else PROJECT_ROOT / "harness" / "scenes" / "active_scene.json"
+        )
         quadtree_cfg = {}
         try:
             scene_data = json.loads(source_scene.read_text())
@@ -357,7 +380,14 @@ class AndroidApkBuilder:
             str(VULKAN_ASSETS_DIR),
         ]
         if quadtree:
-            export_cmd += ["--quadtree", "--lod-depth", str(depth), "--lod-focus", str(focus[0]), str(focus[1])]
+            export_cmd += [
+                "--quadtree",
+                "--lod-depth",
+                str(depth),
+                "--lod-focus",
+                str(focus[0]),
+                str(focus[1]),
+            ]
         self.log(
             f"Exporting scene to {VULKAN_ASSETS_DIR} (quadtree depth {depth}, focus {focus})..."
         )
@@ -516,11 +546,20 @@ def main():
         action="store_true",
         help="Skip the terrain quadtree export (demo scenes without terrain occlusion)",
     )
+    parser.add_argument(
+        "--play",
+        default=None,
+        help="Tier 1 title boot slice (e.g. tide): ships assets/game/boot.txt "
+        "with '?play=<slice>' so the container boots straight into the game",
+    )
     parser.add_argument("--verbose", action="store_true", help="Verbose output")
     args = parser.parse_args()
 
     builder = AndroidApkBuilder(
-        verbose=args.verbose, scene_path=args.scene, quadtree=not args.no_quadtree
+        verbose=args.verbose,
+        scene_path=args.scene,
+        quadtree=not args.no_quadtree,
+        play=args.play,
     )
     res = builder.build_and_deploy(
         device_serial=args.device,

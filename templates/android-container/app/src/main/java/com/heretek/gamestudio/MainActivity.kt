@@ -81,8 +81,16 @@ class MainActivity : AppCompatActivity() {
         // Native Android Bridge
         webView.addJavascriptInterface(AndroidGameBridge(this), "AndroidBridge")
 
-        // Load bundled game
-        val targetUrl = "https://appassets.androidplatform.net/assets/game/index.html"
+        // Load bundled game. A per-title boot target (apk_builder --play <slice>)
+        // ships as assets/game/boot.txt containing e.g. "?play=tide"; absent
+        // means the studio shell (default index, no query).
+        val baseUrl = "https://appassets.androidplatform.net/assets/game/index.html"
+        val bootSuffix = try {
+            assets.open("game/boot.txt").bufferedReader().use { it.readText() }.trim()
+        } catch (e: Exception) {
+            ""
+        }
+        val targetUrl = baseUrl + bootSuffix
         Log.i(TAG, "Loading 3D Android Game from: $targetUrl")
         webView.loadUrl(targetUrl)
     }
