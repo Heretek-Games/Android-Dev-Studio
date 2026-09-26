@@ -1,0 +1,202 @@
+# Heretek Engine — static quality gates (Phase 0, Node D: quality gates).
+#
+# Managed by lefthook 2.1.11. Run locally:
+#   lefthook run pre-commit            # staged files only (default pre-commit path)
+#   lefthook run pre-commit --all-files  # full-tree gate (acceptance path)
+#   lefthook run pre-commit --job <name> # single gate, e.g. --job ruff-check
+#
+# Toolchain pins, install notes, and per-gate baselines live in
+#   orchestration/toolchain/pins.md
+# Missing-binary reporting lives in
+#   orchestration/toolchain/install.sh
+#
+# Convention used throughout this file:
+#   * ENFORCING jobs must PASS on the current tree (verified 2026-09-26).
+#   * WARN-ONLY jobs exit 0 unconditionally but print a loud TODO banner naming
+#     the follow-up. Nothing is silently dropped: every planned gate has a job.
+#   * Every exclusion/ignore carries a dated TODO (2026-09-26) describing what
+#     fails today and how to close it. Never mass-suppress: exclusions name
+#     individual checks or rule codes, never whole tool categories.
+#   * `glob` filters which files trigger a job; `{staged_files}` expands to the
+#     matched files (staged set, or the whole matching tree with --all-files).
+
+pre-commit:
+  jobs:
+    # ------------------------------------------------------------------
+    # ENFORCING: ruff lint over harness/ (all repo Python lives there).
+    # Baseline 2026-09-26: bare `ruff check harness/` reports 1491 errors
+    # across 33 rule codes (ruff 0.16.1 enables the full stable rule set by
+    # default). Each code below fails on the current tree; fix the
+    # occurrences, then delete the code from this list (ratchet).
+    # TODO(2026-09-26): pyupgrade backlog — UP006 x834, UP045 x208,
+    #   UP035 x106, UP034 x1, PIE808 x3. Decide target-version, run
+    #   `ruff check --fix`, drop these codes.
+    # TODO(2026-09-26): hygiene backlog — RUF100 x84 (stale noqa), F401 x34,
+    #   F841 x4, RUF059 x7, RUF046 x4. Remove dead imports/variables, drop.
+    # TODO(2026-09-26): return-style backlog — RET501 x44, PLR1711 x44.
+    #   Auto-fixable (`--fix`), drop.
+    # TODO(2026-09-26): real-bug-class backlog, fix individually then drop:
+    #   F821 x2 (harness/loop/aesthetic.py:94,96 undefined `Optional`),
+    #   F811 x2 (harness/loop/test_action_applier.py:65,101 `os` redefined),
+    #   B017 x1 (harness/memory/test_project_memory.py:64 assert on blind
+    #   Exception), F541 x1 (harness/mcp_server.py:1723 placeholder-less
+    #   f-string), PLR1704 x1 (harness/mcp_server.py:1689 arg shadowed by
+    #   local `req`), PLR0402 x1, RUF012 x1, PIE810 x1, PERF402 x1,
+    #   SIM117 x1, FURB167 x1.
+    # TODO(2026-09-26): strictness backlog — BLE001 x34 (blind except),
+    #   S110 x9, PLW1510 x27 (subprocess without check=), EXE001 x7,
+    #   I001 x15 (import sort), SIM102/SIM115/SIM118, ISC004 x2,
+    #   PLR0124 x2. Harden call sites, drop.
+    # ------------------------------------------------------------------
+    - name: ruff-check
+      tags: [python, lint]
+      glob:
+        - "harness/*.py"
+        - "harness/**/*.py"
+      run: >-
+        ruff check --no-cache
+        --ignore B017,BLE001,EXE001,F401,F541,F811,F821,F841,FURB167,I001,ISC004,PERF402,PIE808,PIE810,PLR0124,PLR0402,PLR1704,PLR1711,PLW1510,RET501,RUF012,RUF046,RUF059,RUF100,S110,SIM102,SIM115,SIM117,SIM118,UP006,UP034,UP035,UP045
+        {staged_files}
+      fail_text: "ruff-check failed. New violations outside the 2026-09-26 ignore list — fix them, do not extend the list without a dated TODO."
+
+    # ------------------------------------------------------------------
+    # ENFORCING: clang-tidy bugprone+cert+concurrency over the Tier 2
+    # native sources. Headers (*.h) are NOT passed as translation units
+    # (clang-tidy treats .h as C and errors on -std=c++17); they are
+    # analysed transitively via --header-filter when a .cpp includes them.
+    # Exclusions below each fail on the current tree (verified 2026-09-26
+    # with --warnings-as-errors='*'):
+    # TODO(2026-09-26): -bugprone-easily-swappable-parameters fires on
+    #   culling.cpp x3 (perspective, perspectiveVulkan, planComputeDispatch),
+    #   terrain_mesh.cpp x4, nav_bake.cpp x2. Deliberate math-API shapes;
+    #   follow-up is NOLINTNEXTLINE or strong types, then drop this exclusion.
+    # TODO(2026-09-26): -bugprone-unchecked-string-to-number-conversion and
+    #   -cert-err34-c fire x6 on tests/nav_bake_probe.cpp (atoi/atof).
+    #   Follow-up is strtol/strtod, then drop both exclusions.
+    # TODO(2026-09-26): -bugprone-implicit-widening-of-multiplication-result
+    #   fires x1 on tests/native_scene_test.cpp. Follow-up is an explicit
+    #   cast, then drop this exclusion.
+    # ------------------------------------------------------------------
+    - name: clang-tidy
+      tags: [cpp, lint]
+      glob:
+        - "templates/vulkan-container/app/src/main/cpp/*.cpp"
+        - "templates/vulkan-container/app/src/main/cpp/**/*.cpp"
+      run: >-
+        clang-tidy --warnings-as-errors='*'
+        --checks='bugprone-*,cert-*,concurrency-*,-bugprone-easily-swappable-parameters,-bugprone-unchecked-string-to-number-conversion,-bugprone-implicit-widening-of-multiplication-result,-cert-err34-c'
+        --header-filter='templates/vulkan-container/.*'
+        {staged_files} -- -std=c++17 -Itemplates/vulkan-container/app/src/main/cpp
+      fail_text: "clang-tidy failed. Fix the finding or add a dated, check-specific exclusion — never a blanket -checks=-*."
+
+    # ------------------------------------------------------------------
+    # ENFORCING: gitleaks secret scan over staged changes.
+    # ------------------------------------------------------------------
+    - name: gitleaks
+      tags: [secrets]
+      run: gitleaks protect --verbose --redact --staged
+      fail_text: "gitleaks found a potential secret in staged changes. Remove it (history rewrite if already committed) — never force-push past this gate."
+
+    # ------------------------------------------------------------------
+    # WARN-ONLY: clang-format --dry-run --Werror.
+    # TODO(2026-09-26): no .clang-format exists in the repo, so the check
+    #   runs against the default LLVM style and ALL 15 files under
+    #   templates/vulkan-container/app/src/main/cpp fail it. Adding a
+    #   .clang-format plus reformatting the tree touches files outside this
+    #   node's scope, so this job warns until the follow-up lands:
+    #   add .clang-format at the repo root, run clang-format -i over the
+    #   cpp tree, then delete the `|| { ...; true; }` tail to enforce.
+    # ------------------------------------------------------------------
+    - name: clang-format
+      tags: [cpp, format]
+      glob:
+        - "templates/vulkan-container/app/src/main/cpp/*.cpp"
+        - "templates/vulkan-container/app/src/main/cpp/**/*.cpp"
+        - "templates/vulkan-container/app/src/main/cpp/*.h"
+        - "templates/vulkan-container/app/src/main/cpp/**/*.h"
+      run: >-
+        clang-format --dry-run --Werror {staged_files} || { echo "WARN-ONLY clang-format - tree is not clang-formatted (TODO 2026-09-26 - add .clang-format, format tree, enforce)."; true; }
+
+    # ------------------------------------------------------------------
+    # WARN-ONLY: cppcheck. LOUD TODO — this gate must never be silently
+    # dropped; the job exists precisely so the gap stays visible.
+    # TODO(2026-09-26): cppcheck is NOT installed on this machine and could
+    #   not be installed in-session: no passwordless sudo (`sudo -n true`
+    #   fails), no apt (Fedora 46; dnf exists but needs root). Close-out:
+    #   `sudo dnf install cppcheck` (needs root) OR `brew install cppcheck`
+    #   (Linuxbrew bottle cppcheck 2.22.0, no root needed), run
+    #   `cppcheck --enable=warning,performance,portability` over
+    #   templates/vulkan-container/app/src/main/cpp, record the exact
+    #   version in orchestration/toolchain/pins.md, tune suppressions for
+    #   what fails that day, then delete the warn-only tail to enforce.
+    # ------------------------------------------------------------------
+    - name: cppcheck
+      tags: [cpp, lint]
+      glob:
+        - "templates/vulkan-container/app/src/main/cpp/*.cpp"
+        - "templates/vulkan-container/app/src/main/cpp/**/*.cpp"
+        - "templates/vulkan-container/app/src/main/cpp/*.h"
+        - "templates/vulkan-container/app/src/main/cpp/**/*.h"
+      run: |
+        if ! command -v cppcheck >/dev/null 2>&1; then
+          echo "WARN-ONLY cppcheck - binary not installed (TODO 2026-09-26 - sudo dnf install cppcheck | brew install cppcheck, tune, enforce). Gate SKIPPED, not dropped."
+          exit 0
+        fi
+        cppcheck --enable=warning,performance,portability --error-exitcode=1 --inline-suppr {staged_files} || { echo "WARN-ONLY cppcheck - findings present (TODO 2026-09-26 - triage, suppress with --inline-suppr + dated comment, enforce)."; true; }
+
+    # ------------------------------------------------------------------
+    # WARN-ONLY: ruff format check over harness/.
+    # TODO(2026-09-26): 5 files fail `ruff format --check` today:
+    #   harness/agents/emulator_smoke.py, harness/agents/stress_scene_gen.py,
+    #   harness/agents/test_stress_scene_gen.py,
+    #   harness/loop/test_action_applier.py, harness/loop/test_vision.py.
+    #   Reformatting touches files outside this node's scope; follow-up is
+    #   `ruff format` on those 5 files, then delete the warn-only tail.
+    # ------------------------------------------------------------------
+    - name: ruff-format
+      tags: [python, format]
+      glob:
+        - "harness/*.py"
+        - "harness/**/*.py"
+      run: >-
+        ruff format --no-cache --check {staged_files} || { echo "WARN-ONLY ruff-format - unformatted files (TODO 2026-09-26 - ruff format the 5 listed files, enforce)."; true; }
+
+    # ------------------------------------------------------------------
+    # WARN-ONLY: mypy --strict over harness/.
+    # TODO(2026-09-26): --strict cannot pass on the current tree.
+    #   Structural blocker: harness/ has no __init__.py anywhere, and
+    #   whole-dir runs die with exit 2 — "Source file found twice under
+    #   different module names: project_memory and memory.project_memory".
+    #   Per-file --strict also fails broadly (untyped defs, missing type
+    #   arguments, e.g. harness/agents/device_cli.py:33 [type-arg]).
+    #   Follow-up: fix package structure (explicit bases or __init__.py),
+    #   annotate to strict-clean, then delete the warn-only tail.
+    #   --no-incremental keeps the hook side-effect free (no .mypy_cache).
+    # ------------------------------------------------------------------
+    - name: mypy-strict
+      tags: [python, types]
+      glob:
+        - "harness/*.py"
+        - "harness/**/*.py"
+      run: >-
+        mypy --strict --no-incremental harness/ || { echo "WARN-ONLY mypy-strict - harness/ is not --strict clean (TODO 2026-09-26 - fix module structure + annotations, enforce)."; true; }
+
+    # ------------------------------------------------------------------
+    # Rust (STUB — no Cargo workspace in this repo as of 2026-09-26;
+    # `find . -name Cargo.toml` is empty outside node_modules/.git).
+    # To enable when a Cargo workspace lands, uncomment and date the TODO:
+    #
+    # TODO(2026-09-26): uncomment when the first Cargo.toml lands.
+    # - name: cargo-fmt
+    #   tags: [rust, format]
+    #   glob:
+    #     - "**/*.rs"
+    #   run: cargo fmt --check
+    #   fail_text: "cargo fmt --check failed. Run cargo fmt."
+    # - name: cargo-clippy
+    #   tags: [rust, lint]
+    #   glob:
+    #     - "**/*.rs"
+    #   run: cargo clippy --all-targets -- -D warnings
+    #   fail_text: "clippy -D warnings failed. Fix lints, do not allow them."
+    # ------------------------------------------------------------------
