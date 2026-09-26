@@ -307,6 +307,7 @@ def generation_messages(
     goal: str,
     rules: List[Dict[str, Any]],
     seed_objects: List[Dict[str, Any]] | None = None,
+    taste_notes: List[str] | None = None,
 ) -> List[Dict[str, str]]:
     """First-iteration prompt: build the whole scene from the goal + rules."""
     seed_note = ""
@@ -314,6 +315,16 @@ def generation_messages(
         seed_note = (
             "\nA base scene already exists; keep its objects and ADD to them with spawn/event actions:\n"
             f"{seed_objects}\n"
+        )
+    # A.4 taste: proven looks from past green runs in this genre. Advisory —
+    # the builder still satisfies the machine rules first.
+    taste_note = ""
+    if taste_notes:
+        taste_note = (
+            "\nPROVEN LOOKS (past green runs in this genre — reuse what fits, "
+            "do not copy blindly):\n"
+            + "\n".join(f"- {note}" for note in taste_notes[:3])
+            + "\n"
         )
     # Deterministic scaffolding (not prose): actions the ruleset provably needs,
     # named per rule id so no abstraction gap remains.
@@ -367,6 +378,7 @@ def generation_messages(
         "The scene must satisfy ALL of these acceptance rules (QA will verify each one):\n"
         f"{format_rules(rules)}\n"
         f"{seed_note}\n"
+        f"{taste_note}"
         f"{required_note}"
         "Entity names referenced by the rules MUST match exactly. Include a ground plane, "
         "the player/actor, and all props required by the rules. Keep the scene small enough "

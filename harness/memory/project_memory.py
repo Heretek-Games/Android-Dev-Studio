@@ -118,6 +118,23 @@ class ProjectMemory:
                 )
             """)
 
+            # 6. Taste memory: high-scoring look-dev decisions per genre (A.4).
+            # Written on loop-green, read per brief — taste compounds like ADRs.
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS taste_memory (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    genre TEXT NOT NULL,
+                    theme TEXT NOT NULL,
+                    kit_zones TEXT NOT NULL DEFAULT '[]',
+                    palette TEXT NOT NULL DEFAULT '[]',
+                    scores TEXT NOT NULL DEFAULT '{}',
+                    overall INTEGER NOT NULL DEFAULT 0,
+                    mean REAL NOT NULL DEFAULT 0,
+                    source TEXT NOT NULL DEFAULT '',
+                    created_at REAL NOT NULL
+                )
+            """)
+
             conn.commit()
 
     # --- ADR Management ---
@@ -377,6 +394,69 @@ class ProjectMemory:
             "failed_tasks": self.list_tasks(state="failed")[-10:],
             "latest_qa": self.get_latest_benchmarks(limit=1),
         }
+
+    # --- Taste memory (Track A.4): what good looked like, per genre ---
+    #: Cap per genre so the table cannot grow without bound.
+    TASTE_PER_GENRE_CAP = 20
+
+    def record_taste(self, entry: Dict[str, Any]) -> int:
+        """Persist one green-run look (theme/kit-zones/palette/scores)."""
+        genre = str(entry.get("genre") or "default").strip().lower() or "default"
+        now = time.time()
+        with self._get_connection() as conn:
+            cursor = conn.execute(
+                """INSERT INTO taste_memory
+                   (genre, theme, kit_zones, palette, scores, overall, mean, source, created_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    genre,
+                    str(entry.get("theme") or "default"),
+                    json.dumps(entry.get("kit_zones") or []),
+                    json.dumps(entry.get("palette") or []),
+                    json.dumps(entry.get("scores") or {}),
+                    int(entry.get("overall") or 0),
+                    float(entry.get("mean") or 0),
+                    str(entry.get("source") or ""),
+                    now,
+                ),
+            )
+            row_id = cursor.lastrowid
+            conn.execute(
+                """DELETE FROM taste_memory WHERE id NOT IN (
+                       SELECT id FROM taste_memory WHERE genre = ?
+                       ORDER BY overall DESC, created_at DESC LIMIT ?
+                   ) AND genre = ?""",
+                (genre, self.TASTE_PER_GENRE_CAP, genre),
+            )
+            conn.commit()
+            return int(row_id)
+
+    def query_taste(self, genre: Any, limit: int = 3) -> List[Dict[str, Any]]:
+        """Top past-green looks for a genre (overall, then recency)."""
+        name = str(genre or "default").strip().lower() or "default"
+        with self._get_connection() as conn:
+            rows = conn.execute(
+                "SELECT * FROM taste_memory WHERE genre = ?"
+                " ORDER BY overall DESC, created_at DESC LIMIT ?",
+                (name, max(1, int(limit or 3))),
+            ).fetchall()
+            out = []
+            for row in rows:
+                out.append(
+                    {
+                        "id": row["id"],
+                        "genre": row["genre"],
+                        "theme": row["theme"],
+                        "kit_zones": json.loads(row["kit_zones"] or "[]"),
+                        "palette": json.loads(row["palette"] or "[]"),
+                        "scores": json.loads(row["scores"] or "{}"),
+                        "overall": row["overall"],
+                        "mean": row["mean"],
+                        "source": row["source"],
+                        "created_at": row["created_at"],
+                    }
+                )
+            return out
 
     # --- Project Summary ---
     def get_project_summary(self) -> Dict[str, Any]:

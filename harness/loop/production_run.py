@@ -72,6 +72,13 @@ def main() -> int:
         vision = make_layout_critique(client, model=args.vision_model)
 
     def factory(goal, rules):
+        genre = "default"
+        try:
+            brief = memory.get_brief(brief_id)
+            fantasy = (brief.get("brief") or {}).get("fantasy") or {}
+            genre = str(fantasy.get("genre") or "default")
+        except Exception:
+            pass
         return IterateLoop(
             goal,
             rules,
@@ -82,6 +89,8 @@ def main() -> int:
             vision_critique=vision,
             max_total_tokens=args.max_tokens,
             max_wall_seconds=args.max_seconds,
+            genre=genre,
+            taste_store=memory,
         )
 
     verdict = ProductionRun(memory, swarm, factory).run(brief_id)

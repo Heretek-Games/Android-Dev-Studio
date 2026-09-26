@@ -256,6 +256,8 @@ class IterateLoop:
         max_wall_seconds: Optional[float] = None,
         max_completion_tokens: int = 8000,
         clock: Callable[[], float] = time.monotonic,
+        genre: Optional[str] = None,
+        taste_store: Any = None,
     ):
         self.goal = goal
         self.rules = rules
@@ -274,6 +276,77 @@ class IterateLoop:
         self.max_wall_seconds = max_wall_seconds
         self.max_completion_tokens = max_completion_tokens
         self.clock = clock
+        # A.4 taste: genre keys retrieval; the store is duck-typed
+        # (record_taste/query_taste) and None keeps runs hermetic.
+        self.genre = (genre or "default").strip().lower() or "default"
+        self.taste_store = taste_store
+
+    def _taste_notes(self) -> List[str]:
+        """Top past-green looks for this genre, as builder prompt lines."""
+        if self.taste_store is None:
+            return []
+        try:
+            entries = self.taste_store.query_taste(self.genre, limit=3) or []
+        except Exception:
+            return []
+        notes = []
+        for entry in entries:
+            if not isinstance(entry, dict):
+                continue
+            scores = entry.get("scores") or {}
+            axes = ", ".join(f"{k}={v}" for k, v in scores.items())
+            zones = entry.get("kit_zones") or []
+            palette = entry.get("palette") or []
+            notes.append(
+                f"theme '{entry.get('theme')}' scored {axes}"
+                + (f"; HUD zones {zones}" if zones else "")
+                + (f"; palette {palette}" if palette else "")
+                + f" (green run {entry.get('source', '?')})"
+            )
+        return notes
+
+    def _record_taste(self, scene: Dict[str, Any]) -> None:
+        """Persist this green run's look (guarded: memory never breaks the loop)."""
+        if self.taste_store is None:
+            return
+        try:
+            from harness.loop.aesthetic import audit_scene
+
+            audit = audit_scene(scene)
+            ui = scene.get("ui") if isinstance(scene.get("ui"), dict) else {}
+            elements = (
+                ui.get("elements") if isinstance(ui.get("elements"), list) else []
+            )
+            zones = sorted(
+                {
+                    e.get("zone")
+                    for e in elements
+                    if isinstance(e, dict) and isinstance(e.get("zone"), str)
+                }
+            )
+            colors = sorted(
+                {
+                    o.get("color")
+                    for o in scene.get("gameObjects", [])
+                    if isinstance(o, dict) and isinstance(o.get("color"), str)
+                }
+            )
+            self.taste_store.record_taste(
+                {
+                    "genre": self.genre,
+                    "theme": ui.get("theme", "default")
+                    if isinstance(ui, dict)
+                    else "default",
+                    "kit_zones": zones,
+                    "palette": colors[:12],
+                    "scores": audit["scores"],
+                    "overall": audit["overall"],
+                    "mean": audit["mean"],
+                    "source": self.work_scene_path.name,
+                }
+            )
+        except Exception:
+            pass
 
     # ------------------------------------------------------------------ helpers
     def _base_scene(self) -> Dict[str, Any]:
@@ -368,6 +441,8 @@ class IterateLoop:
             re.sub(r"[^a-z0-9]+", "-", self.goal.lower())[:40].strip("-") or "run"
         )
         frames: List[Dict[str, Any]] = []
+        # A.4: past-green looks for this genre, fetched once (guarded).
+        taste_notes = self._taste_notes()
 
         for iteration in range(1, self.max_iterations + 1):
             phase = "generate" if iteration == 1 else "repair"
@@ -388,7 +463,10 @@ class IterateLoop:
 
             if phase == "generate":
                 messages = generation_messages(
-                    self.goal, self.rules, scene["gameObjects"] or None
+                    self.goal,
+                    self.rules,
+                    scene["gameObjects"] or None,
+                    taste_notes=taste_notes or None,
                 )
             else:
                 messages = repair_messages(
@@ -551,6 +629,7 @@ class IterateLoop:
                         else:
                             result.iterations.append(record)
                             result.verdict = "green"
+                            self._record_taste(scene)
                             break
             else:
                 # Gate violation: skip QA, feed the violations back as failures.
