@@ -66,6 +66,13 @@ export class DialogueManager {
 
   private activeTreeId: string | null = null;
   private currentNodeId: string | null = null;
+  /**
+   * Conversation history (Track E.4): every node id entered via stepToNode
+   * in entry order, including auto-chained action/condition/end nodes that
+   * never surface as a walk step. Quest logic and the dialogue backlog UI
+   * read this; reset on each startConversation.
+   */
+  private history: string[] = [];
 
   /** Binds key-based line resolution (null detaches; raw text is the default). */
   public setLocalization(localizer: LocalizationService | null): void {
@@ -140,6 +147,7 @@ export class DialogueManager {
     }
 
     this.activeTreeId = treeId;
+    this.history = [];
     return this.stepToNode(tree.startNodeId);
   }
 
@@ -147,6 +155,11 @@ export class DialogueManager {
     if (!this.activeTreeId || !this.currentNodeId) return null;
     const tree = this.trees.get(this.activeTreeId);
     return tree?.nodes[this.currentNodeId] || null;
+  }
+
+  /** Node ids entered in this conversation, in entry order (backlog). */
+  public getHistory(): string[] {
+    return [...this.history];
   }
 
   public advance(): DialogueNode | null {
@@ -246,6 +259,7 @@ export class DialogueManager {
     }
 
     this.currentNodeId = node.id;
+    this.history.push(node.id);
 
     if (node.type === 'end') {
       this.endConversation();

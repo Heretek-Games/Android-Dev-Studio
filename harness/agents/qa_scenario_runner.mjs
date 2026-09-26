@@ -777,9 +777,54 @@ function setupDialogue(spec, engine) {
       manager.removeEventListener(listener);
       manager.endConversation();
     }
-    transcripts[treeId] = { visited, events, error: null };
+    transcripts[treeId] = {
+      // Walk steps plus engine conversation history: auto-chained
+      // action/condition/end nodes never surface as walk steps, but the
+      // engine records them (dialogue backlog) — merge without duplicates.
+      visited: [...visited, ...manager.getHistory().filter(id => !visited.includes(id))],
+      events,
+      error: null
+    };
   }
   return { manager, transcripts, localization };
+}
+
+/**
+ * Track E.4: quest-chain driver. Builds engine.Quest from spec.quest and
+ * polls it each frame against a snapshot assembled from live run state:
+ * dialogue flags (visited nodes + emitted narrative events), kill/reaction
+ * tallies (melee resolutions preferred, hitscan session fallback), and the
+ * session flow phase. Content stays data; the quest only reads.
+ */
+function setupQuest(spec, engine) {
+  if (!spec.quest || typeof spec.quest !== 'object') return null;
+  const quest = new engine.Quest(spec.quest);
+  const stagesSeen = [];
+  quest.onStage(id => stagesSeen.push(id));
+  return {
+    quest,
+    stagesSeen,
+    snapshot(game, dialogue) {
+      const flags = new Set();
+      for (const transcript of Object.values(dialogue?.transcripts || {})) {
+        for (const id of transcript.visited || []) flags.add(id);
+        for (const event of transcript.events || []) {
+          if (event && event.eventName) flags.add(event.eventName);
+        }
+      }
+      const kills = game && typeof game.meleeKills === 'function'
+        ? game.meleeKills()
+        : (game ? game.runtime.session.getKills() : 0);
+      const reactions = game && typeof game.meleeReactions === 'function'
+        ? game.meleeReactions()
+        : (game ? game.runtime.getReactionCount() : 0);
+      const phase = game ? game.runtime.flow.getPhase() : '';
+      return { flags: [...flags], kills, reactions, phase };
+    },
+    poll(game, dialogue) {
+      quest.update(this.snapshot(game, dialogue));
+    }
+  };
 }
 
 /**
@@ -865,7 +910,17 @@ function setupGame(spec, scene, engine) {
   const meleeCfg = config.melee || null;
   let meleeKills = 0;
   let meleeReactions = 0;
+  let bossName = null;
+  let bossStrikes = 0;
   const playerName = config.playerName || 'Player Hero';
+
+  // Track E.4: scalar or per-wave array (boss waves spawn a single tyrant).
+  const perWave = Array.isArray(config.enemiesPerWave) ? config.enemiesPerWave : null;
+  const enemiesPerWaveFn = config.enemiesPerWave !== undefined
+    ? (wave) => perWave
+      ? (perWave[Math.min(wave - 1, perWave.length - 1)] ?? 1)
+      : config.enemiesPerWave
+    : undefined;
 
   const runtime = new engine.GameRuntime({
     mode,
@@ -875,27 +930,57 @@ function setupGame(spec, scene, engine) {
     targetScore: config.targetScore,
     timeLimitSeconds: config.timeLimitSeconds,
     totalWaves: config.totalWaves ?? 2,
-    enemiesPerWave: config.enemiesPerWave ? () => config.enemiesPerWave : undefined,
+    enemiesPerWave: enemiesPerWaveFn,
     spawnRadius: config.spawnRadius ?? 8,
     scorePerKill: config.scorePerKill ?? 100,
     interWaveDelaySeconds: config.interWaveDelaySeconds ?? 1,
     weapon: mode === 'waves' ? hitSource : undefined,
     hitElement: config.hitElement,
     hitGauge: config.hitGauge,
-    buildEnemy: mode === 'waves' ? ({ name, position }) => {
-      const enemy = new engine.GameObject(name);
+    buildEnemy: mode === 'waves' ? ({ name, position, wave }) => {
+      // Track E.4: per-wave boss override (tougher pool, bigger frame,
+      // live telegraph) — the factory already receives the wave number.
+      const bossCfg = config.boss && wave === config.boss.wave ? config.boss : null;
+      const enemy = new engine.GameObject(bossCfg?.name || name);
       enemy.transform.setPosition(position[0], position[1] + (enemySpec.y ?? 0.8), position[2]);
       enemy.addComponent(
         new engine.MeshRenderer({
           shape: enemySpec.shape || 'box',
-          size: enemySpec.size || [1, 1.5, 1],
-          color: enemySpec.color || '#ef4444',
+          size: bossCfg?.size || enemySpec.size || [1, 1.5, 1],
+          color: bossCfg?.color || enemySpec.color || '#ef4444',
           roughness: 0.5
         })
       );
-      addElementalComponent(enemy, enemySpec.elemental, engine);
-      if (!enemySpec.elemental) {
-        enemy.addComponent(new engine.HealthComponent(enemyHealth));
+      const elementalSpec = bossCfg?.health && enemySpec.elemental
+        ? { ...enemySpec.elemental, maxHealth: bossCfg.health }
+        : enemySpec.elemental;
+      addElementalComponent(enemy, elementalSpec, engine);
+      if (!elementalSpec) {
+        enemy.addComponent(new engine.HealthComponent({
+          maxHealth: bossCfg?.health ?? enemyHealth.maxHealth ?? 50,
+          destroyOnDeath: true
+        }));
+      }
+      if (bossCfg?.telegraph) {
+        const tell = new engine.Telegraph(bossCfg.telegraph);
+        tell.onStrike(() => {
+          bossStrikes += 1;
+          // Live telegraph resolution: the strike lands only if the player
+          // is still in reach (dodging matters); the player is unkillable
+          // in QA (destroyOnDeath false) so the encounter always resolves.
+          const player = scene.findByName(playerName);
+          const health = player
+            ? player.components.find(c => c.constructor.name === 'HealthComponent')
+            : null;
+          if (!player || !health || typeof health.takeDamage !== 'function') return;
+          const dx = player.transform.position.x - enemy.transform.position.x;
+          const dz = player.transform.position.z - enemy.transform.position.z;
+          if (Math.hypot(dx, dz) <= (bossCfg.strikeRange ?? 4)) {
+            health.takeDamage(bossCfg.strikeDamage ?? 10);
+          }
+        });
+        enemy.addComponent(tell);
+        bossName = enemy.name;
       }
       if (meleeCfg) {
         const hurt = new engine.Hurtbox({ invulnSeconds: meleeCfg.invulnSeconds ?? 0.3 });
@@ -939,6 +1024,7 @@ function setupGame(spec, scene, engine) {
     meleeHits: 0,
     meleeKills() { return meleeKills; },
     meleeReactions() { return meleeReactions; },
+    bossStrikes() { return bossStrikes; },
     livingEnemies() {
       return runtime.spawner
         .getSpawnedNames()
@@ -972,6 +1058,19 @@ function setupGame(spec, scene, engine) {
       const hits = blade.tryHit();
       this.swingCount += 1;
       this.meleeHits += hits.length;
+    },
+    bossTick() {
+      // Drive the boss telegraph: wind up whenever the player is in reach
+      // and the tell is idle; strike/recover advance via scene updates.
+      if (!bossName) return;
+      const boss = scene.findByName(bossName);
+      const player = scene.findByName(playerName);
+      if (!boss || !player) return;
+      const tell = boss.components.find(c => c.constructor.name === 'Telegraph');
+      if (!tell || tell.phase !== 'idle') return;
+      const dx = player.transform.position.x - boss.transform.position.x;
+      const dz = player.transform.position.z - boss.transform.position.z;
+      if (Math.hypot(dx, dz) <= 8) tell.start();
     },
     maybeFire(frame) {
       if (mode !== 'waves') return;
@@ -1047,7 +1146,7 @@ function placementNote(game) {
 }
 
 function evaluateRules(spec, ctxData) {
-  const { scene, samples, firstSamples, metrics, dt, game, dialogue, input, audio, nav, lighting, destruction, operate, store } = ctxData;
+  const { scene, samples, firstSamples, metrics, dt, game, dialogue, quest, input, audio, nav, lighting, destruction, operate, store } = ctxData;
   const results = [];
 
   for (const rule of spec.rules || []) {
@@ -1524,6 +1623,13 @@ function evaluateRules(spec, ctxData) {
         detail = `melee hits=${hits} (min ${rule.min ?? 1}, swings=${game.swingCount ?? 0})`;
         break;
       }
+      case 'game_boss_strikes_min': {
+        if (!game) { pass = false; detail = 'no game config in scenario'; break; }
+        const strikes = typeof game.bossStrikes === 'function' ? game.bossStrikes() : 0;
+        pass = strikes >= (rule.min ?? 1);
+        detail = `boss telegraph strikes=${strikes} (min ${rule.min ?? 1})`;
+        break;
+      }
       case 'game_enemy_chase_min': {
         if (!game) { pass = false; detail = 'no game config in scenario'; break; }
         const moved = game.maxEnemyDisplacement();
@@ -1547,6 +1653,21 @@ function evaluateRules(spec, ctxData) {
         const gold = Math.floor(settlement.snapshot().gold);
         pass = gold >= (rule.min ?? 1);
         detail = `gold=${gold} (min ${rule.min ?? 1})${placementNote(game)}`;
+        break;
+      }
+      case 'quest_stage_min': {
+        if (!quest) { pass = false; detail = 'no quest config in scenario'; break; }
+        const index = quest.quest.stageIndex;
+        pass = index >= (rule.min ?? 1);
+        detail = `quest stages=${index} (min ${rule.min ?? 1}, seen=[${quest.stagesSeen.join(', ')}])`;
+        break;
+      }
+      case 'quest_complete': {
+        if (!quest) { pass = false; detail = 'no quest config in scenario'; break; }
+        pass = quest.quest.complete === true;
+        detail = pass
+          ? `quest "${quest.quest.id}" complete`
+          : `quest "${quest.quest.id}" incomplete at stage ${quest.quest.stageIndex}`;
         break;
       }
       case 'dialogue_reaches': {
@@ -1644,6 +1765,7 @@ async function main() {
     r => r && r.type === 'game_save_restore'
   );
   const dialogue = setupDialogue(spec, engine);
+  const quest = setupQuest(spec, engine);
   const input = setupInput(spec, engine);
   const audio = setupAudio(spec, scene, engine);
   const nav = setupNav(spec, scene, engine);
@@ -1678,7 +1800,9 @@ async function main() {
     if (game) {
       game.runtime.update(args.dt);
       game.maybeFire(frame);
+      if (typeof game.bossTick === 'function') game.bossTick();
       game.trackEnemies();
+      if (quest) quest.poll(game, dialogue);
       if (saveRestoreWanted && !game.saveRestoreProbe && frame >= Math.floor(args.frames / 2)) {
         game.saveRestoreProbe = runSaveRestoreProbe(game, engine);
       }
@@ -1753,7 +1877,7 @@ async function main() {
     }
   }
 
-  const ruleResults = evaluateRules(spec, { scene, samples, firstSamples, metrics, dt: args.dt, game, dialogue, input, audio, nav, lighting, destruction, operate, store });
+  const ruleResults = evaluateRules(spec, { scene, samples, firstSamples, metrics, dt: args.dt, game, dialogue, quest, input, audio, nav, lighting, destruction, operate, store });
   const passed = ruleResults.filter(r => r.pass).length;
   const total = ruleResults.length;
   const allPass = total > 0 && passed === total;

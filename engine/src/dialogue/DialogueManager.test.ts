@@ -269,3 +269,62 @@ describe('DialogueManager — localization binding', () => {
     assert.deepStrictEqual(svc.missingKeys(), ['dialogue.quest.greet']);
   });
 });
+
+describe('DialogueManager — conversation history (E.4 backlog)', () => {
+  it('records auto-chained action and end nodes never surfaced as walk steps', () => {
+    const dm = new DialogueManager();
+    const events: string[] = [];
+    dm.addEventListener(name => events.push(name));
+    dm.registerTree({
+      id: 'bless',
+      title: 'Blessing',
+      startNodeId: 'greet',
+      nodes: {
+        greet: {
+          id: 'greet',
+          type: 'choice',
+          speaker: 'Keeper',
+          text: 'Take the blessing?',
+          choices: [{ id: 'yes', text: 'Yes', nextNodeId: 'blessed' }]
+        },
+        blessed: {
+          id: 'blessed',
+          type: 'action',
+          speaker: 'Keeper',
+          text: 'Blessed.',
+          action: {
+            emitEvent: { eventName: 'hydro_blessing' },
+            nextNodeId: 'farewell'
+          }
+        },
+        farewell: { id: 'farewell', type: 'end', speaker: 'Keeper', text: 'Go.' }
+      }
+    });
+    let node = dm.startConversation('bless');
+    assert.strictEqual(node?.id, 'greet');
+    node = dm.chooseOption(0); // auto-chains blessed -> farewell -> end
+    assert.strictEqual(node, null);
+    assert.deepStrictEqual(events, ['hydro_blessing']);
+    assert.deepStrictEqual(dm.getHistory(), ['greet', 'blessed', 'farewell']);
+    dm.endConversation();
+  });
+
+  it('history resets on each new conversation', () => {
+    const dm = new DialogueManager();
+    dm.registerTree({
+      id: 't',
+      title: 'T',
+      startNodeId: 'a',
+      nodes: {
+        a: { id: 'a', type: 'text', speaker: 'S', text: 'A', nextNodeId: 'b' },
+        b: { id: 'b', type: 'end', speaker: 'S', text: 'B' }
+      }
+    });
+    dm.startConversation('t');
+    assert.deepStrictEqual(dm.getHistory(), ['a']);
+    dm.endConversation();
+    dm.startConversation('t');
+    assert.deepStrictEqual(dm.getHistory(), ['a']);
+    dm.endConversation();
+  });
+});
