@@ -1,0 +1,686 @@
+{
+  "goal": "Frost Hollow Commission",
+  "rules": [
+    {
+      "type": "dialogue_reaches",
+      "tree": "Warden",
+      "node": "briefed",
+      "id": "warden-briefing"
+    },
+    {
+      "type": "dialogue_event_fired",
+      "tree": "Warden",
+      "event": "commission_taken",
+      "id": "commission-flag"
+    },
+    {
+      "type": "game_melee_kills_min",
+      "min": 2,
+      "id": "slimes-cleared"
+    },
+    {
+      "type": "game_melee_reactions_min",
+      "min": 1,
+      "id": "melt-reactions"
+    },
+    {
+      "type": "quest_complete",
+      "id": "quest-complete"
+    },
+    {
+      "type": "draw_call_budget",
+      "max": 100,
+      "id": "draw-budget"
+    },
+    {
+      "type": "fps_min",
+      "min": 30,
+      "id": "sim-fps"
+    }
+  ],
+  "verdict": "unresolved",
+  "iterations": [
+    {
+      "iteration": 1,
+      "phase": "generate",
+      "visionNotes": [],
+      "llm": {
+        "model": "mimo-v2.6-flash",
+        "promptTokens": 6331,
+        "completionTokens": 5165,
+        "totalTokens": 11496,
+        "latencySeconds": 97.036,
+        "finishReason": "stop",
+        "attempts": 1
+      },
+      "parse": {
+        "strategy": "raw",
+        "actionCount": 17,
+        "summary": "A compact Frost Hollow arena where the hero talks to the Warden (briefing + commission flag), then melee-hunts two Cryo slimes with Pyro swings to trigger Melt and complete the quest.",
+        "error": null
+      },
+      "apply": {
+        "applied": 16,
+        "targetMissing": 0,
+        "invalid": 1,
+        "failed": 0,
+        "outcomes": [
+          {
+            "index": 0,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Frozen Ground (box) at [0.0, 0.0, 0.0]",
+            "target": "Frozen Ground"
+          },
+          {
+            "index": 1,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Player Hero (capsule) at [0.0, 1.5, 0.0]",
+            "target": "Player Hero"
+          },
+          {
+            "index": 2,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Warden Aldric (cylinder) at [-6.0, 2.0, -8.0]",
+            "target": "Warden Aldric"
+          },
+          {
+            "index": 3,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Frost Slime A (sphere) at [5.0, 1.2, 5.0]",
+            "target": "Frost Slime A"
+          },
+          {
+            "index": 4,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Frost Slime B (sphere) at [4.0, 1.2, -5.0]",
+            "target": "Frost Slime B"
+          },
+          {
+            "index": 5,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Ice Pillar East (box) at [9.0, 2.5, -6.0]",
+            "target": "Ice Pillar East"
+          },
+          {
+            "index": 6,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Ice Pillar West (box) at [-9.0, 2.5, 6.0]",
+            "target": "Ice Pillar West"
+          },
+          {
+            "index": 7,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Banner East (box) at [11.0, 3.0, 0.0]",
+            "target": "Banner East"
+          },
+          {
+            "index": 8,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Banner West (box) at [-11.0, 3.0, 0.0]",
+            "target": "Banner West"
+          },
+          {
+            "index": 9,
+            "type": "spawn",
+            "status": "applied",
+            "detail": "Spawned Ember Brazier (cylinder) at [6.0, 1.0, -6.0]",
+            "target": "Ember Brazier"
+          },
+          {
+            "index": 10,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added directional light 'Key Sun' (intensity 2.2)",
+            "target": "Key Sun"
+          },
+          {
+            "index": 11,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added ambient light 'Fill Ambient' (intensity 0.7)",
+            "target": "Fill Ambient"
+          },
+          {
+            "index": 12,
+            "type": "light",
+            "status": "applied",
+            "detail": "Added point light 'Brazier Glow' (intensity 3)",
+            "target": "Brazier Glow"
+          },
+          {
+            "index": 13,
+            "type": "game",
+            "status": "invalid",
+            "detail": "game config rejected \u2014 game quest objective 'target' must be a non-empty string"
+          },
+          {
+            "index": 14,
+            "type": "dialogue",
+            "status": "applied",
+            "detail": "Registered dialogue tree 'Warden' (4 nodes from 'greet')"
+          },
+          {
+            "index": 15,
+            "type": "ui",
+            "status": "applied",
+            "detail": "UI kit 'hud_arena' applied (4 elements, theme 'fantasy')"
+          },
+          {
+            "index": 16,
+            "type": "ui",
+            "status": "applied",
+            "detail": "UI theme set to 'fantasy'"
+          }
+        ],
+        "appliedDescriptions": [
+          "Spawned Frozen Ground (box) at [0.0, 0.0, 0.0]",
+          "Spawned Player Hero (capsule) at [0.0, 1.5, 0.0]",
+          "Spawned Warden Aldric (cylinder) at [-6.0, 2.0, -8.0]",
+          "Spawned Frost Slime A (sphere) at [5.0, 1.2, 5.0]",
+          "Spawned Frost Slime B (sphere) at [4.0, 1.2, -5.0]",
+          "Spawned Ice Pillar East (box) at [9.0, 2.5, -6.0]",
+          "Spawned Ice Pillar West (box) at [-9.0, 2.5, 6.0]",
+          "Spawned Banner East (box) at [11.0, 3.0, 0.0]",
+          "Spawned Banner West (box) at [-11.0, 3.0, 0.0]",
+          "Spawned Ember Brazier (cylinder) at [6.0, 1.0, -6.0]",
+          "Added directional light 'Key Sun' (intensity 2.2)",
+          "Added ambient light 'Fill Ambient' (intensity 0.7)",
+          "Added point light 'Brazier Glow' (intensity 3)",
+          "Registered dialogue tree 'Warden' (4 nodes from 'greet')",
+          "UI kit 'hud_arena' applied (4 elements, theme 'fantasy')",
+          "UI theme set to 'fantasy'"
+        ]
+      },
+      "spatialDiff": {
+        "added": [
+          "Banner East",
+          "Banner West",
+          "Brazier Glow",
+          "Ember Brazier",
+          "Fill Ambient",
+          "Frost Slime A",
+          "Frost Slime B",
+          "Frozen Ground",
+          "Ice Pillar East",
+          "Ice Pillar West",
+          "Key Sun",
+          "Player Hero",
+          "Warden Aldric"
+        ],
+        "removed": [],
+        "moved": [],
+        "resized": [],
+        "physics_changed": [],
+        "ui_changed": true,
+        "places_changed": [],
+        "theme_changed": true,
+        "empty": false
+      },
+      "frame": {
+        "cameraSource": "chase",
+        "cameraName": "Player Hero",
+        "cameraPosition": [
+          0.0,
+          5.0,
+          6.0
+        ],
+        "fov": 60.0,
+        "objectCount": 13,
+        "iteration": 1,
+        "path": "/home/john/Projects/Android-Dev-Studio/harness/runs/loop_runs/20260926-114654-frost-hollow-commission-iter1.png",
+        "bytes": 10485
+      },
+      "gate": {
+        "valid": true,
+        "violations": []
+      },
+      "qa": {
+        "verdict": "FAILED",
+        "passed": 4,
+        "total": 7,
+        "failedRules": [
+          {
+            "id": "slimes-cleared",
+            "type": "game_melee_kills_min",
+            "detail": "no game config in scenario"
+          },
+          {
+            "id": "melt-reactions",
+            "type": "game_melee_reactions_min",
+            "detail": "no game config in scenario"
+          },
+          {
+            "id": "quest-complete",
+            "type": "quest_complete",
+            "detail": "no quest config in scenario"
+          }
+        ],
+        "metrics": {
+          "avgFrameTimeMs": 0.0922,
+          "p95FrameTimeMs": 0.1525,
+          "maxFrameTimeMs": 20.3988,
+          "simFpsEstimate": 10851.38,
+          "drawCallEstimate": 10,
+          "instancedBatches": 0,
+          "instancedEntities": 0,
+          "memoryHeapMb": 18.23,
+          "objectCount": 13,
+          "physicsBodyCount": 6,
+          "eventCount": 0
+        }
+      }
+    },
+    {
+      "iteration": 2,
+      "phase": "repair",
+      "visionNotes": [],
+      "llm": {
+        "model": "mimo-v2.6-flash",
+        "promptTokens": 8170,
+        "completionTokens": 855,
+        "totalTokens": 9025,
+        "latencySeconds": 79.398,
+        "finishReason": "stop",
+        "attempts": 1
+      },
+      "parse": {
+        "strategy": "raw",
+        "actionCount": 1,
+        "summary": "Emitting the missing game config with a valid quest objective target (commission_taken), melee Pyro hits against Cryo-aura slime enemies, and wave settings to satisfy the kill/reaction/quest rules.",
+        "error": null
+      },
+      "apply": {
+        "applied": 1,
+        "targetMissing": 0,
+        "invalid": 0,
+        "failed": 0,
+        "outcomes": [
+          {
+            "index": 0,
+            "type": "game",
+            "status": "applied",
+            "detail": "Set waves-mode quest config for player 'Player Hero'"
+          }
+        ],
+        "appliedDescriptions": [
+          "Set waves-mode quest config for player 'Player Hero'"
+        ]
+      },
+      "frame": {
+        "cameraSource": "chase",
+        "cameraName": "Player Hero",
+        "cameraPosition": [
+          0.0,
+          5.0,
+          6.0
+        ],
+        "fov": 60.0,
+        "objectCount": 13,
+        "iteration": 2,
+        "path": "/home/john/Projects/Android-Dev-Studio/harness/runs/loop_runs/20260926-114654-frost-hollow-commission-iter2.png",
+        "bytes": 10485
+      },
+      "gate": {
+        "valid": true,
+        "violations": []
+      },
+      "qa": {
+        "verdict": "FAILED",
+        "passed": 6,
+        "total": 7,
+        "failedRules": [
+          {
+            "id": "quest-complete",
+            "type": "quest_complete",
+            "detail": "no quest config in scenario"
+          }
+        ],
+        "metrics": {
+          "avgFrameTimeMs": 0.1149,
+          "p95FrameTimeMs": 0.1755,
+          "maxFrameTimeMs": 21.4457,
+          "simFpsEstimate": 8699.82,
+          "drawCallEstimate": 10,
+          "instancedBatches": 0,
+          "instancedEntities": 0,
+          "memoryHeapMb": 19.02,
+          "objectCount": 13,
+          "physicsBodyCount": 6,
+          "eventCount": 0
+        }
+      }
+    },
+    {
+      "iteration": 3,
+      "phase": "repair",
+      "visionNotes": [],
+      "llm": {
+        "model": "mimo-v2.6-flash",
+        "promptTokens": 8217,
+        "completionTokens": 834,
+        "totalTokens": 9051,
+        "latencySeconds": 43.25,
+        "finishReason": "stop",
+        "attempts": 1
+      },
+      "parse": {
+        "strategy": "raw",
+        "actionCount": 2,
+        "summary": "Re-emit the game config as an explicit game action carrying the quest block so the runtime registers the quest and the quest-complete rule can evaluate.",
+        "error": null
+      },
+      "apply": {
+        "applied": 2,
+        "targetMissing": 0,
+        "invalid": 0,
+        "failed": 0,
+        "outcomes": [
+          {
+            "index": 0,
+            "type": "game",
+            "status": "applied",
+            "detail": "Set waves-mode quest config for player 'Player Hero'"
+          },
+          {
+            "index": 1,
+            "type": "modify",
+            "status": "applied",
+            "detail": "Modified Player Hero: weapon, health",
+            "target": "Player Hero"
+          }
+        ],
+        "appliedDescriptions": [
+          "Set waves-mode quest config for player 'Player Hero'",
+          "Modified Player Hero: weapon, health"
+        ]
+      },
+      "frame": {
+        "cameraSource": "chase",
+        "cameraName": "Player Hero",
+        "cameraPosition": [
+          0.0,
+          5.0,
+          6.0
+        ],
+        "fov": 60.0,
+        "objectCount": 13,
+        "iteration": 3,
+        "path": "/home/john/Projects/Android-Dev-Studio/harness/runs/loop_runs/20260926-114654-frost-hollow-commission-iter3.png",
+        "bytes": 10485
+      },
+      "gate": {
+        "valid": true,
+        "violations": []
+      },
+      "qa": {
+        "verdict": "FAILED",
+        "passed": 6,
+        "total": 7,
+        "failedRules": [
+          {
+            "id": "quest-complete",
+            "type": "quest_complete",
+            "detail": "no quest config in scenario"
+          }
+        ],
+        "metrics": {
+          "avgFrameTimeMs": 0.1094,
+          "p95FrameTimeMs": 0.1824,
+          "maxFrameTimeMs": 21.1127,
+          "simFpsEstimate": 9140.78,
+          "drawCallEstimate": 10,
+          "instancedBatches": 0,
+          "instancedEntities": 0,
+          "memoryHeapMb": 21.21,
+          "objectCount": 13,
+          "physicsBodyCount": 6,
+          "eventCount": 0
+        }
+      }
+    },
+    {
+      "iteration": 4,
+      "phase": "repair",
+      "visionNotes": [],
+      "llm": {
+        "model": "mimo-v2.6-flash",
+        "promptTokens": 8217,
+        "completionTokens": 737,
+        "totalTokens": 8954,
+        "latencySeconds": 13.556,
+        "finishReason": "stop",
+        "attempts": 1
+      },
+      "parse": {
+        "strategy": "raw",
+        "actionCount": 1,
+        "summary": "Re-emit the game runtime config carrying the quest block (with flag, kills, and reaction objectives so quest_complete can actually resolve), leaving all existing entities and rules untouched.",
+        "error": null
+      },
+      "apply": {
+        "applied": 0,
+        "targetMissing": 0,
+        "invalid": 1,
+        "failed": 0,
+        "outcomes": [
+          {
+            "index": 0,
+            "type": "game",
+            "status": "invalid",
+            "detail": "game config rejected \u2014 game quest objective 'target' must be a non-empty string"
+          }
+        ],
+        "appliedDescriptions": []
+      },
+      "frame": {
+        "cameraSource": "chase",
+        "cameraName": "Player Hero",
+        "cameraPosition": [
+          0.0,
+          5.0,
+          6.0
+        ],
+        "fov": 60.0,
+        "objectCount": 13,
+        "iteration": 4,
+        "path": "/home/john/Projects/Android-Dev-Studio/harness/runs/loop_runs/20260926-114654-frost-hollow-commission-iter4.png",
+        "bytes": 10485
+      },
+      "gate": {
+        "valid": true,
+        "violations": []
+      },
+      "qa": {
+        "verdict": "FAILED",
+        "passed": 6,
+        "total": 7,
+        "failedRules": [
+          {
+            "id": "quest-complete",
+            "type": "quest_complete",
+            "detail": "no quest config in scenario"
+          }
+        ],
+        "metrics": {
+          "avgFrameTimeMs": 0.1144,
+          "p95FrameTimeMs": 0.1758,
+          "maxFrameTimeMs": 23.349,
+          "simFpsEstimate": 8738.67,
+          "drawCallEstimate": 10,
+          "instancedBatches": 0,
+          "instancedEntities": 0,
+          "memoryHeapMb": 23.52,
+          "objectCount": 13,
+          "physicsBodyCount": 6,
+          "eventCount": 0
+        }
+      }
+    }
+  ],
+  "totalTokens": 38526,
+  "totalLatencySeconds": 233.24,
+  "finalReport": {
+    "schemaVersion": 1,
+    "runner": "qa_scenario_runner.mjs",
+    "scenario": "loop_work_scene.json",
+    "goal": "Frost Hollow Commission",
+    "timestamp": 1790437848.987,
+    "frames": 600,
+    "fixedDeltaSeconds": 0.016666666666666666,
+    "metrics": {
+      "avgFrameTimeMs": 0.1144,
+      "p95FrameTimeMs": 0.1758,
+      "maxFrameTimeMs": 23.349,
+      "simFpsEstimate": 8738.67,
+      "drawCallEstimate": 10,
+      "instancedBatches": 0,
+      "instancedEntities": 0,
+      "memoryHeapMb": 23.52,
+      "objectCount": 13,
+      "physicsBodyCount": 6,
+      "eventCount": 0
+    },
+    "game": {
+      "mode": "waves",
+      "phase": "won",
+      "score": 0,
+      "kills": 0,
+      "wave": 2,
+      "traveledDistance": 0,
+      "settlement": null,
+      "reactions": 0,
+      "shots": 0,
+      "maxEnemyDisplacement": 5.173
+    },
+    "dialogue": {
+      "Warden": {
+        "visited": [
+          "greet",
+          "briefed",
+          "swear"
+        ],
+        "events": [
+          "commission_taken"
+        ],
+        "error": null
+      }
+    },
+    "rules": [
+      {
+        "id": "warden-briefing",
+        "type": "dialogue_reaches",
+        "pass": true,
+        "detail": "dialogue \"Warden\" visited \"briefed\" (path: greet -> briefed -> swear)"
+      },
+      {
+        "id": "commission-flag",
+        "type": "dialogue_event_fired",
+        "pass": true,
+        "detail": "dialogue \"Warden\" fired \"commission_taken\""
+      },
+      {
+        "id": "slimes-cleared",
+        "type": "game_melee_kills_min",
+        "pass": true,
+        "detail": "melee kills=4 (min 2, swings=40)"
+      },
+      {
+        "id": "melt-reactions",
+        "type": "game_melee_reactions_min",
+        "pass": true,
+        "detail": "melee reactions=4 (min 1)"
+      },
+      {
+        "id": "quest-complete",
+        "type": "quest_complete",
+        "pass": false,
+        "detail": "no quest config in scenario"
+      },
+      {
+        "id": "draw-budget",
+        "type": "draw_call_budget",
+        "pass": true,
+        "detail": "drawCallEstimate=10 (budget 100)"
+      },
+      {
+        "id": "sim-fps",
+        "type": "fps_min",
+        "pass": true,
+        "detail": "simFpsEstimate=8738.7 (min 30)"
+      }
+    ],
+    "passed": 6,
+    "total": 7,
+    "verdict": "FAILED",
+    "confidence": 0.857
+  },
+  "error": null,
+  "workScene": "/home/john/Projects/Android-Dev-Studio/harness/scenes/loop_work_scene.json",
+  "frames": [
+    {
+      "cameraSource": "chase",
+      "cameraName": "Player Hero",
+      "cameraPosition": [
+        0.0,
+        5.0,
+        6.0
+      ],
+      "fov": 60.0,
+      "objectCount": 13,
+      "iteration": 1,
+      "path": "/home/john/Projects/Android-Dev-Studio/harness/runs/loop_runs/20260926-114654-frost-hollow-commission-iter1.png",
+      "bytes": 10485
+    },
+    {
+      "cameraSource": "chase",
+      "cameraName": "Player Hero",
+      "cameraPosition": [
+        0.0,
+        5.0,
+        6.0
+      ],
+      "fov": 60.0,
+      "objectCount": 13,
+      "iteration": 2,
+      "path": "/home/john/Projects/Android-Dev-Studio/harness/runs/loop_runs/20260926-114654-frost-hollow-commission-iter2.png",
+      "bytes": 10485
+    },
+    {
+      "cameraSource": "chase",
+      "cameraName": "Player Hero",
+      "cameraPosition": [
+        0.0,
+        5.0,
+        6.0
+      ],
+      "fov": 60.0,
+      "objectCount": 13,
+      "iteration": 3,
+      "path": "/home/john/Projects/Android-Dev-Studio/harness/runs/loop_runs/20260926-114654-frost-hollow-commission-iter3.png",
+      "bytes": 10485
+    },
+    {
+      "cameraSource": "chase",
+      "cameraName": "Player Hero",
+      "cameraPosition": [
+        0.0,
+        5.0,
+        6.0
+      ],
+      "fov": 60.0,
+      "objectCount": 13,
+      "iteration": 4,
+      "path": "/home/john/Projects/Android-Dev-Studio/harness/runs/loop_runs/20260926-114654-frost-hollow-commission-iter4.png",
+      "bytes": 10485
+    }
+  ]
+}
