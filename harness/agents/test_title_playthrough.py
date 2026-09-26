@@ -19,13 +19,12 @@ Negative control: the same spec minus the tyrant loses ONLY the telegraph
 signature (strikes=0) while the kill-counted chain still completes — proving
 the encounter resolves its boss, not the clock.
 
-Gap note (no runner change; runner work belongs to another node): the runner
-reports end-state only, so mid-run snapshots ("phase still playing at the
-moment wave 1 cleared") are not observable. The ordering is encoded instead
-as (a) extra same-run checkpoint rules (`wave1_cleared`, `boss_wave_reached`)
-and (b) the quest `seen=[...]` list asserted in exact order, which proves
-`clear_hall` preceded `slay_tyrant`. A per-frame quest/wave timeline in the
-report would make this a true time-series playthrough.
+Time-series ordering: `report["questTimeline"]` (transition-only stage/wave
+event list from the runner) pins the quest order to wall-clock frames, so
+`test_victory_timeline_ordered_in_frame_order` asserts the true series
+(audience <= blessing <= clear_hall <= slay_tyrant <= victory) instead of
+end-state consistency alone. The pre-existing `seen=[...]` order assertion is
+kept as a cheap cross-check.
 
 Run from the repository root:
     python3 -m unittest harness.agents.test_title_playthrough
@@ -137,6 +136,92 @@ class TidePlaythroughTests(unittest.TestCase):
             won = rules["run_won"]
             self.assertTrue(won["pass"], won)
             self.assertIn("phase=won", won["detail"], won)
+
+    def test_victory_timeline_ordered_in_frame_order(self):
+        """True time-series ordering from the runner's questTimeline.
+
+        Uses ONLY report["questTimeline"] (transition-only event list, not
+        per-frame spam): every expected stage appears exactly once with
+        audience <= blessing <= clear_hall <= slay_tyrant <= victory in
+        wall-clock frame order, and spawner waves never decrease.
+        """
+        report = run_spec(load_playthrough_spec())
+        self.assertEqual(report.get("verdict"), "SUCCEEDED", report)
+        timeline = report.get("questTimeline")
+        self.assertIsNotNone(timeline, "runner must expose report.questTimeline")
+        stages = timeline.get("stages", [])
+        waves = timeline.get("waves", [])
+
+        with self.subTest(check="timeline-stays-small"):
+            total_entries = len(stages) + len(waves)
+            self.assertLess(
+                total_entries,
+                64,
+                f"transition-only timeline must stay small, got {total_entries}: {timeline}",
+            )
+
+        with self.subTest(check="stages-monotonic-frames"):
+            frames = [entry["frame"] for entry in stages]
+            self.assertEqual(
+                frames,
+                sorted(frames),
+                f"stage frames must be non-decreasing: {stages}",
+            )
+
+        with self.subTest(check="quest-order-in-frame-order"):
+            first_frame = {}
+            for entry in stages:
+                first_frame.setdefault(entry["stage"], entry["frame"])
+            for stage in EXPECTED_STAGE_ORDER:
+                self.assertIn(stage, first_frame, f"stage {stage!r} missing: {stages}")
+            ordered = [first_frame[s] for s in EXPECTED_STAGE_ORDER]
+            self.assertEqual(
+                ordered,
+                sorted(ordered),
+                f"audience <= blessing <= clear_hall <= slay_tyrant <= victory "
+                f"in frame order, got {dict(zip(EXPECTED_STAGE_ORDER, ordered))}",
+            )
+
+        with self.subTest(check="waves-non-decreasing"):
+            self.assertGreaterEqual(len(waves), 1, "wave timeline must seed frame 0")
+            self.assertEqual(waves[0]["frame"], 0)
+            wave_frames = [entry["frame"] for entry in waves]
+            self.assertEqual(wave_frames, sorted(wave_frames), waves)
+            wave_ids = [entry["wave"] for entry in waves]
+            self.assertEqual(wave_ids, sorted(wave_ids), waves)
+            self.assertGreaterEqual(max(wave_ids), 2, waves)
+
+    def test_no_tyrant_timeline_missing_boss_stages(self):
+        """Negative probe: without the tyrant the timeline stays sensible.
+
+        Single-enemy waves can never reach the 3-kill `slay_tyrant` gate, so
+        the boss-dependent stages (`slay_tyrant`, `victory`) are absent while
+        the reachable chain still records in frame order and waves still
+        advance monotonically.
+        """
+        spec = copy.deepcopy(load_spec())
+        spec["game"].pop("boss", None)
+        spec["game"]["enemiesPerWave"] = 1
+        report = run_spec(spec)
+        timeline = report.get("questTimeline")
+        self.assertIsNotNone(timeline, "runner must expose report.questTimeline")
+        stages = timeline.get("stages", [])
+        waves = timeline.get("waves", [])
+
+        total_entries = len(stages) + len(waves)
+        self.assertLess(total_entries, 64, timeline)
+
+        seen = [entry["stage"] for entry in stages]
+        for stage in ("audience", "blessing", "clear_hall"):
+            self.assertIn(stage, seen, stages)
+        for stage in ("slay_tyrant", "victory"):
+            self.assertNotIn(stage, seen, stages)
+        frames = [entry["frame"] for entry in stages]
+        self.assertEqual(frames, sorted(frames), stages)
+
+        self.assertGreaterEqual(len(waves), 1)
+        wave_ids = [entry["wave"] for entry in waves]
+        self.assertEqual(wave_ids, sorted(wave_ids), waves)
 
     def test_no_tyrant_control_loses_telegraph_signature(self):
         spec = copy.deepcopy(load_spec())
