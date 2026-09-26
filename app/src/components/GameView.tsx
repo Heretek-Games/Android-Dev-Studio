@@ -879,18 +879,21 @@ export const GameView: React.FC = () => {
                 pos.z += (dz / dist) * step;
               }
             }
-            if (quest && dialogue) {
+            // Quest snapshot + tracker (shared with the post-win poll below).
+            const pollQuest = (): void => {
+              if (!quest || !dialogue) return;
               for (const id of dialogue.getHistory()) questFlags.add(id);
               quest.update({
                 flags: [...questFlags],
                 kills: meleeKills,
                 reactions: meleeReactions,
-                phase: runtime.flow.getPhase()
+                phase: runtime!.flow.getPhase()
               });
               if (
                 quest.stageIndex !== lastQuestStage ||
                 meleeKills !== lastQuestKills ||
-                meleeReactions !== lastQuestReactions
+                meleeReactions !== lastQuestReactions ||
+                quest.complete
               ) {
                 lastQuestStage = quest.stageIndex;
                 lastQuestKills = meleeKills;
@@ -911,9 +914,26 @@ export const GameView: React.FC = () => {
                     : `Quest: ${stage?.id ?? '—'} (${quest.stageIndex + 1}/${quest.stages.length})`) +
                   ` · Foes ${meleeKills} · Reactions ${meleeReactions}${hpLine}`;
               }
-            }
+            };
+            pollQuest();
           }
           context.step(dt);
+        }
+        // The victory stage completes on the won phase, after the playing
+        // block stops polling.
+        if (isTide && quest && !quest.complete && runtime.flow.getPhase() === 'won') {
+          for (const id of dialogue!.getHistory()) questFlags.add(id);
+          quest.update({
+            flags: [...questFlags],
+            kills: meleeKills,
+            reactions: meleeReactions,
+            phase: 'won'
+          });
+          if (quest.complete) {
+            questBar.style.display = 'block';
+            questBar.textContent =
+              `✔ ${quest.id} complete · Foes ${meleeKills} · Reactions ${meleeReactions}`;
+          }
         }
         runtime.update(dt);
         if (isCity && settlement) {
