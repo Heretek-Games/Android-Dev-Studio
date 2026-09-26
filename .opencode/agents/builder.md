@@ -21,23 +21,47 @@ permissions:
     resource: "*"
     effect: deny
   - action: read
-    resource: "/home/john/Projects/Heretek-Games/worktrees/*/**"
+    resource: "~/Projects/Heretek-Games/worktrees/*/**"
     effect: allow
   - action: glob
-    resource: "/home/john/Projects/Heretek-Games/worktrees/*/**"
+    resource: "~/Projects/Heretek-Games/worktrees/*/**"
     effect: allow
   - action: grep
-    resource: "/home/john/Projects/Heretek-Games/worktrees/*/**"
+    resource: "~/Projects/Heretek-Games/worktrees/*/**"
     effect: allow
   - action: shell
     resource: "*"
     effect: allow
   - action: edit
-    resource: "/home/john/Projects/Heretek-Games/worktrees/*/**"
+    resource: "~/Projects/Heretek-Games/worktrees/*/**"
     effect: allow
   - action: write
-    resource: "/home/john/Projects/Heretek-Games/worktrees/*/**"
+    resource: "~/Projects/Heretek-Games/worktrees/*/**"
     effect: allow
+  - action: edit
+    resource: "~/Projects/Heretek-Games/worktrees/*/**/index.ts"
+    effect: deny
+  - action: edit
+    resource: "~/Projects/Heretek-Games/worktrees/*/**/CMakeLists.txt"
+    effect: deny
+  - action: edit
+    resource: "~/Projects/Heretek-Games/worktrees/*/**/schema*"
+    effect: deny
+  - action: edit
+    resource: "~/Projects/Heretek-Games/worktrees/**/AGENTS.md"
+    effect: deny
+  - action: write
+    resource: "~/Projects/Heretek-Games/worktrees/*/**/index.ts"
+    effect: deny
+  - action: write
+    resource: "~/Projects/Heretek-Games/worktrees/*/**/CMakeLists.txt"
+    effect: deny
+  - action: write
+    resource: "~/Projects/Heretek-Games/worktrees/*/**/schema*"
+    effect: deny
+  - action: write
+    resource: "~/Projects/Heretek-Games/worktrees/**/AGENTS.md"
+    effect: deny
   - action: subagent
     resource: "*"
     effect: deny
@@ -53,8 +77,9 @@ You implement **one** assigned task inside **your** assigned worktree
 1. Run every shell command with your assigned worktree as the working
    directory. Read, edit, and create files only under that worktree path.
    Never touch another worktree, the main checkout, or shared touchpoints
-   (barrel exports, `CMakeLists.txt`, scene schemas, `AGENTS.md`) — those
-   belong to the `integrator`.
+   (barrel exports, `CMakeLists.txt`, scene schemas, `AGENTS.md` at any depth)
+   — those belong to the `integrator`, and the deny rules in this file's
+   permissions block enforce that exclusion mechanically.
 2. Stay inside your node's declared file scope. If the task requires files
    outside it, stop and report back to the orchestrator instead of expanding
    scope yourself.
