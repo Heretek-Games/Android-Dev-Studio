@@ -174,3 +174,70 @@ describe('GameShell — localization binding (headless)', () => {
     assert.match(shell.getView().statusText, /Press Start/);
   });
 });
+
+describe('GameShell — theme tokens (headless)', () => {
+  test('default theme preserves the pre-theme look', () => {
+    const { shell } = makeShell();
+    assert.deepStrictEqual(shell.getTheme(), {
+      palette: {
+        bg: '#09090c',
+        surface: '#18181b',
+        accent: '#2563eb',
+        text: '#f4f4f5',
+        muted: '#a1a1aa',
+        success: '#22c55e',
+        danger: '#f87171'
+      },
+      typography: { family: 'sans', basePx: 15, titlePx: 34 },
+      radius: 8
+    });
+  });
+
+  test('partial themes merge over the default', () => {
+    const { shell } = makeShell({ theme: { palette: { accent: '#d4a24e' } } });
+    const resolved = shell.getTheme();
+    assert.strictEqual(resolved.palette.accent, '#d4a24e');
+    assert.strictEqual(resolved.palette.text, '#f4f4f5');
+    assert.strictEqual(resolved.typography.family, 'sans');
+  });
+
+  test('invalid values fall back per-field and never throw', () => {
+    const { shell } = makeShell({
+      theme: {
+        palette: { accent: 'not-a-color', text: '#zzz' },
+        typography: { family: 'comic', basePx: -3, titlePx: NaN },
+        radius: -1
+      }
+    });
+    const resolved = shell.getTheme();
+    assert.strictEqual(resolved.palette.accent, '#2563eb');
+    assert.strictEqual(resolved.palette.text, '#f4f4f5');
+    assert.strictEqual(resolved.typography.family, 'sans');
+    assert.strictEqual(resolved.typography.basePx, 15);
+    assert.strictEqual(resolved.radius, 8);
+  });
+
+  test('setTheme switches at runtime; clearing restores the default', () => {
+    const { shell } = makeShell();
+    shell.setTheme({ palette: { accent: '#22d3ee' }, typography: { family: 'mono' }, radius: 6 });
+    assert.strictEqual(shell.getTheme().palette.accent, '#22d3ee');
+    assert.strictEqual(shell.getTheme().typography.family, 'mono');
+    shell.setTheme(undefined);
+    assert.strictEqual(shell.getTheme().palette.accent, '#2563eb');
+  });
+
+  test('harness fantasy tokens resolve through the shell', () => {
+    const { shell } = makeShell({
+      theme: {
+        palette: { bg: '#14101c', surface: '#241d33', accent: '#d4a24e', text: '#f3e9d2' },
+        typography: { family: 'serif', basePx: 16, titlePx: 28 },
+        radius: 12
+      }
+    });
+    const resolved = shell.getTheme();
+    assert.strictEqual(resolved.palette.accent, '#d4a24e');
+    assert.strictEqual(resolved.typography.family, 'serif');
+    assert.strictEqual(resolved.typography.titlePx, 28);
+    assert.strictEqual(resolved.radius, 12);
+  });
+});

@@ -41,6 +41,89 @@ export interface ShellHudConfig {
   showHealth?: boolean;
 }
 
+/** Data-driven shell theme (Track A.3 Phase 2): mirrors the harness genre
+ * token tables (`harness/loop/ui_themes.py`) so the loop picks `theme` instead
+ * of inventing raw colors. Partial themes merge over the default; unknown
+ * values fall back per-field and never throw. */
+export interface ShellThemePalette {
+  bg?: string;
+  surface?: string;
+  accent?: string;
+  text?: string;
+  muted?: string;
+  success?: string;
+  danger?: string;
+}
+
+export interface ShellTheme {
+  palette?: ShellThemePalette;
+  typography?: {
+    family?: 'serif' | 'sans' | 'mono';
+    basePx?: number;
+    titlePx?: number;
+  };
+  /** Corner radius in px for buttons and bars. */
+  radius?: number;
+}
+
+/** The pre-theme look, preserved exactly: existing games see zero change
+ * unless they opt into a theme. */
+export const DEFAULT_SHELL_THEME: {
+  palette: Required<ShellThemePalette>;
+  typography: { family: 'serif' | 'sans' | 'mono'; basePx: number; titlePx: number };
+  radius: number;
+} = {
+  palette: {
+    bg: '#09090c',
+    surface: '#18181b',
+    accent: '#2563eb',
+    text: '#f4f4f5',
+    muted: '#a1a1aa',
+    success: '#22c55e',
+    danger: '#f87171'
+  },
+  typography: { family: 'sans', basePx: 15, titlePx: 34 },
+  radius: 8
+};
+
+const FONT_STACK: Record<string, string> = {
+  serif: 'Georgia,"Times New Roman",serif',
+  sans: 'system-ui,sans-serif',
+  mono: 'ui-monospace,SFMono-Regular,Menlo,monospace'
+};
+
+/** Resolves any partial theme over the default (pure: unit-testable headless). */
+export function resolveShellTheme(theme?: ShellTheme): typeof DEFAULT_SHELL_THEME {
+  const palette = { ...DEFAULT_SHELL_THEME.palette, ...(theme?.palette ?? {}) };
+  for (const key of Object.keys(palette) as Array<keyof ShellThemePalette>) {
+    const value = palette[key];
+    if (typeof value !== 'string' || !/^#[0-9a-fA-F]{3}([0-9a-fA-F]{3})?$/.test(value)) {
+      palette[key] = DEFAULT_SHELL_THEME.palette[key];
+    }
+  }
+  const family = theme?.typography?.family;
+  const basePx = theme?.typography?.basePx;
+  const titlePx = theme?.typography?.titlePx;
+  const radius = theme?.radius;
+  return {
+    palette,
+    typography: {
+      family: family === 'serif' || family === 'sans' || family === 'mono'
+        ? family
+        : DEFAULT_SHELL_THEME.typography.family,
+      basePx: Number.isFinite(basePx) && (basePx as number) > 0
+        ? (basePx as number)
+        : DEFAULT_SHELL_THEME.typography.basePx,
+      titlePx: Number.isFinite(titlePx) && (titlePx as number) > 0
+        ? (titlePx as number)
+        : DEFAULT_SHELL_THEME.typography.titlePx
+    },
+    radius: Number.isFinite(radius) && (radius as number) >= 0
+      ? (radius as number)
+      : DEFAULT_SHELL_THEME.radius
+  };
+}
+
 export interface GameShellOptions {
   flow: GameFlow;
   session: GameSession;
@@ -59,6 +142,8 @@ export interface GameShellOptions {
   onLoad?: () => void;
   /** HUD presentation overrides (e.g. distance runs hide wave/kills). */
   hud?: ShellHudConfig;
+  /** Visual theme tokens (Track A.3): partial themes merge over the default. */
+  theme?: ShellTheme;
   /** Optional key-based labels (Track 1.8); English defaults when absent. */
   localization?: LocalizationService;
 }
@@ -106,6 +191,17 @@ export class GameShell {
     this.flow = options.flow;
     this.session = options.session;
     this.title = options.title ?? 'Heretek Arena';
+  }
+
+  /** Resolved theme (default merged with any option theme). */
+  public getTheme(): typeof DEFAULT_SHELL_THEME {
+    return resolveShellTheme(this.options.theme);
+  }
+
+  /** Switches the theme at runtime and repaints (validated merge, never throws). */
+  public setTheme(theme?: ShellTheme): void {
+    this.options.theme = theme;
+    this.refresh();
   }
 
   /** Current view state (always available, DOM or not). */
@@ -254,23 +350,37 @@ function substituteVars(template: string, vars?: Record<string, unknown>): strin
 }
 
 // --------------------------------------------------------------------- DOM layer
+/** #rrggbb + alpha → rgba() (theme overlay washes need translucency). */
+function hexToRgba(hex: string, alpha: number): string {
+  let digits = hex.replace('#', '');
+  if (digits.length === 3) digits = digits.split('').map((c) => c + c).join('');
+  const value = parseInt(digits, 16);
+  if (!Number.isFinite(value)) return `rgba(9,9,12,${alpha})`;
+  const r = (value >> 16) & 255;
+  const g = (value >> 8) & 255;
+  const b = value & 255;
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
 function buildDom(doc: Document, root: HTMLElement, shell: GameShell): Record<string, HTMLElement> {
+  const theme = shell.getTheme();
+  const font = FONT_STACK[theme.typography.family];
   const container = doc.createElement('div');
   container.setAttribute('data-heretek-shell', 'true');
   container.style.cssText =
-    'position:absolute;inset:0;pointer-events:none;font-family:system-ui,sans-serif;color:#f4f4f5;z-index:50;';
+    `position:absolute;inset:0;pointer-events:none;font-family:${font};color:${theme.palette.text};z-index:50;`;
 
   const overlay = doc.createElement('div');
   overlay.setAttribute('data-shell-overlay', 'true');
   overlay.style.cssText =
-    'position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:rgba(9,9,12,0.82);pointer-events:auto;text-align:center;';
+    `position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:${hexToRgba(theme.palette.bg, 0.82)};pointer-events:auto;text-align:center;`;
 
   const title = doc.createElement('h1');
-  title.style.cssText = 'margin:0;font-size:34px;letter-spacing:0.5px;';
+  title.style.cssText = `margin:0;font-size:${theme.typography.titlePx}px;letter-spacing:0.5px;`;
   const status = doc.createElement('div');
-  status.style.cssText = 'font-size:16px;color:#a1a1aa;';
+  status.style.cssText = `font-size:${theme.typography.basePx}px;color:${theme.palette.muted};`;
   const stats = doc.createElement('div');
-  stats.style.cssText = 'font-size:14px;color:#d4d4d8;display:flex;gap:18px;';
+  stats.style.cssText = `font-size:${theme.typography.basePx - 1}px;color:${theme.palette.text};display:flex;gap:18px;`;
 
   const buttons = doc.createElement('div');
   buttons.style.cssText = 'display:flex;gap:10px;flex-wrap:wrap;justify-content:center;';
@@ -284,7 +394,7 @@ function buildDom(doc: Document, root: HTMLElement, shell: GameShell): Record<st
     button.setAttribute('data-shell-label', labelKey);
     button.setAttribute('data-shell-fallback', fallback);
     button.style.cssText =
-      'pointer-events:auto;padding:10px 22px;border-radius:8px;border:1px solid #3f3f46;background:#2563eb;color:#fff;font-size:15px;cursor:pointer;';
+      `pointer-events:auto;padding:10px 22px;border-radius:${theme.radius}px;border:1px solid #3f3f46;background:${theme.palette.accent};color:#fff;font-size:${theme.typography.basePx}px;cursor:pointer;`;
     button.addEventListener('click', () => shell.handleButton(action));
     return button;
   };
@@ -300,7 +410,7 @@ function buildDom(doc: Document, root: HTMLElement, shell: GameShell): Record<st
   const hud = doc.createElement('div');
   hud.setAttribute('data-shell-hud', 'true');
   hud.style.cssText =
-    'position:absolute;top:12px;left:0;right:0;display:flex;justify-content:center;gap:24px;font-size:15px;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;';
+    `position:absolute;top:12px;left:0;right:0;display:flex;justify-content:center;gap:24px;font-size:${theme.typography.basePx}px;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;`;
   const hudScore = doc.createElement('span');
   const hudWave = doc.createElement('span');
   const hudKills = doc.createElement('span');
@@ -310,7 +420,7 @@ function buildDom(doc: Document, root: HTMLElement, shell: GameShell): Record<st
   pauseButton.setAttribute('data-shell-label', 'shell.button.pause');
   pauseButton.setAttribute('data-shell-fallback', '⏸ Pause');
   pauseButton.style.cssText =
-    'pointer-events:auto;position:absolute;right:14px;top:-4px;padding:6px 14px;border-radius:8px;border:1px solid #3f3f46;background:rgba(24,24,27,0.85);color:#e4e4e7;font-size:13px;cursor:pointer;';
+    `pointer-events:auto;position:absolute;right:14px;top:-4px;padding:6px 14px;border-radius:${theme.radius}px;border:1px solid #3f3f46;background:${hexToRgba(theme.palette.surface, 0.85)};color:${theme.palette.text};font-size:${theme.typography.basePx - 2}px;cursor:pointer;`;
   pauseButton.addEventListener('click', () => shell.handleButton('pause'));
   hud.append(hudScore, hudWave, hudKills, hudTime, pauseButton);
 
@@ -318,7 +428,7 @@ function buildDom(doc: Document, root: HTMLElement, shell: GameShell): Record<st
   healthBar.style.cssText =
     'position:absolute;left:16px;bottom:16px;width:220px;height:14px;border-radius:7px;border:1px solid #52525b;background:rgba(24,24,27,0.8);overflow:hidden;';
   const healthFill = doc.createElement('div');
-  healthFill.style.cssText = 'height:100%;width:100%;background:#22c55e;transition:width 120ms linear;';
+  healthFill.style.cssText = `height:100%;width:100%;background:${theme.palette.success};transition:width 120ms linear;`;
   healthBar.append(healthFill);
 
   container.append(overlay, hud, healthBar);
@@ -392,5 +502,7 @@ function applyView(doc: Document, elements: Record<string, HTMLElement>, view: S
   elements.healthBar.style.display = view.showHealth && view.overlay !== 'hud' ? 'none' : view.showHealth ? 'block' : 'none';
   elements.hudTime.textContent = `${view.elapsedSeconds.toFixed(1)}s`;
   elements.healthFill.style.width = `${Math.round(view.healthFraction * 100)}%`;
-  elements.healthFill.style.background = view.healthFraction > 0.5 ? '#22c55e' : view.healthFraction > 0.2 ? '#eab308' : '#ef4444';
+  const palette = shell.getTheme().palette;
+  elements.healthFill.style.background =
+    view.healthFraction > 0.5 ? palette.success : view.healthFraction > 0.2 ? palette.accent : palette.danger;
 }
