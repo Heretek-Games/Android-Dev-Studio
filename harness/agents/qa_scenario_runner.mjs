@@ -838,11 +838,20 @@ function setupGame(spec, scene, engine) {
     }
   }
 
+  // Track E.2: melee encounter mode. When spec.game.melee is set, the
+  // player swings a MeleeHitbox (soft lock-on facing) instead of the
+  // hitscan fireAt path, and kills/reactions tally off Hurtbox
+  // resolutions (single application point — no double-apply).
+  const meleeCfg = config.melee || null;
+  let meleeKills = 0;
+  let meleeReactions = 0;
+  const playerName = config.playerName || 'Player Hero';
+
   const runtime = new engine.GameRuntime({
     mode,
     scene,
     settlement,
-    playerName: config.playerName || 'Player Hero',
+    playerName,
     targetScore: config.targetScore,
     timeLimitSeconds: config.timeLimitSeconds,
     totalWaves: config.totalWaves ?? 2,
@@ -868,6 +877,14 @@ function setupGame(spec, scene, engine) {
       if (!enemySpec.elemental) {
         enemy.addComponent(new engine.HealthComponent(enemyHealth));
       }
+      if (meleeCfg) {
+        const hurt = new engine.Hurtbox({ invulnSeconds: meleeCfg.invulnSeconds ?? 0.3 });
+        hurt.onResolved(resolution => {
+          if (resolution.fatal) meleeKills += 1;
+          if (resolution.reaction && resolution.reaction !== 'None') meleeReactions += 1;
+        });
+        enemy.addComponent(hurt);
+      }
       enemy.addComponent(new engine.EnemyAI(enemyAi));
       scene.addGameObject(enemy);
       return enemy;
@@ -878,14 +895,67 @@ function setupGame(spec, scene, engine) {
   const maxDisplacement = new Map();
   runtime.start();
 
+  if (meleeCfg) {
+    const player = scene.findByName(playerName);
+    if (player) {
+      player.addComponent(new engine.MeleeHitbox({
+        damage: meleeCfg.damage ?? 25,
+        range: meleeCfg.range ?? 3,
+        arcDegrees: meleeCfg.arcDegrees ?? 120,
+        element: meleeCfg.element,
+        gaugeUnits: meleeCfg.gauge ?? 1
+      }));
+    }
+  }
+
   return {
     mode,
     runtime,
     hitEveryFrames: config.hitEveryFrames ?? 20,
     hitDamage: config.hitDamage ?? enemyHealth.maxHealth ?? 50,
     fireCount: 0,
+    swingEveryFrames: meleeCfg ? (meleeCfg.swingEveryFrames ?? 20) : 0,
+    swingCount: 0,
+    meleeHits: 0,
+    meleeKills() { return meleeKills; },
+    meleeReactions() { return meleeReactions; },
+    livingEnemies() {
+      return runtime.spawner
+        .getSpawnedNames()
+        .map(name => scene.findByName(name))
+        .filter(Boolean);
+    },
+    maybeSwing(frame) {
+      if (!meleeCfg || frame % this.swingEveryFrames !== 0) return;
+      const player = scene.findByName(playerName);
+      const blade = player ? player.components.find(c => c.constructor.name === 'MeleeHitbox') : null;
+      if (!player || !blade) return;
+      // Soft lock-on: face the nearest living enemy before the swing so
+      // arc-limited strikes connect (game-side facing, not engine aimbot).
+      const alive = this.livingEnemies();
+      if (alive.length) {
+        let best = alive[0];
+        let bestD = Infinity;
+        for (const enemy of alive) {
+          const dx = enemy.transform.position.x - player.transform.position.x;
+          const dz = enemy.transform.position.z - player.transform.position.z;
+          const d = dx * dx + dz * dz;
+          if (d < bestD) { bestD = d; best = enemy; }
+        }
+        const dx = best.transform.position.x - player.transform.position.x;
+        const dz = best.transform.position.z - player.transform.position.z;
+        if (dx * dx + dz * dz > 1e-8) {
+          player.transform.setRotation(0, Math.atan2(-dx, -dz), 0);
+        }
+      }
+      blade.beginSwing();
+      const hits = blade.tryHit();
+      this.swingCount += 1;
+      this.meleeHits += hits.length;
+    },
     maybeFire(frame) {
       if (mode !== 'waves') return;
+      if (meleeCfg) { this.maybeSwing(frame); return; }
       if (frame % this.hitEveryFrames !== 0) return;
       const alive = runtime.spawner
         .getSpawnedNames()
@@ -1411,6 +1481,27 @@ function evaluateRules(spec, ctxData) {
         const reactions = game.runtime.getReactionCount();
         pass = reactions >= (rule.min ?? 1);
         detail = `reactions=${reactions} (min ${rule.min ?? 1})`;
+        break;
+      }
+      case 'game_melee_kills_min': {
+        if (!game) { pass = false; detail = 'no game config in scenario'; break; }
+        const kills = typeof game.meleeKills === 'function' ? game.meleeKills() : 0;
+        pass = kills >= (rule.min ?? 1);
+        detail = `melee kills=${kills} (min ${rule.min ?? 1}, swings=${game.swingCount ?? 0})`;
+        break;
+      }
+      case 'game_melee_reactions_min': {
+        if (!game) { pass = false; detail = 'no game config in scenario'; break; }
+        const reactions = typeof game.meleeReactions === 'function' ? game.meleeReactions() : 0;
+        pass = reactions >= (rule.min ?? 1);
+        detail = `melee reactions=${reactions} (min ${rule.min ?? 1})`;
+        break;
+      }
+      case 'game_melee_hits_min': {
+        if (!game) { pass = false; detail = 'no game config in scenario'; break; }
+        const hits = game.meleeHits ?? 0;
+        pass = hits >= (rule.min ?? 1);
+        detail = `melee hits=${hits} (min ${rule.min ?? 1}, swings=${game.swingCount ?? 0})`;
         break;
       }
       case 'game_enemy_chase_min': {

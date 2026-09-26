@@ -1,0 +1,121 @@
+{
+  "name": "melee_combat",
+  "goal": "E.2 gate: a hydro-infused hero cleaves two waves of pyro slimes with animation-driven melee swings; kills and vaporize reactions tally off Hurtbox resolutions",
+  "game": {
+    "playerName": "Hero",
+    "totalWaves": 2,
+    "enemiesPerWave": 2,
+    "spawnRadius": 5,
+    "scorePerKill": 100,
+    "interWaveDelaySeconds": 0.5,
+    "melee": {
+      "damage": 40,
+      "range": 3.5,
+      "arcDegrees": 120,
+      "element": "Hydro",
+      "gauge": 1,
+      "swingEveryFrames": 15,
+      "invulnSeconds": 0.2
+    },
+    "enemy": {
+      "shape": "sphere",
+      "size": [1.2, 1.2, 1.2],
+      "color": "#f97316",
+      "y": 0.8,
+      "elemental": {
+        "aura": "Pyro",
+        "maxHealth": 80
+      },
+      "ai": {
+        "targetName": "Hero",
+        "moveSpeed": 2.5,
+        "attackRange": 2.0,
+        "attackDamage": 6,
+        "attackIntervalSeconds": 1.2
+      }
+    }
+  },
+  "gameObjects": [
+    {
+      "name": "Arena Floor",
+      "shape": "box",
+      "size": [30, 1, 30],
+      "position": [0, -0.5, 0],
+      "color": "#1f1b16",
+      "physics": "fixed"
+    },
+    {
+      "name": "Hero",
+      "shape": "capsule",
+      "size": [1, 1.5, 1],
+      "position": [0, 1.5, 0],
+      "color": "#38bdf8",
+      "physics": "none",
+      "controller": true,
+      "health": {
+        "maxHealth": 100,
+        "destroyOnDeath": false
+      }
+    },
+    {
+      "name": "Arena Light",
+      "kind": "light",
+      "lightType": "directional",
+      "color": "#fff7ed",
+      "intensity": 2.0,
+      "position": [6, 10, 4]
+    }
+  ],
+  "rules": [
+    {
+      "id": "hero_exists",
+      "type": "entity_exists",
+      "target": "Hero"
+    },
+    {
+      "id": "hero_has_blade",
+      "type": "entity_component",
+      "target": "Hero",
+      "component": "MeleeHitbox"
+    },
+    {
+      "id": "swings_connected",
+      "type": "game_melee_hits_min",
+      "min": 4
+    },
+    {
+      "id": "melee_kills",
+      "type": "game_melee_kills_min",
+      "min": 4
+    },
+    {
+      "id": "vaporize_reactions",
+      "type": "game_melee_reactions_min",
+      "min": 3
+    },
+    {
+      "id": "enemies_chase",
+      "type": "game_enemy_chase_min",
+      "min": 0.5
+    },
+    {
+      "id": "run_won",
+      "type": "game_phase",
+      "phase": "won"
+    },
+    {
+      "id": "finite_transforms",
+      "type": "no_nan_transforms"
+    },
+    {
+      "id": "mobile_draw_budget",
+      "type": "draw_call_budget",
+      "max": 100
+    },
+    {
+      "id": "sim_performance",
+      "type": "fps_min",
+      "min": 30
+    }
+  ]
+}
