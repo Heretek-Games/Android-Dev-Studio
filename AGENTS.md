@@ -170,7 +170,7 @@ python3 -m unittest harness.validation.test_scene_invariants harness.validation.
 
 # 8. Native host checks (Tier 2 core: loader, culling, terrain meshing, projection)
 cd templates/vulkan-container/app/src/main/cpp && \
-  g++ -std=c++17 -Wall -Wextra scene_loader.cpp culling.cpp terrain_mesh.cpp tests/native_scene_test.cpp \
+  g++ -std=c++17 -Wall -Wextra scene_loader.cpp culling.cpp terrain_mesh.cpp nav_bake.cpp tests/native_scene_test.cpp \
   -o /tmp/native_scene_test && /tmp/native_scene_test ../assets/scene.native
 
 # 9. Package a container (real build; installs + launches when a device/emulator is attached)
