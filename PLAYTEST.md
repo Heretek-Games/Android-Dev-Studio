@@ -15,7 +15,9 @@ Open `http://localhost:3000/?play=tide` (desktop: click; touch: tap).
 Or header **Tide** in the studio. No build step needed.
 
 Controls: move stick (touch) / WASD (desktop), **⚔ attack** (or Space),
-**⇄ swap hero** (mid-fight, 1s cooldown), **💨 dodge** (or Shift; i-frames
+**⇄ swap hero** (mid-fight, 1s cooldown — swapping swaps elements: Squire
+is innate Cryo for Melt, the Adventurer needs the Hydro blessing for
+Vaporize), **💨 dodge** (or Shift; i-frames
 beat boss strikes), Esc pauses. Green Emberblooms heal 25 on touch.
 
 ## Part A — E.2 feel review (~10 minutes)
