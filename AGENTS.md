@@ -17,13 +17,18 @@ and the Perception & Coherence program (Tracks A.1→B.3) are implemented and ve
   scenario-keyed regression baselines; 50 Python tests (invariants, exporter, apk_builder,
   cross-tier quadtree parity); an **autonomous iterate-until-green loop** (`harness/loop/`)
   that drives generated scenes to QA-verified green with vision critique, regression bisect,
-  and a cost/latency dashboard (235 loop tests).
+  and a cost/latency dashboard (241 loop tests).
 - **Perception** — gameplay-camera frame capture per iteration, 4-axis visual rubric +
   deterministic aesthetic proxies (`visual_quality_min` gate), genre UI themes + kits +
   GameShell token plumbing, taste memory + Artemis diff view, unified spatial index +
   consistency audit (`spatial_audit` gate) with engine parity, EQS-style queries + named
-  places, viewport ghosts + mutation diffs (45 spatial tests + 2 parity suites green;
+  places, viewport ghosts + mutation diffs (45 spatial tests + 3 parity suites green;
   ghost + diff views proven live in chrome-devtools with zero console errors).
+- **Interface** — status bar + command palette + persistent layouts + token audit/UiKit;
+  scene rev counter with poll-and-toast live sync + run-log activity feed (proven live);
+  loop asset vocabulary (`uid://` spawn, `asset_count`/`asset_license` gates), unified
+  MCP installs (real downloads, gated saves, no placeholders), asset search + prompt
+  injection, SBOM-shaped provenance registry (provenance 10/10, store 11/11).
 - **Containers** — both tiers assemble real debug APKs and deploy/launch on an attached device.
   Tier 2 is validated on an Android target (emulator): real swapchain, 3 instanced cubes +
   64 terrain LOD leaf draws, `VK_SUCCESS` acquire/submit/present at ~61.5 FPS, rendered output

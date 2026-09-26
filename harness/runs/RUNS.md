@@ -905,3 +905,19 @@ Every track built end-to-end (OSINT → ADR → build → tests → commit), all
 | C.6 | nav-bake strangler (`913dd40`, `c2794b0`) | TS↔C++ parity 3/3 after two float-precision bugs the harness itself caught |
 
 Standing blockers (hardware-bound, unchanged): #1 physical arm64, #3 50k-instance on-device, #6 validation-layer soak. Deferred items never entered; opening any needs explicit direction plus a gate artifact.
+
+---
+
+## Run Block 29 — 2026-09-26, Interface & Integration Complete (D.1–D.5) ✅
+
+Every track built end-to-end (OSINT → ADR → build → tests → commit), all suites green on fresh runs this block (engine 458/92, loop 241, agents 47, harness 100-module line, app build).
+
+| Track | Items | Gate evidence |
+|-------|-------|---------------|
+| D.1 | status bar + palette + layouts + tokens (`2fc507b`, `39e4893`) | live 66–72 FPS readout, palette proof, save/open layout proof, token audit 1582→1562 with 0 in touched files, 0 console errors |
+| D.2 | rev counter + sync + feed (`b0f95cb`, `6dc93cf`, `7a001ec`) | external gated write in hierarchy/viewport/status bar within seconds, selection preserved; feed expander with real run cards |
+| D.3 | asset vocabulary (`ad43f41`) | real-runner proof: licensed green, unlicensed fails license, missing fails count |
+| D.4 | import unification + search (`a9bf966`, `e646a3a`) | live GDevelop CDN download proof; gate bypass closed; applied spawn passes real QA green |
+| D.5 | provenance registry (`ca5944d`) | audit complete + memory query green over loop-built scenes |
+
+Standing blockers (hardware-bound, unchanged): #1 physical arm64, #3 50k-instance on-device, #6 validation-layer soak. Deferred items never entered; opening any needs explicit direction plus a gate artifact.
