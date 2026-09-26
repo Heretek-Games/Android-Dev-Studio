@@ -82,8 +82,13 @@ Mat4 multiply(const Mat4& a, const Mat4& b) {
 
 AABB meshAABB(const MeshRecord& mesh) {
   AABB box;
-  box.min = {mesh.px - mesh.sx * 0.5f, mesh.py - mesh.sy * 0.5f, mesh.pz - mesh.sz * 0.5f};
-  box.max = {mesh.px + mesh.sx * 0.5f, mesh.py + mesh.sy * 0.5f, mesh.pz + mesh.sz * 0.5f};
+  // Narrowing to float is intended here (GPU culling volumes).
+  box.min = {static_cast<float>(mesh.px - mesh.sx * 0.5),
+             static_cast<float>(mesh.py - mesh.sy * 0.5),
+             static_cast<float>(mesh.pz - mesh.sz * 0.5)};
+  box.max = {static_cast<float>(mesh.px + mesh.sx * 0.5),
+             static_cast<float>(mesh.py + mesh.sy * 0.5),
+             static_cast<float>(mesh.pz + mesh.sz * 0.5)};
   return box;
 }
 

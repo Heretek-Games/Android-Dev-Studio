@@ -16,6 +16,7 @@ if(ANDROID)
   add_library(heretek_native SHARED
     scene_loader.cpp
     culling.cpp
+    nav_bake.cpp
     terrain_mesh.cpp
     vulkan_swapchain.cpp
     vulkan_renderer.cpp
@@ -35,6 +36,7 @@ if(HERETEK_BUILD_HOST_TESTS)
   add_executable(native_scene_test
     scene_loader.cpp
     culling.cpp
+    nav_bake.cpp
     terrain_mesh.cpp
     tests/native_scene_test.cpp
   )

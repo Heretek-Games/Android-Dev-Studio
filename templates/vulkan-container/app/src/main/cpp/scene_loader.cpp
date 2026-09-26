@@ -1,8 +1,11 @@
 #include "scene_loader.h"
 
+#include <cmath>
 #include <fstream>
 #include <set>
 #include <sstream>
+
+#include "nav_bake.h"
 
 namespace heretek {
 
@@ -15,6 +18,41 @@ int NativeScene::uniqueBatchCount() const {
 int NativeScene::drawCallEstimate() const {
   return static_cast<int>(meshes.size()) + uniqueBatchCount() +
          static_cast<int>(terrainLod.size());
+}
+
+NavBakeResult NativeScene::bakeNavGrid() const {
+  std::vector<NavObstacle> obstacles;
+  double minX = 0, minZ = 0, maxX = 0, maxZ = 0;
+  bool first = true;
+  for (const auto& mesh : meshes) {
+    if (first) {
+      minX = maxX = mesh.px;
+      minZ = maxZ = mesh.pz;
+      first = false;
+    } else {
+      minX = std::min(minX, mesh.px);
+      minZ = std::min(minZ, mesh.pz);
+      maxX = std::max(maxX, mesh.px);
+      maxZ = std::max(maxZ, mesh.pz);
+    }
+    if (mesh.physics != PhysicsType::Fixed) continue;
+    if (mesh.sy < 2.0f) continue;
+    NavObstacle obstacle;
+    obstacle.x = mesh.px;
+    obstacle.z = mesh.pz;
+    obstacle.hx = mesh.sx / 2.0f;
+    obstacle.hz = mesh.sz / 2.0f;
+    obstacles.push_back(obstacle);
+  }
+  if (first) return NavBakeResult{};
+  const float pad = 2.0f;
+  const float originX = std::floor(minX - pad);
+  const float originZ = std::floor(minZ - pad);
+  const int width = std::max(1, static_cast<int>(std::ceil(maxX + pad - originX)));
+  const int height = std::max(1, static_cast<int>(std::ceil(maxZ + pad - originZ)));
+  return bakeWalkabilityNative(width, height, obstacles.data(),
+                               static_cast<int>(obstacles.size()), originX,
+                               originZ, 1.0, 0.4);
 }
 
 namespace {
@@ -73,7 +111,7 @@ bool parseSceneText(const std::string& text, NativeScene& out, std::string& erro
         return false;
       }
       inst.foliage = (inst.batch == kFoliageBatch);
-      float metallic = 0.0f, roughness = 0.9f;
+      double metallic = 0.0, roughness = 0.9;
       std::string shading;
       if (tokens >> inst.r >> inst.g >> inst.b >> metallic >> roughness >> shading) {
         inst.metallic = metallic;

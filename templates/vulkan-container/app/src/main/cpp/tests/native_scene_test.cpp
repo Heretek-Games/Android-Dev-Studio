@@ -258,14 +258,15 @@ int main(int argc, char** argv) {
         mat, matError);
     CHECK(ok, ("material lines parse: " + matError).c_str());
     CHECK(mat.meshes.size() == 2, "2 material mesh records");
-    CHECK(mat.meshes[0].metallic == 1.0f && mat.meshes[0].roughness == 0.15f &&
+    const auto near = [](double a, double b) { return std::fabs(a - b) < 1e-9; };
+    CHECK(near(mat.meshes[0].metallic, 1.0) && near(mat.meshes[0].roughness, 0.15) &&
               !mat.meshes[0].unlit,
           "chrome mesh carries metallic/roughness/pbr");
-    CHECK(mat.meshes[1].metallic == 0.0f && mat.meshes[1].roughness == 0.9f &&
+    CHECK(near(mat.meshes[1].metallic, 0.0) && near(mat.meshes[1].roughness, 0.9) &&
               !mat.meshes[1].unlit,
           "v1 mesh line gets Lambert-era defaults");
     CHECK(mat.instances.size() == 2, "2 instance records");
-    CHECK(mat.instances[0].r == 1.0f && mat.instances[0].roughness == 0.4f &&
+    CHECK(near(mat.instances[0].r, 1.0) && near(mat.instances[0].roughness, 0.4) &&
               !mat.instances[0].legacy,
           "new instance line carries albedo + material");
     CHECK(mat.instances[1].legacy, "v1 instance line flagged legacy");
