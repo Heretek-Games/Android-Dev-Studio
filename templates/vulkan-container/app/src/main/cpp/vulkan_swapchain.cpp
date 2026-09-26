@@ -13,15 +13,6 @@ namespace heretek {
 
 namespace {
 
-VkSurfaceFormatKHR chooseFormat(const std::vector<VkSurfaceFormatKHR>& formats) {
-  for (const auto& format : formats) {
-    if (format.format == VK_FORMAT_R8G8B8A8_UNORM || format.format == VK_FORMAT_B8G8R8A8_UNORM) {
-      return format;
-    }
-  }
-  return formats[0];
-}
-
 // The host-testable policy constants must stay bit-identical to the Vulkan
 // header (vulkan_swapchain.h documents the mirror).
 static_assert(VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR == swapchain_policy::kCompositeAlphaOpaque,
@@ -32,8 +23,13 @@ static_assert(VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR ==
 static_assert(VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR ==
                   swapchain_policy::kCompositeAlphaPostMultiplied,
               "compositeAlpha policy mirror drifted (POST_MULTIPLIED)");
-static_assert(VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR == swapchain_policy::kCompositeAlphaInherit,
+static_assert(VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR ==
+                  swapchain_policy::kCompositeAlphaInherit,
               "compositeAlpha policy mirror drifted (INHERIT)");
+static_assert(VK_FORMAT_R8G8B8A8_UNORM == swapchain_policy::kFormatR8G8B8A8Unorm,
+              "surface-format policy mirror drifted (R8G8B8A8_UNORM)");
+static_assert(VK_FORMAT_B8G8R8A8_UNORM == swapchain_policy::kFormatB8G8R8A8Unorm,
+              "surface-format policy mirror drifted (B8G8R8A8_UNORM)");
 
 }  // namespace
 
@@ -89,17 +85,35 @@ bool VulkanSwapchain::create(VkInstance instance, VkPhysicalDevice physical, VkD
   getSurfaceFormats_(physical, surface_, &formatCount, nullptr);
   SW_LOGI("surface caps: extent=%ux%u minImages=%u formats=%u", caps.currentExtent.width,
           caps.currentExtent.height, caps.minImageCount, formatCount);
+  if (formatCount == 0) {
+    SW_LOGE("surface reports zero formats (no compatible present format)");
+    lastError_ = "surface reports zero surface formats";
+    destroySwapchainObjects(device);
+    return false;
+  }
   std::vector<VkSurfaceFormatKHR> formats(formatCount);
   getSurfaceFormats_(physical, surface_, &formatCount, formats.data());
-  format_ = chooseFormat(formats);
+  std::vector<uint32_t> formatIds(formatCount);
+  for (uint32_t i = 0; i < formatCount; i++) {
+    formatIds[i] = static_cast<uint32_t>(formats[i].format);
+  }
+  const uint32_t formatIndex = swapchain_policy::chooseFormatIndex(formatIds.data(), formatCount);
+  format_ = formats[formatIndex];
   SW_LOGI("chosen format: %d colorspace=%d", static_cast<int>(format_.format),
           static_cast<int>(format_.colorSpace));
 
-  extent_ = caps.currentExtent;
-  if (extent_.width == UINT32_MAX) {
-    extent_.width = std::clamp(static_cast<uint32_t>(width), caps.minImageExtent.width, caps.maxImageExtent.width);
-    extent_.height = std::clamp(static_cast<uint32_t>(height), caps.minImageExtent.height, caps.maxImageExtent.height);
+  const swapchain_policy::Extent2D resolved = swapchain_policy::resolveExtent(
+      static_cast<uint32_t>(width), static_cast<uint32_t>(height), caps.minImageExtent.width,
+      caps.minImageExtent.height, caps.maxImageExtent.width, caps.maxImageExtent.height,
+      caps.currentExtent.width, caps.currentExtent.height);
+  if (resolved.width == 0 || resolved.height == 0) {
+    SW_LOGE("surface is minimized (0-area extent) — skipping swapchain creation");
+    lastError_ = "surface is minimized (0-area extent)";
+    destroySwapchainObjects(device);
+    return false;
   }
+  extent_.width = resolved.width;
+  extent_.height = resolved.height;
 
   uint32_t imageCount = caps.minImageCount + 1;
   if (caps.maxImageCount > 0) imageCount = std::min(imageCount, caps.maxImageCount);
@@ -161,6 +175,7 @@ bool VulkanSwapchain::create(VkInstance instance, VkPhysicalDevice physical, VkD
     viewInfo.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
     if (vkCreateImageView(device, &viewInfo, nullptr, &imageViews_[i]) != VK_SUCCESS) {
       lastError_ = "vkCreateImageView failed";
+      destroySwapchainObjects(device);
       return false;
     }
   }
@@ -200,6 +215,7 @@ bool VulkanSwapchain::create(VkInstance instance, VkPhysicalDevice physical, VkD
   passInfo.pDependencies = &dependency;
   if (vkCreateRenderPass(device, &passInfo, nullptr, &renderPass_) != VK_SUCCESS) {
     lastError_ = "vkCreateRenderPass failed";
+    destroySwapchainObjects(device);
     return false;
   }
 
@@ -217,13 +233,14 @@ bool VulkanSwapchain::create(VkInstance instance, VkPhysicalDevice physical, VkD
     fbInfo.layers = 1;
     if (vkCreateFramebuffer(device, &fbInfo, nullptr, &framebuffers_[i]) != VK_SUCCESS) {
       lastError_ = "vkCreateFramebuffer failed";
+      destroySwapchainObjects(device);
       return false;
     }
   }
   return true;
 }
 
-void VulkanSwapchain::destroy(VkDevice device) {
+void VulkanSwapchain::destroySwapchainObjects(VkDevice device) {
   for (auto framebuffer : framebuffers_) vkDestroyFramebuffer(device, framebuffer, nullptr);
   framebuffers_.clear();
   for (auto view : imageViews_) vkDestroyImageView(device, view, nullptr);
@@ -235,6 +252,11 @@ void VulkanSwapchain::destroy(VkDevice device) {
     destroySwapchain_(device, swapchain_, nullptr);
   }
   swapchain_ = VK_NULL_HANDLE;
+  extent_ = {0, 0};
+}
+
+void VulkanSwapchain::destroy(VkDevice device) {
+  destroySwapchainObjects(device);
   if (surface_ != VK_NULL_HANDLE && instance_ != VK_NULL_HANDLE && destroySurface_ != nullptr) {
     destroySurface_(instance_, surface_, nullptr);
   }

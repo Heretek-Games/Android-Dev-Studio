@@ -32,6 +32,13 @@ class VulkanRenderer {
   void renderFrame();
   /** Rebuilds the swapchain (and extent-dependent resources) after OUT_OF_DATE/SUBOPTIMAL. */
   bool recreateSwapchain();
+  /**
+   * Surface-size change hook (wired to surfaceChanged on the Java side):
+   * records the new dimensions and rebuilds the swapchain when a live
+   * surface actually changed size. A 0 new size is the minimized state and
+   * is recorded without rebuilding. No-op until a surface exists.
+   */
+  bool onSurfaceSizeChanged(int width, int height);
   /** Requests a one-shot readback of the next rendered frame (writes a PPM P6 file). */
   bool captureNextFrame(const std::string& path);
   void uploadScene(const NativeScene& scene);
@@ -64,6 +71,15 @@ class VulkanRenderer {
   VkShaderModule loadShader(const std::string& path);
   void recordFrame(VkCommandBuffer cmd, uint32_t imageIndex, bool capture);
   bool createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkBuffer* buffer, VkDeviceMemory* memory, void** mapped);
+  /**
+   * Builds the per-frame resources sized to the live swapchain (command
+   * buffers + fences + acquire/signal semaphores). Every creation return is
+   * checked; on failure the partial set is torn down so no device object
+   * leaks. Shared by createSurface and recreateSwapchain.
+   */
+  bool createFrameResources();
+  /** Null-safe teardown of everything createFrameResources builds. */
+  void destroyFrameResources();
 
   // Validation debug messenger (destroyed before the instance it belongs to).
   VkDebugUtilsMessengerEXT debugMessenger_ = VK_NULL_HANDLE;
@@ -93,6 +109,10 @@ class VulkanRenderer {
   ANativeWindow* window_ = nullptr;
   int surfaceWidth_ = 0;
   int surfaceHeight_ = 0;
+  // Set when a recreate attempt fails: the swapchain handle is null and the
+  // renderFrame guard retries recreation (throttled) instead of going dark
+  // forever. Cleared by any successful create/recreate.
+  bool swapchainStale_ = false;
 
   VkDescriptorSetLayout computeSetLayout_ = VK_NULL_HANDLE;
   VkDescriptorSetLayout graphicsSetLayout_ = VK_NULL_HANDLE;
@@ -177,6 +197,8 @@ class VulkanRenderer {
   bool createSurface(void* /*window*/, int /*width*/, int /*height*/) { return false; }
   void destroySurface() {}
   void renderFrame() {}
+  bool recreateSwapchain() { return false; }
+  bool onSurfaceSizeChanged(int /*width*/, int /*height*/) { return true; }
   bool captureNextFrame(const std::string& /*path*/) { return false; }
   void uploadScene(const NativeScene& scene) {
     drawCallEstimate_ = scene.drawCallEstimate();

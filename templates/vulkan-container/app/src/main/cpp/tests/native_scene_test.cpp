@@ -7,6 +7,7 @@
 #include <cmath>
 #include <array>
 #include <cstddef>
+#include <cstdint>
 #include <cstdio>
 #include <string>
 
@@ -323,6 +324,52 @@ int main(int argc, char** argv) {
               kCompositeAlphaOpaque,
           "compositeAlpha: full mask still prefers OPAQUE");
     CHECK(chooseCompositeAlpha(0) == 0, "compositeAlpha: empty mask fails loudly (returns 0)");
+  }
+
+  // ---- Swapchain hardening: host-testable policy helpers ----
+  // Terrain push block matches terrain.vert (mat4 viewProj only, 64 B) — the
+  // pipeline-layout range and the push call both size from this struct.
+  CHECK(sizeof(TerrainPushConstants) == 64, "terrain push block is 64 bytes (mat4 viewProj)");
+  CHECK(offsetof(TerrainPushConstants, viewProj) == 0, "viewProj leads the terrain push block");
+
+  // Surface-format preference: first 8-bit RGBA entry, else index 0, else
+  // UINT32_MAX on empty input (caller fails loudly instead of indexing [0]).
+  {
+    using namespace swapchain_policy;
+    const uint32_t rgbaFirst[] = {kFormatR8G8B8A8Unorm, kFormatB8G8R8A8Unorm};
+    CHECK(chooseFormatIndex(rgbaFirst, 2) == 0, "format: first RGBA entry wins");
+    const uint32_t bgraFirst[] = {kFormatB8G8R8A8Unorm, kFormatR8G8B8A8Unorm};
+    CHECK(chooseFormatIndex(bgraFirst, 2) == 0, "format: BGRA-first order still picks index 0");
+    const uint32_t exoticFirst[] = {100, 101, kFormatB8G8R8A8Unorm};
+    CHECK(chooseFormatIndex(exoticFirst, 3) == 2, "format: RGBA found past exotic entries");
+    const uint32_t noRgba[] = {100, 101};
+    CHECK(chooseFormatIndex(noRgba, 2) == 0, "format: no RGBA falls back to index 0");
+    CHECK(chooseFormatIndex(nullptr, 0) == UINT32_MAX, "format: empty input fails loudly");
+  }
+
+  // Extent resolution: implementation current extent wins; the UINT32_MAX
+  // sentinel falls back to the requested size clamped into [min, max].
+  {
+    using namespace swapchain_policy;
+    Extent2D cur = resolveExtent(100, 100, 1, 1, 4096, 4096, 800, 600);
+    CHECK(cur.width == 800 && cur.height == 600, "extent: implementation current extent wins");
+    Extent2D inRange = resolveExtent(800, 600, 1, 1, 4096, 4096, UINT32_MAX, UINT32_MAX);
+    CHECK(inRange.width == 800 && inRange.height == 600, "extent: in-range request passes through");
+    Extent2D low = resolveExtent(0, 0, 64, 64, 4096, 4096, UINT32_MAX, UINT32_MAX);
+    CHECK(low.width == 64 && low.height == 64, "extent: undersized request clamps to minimum");
+    Extent2D high = resolveExtent(99999, 99999, 64, 64, 4096, 2160, UINT32_MAX, UINT32_MAX);
+    CHECK(high.width == 4096 && high.height == 2160, "extent: oversized request clamps to maximum");
+  }
+
+  // Size-change predicate: differ -> rebuild; identical -> skip; 0 new size
+  // (minimized) -> skip, never recreate a 0-area swapchain.
+  {
+    using namespace swapchain_policy;
+    CHECK(!shouldRecreateOnSizeChange(800, 600, 800, 600), "resize: identical size skips rebuild");
+    CHECK(shouldRecreateOnSizeChange(800, 600, 600, 800), "resize: rotation rebuilds");
+    CHECK(shouldRecreateOnSizeChange(800, 600, 1024, 768), "resize: larger surface rebuilds");
+    CHECK(!shouldRecreateOnSizeChange(800, 600, 0, 0), "resize: minimized skips rebuild");
+    CHECK(!shouldRecreateOnSizeChange(0, 0, 0, 0), "resize: no surface yet skips rebuild");
   }
 
   std::printf("\n%s (%d failure%s)\n", failures == 0 ? "NATIVE CORE TESTS PASSED" : "NATIVE CORE TESTS FAILED",
