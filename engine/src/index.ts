@@ -2,6 +2,7 @@
 export * from './core/Transform.js';
 export * from './core/Component.js';
 export * from './core/ComponentRegistry.js';
+export * from './core/InspectorSchema.js';
 export * from './core/BuiltinComponents.js';
 export * from './core/HistoryStack.js';
 export * from './core/GameObject.js';

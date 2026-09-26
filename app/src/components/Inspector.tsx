@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useStudio } from '../state/StudioState';
+import { SchemaFields } from './SchemaFields';
 import {
   MeshRenderer,
   LightComponent,
@@ -404,33 +405,15 @@ export const Inspector: React.FC = () => {
               </span>
             }
           >
-            <div className="space-y-2 text-xs">
-              <div className="flex items-center justify-between">
-                <span className="text-zinc-400">Type</span>
-                <span className="capitalize text-zinc-200 bg-zinc-800 px-2 py-0.5 rounded border border-zinc-700">
-                  {lightComp.lightType}
-                </span>
-              </div>
-              <div className="space-y-1">
-                <div className="flex justify-between text-zinc-400">
-                  <span>Intensity</span>
-                  <span className="font-mono text-zinc-200">{lightComp.intensity}</span>
-                </div>
-                <input
-                  type="range"
-                  min="0"
-                  max="10"
-                  step="0.2"
-                  value={lightComp.intensity}
-                  onChange={(e) => {
-                    lightComp.intensity = parseFloat(e.target.value);
-                    if (lightComp.threeLight) lightComp.threeLight.intensity = lightComp.intensity;
-                    refreshScene();
-                  }}
-                  className="w-full accent-amber-500 cursor-pointer h-1.5 bg-zinc-800 rounded"
-                />
-              </div>
-            </div>
+            {/* C.1 reflection spike: schema-driven fields (type string, min-safe) */}
+            <SchemaFields
+              type="LightComponent"
+              component={lightComp}
+              onCommit={() => {
+                if (lightComp.threeLight) lightComp.threeLight.intensity = lightComp.intensity;
+                refreshScene();
+              }}
+            />
           </AccordionCard>
         )}
 
@@ -634,24 +617,12 @@ export const Inspector: React.FC = () => {
             }
           >
             <div className="space-y-2 text-xs">
-              <div className="flex items-center justify-between">
-                <span className="text-zinc-400">Rate /s</span>
-                <input
-                  type="number"
-                  step="5"
-                  value={particleSys.rate}
-                  onChange={(e) => { particleSys.rate = Math.max(0, parseFloat(e.target.value) || 0); refreshScene(); }}
-                  className="w-20 bg-zinc-950 border border-zinc-700 rounded px-2 py-0.5 text-right text-white outline-none font-mono"
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-zinc-400">Max particles</span>
-                <span className="font-mono text-zinc-200">{particleSys.maxParticles}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-zinc-400">Lifetime</span>
-                <span className="font-mono text-zinc-200">{particleSys.lifetimeMin}s – {particleSys.lifetimeMax}s</span>
-              </div>
+              {/* C.1 reflection spike: schema-driven fields (type string, min-safe) */}
+              <SchemaFields
+                type="ParticleSystem"
+                component={particleSys}
+                onCommit={() => refreshScene()}
+              />
               <div className="grid grid-cols-3 gap-1.5 pt-1">
                 <button
                   onClick={() => { particleSys.emit(20); refreshScene(); }}

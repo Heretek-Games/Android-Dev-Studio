@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { Component } from '../core/Component.js';
+import { registerInspectorSchema } from '../core/InspectorSchema.js';
 
 export type LightType = 'directional' | 'point' | 'ambient' | 'spot';
 
@@ -125,3 +126,12 @@ export class LightComponent extends Component {
     this.createLight();
   }
 }
+
+// Track C.1 reflection spike: explicit type string (minification-safe).
+registerInspectorSchema('LightComponent', [
+  { key: 'lightType', label: 'Type', kind: 'enum', options: ['directional', 'point', 'ambient', 'spot'] },
+  { key: 'color', label: 'Color', kind: 'color' },
+  { key: 'intensity', label: 'Intensity', kind: 'slider', min: 0, max: 8, step: 0.1 },
+  { key: 'distance', label: 'Distance', kind: 'number', min: 0, step: 0.5 },
+  { key: 'castShadow', label: 'Cast Shadow', kind: 'boolean' }
+]);

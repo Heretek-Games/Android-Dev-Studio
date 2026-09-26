@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { Component } from '../core/Component.js';
+import { registerInspectorSchema } from '../core/InspectorSchema.js';
 
 export type ParticleShape = 'point' | 'box' | 'sphere';
 export type ParticleBlending = 'additive' | 'normal';
@@ -719,3 +720,21 @@ export class ParticleSystem extends Component {
     this.attrsDirty = true;
   }
 }
+
+// Track C.1 reflection spike: explicit type string (minification-safe).
+registerInspectorSchema('ParticleSystem', [
+  { key: 'rate', label: 'Emission Rate /s', kind: 'slider', min: 0, max: 500, step: 1, group: 'Emission' },
+  { key: 'maxParticles', label: 'Max Particles', kind: 'number', min: 1, max: 10000, step: 1, group: 'Emission' },
+  { key: 'burst', label: 'Burst', kind: 'number', min: 0, step: 1, group: 'Emission' },
+  { key: 'loop', label: 'Loop', kind: 'boolean', group: 'Emission' },
+  { key: 'shape', label: 'Shape', kind: 'enum', options: ['point', 'box', 'sphere'], group: 'Shape' },
+  { key: 'spread', label: 'Spread', kind: 'slider', min: 0, max: 1, step: 0.01, group: 'Shape' },
+  { key: 'speedMin', label: 'Speed Min', kind: 'number', min: 0, step: 0.1, group: 'Motion' },
+  { key: 'speedMax', label: 'Speed Max', kind: 'number', min: 0, step: 0.1, group: 'Motion' },
+  { key: 'gravity', label: 'Gravity', kind: 'number', step: 0.1, group: 'Motion' },
+  { key: 'lifetimeMin', label: 'Lifetime Min', kind: 'number', min: 0.01, step: 0.1, group: 'Lifetime' },
+  { key: 'lifetimeMax', label: 'Lifetime Max', kind: 'number', min: 0.01, step: 0.1, group: 'Lifetime' },
+  { key: 'startColor', label: 'Start Color', kind: 'color', group: 'Color' },
+  { key: 'endColor', label: 'End Color', kind: 'color', group: 'Color' },
+  { key: 'opacity', label: 'Opacity', kind: 'slider', min: 0, max: 1, step: 0.01, group: 'Color' }
+]);
