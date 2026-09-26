@@ -849,3 +849,17 @@ an entry (it caught a missing `VehicleController` entry on its own first run);
 the repo's first CI. Honest count: 6 missing (camera, physics, input-productized,
 models, cel-shader, runtime stream refocus). 3 checker tests green; all CI commands
 verified locally (70-module suite OK).
+
+---
+
+## Run Block 25 — 2026-09-25, Tracks 1–3 Program Completion ✅
+
+Every listed track item built end-to-end (OSINT → ADR → engine + runner + loop + studio proof → commit), all suites green on fresh runs this block (engine 445/89, loop 154, agents 41, 125-module harness line, native host checks, tier2 parity, app build).
+
+| Track | Items | Gate evidence |
+|-------|-------|---------------|
+| Track 1 (12/12) | prefabs + UI affordances (`4f4f340`), undo/redo, 10 behaviors (`8c61bc1`), event trace debugger (`0652f26`), asset pipeline (`f286408`), particles (`ca6d79e`), AnimFSM + Timeline (`cb557ef`), localization (`12139e1`), input maps (`7d77654`), audio mixer (`cf4bd61`), CI/CD ×3 (`0d1518d`), NavMesh + crossing gate (`d9349b3`) | engine 397/78, loop 143; live chrome-devtools proofs per item, zero new console errors |
+| Track 2 (5/5) | lighting rig (`8ae1092`), CineCamera (`37bdfc1`), Niagara-lite (`3ae2b4f`, TF spike validated live 1.49e-8), Chaos-lite (`6ee4757`, real Rapier fracture), node-materials gate CLOSED without build (`4a7be9e`, dissolve brief green 1st iteration) | engine 426/85, loop 150; failure-gate verdict ADR recorded |
+| Track 3 (4/4) | operate telemetry (`d7077cb`), storefront (`88dd8f1`), marketplace (`75e9d96`), 10/10 templates first-pass green (`729d85d` + verdict matrix) | engine 445/89, loop 154; 7 loop-side prompt fixes from first-pass failures, zero template changes |
+
+Standing blockers (hardware-bound, unchanged): #1 physical arm64, #3 50k-instance on-device, #6 validation-layer soak. Deferred items (multiplayer, consoles, 2D, iOS, full GI, shader graph) never entered; opening any needs explicit direction.
