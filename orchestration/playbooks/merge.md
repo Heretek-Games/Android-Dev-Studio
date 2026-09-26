@@ -83,6 +83,14 @@ npm test && npm run build
 Any red ⇒ node returns to `working` with the failing log attached. The
 merge queue moves to the next node; this one waits for a fixed rebase.
 
+### Engine-dist rebuild (after any `engine/src/**` merge)
+
+After merging a node that touches `engine/src/**`, run
+`npm --workspace=engine run build` BEFORE `npm --workspace=app run build`
+(or any app build) — the app typechecks against local `engine/dist/`
+(untracked), so a stale dist fails with phantom `TS2339`s. Rebuild first,
+then verify the app build.
+
 ## 4. Push (only on §1 + §3 green)
 
 ```bash
