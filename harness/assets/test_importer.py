@@ -10,13 +10,17 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from harness.assets.importer import (  # noqa: E402
+    KTX2_MAGIC,
     PRESETS,
+    TranscodeError,
     audit_scene_assets,
     build_manifest,
     check_reimport,
+    find_basisu,
     import_asset,
     reimport_asset,
     resolve_uid,
+    transcode_texture,
 )
 
 GLB_MAGIC = b"glTF" + b"\x00" * 100
@@ -139,3 +143,86 @@ class ImporterTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def _png_bytes(width, height, color=(200, 40, 40, 255)):
+    from PIL import Image
+
+    buffer = __import__("io").BytesIO()
+    Image.new("RGBA", (width, height), color).save(buffer, format="PNG")
+    return buffer.getvalue()
+
+
+def _fake_transcoder(basisu_bin, src_png, out_dir):
+    out = __import__("os").path.join(out_dir, "src.ktx2")
+    with open(out, "wb") as fh:
+        fh.write(KTX2_MAGIC + b"fake-etc1s-payload")
+    return out
+
+
+class TranscodeTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.dir = self.tmp.name
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_fake_transcoder_round_trip(self):
+        sidecar = transcode_texture(
+            _png_bytes(64, 64), name="brick", preset="mobile",
+            assets_dir=self.dir, transcoder=_fake_transcoder,
+        )
+        self.assertEqual(sidecar["outputs"]["texture"], f"{sidecar['uid']}.ktx2")
+        self.assertEqual(sidecar["transcode"]["format"], "ktx2-etc1s")
+        with open(os.path.join(self.dir, sidecar["outputs"]["texture"]), "rb") as fh:
+            self.assertTrue(fh.read().startswith(KTX2_MAGIC))
+        manifest = build_manifest(self.dir)
+        self.assertIn(sidecar["uid"], manifest)
+
+    def test_large_image_shrinks_to_preset(self):
+        seen = {}
+
+        def spy(basisu_bin, src_png, out_dir):
+            from PIL import Image
+
+            with Image.open(src_png) as frame:
+                seen["size"] = frame.size
+            return _fake_transcoder(basisu_bin, src_png, out_dir)
+
+        sidecar = transcode_texture(
+            _png_bytes(2048, 1024), name="big", preset="mobile",
+            assets_dir=self.dir, transcoder=spy,
+        )
+        self.assertLessEqual(max(seen["size"]), 1024)
+        self.assertEqual(sidecar["transcode"]["outWidth"], seen["size"][0])
+
+    def test_missing_binary_is_explicit(self):
+        with self.assertRaises(TranscodeError):
+            transcode_texture(
+                _png_bytes(16, 16), name="x", assets_dir=self.dir,
+                basisu_bin="/nonexistent/basisu",
+            )
+        self.assertIsNone(find_basisu("/nonexistent/basisu"))
+
+    def test_bad_payloads_rejected(self):
+        with self.assertRaises(TranscodeError):
+            transcode_texture(b"", name="x", assets_dir=self.dir,
+                              transcoder=_fake_transcoder)
+        with self.assertRaises(TranscodeError):
+            transcode_texture(b"not-an-image", name="x", assets_dir=self.dir,
+                              transcoder=_fake_transcoder)
+        with self.assertRaises(TranscodeError):
+            transcode_texture(_png_bytes(8, 8), name="x", preset="nope",
+                              assets_dir=self.dir, transcoder=_fake_transcoder)
+
+    def test_bad_magic_rejected(self):
+        def liar(basisu_bin, src_png, out_dir):
+            out = os.path.join(out_dir, "src.ktx2")
+            with open(out, "wb") as fh:
+                fh.write(b"not really ktx2")
+            return out
+
+        with self.assertRaises(TranscodeError):
+            transcode_texture(_png_bytes(8, 8), name="x", assets_dir=self.dir,
+                              transcoder=liar)

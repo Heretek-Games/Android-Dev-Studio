@@ -20,10 +20,16 @@ glTF-Transform, sharp/PIL, Basis + KTX-Software).
 import hashlib
 import json
 import os
+import shutil
+import subprocess
+import tempfile
 import uuid
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 IMPORTER_VERSION = 1
+
+#: KTX2 file magic (12 bytes): AB 4B 54 58 20 32 30 BB 0D 0A 1A 0A.
+KTX2_MAGIC = bytes.fromhex("ab4b5458203230bb0d0a1a0a")
 
 #: Declared import presets. Phase 1 stores the selected preset (and its
 #: knobs) in the sidecar; enforcement beyond passthrough is Phase 2.
@@ -272,3 +278,124 @@ def audit_scene_assets(scene: Dict[str, Any], assets_dir: str) -> List[Dict[str,
                 }
             )
     return violations
+
+
+class TranscodeError(RuntimeError):
+    """Explicit transcode failure (missing tool, bad payload, bad output)."""
+
+
+#: Injected transcoder signature: (basisu_bin, src_png, out_dir) -> out ktx2 path.
+#: The default shells out to the real binary; tests inject fakes.
+Transcoder = Callable[[str, str, str], str]
+
+
+def find_basisu(explicit: Optional[str] = None) -> Optional[str]:
+    """Resolve the basisu binary: explicit path > $BASISU_BIN > $PATH."""
+    candidates = [explicit, os.environ.get("BASISU_BIN"), shutil.which("basisu")]
+    for candidate in candidates:
+        if candidate and os.path.isfile(candidate) and os.access(candidate, os.X_OK):
+            return candidate
+    return None
+
+
+def _default_transcoder(basisu_bin: str, src_png: str, out_dir: str) -> str:
+    """Run the real encoder: ETC1S KTX2 with mipmaps (mobile preset path)."""
+    proc = subprocess.run(
+        [basisu_bin, "-ktx2", "-mipmap", "-q", "128", src_png],
+        capture_output=True,
+        text=True,
+        cwd=out_dir,
+        timeout=600,
+    )
+    if proc.returncode != 0:
+        raise TranscodeError(f"basisu failed: {proc.stderr.strip()[:300]}")
+    produced = sorted(f for f in os.listdir(out_dir) if f.endswith(".ktx2"))
+    if not produced:
+        raise TranscodeError("basisu produced no .ktx2 output")
+    # Newest artifact wins (the directory is a fresh temp dir per call).
+    produced.sort(key=lambda f: os.path.getmtime(os.path.join(out_dir, f)))
+    return os.path.join(out_dir, produced[-1])
+
+
+def transcode_texture(
+    data: bytes,
+    *,
+    name: str,
+    preset: str = "mobile",
+    assets_dir: str,
+    basisu_bin: Optional[str] = None,
+    transcoder: Optional[Transcoder] = None,
+) -> Dict[str, Any]:
+    """Transcodes image bytes to KTX2/ETC1S (Track C.2 Phase 2, mobile preset).
+
+    Pipeline: PIL decode -> shrink to preset maxTextureSize (aspect-kept) ->
+    basisu -ktx2 -> KTX2-magic verification -> uid-addressed artifact +
+    sidecar. Missing basisu raises TranscodeError with an install hint —
+    never a silent passthrough.
+    """
+    if preset not in PRESETS:
+        raise TranscodeError(
+            f"unknown import preset {preset!r} (allowed: {sorted(PRESETS)})"
+        )
+    if not data:
+        raise TranscodeError("transcode payload must not be empty")
+    try:
+        from PIL import Image
+    except ImportError as exc:
+        raise TranscodeError(f"Pillow is required for texture decode: {exc}") from exc
+    try:
+        image = Image.open(__import__("io").BytesIO(data)).convert("RGBA")
+    except Exception as exc:
+        raise TranscodeError(f"undecodable image payload: {exc}") from exc
+
+    max_size = int(PRESETS[preset].get("maxTextureSize", 1024))
+    if max(image.size) > max_size:
+        image.thumbnail((max_size, max_size), Image.LANCZOS)
+    out_w, out_h = image.size
+
+    binary = find_basisu(basisu_bin)
+    if binary is None and transcoder is None:
+        raise TranscodeError(
+            "basisu binary not found (set $BASISU_BIN or install "
+            "basis_universal); refusing silent passthrough"
+        )
+    os.makedirs(assets_dir, exist_ok=True)
+    uid = uuid.uuid4().hex
+    digest = sha256_bytes(data)
+    with tempfile.TemporaryDirectory(prefix="heretek-tx-") as tmp:
+        src_png = os.path.join(tmp, "src.png")
+        image.save(src_png, format="PNG")
+        run = transcoder or _default_transcoder
+        produced = run(binary or "basisu", src_png, tmp)
+        with open(produced, "rb") as fh:
+            ktx2 = fh.read()
+    if ktx2[:12] != KTX2_MAGIC:
+        raise TranscodeError("encoder output lacks the KTX2 magic — rejecting")
+    model_file = f"{uid}.ktx2"
+    with open(os.path.join(assets_dir, model_file), "wb") as fh:
+        fh.write(ktx2)
+    sidecar: Dict[str, Any] = {
+        "uid": uid,
+        "sourceName": name,
+        "sourceHint": "texture",
+        "sha256": digest,
+        "bytes": len(data),
+        "preset": preset,
+        "presetConfig": dict(PRESETS[preset]),
+        "importerVersion": IMPORTER_VERSION,
+        "outputs": {"texture": model_file},
+        "transcode": {
+            "tool": "basisu",
+            "format": "ktx2-etc1s",
+            "mipmaps": True,
+            "srcBytes": len(data),
+            "outBytes": len(ktx2),
+            "outWidth": out_w,
+            "outHeight": out_h,
+        },
+        "deps": [],
+    }
+    sidecar_path = os.path.join(assets_dir, f"{_safe_stem(name)}{SIDECAR_SUFFIX}")
+    with open(sidecar_path, "w", encoding="utf-8") as fh:
+        json.dump(sidecar, fh, indent=1)
+    return sidecar
