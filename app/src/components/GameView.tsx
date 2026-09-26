@@ -283,9 +283,12 @@ export const GameView: React.FC = () => {
       // NOTE: resetTideRun() is declared further below (after the tide HUD
       // state it resets); this closure only runs on user actions, long after
       // boot has initialized it.
-      const resetArena = () => {
+      const resetArena = (opts?: { silent?: boolean }) => {
         if (isTide) {
-          resetTideRun();
+          // Silent resets (Quit-to-menu, Load) skip the keeper-audience
+          // replay: ending a run must never pop dialogue over the menu,
+          // and loading one restores its own state below instead.
+          resetTideRun(opts);
           if (vehicle) {
             vehicle.throttle = 0;
             vehicle.steering = 0;
@@ -421,29 +424,81 @@ export const GameView: React.FC = () => {
         },
         onQuit: () => {
           runtime!.stop();
-          resetArena();
+          // Silent: reset the run for a fresh next Start (which replays
+          // the audience exactly once) without popping dialogue over the menu.
+          resetArena({ silent: true });
         },
-        // Saves capture the session snapshot only; the settlement grid is not
-        // serialized, so save slots stay an arena/dungeon feature.
+        // Saves capture the session snapshot plus the quest snapshot (and,
+        // for tide, the run-state bag); the settlement grid is not
+        // serialized, so save slots stay an arena/dungeon/tide feature.
         hasSave: () => !isCity && saveSystem.load(SAVE_SLOT) !== null,
         onSave: () => {
           if (isCity) return;
           saveSystem.save(
             SAVE_SLOT,
             runtime!.session.snapshot(),
-            isTide && quest ? { quest: quest.toJSON() } : undefined
+            // Tide run state rides in the version-stable `data` bag beside
+            // the quest snapshot: blade blessing, quest flags, and the
+            // melee/pickup counters the silent reset zeroes. Old saves
+            // without the `tide` bag still load (guarded reads onLoad).
+            isTide && quest
+              ? {
+                  quest: quest.toJSON(),
+                  tide: {
+                    flags: [...questFlags],
+                    meleeKills,
+                    meleeReactions,
+                    bloomPickups,
+                    bladeElement: player?.getComponent(MeleeHitbox)?.element ?? null
+                  }
+                }
+              : undefined
           );
         },
         onLoad: () => {
           if (isCity) return;
           const envelope = saveSystem.load(SAVE_SLOT);
           if (!envelope) return;
-          resetArena();
+          // Silent: no audience pop — the restore below re-applies the
+          // saved run state onto the zeroed defaults.
+          resetArena({ silent: true });
           runtime!.session.restore(envelope.session);
-          if (isTide && quest && envelope.data && (envelope.data as { quest?: unknown }).quest) {
-            const restored = Quest.fromJSON((envelope.data as { quest: Record<string, unknown> }).quest as never);
-            quest.completedStageIds = restored.completedStageIds;
-            quest.complete = restored.complete;
+          if (isTide && quest) {
+            const data = (envelope.data ?? {}) as {
+              quest?: Record<string, unknown>;
+              tide?: {
+                flags?: unknown;
+                meleeKills?: unknown;
+                meleeReactions?: unknown;
+                bloomPickups?: unknown;
+                bladeElement?: unknown;
+              };
+            };
+            if (data.quest) {
+              const restored = Quest.fromJSON(data.quest as never);
+              quest.completedStageIds = restored.completedStageIds;
+              quest.complete = restored.complete;
+            }
+            // Saves predating the `tide` bag keep the silent-reset
+            // defaults (unblessed blade, zeroed counters); the dialogue
+            // backlog itself is not persisted (DialogueManager exposes no
+            // history setter), so its quest flags carry the progression.
+            const tide = data.tide;
+            if (tide && typeof tide === 'object') {
+              if (Array.isArray(tide.flags)) {
+                questFlags.clear();
+                for (const flag of tide.flags) {
+                  if (typeof flag === 'string') questFlags.add(flag);
+                }
+              }
+              if (Number.isFinite(tide.meleeKills)) meleeKills = tide.meleeKills as number;
+              if (Number.isFinite(tide.meleeReactions)) meleeReactions = tide.meleeReactions as number;
+              if (Number.isFinite(tide.bloomPickups)) bloomPickups = tide.bloomPickups as number;
+              if (typeof tide.bladeElement === 'string' && tide.bladeElement) {
+                const heroBlade = player?.getComponent(MeleeHitbox) ?? null;
+                if (heroBlade) heroBlade.element = tide.bladeElement as never;
+              }
+            }
           }
           if (runtime!.flow.getPhase() === 'menu') {
             runtime!.flow.transition('start');
@@ -725,8 +780,9 @@ export const GameView: React.FC = () => {
       // Order: (1) destroy spawned enemies, (2) hero/squire transforms +
       // health, (3) zero melee/quest/combo/pickup counters, (4) rebuild Quest
       // from spec, (5) reset blade elements, (6) end + restart keeper
-      // dialogue, (7) hide the quest bar, (8) restore the party lead.
-      const resetTideRun = (): void => {
+      // dialogue (skipped on silent resets — see below), (7) hide the quest
+      // bar, (8) restore the party lead.
+      const resetTideRun = (opts?: { silent?: boolean }): void => {
         if (!isTide) return;
         // (1) Destroy spawned enemies.
         for (const name of runtime!.spawner.getSpawnedNames()) {
@@ -759,12 +815,20 @@ export const GameView: React.FC = () => {
           const squireBlade = squire.getComponent(MeleeHitbox) ?? null;
           if (squireBlade) squireBlade.element = 'Cryo' as never;
         }
-        // (6) End + restart the keeper audience so the blessing (and its
-        // quest flag) is earnable again; history resets on startConversation.
+        // (6) Keeper audience. Loud paths (Start/Restart) end + restart
+        // the audience so the blessing (and its quest flag) is earnable
+        // again; history resets on startConversation. Silent paths
+        // (Quit-to-menu, Load) end any live conversation and hide the
+        // panel instead — quitting must never pop the keeper over the
+        // menu, and loading re-applies its own saved state right after.
         if (dialogue) {
           dialogue.endConversation();
-          const node = dialogue.startConversation('DungeonKeeper');
-          if (node) showDialogueNode(node);
+          if (opts?.silent) {
+            dialoguePanel.style.display = 'none';
+          } else {
+            const node = dialogue.startConversation('DungeonKeeper');
+            if (node) showDialogueNode(node);
+          }
         }
         // (7) Hide the quest bar until the next quest poll.
         questBar.style.display = 'none';
