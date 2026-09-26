@@ -921,3 +921,18 @@ Every track built end-to-end (OSINT → ADR → build → tests → commit), all
 | D.5 | provenance registry (`ca5944d`) | audit complete + memory query green over loop-built scenes |
 
 Standing blockers (hardware-bound, unchanged): #1 physical arm64, #3 50k-instance on-device, #6 validation-layer soak. Deferred items never entered; opening any needs explicit direction plus a gate artifact.
+
+---
+
+## Run Block 30 — 2026-09-26, E.5 Emulator Perf Leg (Elemental Action RPG Program) ✅ evidence
+
+Tier-2 APK built from a generated 3,016-object perf scene (2,400 instanced crowd + 600 foliage + 8 actor meshes + 6 braziers, mirroring `perf_action.json` loads), installed and launched on the `xune-test` AVD (lavapipe software Vulkan, 2400×1080).
+
+- Export: 3,000 instances, 15 meshes, 64 terrain LOD leaves, **81/100 draws, within budget**.
+- On-device (emulator): real swapchain, `instances=3015 indirectCmds=2 terrainDraws=64`, frame counter advancing past **frame 1800 presented**, `acquire=0 submit=0 present=0` throughout (all `VK_SUCCESS`).
+- Frame readback (`native_frame.ppm`, 2400×1080): **1,031 unique sampled colors** — real rasterized pixels, non-uniform.
+- Measured pacing ≈ 35 ms/frame (~28 fps) under lavapipe software rendering at 2400×1080. Honestly reported: this is emulator evidence of rasterization-at-load, NOT 60 fps proof — the Snapdragon 60 fps gate stays open behind issues #1/#3, and emulator results never substitute for physical-device proof.
+
+Headless leg (same block): `perf_action.json` 9/9 SUCCEEDED — p95 sim-frame 0.21 ms, 36/100 draws, 8 melee kills + 8 reactions, VFX alive + budgeted (`f2d62e3`).
+
+Standing blockers (hardware-bound, unchanged): #1 physical arm64, #3 50k-instance on-device, #6 validation-layer soak.
