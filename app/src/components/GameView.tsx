@@ -409,6 +409,8 @@ export const GameView: React.FC = () => {
             meleeKills = 0;
             meleeReactions = 0;
             questFlags.clear();
+            comboStage = 0;
+            lastComboAt = 0;
             if (questSpec) quest = new Quest(questSpec as unknown as { id: string; stages: never[] });
             lastQuestStage = -1;
             lastQuestKills = -1;
@@ -615,6 +617,14 @@ export const GameView: React.FC = () => {
 
       let lastSwingAt = 0;
       let bloomPickups = 0;
+      // Tide combo chain (E.1 cancel-window canon, game layer): swings chained
+      // inside the window climb stages 1->2->3 with damage scaling; the window
+      // lapsing resets to stage 1. Clip-synced animation chaining awaits
+      // rigged heroes; this is the timing/state half, fully playable now.
+      let comboStage = 0;
+      let lastComboAt = 0;
+      const COMBO_WINDOW_MS = 1500;
+      const COMBO_MULT = [1.0, 1.2, 1.5];
       // Tide feel: freeze frames on clean hits + a headless-queryable damage
       // feed behind the floating numbers.
       const hitstop = new HitstopClock();
@@ -685,8 +695,14 @@ export const GameView: React.FC = () => {
           const e = nearest.transform.position;
           hero.transform.setRotation(0, Math.atan2(-(e.x - p.x), -(e.z - p.z)), 0);
         }
+        // Combo staging: chain inside the window, reset outside it.
+        comboStage = now - lastComboAt <= COMBO_WINDOW_MS ? Math.min(comboStage + 1, 2) : 0;
+        lastComboAt = now;
+        const baseDamage = heroBlade.damage;
+        heroBlade.damage = baseDamage * (COMBO_MULT[comboStage] ?? 1);
         heroBlade.beginSwing();
         heroBlade.tryHit();
+        heroBlade.damage = baseDamage;
       };
 
       // Dodge roll: burst along the active hero's facing with i-frames
@@ -749,6 +765,7 @@ export const GameView: React.FC = () => {
             ? { stage: quest.currentStage()?.id ?? null, stageIndex: quest.stageIndex, complete: quest.complete }
             : null,
         melee: () => (isTide ? { kills: meleeKills, reactions: meleeReactions } : null),
+        combo: () => (isTide ? { stage: comboStage + 1, mult: COMBO_MULT[comboStage] ?? 1 } : null),
         feed: () =>
           isTide
             ? { hits: damageFeed.size, total: damageFeed.totalDealt(), hitstop: hitstop.active }
