@@ -96,22 +96,29 @@ def parse_native(text: str):
         if kind == "scene":
             records["scene"] = parts[1]
         elif kind == "mesh":
-            records["mesh"].append(
-                {
-                    "name": parts[1],
-                    "pos": [float(parts[2]), float(parts[3]), float(parts[4])],
-                    "size": [float(parts[5]), float(parts[6]), float(parts[7])],
-                    "rgb": [float(parts[8]), float(parts[9]), float(parts[10])],
-                    "physics": parts[11],
-                }
-            )
+            entry = {
+                "name": parts[1],
+                "pos": [float(parts[2]), float(parts[3]), float(parts[4])],
+                "size": [float(parts[5]), float(parts[6]), float(parts[7])],
+                "rgb": [float(parts[8]), float(parts[9]), float(parts[10])],
+                "physics": parts[11],
+            }
+            if len(parts) > 14:  # C.3 trailing material
+                entry["metallic"] = float(parts[12])
+                entry["roughness"] = float(parts[13])
+                entry["shading"] = parts[14]
+            records["mesh"].append(entry)
         elif kind == "instance":
-            records["instance"].append(
-                {
-                    "batch": parts[1],
-                    "pos": [float(parts[2]), float(parts[3]), float(parts[4])],
-                }
-            )
+            entry = {
+                "batch": parts[1],
+                "pos": [float(parts[2]), float(parts[3]), float(parts[4])],
+            }
+            if len(parts) > 11:  # C.3 trailing color + material
+                entry["rgb"] = [float(parts[6]), float(parts[7]), float(parts[8])]
+                entry["metallic"] = float(parts[9])
+                entry["roughness"] = float(parts[10])
+                entry["shading"] = parts[11]
+            records["instance"].append(entry)
         elif kind == "light":
             records["light"].append(
                 {
@@ -196,6 +203,54 @@ class SceneExporterTests(unittest.TestCase):
         )
         self.assertIn("mesh Player_Hero", text)
         self.assertNotIn("mesh Player Hero", text)
+
+    def test_pbr_material_trailing_tokens(self):
+        text, _ = export_scene(
+            {
+                "name": "S",
+                "gameObjects": [
+                    {
+                        "name": "Chrome",
+                        "shape": "box",
+                        "position": [0, 0, 0],
+                        "color": "#cccccc",
+                        "metallic": 1.0,
+                        "roughness": 0.15,
+                    },
+                    {
+                        "name": "Ghost",
+                        "shape": "box",
+                        "position": [2, 0, 0],
+                        "cel": {"baseColor": "#38bdf8"},
+                        "metallic": 9,
+                        "roughness": -2,
+                    },
+                    {
+                        "name": "Coins",
+                        "shape": "cylinder",
+                        "position": [4, 0, 0],
+                        "batched": True,
+                        "batch": "coins",
+                        "color": "#ffcc33",
+                        "metallic": 0.8,
+                        "roughness": 0.3,
+                    },
+                ],
+            }
+        )
+        records = parse_native(text)
+        chrome = records["mesh"][0]
+        self.assertAlmostEqual(chrome["metallic"], 1.0)
+        self.assertAlmostEqual(chrome["roughness"], 0.15)
+        self.assertEqual(chrome["shading"], "pbr")
+        ghost = records["mesh"][1]
+        self.assertAlmostEqual(ghost["metallic"], 1.0)  # clamped
+        self.assertAlmostEqual(ghost["roughness"], 0.0)  # clamped
+        self.assertEqual(ghost["shading"], "unlit")  # cel forces unlit
+        coins = records["instance"][0]
+        self.assertAlmostEqual(coins["rgb"][0], 1.0)
+        self.assertAlmostEqual(coins["metallic"], 0.8)
+        self.assertEqual(coins["shading"], "pbr")
 
     # ---- Quadtree terrain LOD export ----------------------------------------
 

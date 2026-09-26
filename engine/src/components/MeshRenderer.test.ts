@@ -1,7 +1,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert';
 import * as THREE from 'three';
-import { MeshRenderer } from './MeshRenderer.js';
+import { MeshRenderer, normalizePbrMaterial, validatePbrMaterial } from './MeshRenderer.js';
 import { GameObject } from '../core/GameObject.js';
 import { Scene } from '../core/Scene.js';
 
@@ -74,5 +74,46 @@ describe('MeshRenderer — primitive meshes and material control', () => {
     other.fromJSON(json);
     assert.strictEqual(other.shape, 'cylinder');
     assert.deepStrictEqual(other.size, [0.5, 2, 0.5]);
+  });
+});
+
+describe('PbrMaterial — glTF-shaped factors (Track C.3)', () => {
+  test('normalize clamps and defaults partial payloads', () => {
+    const mat = normalizePbrMaterial({ metallic: 2, roughness: -1, shading: 'unlit' });
+    assert.deepStrictEqual(mat, {
+      baseColor: [1, 1, 1], metallic: 1, roughness: 0,
+      emissive: [0, 0, 0], shading: 'unlit'
+    });
+    assert.deepStrictEqual(normalizePbrMaterial(null).shading, 'pbr');
+    assert.deepStrictEqual(
+      normalizePbrMaterial({ shading: 'cel' as unknown as 'pbr' }).shading, 'pbr');
+  });
+
+  test('validate reports problems, empty means valid', () => {
+    assert.deepStrictEqual(validatePbrMaterial({
+      baseColor: [1, 0.5, 0], metallic: 0.2, roughness: 0.8,
+      emissive: [0, 0, 0], shading: 'pbr'
+    }), []);
+    const problems = validatePbrMaterial({
+      baseColor: [2, 0, 0], metallic: -1, roughness: NaN,
+      shading: 'cel', emissive: 'red'
+    });
+    assert.ok(problems.length >= 4, problems.join('; '));
+    assert.deepStrictEqual(validatePbrMaterial(null), ['material must be an object']);
+  });
+
+  test('get/setPbrMaterial round-trips through hex color', () => {
+    const go = new GameObject('Pbr');
+    const mr = go.addComponent(new MeshRenderer({ color: '#3b82f6', roughness: 0.4, metalness: 0.2 }));
+    const mat = mr.getPbrMaterial();
+    assert.strictEqual(mat.metallic, 0.2);
+    assert.strictEqual(mat.roughness, 0.4);
+    assert.strictEqual(mat.shading, 'pbr');
+    assert.deepStrictEqual(mr.setPbrMaterial({ metallic: 0.9, roughness: 0.1 }), []);
+    assert.strictEqual(mr.metalness, 0.9);
+    assert.strictEqual(mr.roughness, 0.1);
+    assert.deepStrictEqual(
+      mr.setPbrMaterial({ metallic: 5 }), ['metallic must be 0..1']);
+    assert.strictEqual(mr.metalness, 0.9);
   });
 });

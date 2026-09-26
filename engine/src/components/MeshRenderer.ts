@@ -3,6 +3,74 @@ import { Component } from '../core/Component.js';
 
 export type PrimitiveShape = 'box' | 'sphere' | 'cylinder' | 'capsule' | 'plane' | 'torus';
 
+/** Shading path selector (Track C.3): `pbr` shades Cook-Torrance on Tier 2,
+ * `unlit` renders flat albedo (stylized/cel fallback — never delete the look). */
+export type MaterialShading = 'pbr' | 'unlit';
+
+/** glTF-shaped PBR factors (baseColor linear multipliers + metal/rough). */
+export interface PbrMaterial {
+  baseColor: [number, number, number];
+  metallic: number;
+  roughness: number;
+  emissive: [number, number, number];
+  shading: MaterialShading;
+}
+
+export const DEFAULT_PBR_MATERIAL: PbrMaterial = {
+  baseColor: [1, 1, 1],
+  metallic: 0,
+  roughness: 0.9,
+  emissive: [0, 0, 0],
+  shading: 'pbr'
+};
+
+function clamp01(value: unknown, fallback: number): number {
+  const num = typeof value === 'number' ? value : fallback;
+  if (!Number.isFinite(num)) return fallback;
+  return Math.min(1, Math.max(0, num));
+}
+
+function rgb01(value: unknown, fallback: [number, number, number]): [number, number, number] {
+  if (!Array.isArray(value) || value.length !== 3) return fallback;
+  return [clamp01(value[0], fallback[0]), clamp01(value[1], fallback[1]), clamp01(value[2], fallback[2])];
+}
+
+/** Normalize any partial material payload into a valid PbrMaterial (pure). */
+export function normalizePbrMaterial(input?: Partial<PbrMaterial> | null): PbrMaterial {
+  if (!input || typeof input !== 'object') return { ...DEFAULT_PBR_MATERIAL };
+  return {
+    baseColor: rgb01((input as Record<string, unknown>).baseColor, DEFAULT_PBR_MATERIAL.baseColor),
+    metallic: clamp01((input as Record<string, unknown>).metallic, DEFAULT_PBR_MATERIAL.metallic),
+    roughness: clamp01((input as Record<string, unknown>).roughness, DEFAULT_PBR_MATERIAL.roughness),
+    emissive: rgb01((input as Record<string, unknown>).emissive, DEFAULT_PBR_MATERIAL.emissive),
+    shading: (input as Record<string, unknown>).shading === 'unlit' ? 'unlit' : 'pbr'
+  };
+}
+
+/** Validate a material payload: returns problem strings (empty = valid). */
+export function validatePbrMaterial(input: unknown): string[] {
+  const problems: string[] = [];
+  if (!input || typeof input !== 'object') return ['material must be an object'];
+  const record = input as Record<string, unknown>;
+  for (const key of (['baseColor', 'emissive'] as const)) {
+    const value = record[key];
+    if (value !== undefined && (!Array.isArray(value) || value.length !== 3 ||
+        !(value as unknown[]).every(v => typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 1))) {
+      problems.push(`${key} must be [r, g, b] in 0..1`);
+    }
+  }
+  for (const key of (['metallic', 'roughness'] as const)) {
+    const value = record[key];
+    if (value !== undefined && (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > 1)) {
+      problems.push(`${key} must be 0..1`);
+    }
+  }
+  if (record.shading !== undefined && record.shading !== 'pbr' && record.shading !== 'unlit') {
+    problems.push(`shading must be 'pbr' or 'unlit'`);
+  }
+  return problems;
+}
+
 export interface MeshRendererOptions {
   shape?: PrimitiveShape;
   color?: string | number;
@@ -103,6 +171,35 @@ export class MeshRenderer extends Component {
       this.threeMesh.material.roughness = this.roughness;
       this.threeMesh.material.metalness = this.metalness;
     }
+  }
+
+  /** Canonical PBR factors for export (linear baseColor via three.Color). */
+  public getPbrMaterial(): PbrMaterial {
+    const c = new THREE.Color(this.color);
+    return normalizePbrMaterial({
+      baseColor: [c.r, c.g, c.b],
+      metallic: this.metalness,
+      roughness: this.roughness,
+      emissive: [0, 0, 0],
+      shading: 'pbr'
+    });
+  }
+
+  /** Apply a validated material payload; returns problems (empty = applied). */
+  public setPbrMaterial(input: unknown): string[] {
+    const problems = validatePbrMaterial(input);
+    if (problems.length) return problems;
+    const mat = normalizePbrMaterial(input as Partial<PbrMaterial>);
+    const toSrgb = (v: number): string => {
+      const s = v <= 0.0031308 ? 12.92 * v : 1.055 * Math.pow(v, 1 / 2.4) - 0.055;
+      return Math.round(Math.min(1, Math.max(0, s)) * 255).toString(16).padStart(2, '0');
+    };
+    this.setMaterial(
+      `#${toSrgb(mat.baseColor[0])}${toSrgb(mat.baseColor[1])}${toSrgb(mat.baseColor[2])}`,
+      mat.roughness,
+      mat.metallic
+    );
+    return [];
   }
 
   private createGeometry(): THREE.BufferGeometry {

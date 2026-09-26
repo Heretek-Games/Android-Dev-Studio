@@ -9,6 +9,7 @@
 struct InstanceData {
     vec4 positionRadius;  // xyz = world position, w = bounding radius (half height)
     vec4 color;           // rgb = tint, a = category
+    vec4 material;        // x = metallic, y = roughness, z = unlit flag, w = pad
 };
 
 layout(std430, binding = 0) readonly buffer InstanceBuffer {

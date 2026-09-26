@@ -47,6 +47,20 @@ class SpawnTests(unittest.TestCase):
         self.assertEqual(obj["shape"], "box")
         self.assertEqual(obj["physics"], "none")
 
+    def test_spawn_pbr_factors_validated(self):
+        scene, result = apply_actions(
+            base_scene(),
+            [{"type": "spawn", "name": "Chrome", "metallic": 1.0, "roughness": 0.2}],
+        )
+        self.assertEqual(result.applied, 1)
+        obj = scene["gameObjects"][1]
+        self.assertEqual(obj["metallic"], 1.0)
+        self.assertEqual(obj["roughness"], 0.2)
+        _, rejected = apply_actions(
+            base_scene(), [{"type": "spawn", "name": "Bad", "metallic": 2}]
+        )
+        self.assertEqual(rejected.applied, 0)
+
     def test_spawn_controller_flag_maps_to_mobile_controller(self):
         scene, result = apply_actions(
             base_scene(),

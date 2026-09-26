@@ -273,7 +273,8 @@ function buildScene(spec, engine) {
         shape: objSpec.shape || 'box',
         size,
         color: objSpec.color || '#3b82f6',
-        roughness: objSpec.roughness ?? 0.4
+        roughness: objSpec.roughness ?? 0.4,
+        metalness: objSpec.metallic ?? objSpec.metalness ?? 0.0
       }));
       if (objSpec.physics && objSpec.physics !== 'none') {
         go.addComponent(new engine.RigidBody3D({

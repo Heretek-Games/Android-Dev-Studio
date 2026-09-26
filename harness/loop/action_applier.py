@@ -1820,6 +1820,18 @@ def _apply_spawn(
         "color": color,
         "physics": physics,
     }
+    # Track C.3 PBR factors (glTF-shaped 0..1; default dielectric).
+    for key, default in (("metallic", 0.0), ("roughness", 0.9)):
+        value = action.get(key, default)
+        if not _is_finite_number(value) or not 0.0 <= float(value) <= 1.0:
+            return _outcome(
+                result,
+                index,
+                "spawn",
+                "invalid",
+                f"spawn '{key}' must be 0..1 (got {value!r})",
+            )
+        obj[key] = float(value)
     if physics == "dynamic":
         mass = action.get("mass", 1.0)
         if not _is_finite_number(mass) or mass <= 0:

@@ -60,6 +60,11 @@ bool parseSceneText(const std::string& text, NativeScene& out, std::string& erro
         return false;
       }
       mesh.physics = parsePhysics(physics);
+      // Track C.3 trailing material (backward-compatible: v1 lines stop here).
+      std::string shading;
+      if (tokens >> mesh.metallic >> mesh.roughness >> shading) {
+        mesh.unlit = (shading == "unlit");
+      }
       out.meshes.push_back(std::move(mesh));
     } else if (kind == "instance") {
       InstanceRecord inst;
@@ -68,6 +73,14 @@ bool parseSceneText(const std::string& text, NativeScene& out, std::string& erro
         return false;
       }
       inst.foliage = (inst.batch == kFoliageBatch);
+      float metallic = 0.0f, roughness = 0.9f;
+      std::string shading;
+      if (tokens >> inst.r >> inst.g >> inst.b >> metallic >> roughness >> shading) {
+        inst.metallic = metallic;
+        inst.roughness = roughness;
+        inst.unlit = (shading == "unlit");
+        inst.legacy = false;
+      }
       out.instances.push_back(std::move(inst));
     } else if (kind == "light") {
       LightRecord light;

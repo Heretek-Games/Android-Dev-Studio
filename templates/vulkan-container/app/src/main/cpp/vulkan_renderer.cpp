@@ -42,6 +42,8 @@ struct GraphicsPushConstants {
   float viewProj[16];
   float time;              // seconds; drives foliage wind
   uint32_t foliageVisibleBase;
+  float camPos[3];         // world-space camera eye (PBR view vector)
+  float camPad = 0.0f;
 };
 
 /** Unit cube (24 vertices: position + normal), scaled per-instance in the shader. */
@@ -258,7 +260,7 @@ bool VulkanRenderer::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, V
 }
 
 bool VulkanRenderer::createBuffers() {
-  const VkDeviceSize instanceBytes = sizeof(float) * 8 * 65536;  // 65k instances
+  const VkDeviceSize instanceBytes = sizeof(float) * 12 * 65536;  // 65k instances x 3 vec4
   const VkDeviceSize visibleBytes = sizeof(uint32_t) * kMaxInstances * 2;
   const VkDeviceSize indirectBytes = sizeof(IndirectDrawCommand) * 2;
 
@@ -482,7 +484,8 @@ bool VulkanRenderer::createPipelines() {
 
   // ---- Instanced scene graphics pipeline ----------------------------------
   VkPushConstantRange graphicsRange{};
-  graphicsRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+  // Vertex (viewProj/time) + fragment (camPos for the PBR view vector).
+  graphicsRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
   graphicsRange.offset = 0;
   graphicsRange.size = sizeof(GraphicsPushConstants);
 
@@ -728,9 +731,9 @@ void VulkanRenderer::uploadScene(const NativeScene& scene) {
 
   float* instances = static_cast<float*>(instanceMapped_);
   auto writeInstance = [&](float x, float y, float z, float radius, float r, float g, float b,
-                           float category) {
+                           float category, float metallic, float roughness, float unlit) {
     if (instanceCount_ >= kMaxInstances) return;
-    float* slot = instances + static_cast<size_t>(instanceCount_) * 8;
+    float* slot = instances + static_cast<size_t>(instanceCount_) * 12;
     slot[0] = x;
     slot[1] = y;
     slot[2] = z;
@@ -739,20 +742,34 @@ void VulkanRenderer::uploadScene(const NativeScene& scene) {
     slot[5] = g;
     slot[6] = b;
     slot[7] = category;  // cull.comp reads the category from color.a
+    slot[8] = metallic;
+    slot[9] = roughness;
+    slot[10] = unlit;
+    slot[11] = 0.0f;  // padding (std430 vec4 alignment)
     instanceCount_++;
   };
 
   for (const auto& mesh : scene.meshes) {
     const float radius = 0.5f * std::max(mesh.sx, std::max(mesh.sy, mesh.sz));
-    writeInstance(mesh.px, mesh.py, mesh.pz, radius, mesh.r, mesh.g, mesh.b, 0.0f);
+    writeInstance(mesh.px, mesh.py, mesh.pz, radius, mesh.r, mesh.g, mesh.b, 0.0f,
+                  mesh.metallic, mesh.roughness, mesh.unlit ? 1.0f : 0.0f);
   }
   foliageCount_ = 0;
   for (const auto& inst : scene.instances) {
+    // Legacy (pre-material) lines keep the hardcoded category colors so old
+    // scenes render pixel-identically; new lines carry their own albedo.
+    float r = inst.r, g = inst.g, b = inst.b;
+    if (inst.legacy) {
+      if (inst.foliage) { r = 0.30f; g = 0.52f; b = 0.24f; }
+      else { r = 0.45f; g = 0.65f; b = 0.35f; }
+    }
     if (inst.foliage) {
-      writeInstance(inst.px, inst.py, inst.pz, 1.5f, 0.30f, 0.52f, 0.24f, 1.0f);
+      writeInstance(inst.px, inst.py, inst.pz, 1.5f, r, g, b, 1.0f,
+                    inst.metallic, inst.roughness, inst.unlit ? 1.0f : 0.0f);
       foliageCount_++;
     } else {
-      writeInstance(inst.px, inst.py, inst.pz, 0.3f, 0.45f, 0.65f, 0.35f, 0.0f);
+      writeInstance(inst.px, inst.py, inst.pz, 0.3f, r, g, b, 0.0f,
+                    inst.metallic, inst.roughness, inst.unlit ? 1.0f : 0.0f);
     }
   }
 
@@ -802,7 +819,7 @@ int VulkanRenderer::syncInstances(const int* slots, const float* xyz, int count)
   for (int i = 0; i < count; i++) {
     const int slot = slots[i];
     if (slot < 0 || slot >= instanceCount_) continue;
-    float* dst = instances + static_cast<size_t>(slot) * 8;
+    float* dst = instances + static_cast<size_t>(slot) * 12;
     dst[0] = xyz[static_cast<size_t>(i) * 3];
     dst[1] = xyz[static_cast<size_t>(i) * 3 + 1];
     dst[2] = xyz[static_cast<size_t>(i) * 3 + 2];
@@ -896,8 +913,11 @@ void VulkanRenderer::recordFrame(VkCommandBuffer cmd, uint32_t imageIndex, bool 
   GraphicsPushConstants graphicsConstants{};
   graphicsConstants.time = timeSeconds_;                        // drives foliage wind
   graphicsConstants.foliageVisibleBase = kFoliageVisibleBase;   // category-1 slot base
+  graphicsConstants.camPos[0] = 14.0f;                          // must match the lookAt eye below
+  graphicsConstants.camPos[1] = 30.0f;
+  graphicsConstants.camPos[2] = 44.0f;
   std::memcpy(graphicsConstants.viewProj, viewProj.m, sizeof(float) * 16);
-  vkCmdPushConstants(cmd, graphicsPipelineLayout_, VK_SHADER_STAGE_VERTEX_BIT, 0,
+  vkCmdPushConstants(cmd, graphicsPipelineLayout_, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0,
                      sizeof(GraphicsPushConstants), &graphicsConstants);
 
   VkDeviceSize offset = 0;
@@ -910,7 +930,7 @@ void VulkanRenderer::recordFrame(VkCommandBuffer cmd, uint32_t imageIndex, bool 
   if (indirectCommandCount_ > 1 && foliagePipeline_ != VK_NULL_HANDLE) {
     // Command 1: wind-animated foliage range (category 1).
     vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, foliagePipeline_);
-    vkCmdPushConstants(cmd, graphicsPipelineLayout_, VK_SHADER_STAGE_VERTEX_BIT, 0,
+    vkCmdPushConstants(cmd, graphicsPipelineLayout_, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0,
                        sizeof(GraphicsPushConstants), &graphicsConstants);
     vkCmdDrawIndexedIndirect(cmd, indirectBuffer_, sizeof(IndirectDrawCommand), 1,
                              sizeof(IndirectDrawCommand));

@@ -245,6 +245,32 @@ int main(int argc, char** argv) {
   CHECK(!parsedBroken, "malformed mesh record rejected");
   CHECK(brokenError.find("line 2") != std::string::npos, "error reports the offending line");
 
+  // ---- Track C.3 material records: new lines parse, v1 lines default ----
+  {
+    NativeScene mat;
+    std::string matError;
+    const bool ok = parseSceneText(
+        "scene M\n"
+        "mesh Chrome 0 1 0 1 1 1 0.8 0.8 0.8 fixed 1.0000 0.1500 pbr\n"
+        "mesh Old 2 1 0 1 1 1 0.5 0.5 0.5 none\n"
+        "instance coins 1 1 1 0.0000 1.0000 0.8000 0.2000 0.0000 0.4000 pbr\n"
+        "instance legacy_batch 3 1 3 0.0000\n",
+        mat, matError);
+    CHECK(ok, ("material lines parse: " + matError).c_str());
+    CHECK(mat.meshes.size() == 2, "2 material mesh records");
+    CHECK(mat.meshes[0].metallic == 1.0f && mat.meshes[0].roughness == 0.15f &&
+              !mat.meshes[0].unlit,
+          "chrome mesh carries metallic/roughness/pbr");
+    CHECK(mat.meshes[1].metallic == 0.0f && mat.meshes[1].roughness == 0.9f &&
+              !mat.meshes[1].unlit,
+          "v1 mesh line gets Lambert-era defaults");
+    CHECK(mat.instances.size() == 2, "2 instance records");
+    CHECK(mat.instances[0].r == 1.0f && mat.instances[0].roughness == 0.4f &&
+              !mat.instances[0].legacy,
+          "new instance line carries albedo + material");
+    CHECK(mat.instances[1].legacy, "v1 instance line flagged legacy");
+  }
+
   // Experiment 1 (delta-loop spike): host-stub syncInstances validates shape.
   {
     VulkanRenderer stub;

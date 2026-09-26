@@ -62,6 +62,16 @@ def _f(v: float) -> str:
     return f"{v:.4f}"
 
 
+def _clamp01(value: Any) -> float:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return 0.0
+    if number != number:  # NaN
+        return 0.0
+    return min(1.0, max(0.0, number))
+
+
 def quadtree_leaves(
     min_x: float,
     min_z: float,
@@ -146,6 +156,13 @@ def export_scene(
         rgb = hex_to_rgb(obj.get("color"))
 
         kind = obj.get("kind", "mesh")
+        # Track C.3 PBR factors (glTF-shaped 0..1; cel-shaded objects export
+        # as unlit so the stylized look survives the native path).
+        metallic = _clamp01(obj.get("metallic", obj.get("metalness", 0.0)))
+        roughness = _clamp01(obj.get("roughness", 0.9))
+        shading = str(obj.get("shading", "unlit" if obj.get("cel") else "pbr"))
+        if shading not in ("pbr", "unlit"):
+            shading = "pbr"
         if kind == "light":
             ltype = obj.get("lightType", "directional")
             intensity = float(obj.get("intensity", 1.0))
@@ -162,7 +179,9 @@ def export_scene(
                     obj.get("batch") or obj.get("shape") or "instanced_batch"
                 ).replace(" ", "_")
                 lines.append(
-                    f"instance {batch_key} {_f(pos[0])} {_f(pos[1])} {_f(pos[2])} 0.0000"
+                    f"instance {batch_key} {_f(pos[0])} {_f(pos[1])} {_f(pos[2])} 0.0000 "
+                    f"{_f(rgb[0])} {_f(rgb[1])} {_f(rgb[2])} "
+                    f"{_f(metallic)} {_f(roughness)} {shading}"
                 )
                 instances += 1
                 batch_keys.add(batch_key)
@@ -170,7 +189,8 @@ def export_scene(
                 lines.append(
                     f"mesh {obj_name} {_f(pos[0])} {_f(pos[1])} {_f(pos[2])} "
                     f"{_f(size[0])} {_f(size[1])} {_f(size[2])} "
-                    f"{_f(rgb[0])} {_f(rgb[1])} {_f(rgb[2])} {physics}"
+                    f"{_f(rgb[0])} {_f(rgb[1])} {_f(rgb[2])} {physics} "
+                    f"{_f(metallic)} {_f(roughness)} {shading}"
                 )
                 meshes += 1
 

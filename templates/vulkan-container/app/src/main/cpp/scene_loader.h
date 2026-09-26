@@ -21,6 +21,11 @@ struct MeshRecord {
   float sx = 1, sy = 1, sz = 1;
   float r = 0.5f, g = 0.5f, b = 0.5f;
   PhysicsType physics = PhysicsType::None;
+  /** Track C.3 PBR factors (glTF-shaped; absent on v1 lines = defaults). */
+  float metallic = 0.0f;
+  float roughness = 0.9f;
+  /** True = flat albedo (stylized/cel fallback); false = Cook-Torrance. */
+  bool unlit = false;
 };
 
 struct InstanceRecord {
@@ -29,6 +34,13 @@ struct InstanceRecord {
   float rotY = 0;
   /** Foliage instances (batch key "foliage") get wind deformation on the GPU. */
   bool foliage = false;
+  float r = 0.45f, g = 0.65f, b = 0.35f;
+  float metallic = 0.0f;
+  float roughness = 0.9f;
+  bool unlit = false;
+  /** True when the line predates material tokens: the renderer keeps the
+   * legacy hardcoded category colors so old scenes render identically. */
+  bool legacy = true;
 };
 
 /** Batch key that marks instances for the wind-animated foliage pipeline. */
