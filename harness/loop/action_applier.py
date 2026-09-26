@@ -3926,6 +3926,71 @@ def _apply_ui(
     scene["ui"] = {"theme": theme, "elements": elements}
 
 
+def _apply_place(
+    scene: Dict[str, Any], action: Dict[str, Any], result: ApplyResult, index: int
+) -> None:
+    """Named-place action (Track B.2): first-class geography for briefs,
+    dialogue, quests, and agents. Writes scene["places"] = [{name, position,
+    radius}]. Malformed actions become outcomes, never exceptions."""
+    from harness.spatial.spatial_queries import validate_places
+
+    op = action.get("op", "define")
+    places = [p for p in scene.get("places", []) if isinstance(p, dict)]
+    if op == "define":
+        place = action.get("place")
+        problems = validate_places([place] if place is not None else None)
+        if problems:
+            return _outcome(
+                result,
+                index,
+                "place",
+                "invalid",
+                f"place rejected — {problems[0]}",
+            )
+        name = str(place["name"]).strip()
+        if any(p.get("name") == name for p in places):
+            return _outcome(
+                result,
+                index,
+                "place",
+                "invalid",
+                f"place rejected — duplicate name {name!r}",
+            )
+        places.append(
+            {
+                "name": name,
+                "position": [
+                    float(place["position"][0]),
+                    float(place["position"][1]),
+                    float(place["position"][2]),
+                ],
+                "radius": float(place.get("radius", 1.0)),
+            }
+        )
+        _outcome(result, index, "place", "applied", f"Place {name!r} defined")
+    elif op == "remove":
+        target = action.get("name")
+        if not any(p.get("name") == target for p in places):
+            return _outcome(
+                result,
+                index,
+                "place",
+                "target-missing",
+                f"place remove rejected — no place {target!r}",
+            )
+        places = [p for p in places if p.get("name") != target]
+        _outcome(result, index, "place", "applied", f"Place {target!r} removed")
+    else:
+        return _outcome(
+            result,
+            index,
+            "place",
+            "invalid",
+            f"place op rejected — must be define|remove (got {op!r})",
+        )
+    scene["places"] = places
+
+
 _HANDLERS = {
     "spawn": _apply_spawn,
     "light": _apply_light,
@@ -3943,6 +4008,7 @@ _HANDLERS = {
     "operate": _apply_operate,
     "store": _apply_store,
     "ui": _apply_ui,
+    "place": _apply_place,
 }
 
 

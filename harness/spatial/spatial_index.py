@@ -144,6 +144,16 @@ class SpatialIndex:
                 if isinstance(target, (list, tuple)) and len(target) == 2:
                     xs.append(_num(target[0]))
                     zs.append(_num(target[1]))
+        # Named places are queried geography: bound them like nav goals.
+        raw_places = scene.get("places")
+        if isinstance(raw_places, list):
+            for place in raw_places:
+                if not isinstance(place, dict):
+                    continue
+                pos = place.get("position")
+                if isinstance(pos, (list, tuple)) and len(pos) == 3:
+                    xs.append(_num(pos[0]))
+                    zs.append(_num(pos[2]))
         for fp in self.footprints:
             xs += [fp["x"] - fp["hx"], fp["x"] + fp["hx"]]
             zs += [fp["z"] - fp["hz"], fp["z"] + fp["hz"]]

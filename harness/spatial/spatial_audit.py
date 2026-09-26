@@ -203,6 +203,45 @@ def spatial_audit(scene: Dict[str, Any]) -> Dict[str, Any]:
     except ImportError:
         ok("camera_framing", "frame preview unavailable")
 
+    # 5. named places (first-class geography must be sane: unique, finite,
+    # walkable, supported — shared by briefs, dialogue, quests, agents).
+    try:
+        from harness.spatial.spatial_queries import validate_places
+    except ImportError:
+        validate_places = None  # type: ignore[assignment]
+    raw_places = scene.get("places")
+    if not raw_places:
+        ok("places", "no named places")
+    elif validate_places is None:
+        ok("places", "place validator unavailable")
+    else:
+        problems = validate_places(raw_places)
+        if problems:
+            for problem in problems:
+                fail("places", f"{problem} → repair: redefine the place")
+        else:
+            for place in raw_places:
+                label = f"place '{place.get('name')}'"
+                px, py, pz = (
+                    float(place["position"][0]),
+                    float(place["position"][1]),
+                    float(place["position"][2]),
+                )
+                if not index.is_walkable(px, pz):
+                    fail(
+                        label,
+                        f"({px:g}, {pz:g}) sits in blocked space → repair: move it clear",
+                    )
+                    continue
+                top = index.support_top(px, pz)
+                if top is None or py - 0.5 > top + SUPPORT_SETTLE_DISTANCE:
+                    fail(
+                        label,
+                        f"({px:g}, {pz:g}) has no ground in reach → repair: move onto a slab",
+                    )
+                else:
+                    ok(label, f"walkable + supported at ({px:g}, {pz:g})")
+
     passed = sum(1 for c in checks if c["pass"])
     return {
         "checks": checks,

@@ -218,6 +218,10 @@ ACTION_SCHEMA = """Action vocabulary (a JSON array named "actions"):
     top_center|top_left|top_right|bottom_left|bottom_right|bottom_center|center|full;
     interactive kinds must stay inside the safe area; same-zone elements stack by
     distinct order; audited by the ui_alignment axis of visual_quality_min)
+  - {"type": "place", "op": "define", "place": {"name": "north gate", "position": [0, 0.5, -12], "radius": 2}}
+    (defines first-class named geography shared by briefs, dialogue, quests, and
+    agents — reference places by name instead of raw coordinates; audited by the
+    spatial_audit places family: walkable + supported ground required)
   - Camera clips ride the timeline vocabulary: {"type": "timeline", ... "clips": [{"id": "wide", "start": 0, "dur": 2, "type": "camera", "data": {"shot": "wide", "to": [0, 2, 8], "cut": true}}]}
     (cinematic data keys: shot id, cut bool, blend seconds, lookTarget name + deadzone/
     lookahead/smoothTime, dolly|crane {path, ease}, shake {trauma, decay, freq, ampPos,
@@ -441,6 +445,22 @@ def repair_messages(
         "\n".join(failure_lines) if failure_lines else "- (no rule details captured)"
     )
 
+    # B.2 digest: large scenes (>50 objects) get a compacted geography header
+    # so the model holds zones + places + actors without drowning in JSON.
+    digest_note = ""
+    try:
+        game_objects = scene.get("gameObjects") or []
+        if isinstance(game_objects, list) and len(game_objects) > 50:
+            from harness.spatial.spatial_queries import scene_digest
+
+            digest_note = (
+                "\nScene digest (large scene — use named places + QueryRunner "
+                "semantics: ask, don't guess coordinates):\n"
+                f"{scene_digest(scene)}\n"
+            )
+    except Exception:
+        digest_note = ""
+
     vision_note = ""
     if vision_notes:
         vision_note = "\nVisual/layout critique of the current scene:\n" + "\n".join(
@@ -462,6 +482,7 @@ def repair_messages(
         f"Telemetry: {json.dumps(metrics)}\n"
         f"{vision_note}\n"
         f"{rejected_note}"
+        f"{digest_note}"
         "Current scene (JSON):\n"
         f"{json.dumps(scene, separators=(',', ':'))}\n\n"
         "Acceptance rules (all must eventually pass):\n"
