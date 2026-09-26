@@ -1,0 +1,277 @@
+{
+  "name": "open_zone",
+  "goal": "E.3 gate: one hand-authored streaming region (meadow / ember highland / frost hollow, two enemy camps, a collection route) under a live day/night rig; traversal + streaming-coherence audits green within the S-tier draw budget",
+  "streaming": {
+    "samples": 5,
+    "settleFrames": 12,
+    "path": {"from": {"x": -80, "z": 0}, "to": {"x": 80, "z": 0}}
+  },
+  "traversal": {"grid": 9},
+  "gameObjects": [
+    {
+      "name": "Region Ground",
+      "shape": "box",
+      "size": [220, 1, 80],
+      "position": [0, -0.5, 0],
+      "color": "#365314",
+      "physics": "fixed"
+    },
+    {
+      "name": "Traveler",
+      "shape": "capsule",
+      "size": [1, 1.5, 1],
+      "position": [-80, 2, 0],
+      "color": "#38bdf8",
+      "physics": "none",
+      "controller": true,
+      "streamer": {
+        "chunkSize": 16,
+        "renderDistance": 1,
+        "resolution": 8,
+        "maxHeight": 4
+      }
+    },
+    {
+      "name": "Sun",
+      "kind": "light",
+      "lightType": "directional",
+      "color": "#fff7ed",
+      "intensity": 2.0,
+      "position": [40, 60, 20],
+      "daynight": {
+        "dayLengthSeconds": 240,
+        "startTimeOfDay": 0.3,
+        "sun": "Sun",
+        "ambient": "Sky"
+      }
+    },
+    {
+      "name": "Sky",
+      "kind": "light",
+      "lightType": "ambient",
+      "color": "#93c5fd",
+      "intensity": 0.5,
+      "position": [0, 10, 0]
+    },
+    {
+      "name": "Meadow Oak North",
+      "shape": "box",
+      "size": [1.5, 5, 1.5],
+      "position": [-62, 2.5, -8],
+      "color": "#166534",
+      "biome": "meadow"
+    },
+    {
+      "name": "Meadow Oak South",
+      "shape": "box",
+      "size": [1.5, 4, 1.5],
+      "position": [-56, 2, 10],
+      "color": "#15803d",
+      "biome": "meadow"
+    },
+    {
+      "name": "Meadow Grass West",
+      "shape": "box",
+      "size": [3, 0.6, 3],
+      "position": [-68, 0.3, 2],
+      "color": "#4ade80",
+      "biome": "meadow"
+    },
+    {
+      "name": "Meadow Grass East",
+      "shape": "box",
+      "size": [3, 0.6, 3],
+      "position": [-50, 0.3, -4],
+      "color": "#4ade80",
+      "biome": "meadow"
+    },
+    {
+      "name": "Meadow Stone",
+      "shape": "box",
+      "size": [2, 1, 2],
+      "position": [-59, 0.5, 14],
+      "color": "#a8a29e",
+      "biome": "meadow"
+    },
+    {
+      "name": "Cinder Rock Alpha",
+      "shape": "box",
+      "size": [3, 2.5, 3],
+      "position": [-6, 1.25, -10],
+      "color": "#7c2d12",
+      "biome": "ember"
+    },
+    {
+      "name": "Cinder Rock Beta",
+      "shape": "box",
+      "size": [2, 2, 2],
+      "position": [7, 1, 9],
+      "color": "#9a3412",
+      "biome": "ember"
+    },
+    {
+      "name": "Cinder Rock Gamma",
+      "shape": "box",
+      "size": [2.5, 1.5, 2.5],
+      "position": [2, 0.75, -2],
+      "color": "#7c2d12",
+      "biome": "ember"
+    },
+    {
+      "name": "Cinder Slime A",
+      "shape": "sphere",
+      "size": [1.2, 1.2, 1.2],
+      "position": [-2, 0.8, 4],
+      "color": "#f97316",
+      "biome": "ember",
+      "elemental": {"aura": "Pyro", "maxHealth": 60},
+      "ai": {"targetName": "Traveler", "moveSpeed": 2.0, "attackRange": 2.0}
+    },
+    {
+      "name": "Cinder Slime B",
+      "shape": "sphere",
+      "size": [1.2, 1.2, 1.2],
+      "position": [4, 0.8, -6],
+      "color": "#fb923c",
+      "biome": "ember",
+      "elemental": {"aura": "Pyro", "maxHealth": 60},
+      "ai": {"targetName": "Traveler", "moveSpeed": 2.0, "attackRange": 2.0}
+    },
+    {
+      "name": "Frost Shard North",
+      "shape": "box",
+      "size": [1, 3.5, 1],
+      "position": [58, 1.75, -9],
+      "color": "#bae6fd",
+      "biome": "frost"
+    },
+    {
+      "name": "Frost Shard South",
+      "shape": "box",
+      "size": [1, 2.5, 1],
+      "position": [64, 1.25, 8],
+      "color": "#e0f2fe",
+      "biome": "frost"
+    },
+    {
+      "name": "Frost Shard Core",
+      "shape": "box",
+      "size": [2, 2, 2],
+      "position": [61, 1, 0],
+      "color": "#7dd3fc",
+      "biome": "frost"
+    },
+    {
+      "name": "Frost Slime A",
+      "shape": "sphere",
+      "size": [1.2, 1.2, 1.2],
+      "position": [55, 0.8, 3],
+      "color": "#38bdf8",
+      "biome": "frost",
+      "elemental": {"aura": "Cryo", "maxHealth": 60},
+      "ai": {"targetName": "Traveler", "moveSpeed": 1.6, "attackRange": 2.0}
+    },
+    {
+      "name": "Emberbloom 1",
+      "shape": "sphere",
+      "size": [0.5, 0.5, 0.5],
+      "position": [-60, 0.5, 6],
+      "color": "#fbbf24"
+    },
+    {
+      "name": "Emberbloom 2",
+      "shape": "sphere",
+      "size": [0.5, 0.5, 0.5],
+      "position": [-30, 0.5, 6],
+      "color": "#fbbf24"
+    },
+    {
+      "name": "Emberbloom 3",
+      "shape": "sphere",
+      "size": [0.5, 0.5, 0.5],
+      "position": [0, 0.5, 6],
+      "color": "#fbbf24"
+    },
+    {
+      "name": "Emberbloom 4",
+      "shape": "sphere",
+      "size": [0.5, 0.5, 0.5],
+      "position": [30, 0.5, 6],
+      "color": "#fbbf24"
+    },
+    {
+      "name": "Emberbloom 5",
+      "shape": "sphere",
+      "size": [0.5, 0.5, 0.5],
+      "position": [60, 0.5, 6],
+      "color": "#fbbf24"
+    }
+  ],
+  "rules": [
+    {
+      "id": "stream_seamless",
+      "type": "streaming_coherence_min",
+      "min": 1.0
+    },
+    {
+      "id": "ground_walkable",
+      "type": "traversal_coverage_min",
+      "min": 1.0
+    },
+    {
+      "id": "meadow_composed",
+      "type": "biome_coverage_min",
+      "biome": "meadow",
+      "min": 5
+    },
+    {
+      "id": "ember_composed",
+      "type": "biome_coverage_min",
+      "biome": "ember",
+      "min": 5
+    },
+    {
+      "id": "frost_composed",
+      "type": "biome_coverage_min",
+      "biome": "frost",
+      "min": 4
+    },
+    {
+      "id": "traveler_streams",
+      "type": "entity_component",
+      "target": "Traveler",
+      "component": "WorldStreamer"
+    },
+    {
+      "id": "sun_cycles",
+      "type": "entity_component",
+      "target": "Sun",
+      "component": "DayNightCycle"
+    },
+    {
+      "id": "cinder_camp",
+      "type": "entity_component",
+      "target": "Cinder Slime A",
+      "component": "EnemyAI"
+    },
+    {
+      "id": "collection_route",
+      "type": "object_count",
+      "min": 24
+    },
+    {
+      "id": "finite_transforms",
+      "type": "no_nan_transforms"
+    },
+    {
+      "id": "mobile_draw_budget",
+      "type": "draw_call_budget",
+      "max": 100
+    },
+    {
+      "id": "sim_performance",
+      "type": "fps_min",
+      "min": 30
+    }
+  ]
+}

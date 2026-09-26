@@ -375,7 +375,27 @@ function buildScene(spec, engine) {
         }))));
       }
     }
+    if (objSpec.daynight) {
+      // Track E.3: time-of-day rig (kind-independent: lights carry it too);
+      // sun/ambient bound by name after all objects exist (order-independent).
+      go.addComponent(new engine.DayNightCycle(objSpec.daynight));
+      go.__daynightBind = {
+        sun: objSpec.daynight.sun || null,
+        ambient: objSpec.daynight.ambient || null
+      };
+    }
     scene.addGameObject(go);
+  }
+  for (const go of scene.gameObjects) {
+    const bind = go.__daynightBind;
+    if (!bind) continue;
+    delete go.__daynightBind;
+    const cycle = go.components.find(c => c.constructor.name === 'DayNightCycle');
+    const sunGo = bind.sun ? scene.findByName(bind.sun) : null;
+    const ambGo = bind.ambient ? scene.findByName(bind.ambient) : null;
+    const sun = sunGo ? sunGo.components.find(c => c.constructor.name === 'LightComponent') : null;
+    const ambient = ambGo ? ambGo.components.find(c => c.constructor.name === 'LightComponent') : null;
+    if (cycle && typeof cycle.bind === 'function') cycle.bind(sun || null, ambient || null);
   }
   return scene;
 }

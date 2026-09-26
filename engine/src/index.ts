@@ -95,6 +95,7 @@ export * from './cinematics/CineCamera.js';
 export * from './cinematics/CineShots.js';
 export * from './lighting/LightProbe.js';
 export * from './lighting/ColorGrade.js';
+export * from './lighting/DayNightCycle.js';
 export * from './combat/ElementalReactionComponent.js';
 export * from './vehicles/VehicleController.js';
 export * from './ai/TrafficSystem.js';
