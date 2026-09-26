@@ -4,6 +4,7 @@ import { TransformControls } from 'three/examples/jsm/controls/TransformControls
 import { useStudio } from '../state/StudioState';
 import { MobileInput, RigidBody3D } from '@heretek/engine';
 import { GDevelopAssetService } from '../services/GDevelopAssetService';
+import { GhostPreview, probePlacement, snapToGrid } from '../services/GhostPreview';
 import {
   Maximize2,
   Eye,
@@ -35,6 +36,14 @@ export const Viewport3D: React.FC = () => {
   const [joystickPos, setJoystickPos] = useState({ x: 0, y: 0 });
   const [actionPulse, setActionPulse] = useState(false);
   const [playerCoords, setPlayerCoords] = useState({ x: '0.0', y: '1.5', z: '0.0' });
+  // B.3 ghost placement preview (agent-proposed positions render BEFORE writes)
+  const [ghostMode, setGhostMode] = useState(false);
+  const [ghostInfo, setGhostInfo] = useState<string | null>(null);
+  const ghostModeRef = useRef(false);
+  ghostModeRef.current = ghostMode;
+  const ghostRef = useRef<GhostPreview | null>(null);
+  const snappingRef = useRef(snapping);
+  snappingRef.current = snapping;
 
   const joystickContainerRef = useRef<HTMLDivElement>(null);
   const joystickOriginRef = useRef<{ x: number; y: number } | null>(null);
@@ -61,7 +70,32 @@ export const Viewport3D: React.FC = () => {
     }
   }, [snapping]);
 
-  // Global keyboard shortcuts (W: translate, E: rotate, R: scale)
+  // B.3 ghost preview at a world XZ point (shared by ground clicks and the
+  // default preview shown when ghost mode is entered).
+  const previewGhostAt = (x: number, z: number) => {
+    if (!ghostRef.current) return;
+    const p = snappingRef.current ? snapToGrid(x, z) : { x, z };
+    const spec = { shape: 'box' as const, size: [1, 1, 1] as [number, number, number], position: [p.x, 1, p.z] as [number, number, number] };
+    ghostRef.current.show(spec);
+    setGhostInfo('probing…');
+    probePlacement(spec).then(
+      verdict => {
+        ghostRef.current?.setValidity(verdict.valid);
+        const first = verdict.defects[0] ?? 'walkable + supported';
+        setGhostInfo(`${verdict.valid ? 'VALID' : 'BLOCKED'} @ (${p.x.toFixed(1)}, ${p.z.toFixed(1)}) — ${first}`);
+      },
+      () => setGhostInfo('probe unavailable (dev server?)')
+    );
+  };
+  const previewGhostAtRef = useRef(previewGhostAt);
+  previewGhostAtRef.current = previewGhostAt;
+
+  // Default ghost when ghost mode is entered (same path as ground clicks).
+  useEffect(() => {
+    if (ghostMode) previewGhostAtRef.current(0, 4);
+  }, [ghostMode]);
+
+  // Global keyboard shortcuts (W: translate, E: rotate, R: scale, G: ghost preview)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const tag = (document.activeElement?.tagName || '').toLowerCase();
@@ -74,6 +108,14 @@ export const Viewport3D: React.FC = () => {
         setGizmoMode('rotate');
       } else if (e.key === 'r' || e.key === 'R') {
         setGizmoMode('scale');
+      } else if (e.key === 'g' || e.key === 'G') {
+        setGhostMode(f => {
+          if (f) {
+            ghostRef.current?.hide();
+            setGhostInfo(null);
+          }
+          return !f;
+        });
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -138,6 +180,9 @@ export const Viewport3D: React.FC = () => {
     const boxHelper = new THREE.BoxHelper(new THREE.Mesh(), 0x60a5fa);
     boxHelper.visible = false;
     scene.threeScene.add(boxHelper);
+
+    // B.3 ghost preview (one translucent mesh, green/red by audit validity)
+    ghostRef.current = new GhostPreview(scene.threeScene);
 
     // TransformControls & 3D Manipulator Gizmo
     const transformControls = new TransformControls(camera, renderer.domElement);
@@ -259,8 +304,19 @@ export const Viewport3D: React.FC = () => {
         const raycaster = new THREE.Raycaster();
         raycaster.setFromCamera(new THREE.Vector2(mouseX, mouseY), camera);
 
+        // B.3 ghost mode: click previews a placement (grid-snapped) and asks
+        // the spatial audit for validity BEFORE anything is written.
+        if (ghostModeRef.current && ghostRef.current) {
+          const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+          const hitPoint = new THREE.Vector3();
+          if (raycaster.ray.intersectPlane(groundPlane, hitPoint)) {
+            previewGhostAtRef.current(hitPoint.x, hitPoint.z);
+          }
+          return;
+        }
+
         const validObjects = scene.threeScene.children.filter(
-          c => c !== grid && c !== boxHelper && c !== transformHelper && c !== transformProxy
+          c => c !== grid && c !== boxHelper && c !== transformHelper && c !== transformProxy && !c.userData?.isGhost
         );
         const intersects = raycaster.intersectObjects(validObjects, true);
 
@@ -390,6 +446,8 @@ export const Viewport3D: React.FC = () => {
       renderer.dispose();
       transformControls.dispose();
       transformControlsRef.current = null;
+      ghostRef.current?.dispose();
+      ghostRef.current = null;
       scene.threeScene.remove(grid);
       scene.threeScene.remove(boxHelper);
       scene.threeScene.remove(transformHelper);
@@ -549,6 +607,24 @@ export const Viewport3D: React.FC = () => {
             </button>
             <div className="h-4 w-px bg-studio-border mx-0.5" />
             <button
+              onClick={() => {
+                setGhostMode(f => {
+                  if (f) {
+                    ghostRef.current?.hide();
+                    setGhostInfo(null);
+                  }
+                  return !f;
+                });
+              }}
+              title="Ghost placement preview (B.3): click ground to audit a 1u box BEFORE writing"
+              className={`p-1.5 rounded text-xs transition-colors ${
+                ghostMode ? 'bg-emerald-600 text-white' : 'text-gray-300 hover:bg-studio-hover'
+              }`}
+            >
+              <Layers className="w-3.5 h-3.5" />
+            </button>
+            <div className="h-4 w-px bg-studio-border mx-0.5" />
+            <button
               onClick={() => setShowDeviceFrame(f => !f)}
               title="Toggle Mobile Device Frame"
               className={`p-1.5 rounded text-xs transition-colors ${
@@ -557,6 +633,12 @@ export const Viewport3D: React.FC = () => {
             >
               <Smartphone className="w-3.5 h-3.5" />
             </button>
+          </div>
+        )}
+        {/* B.3 ghost verdict badge */}
+        {!isPlaying && ghostMode && ghostInfo && (
+          <div className="absolute bottom-3 left-3 bg-black/70 backdrop-blur-md px-3 py-1.5 rounded-md text-[11px] font-mono text-zinc-200 border border-white/10 shadow-lg max-w-[420px]">
+            {ghostInfo}
           </div>
         )}
 

@@ -72,6 +72,72 @@ function sceneBridgePlugin(): Plugin {
   };
 }
 
+// Dev-server bridge to the ghost placement probe (Track B.3):
+// POST /api/spatial/ghost { placement, scene? } -> runs ghost_cli.py against
+// the canonical scene (or a supplied scene) and returns the audit verdict
+// BEFORE anything is written. Nothing mutates; validity only.
+function ghostBridgePlugin(): Plugin {
+  return {
+    name: 'heretek-ghost-bridge',
+    configureServer(server) {
+      server.middlewares.use('/api/spatial/ghost', (req, res) => {
+        res.setHeader('Content-Type', 'application/json');
+        if (req.method !== 'POST') {
+          res.statusCode = 405;
+          res.end(JSON.stringify({ ok: false, error: 'POST required' }));
+          return;
+        }
+        let body = '';
+        req.on('data', chunk => { body += chunk; });
+        req.on('end', () => {
+          let placement: unknown = null;
+          let scene: string | undefined;
+          try {
+            const parsed = JSON.parse(body || '{}');
+            placement = parsed.placement ?? null;
+            if (parsed.scene) scene = '/tmp/heretek-ghost-scene.json';
+          } catch {
+            // fall through to the missing-placement error
+          }
+          if (!placement) {
+            res.statusCode = 400;
+            res.end(JSON.stringify({ ok: false, error: 'placement is required' }));
+            return;
+          }
+          const repoRoot = path.resolve(__dirname, '..');
+          const run = (scenePath: string) => {
+            const proc = spawn('python3', [
+              'harness/spatial/ghost_cli.py',
+              '--scene', scenePath,
+              '--placement', JSON.stringify(placement)
+            ], { cwd: repoRoot });
+            let out = '';
+            let err = '';
+            proc.stdout.on('data', d => { out += d; });
+            proc.stderr.on('data', d => { err += d; });
+            proc.on('close', code => {
+              res.statusCode = code === 0 ? 200 : 502;
+              res.end(out || JSON.stringify({ ok: false, error: err || 'ghost probe unavailable' }));
+            });
+          };
+          if (scene) {
+            try {
+              require('node:fs').writeFileSync(
+                path.resolve(repoRoot, scene.slice(1)), JSON.stringify((JSON.parse(body) as { scene: unknown }).scene));
+            } catch {
+              res.statusCode = 400;
+              res.end(JSON.stringify({ ok: false, error: 'scene must be JSON' }));
+              return;
+            }
+            run(scene);
+          } else {
+            run('harness/scenes/active_scene.json');
+          }
+        });
+      });
+    }
+  };
+}
 // Dev-server bridge to the real multi-agent swarm orchestrator:
 // POST /api/swarm/run { goal } -> runs the pipeline (architect -> invariant
 // audit -> headless QA -> review) and returns the real task log + ADRs.
@@ -404,7 +470,7 @@ export default defineConfig({
   // Relative asset paths so the built bundle also works when mounted under a
   // sub-path (the Android WebView container serves it at /assets/game/).
   base: './',
-  plugins: [react(), sceneBridgePlugin(), qaBridgePlugin(), swarmBridgePlugin(), deviceBridgePlugin()],
+  plugins: [react(), sceneBridgePlugin(), qaBridgePlugin(), swarmBridgePlugin(), deviceBridgePlugin(), ghostBridgePlugin()],
   define: {
     __LLM_MODEL__: JSON.stringify(llmModel)
   },
