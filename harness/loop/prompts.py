@@ -326,6 +326,7 @@ def generation_messages(
     rules: List[Dict[str, Any]],
     seed_objects: List[Dict[str, Any]] | None = None,
     taste_notes: List[str] | None = None,
+    asset_notes: List[str] | None = None,
 ) -> List[Dict[str, str]]:
     """First-iteration prompt: build the whole scene from the goal + rules."""
     seed_note = ""
@@ -342,6 +343,15 @@ def generation_messages(
             "\nPROVEN LOOKS (past green runs in this genre — reuse what fits, "
             "do not copy blindly):\n"
             + "\n".join(f"- {note}" for note in taste_notes[:3])
+            + "\n"
+        )
+    # D.4 store assets: real uid:// refs the builder may spawn. Advisory —
+    # unknown uids are rejected, so inventing refs never pays.
+    asset_note = ""
+    if asset_notes:
+        asset_note = (
+            '\nSTORE ASSETS (spawn with "model": the uid shown — never invent uids):\n'
+            + "\n".join(f"- {note}" for note in asset_notes[:8])
             + "\n"
         )
     # Deterministic scaffolding (not prose): actions the ruleset provably needs,
@@ -397,6 +407,7 @@ def generation_messages(
         f"{format_rules(rules)}\n"
         f"{seed_note}\n"
         f"{taste_note}"
+        f"{asset_note}"
         f"{required_note}"
         "Entity names referenced by the rules MUST match exactly. Include a ground plane, "
         "the player/actor, and all props required by the rules. Keep the scene small enough "

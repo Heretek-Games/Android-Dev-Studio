@@ -19,6 +19,7 @@ CLI:
 import argparse
 import copy
 import json
+import os
 import re
 import subprocess
 import sys
@@ -268,6 +269,7 @@ class IterateLoop:
         clock: Callable[[], float] = time.monotonic,
         genre: Optional[str] = None,
         taste_store: Any = None,
+        assets_dir: Optional[str] = None,
     ):
         self.goal = goal
         self.rules = rules
@@ -290,6 +292,9 @@ class IterateLoop:
         # (record_taste/query_taste) and None keeps runs hermetic.
         self.genre = (genre or "default").strip().lower() or "default"
         self.taste_store = taste_store
+        # D.4 store assets: directory of importer sidecars (or None).
+        # Falls back to $HERETEK_ASSETS_DIR so production runs need no plumbing.
+        self.assets_dir = assets_dir or os.environ.get("HERETEK_ASSETS_DIR", "")
 
     def _taste_notes(self) -> List[str]:
         """Top past-green looks for this genre, as builder prompt lines."""
@@ -314,6 +319,18 @@ class IterateLoop:
                 + f" (green run {entry.get('source', '?')})"
             )
         return notes
+
+    def _asset_notes(self) -> List[str]:
+        """Real store assets for the builder, as prompt lines (guarded)."""
+        if not self.assets_dir:
+            return []
+        try:
+            from harness.assets.search import format_asset_notes, search_assets
+
+            assets = search_assets(assets_dir=self.assets_dir, query=self.goal, limit=8)
+            return format_asset_notes(assets)
+        except Exception:
+            return []
 
     def _log_calibration(self, result: LoopResult, run_slug: str) -> None:
         """Compare VLM rubric vs deterministic proxies per iteration (guarded).
@@ -484,6 +501,8 @@ class IterateLoop:
         frames: List[Dict[str, Any]] = []
         # A.4: past-green looks for this genre, fetched once (guarded).
         taste_notes = self._taste_notes()
+        # D.4: real store assets for the builder, fetched once (guarded).
+        asset_notes = self._asset_notes()
         # B.3: one-line summary of the previous iteration's mutation.
         last_diff_note = ""
 
@@ -510,6 +529,7 @@ class IterateLoop:
                     self.rules,
                     scene["gameObjects"] or None,
                     taste_notes=taste_notes or None,
+                    asset_notes=asset_notes or None,
                 )
             else:
                 messages = repair_messages(
