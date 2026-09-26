@@ -32,6 +32,8 @@ import {
   Hurtbox,
   Telegraph,
   DodgeRoll,
+  HitstopClock,
+  DamageFeed,
   Quest,
   Party,
   Settlement,
@@ -139,6 +141,7 @@ export const GameView: React.FC = () => {
     let shell: GameShell | null = null;
     let runtime: GameRuntime | null = null;
     let context: EngineContext | null = null;
+    let liveCamera: THREE.PerspectiveCamera | null = null;
 
     const boot = async () => {
       const scene = buildEngineScene(spec) as EngineScene;
@@ -325,6 +328,7 @@ export const GameView: React.FC = () => {
           foeFactions: ['foe']
         };
         blade = new MeleeHitbox(bladeOpts);
+        blade.onHit((hit) => feedDamage(hit.targetName, hit.applied, hit.point));
         player.addComponent(blade);
         player.addComponent(new Hurtbox({ invulnSeconds: 0.5, faction: 'ally' }));
         player.addComponent(new DodgeRoll({ distance: 4, duration: 0.3, cooldownSeconds: 0.8 }));
@@ -336,7 +340,9 @@ export const GameView: React.FC = () => {
         squire.addComponent(squireBrain);
         squire.addComponent(new HealthComponent({ maxHealth: 100, destroyOnDeath: false }));
         // Each hero carries their own blade; swings resolve from the active hero.
-        squire.addComponent(new MeleeHitbox(bladeOpts));
+        const squireBlade = new MeleeHitbox(bladeOpts);
+        squireBlade.onHit((hit) => feedDamage(hit.targetName, hit.applied, hit.point));
+        squire.addComponent(squireBlade);
         squire.addComponent(new Hurtbox({ invulnSeconds: 0.5, faction: 'ally' }));
         squire.addComponent(new DodgeRoll({ distance: 4, duration: 0.3, cooldownSeconds: 0.8 }));
         scene.addGameObject(squire);
@@ -609,6 +615,49 @@ export const GameView: React.FC = () => {
 
       let lastSwingAt = 0;
       let bloomPickups = 0;
+      // Tide feel: freeze frames on clean hits + a headless-queryable damage
+      // feed behind the floating numbers.
+      const hitstop = new HitstopClock();
+      const damageFeed = new DamageFeed(64);
+      const feedDamage = (target: string, applied: number, point?: [number, number, number]): void => {
+        if (applied <= 0) return;
+        damageFeed.push(target, Math.round(applied));
+        hitstop.request(3);
+        spawnDamageFloater(target, Math.round(applied), point);
+      };
+
+      // Floating damage numbers: project the hit point through the live
+      // camera; numbers rise and fade via CSS, capped so bursts stay cheap.
+      const floaterLayer = document.createElement('div');
+      floaterLayer.setAttribute('data-tide-ui', '1');
+      floaterLayer.style.cssText =
+        'position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:55;';
+      if (isTide) container.append(floaterLayer);
+      function spawnDamageFloater(target: string, applied: number, point?: [number, number, number]): void {
+        if (!isTide || floaterLayer.childElementCount > 12) return;
+        const node = document.createElement('div');
+        node.textContent = `${applied}`;
+        let left = 50;
+        let top = 42;
+        if (point && liveCamera) {
+          const v = new THREE.Vector3(point[0], point[1] + 0.8, point[2]).project(liveCamera);
+          if (v.z < 1) {
+            left = ((v.x + 1) / 2) * 100;
+            top = ((1 - v.y) / 2) * 100;
+          }
+        }
+        node.style.cssText =
+          `position:absolute;left:${left}%;top:${top}%;transform:translate(-50%,-50%);` +
+          'color:#fef08a;font-weight:800;font-size:22px;font-family:system-ui,sans-serif;' +
+          'text-shadow:0 2px 6px rgba(0,0,0,0.9);transition:top 0.7s ease-out,opacity 0.7s;';
+        node.title = target;
+        floaterLayer.append(node);
+        requestAnimationFrame(() => {
+          node.style.top = `${top - 9}%`;
+          node.style.opacity = '0';
+        });
+        setTimeout(() => node.remove(), 750);
+      }
       const trySwing = (): void => {
         if (!isTide || !runtime || !player) return;
         if (!runtime.flow.isPlaying()) return;
@@ -700,6 +749,10 @@ export const GameView: React.FC = () => {
             ? { stage: quest.currentStage()?.id ?? null, stageIndex: quest.stageIndex, complete: quest.complete }
             : null,
         melee: () => (isTide ? { kills: meleeKills, reactions: meleeReactions } : null),
+        feed: () =>
+          isTide
+            ? { hits: damageFeed.size, total: damageFeed.totalDealt(), hitstop: hitstop.active }
+            : null,
         party: () =>
           party
             ? { active: party.active()?.name ?? null, activeIndex: party.activeIndex, swaps: party.swapsTaken }
@@ -765,6 +818,7 @@ export const GameView: React.FC = () => {
       container.prepend(renderer.domElement);
 
       const camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 300);
+      liveCamera = camera;
       const cameraTarget = new THREE.Vector3();
       if (isCity) {
         // Fixed high overview of the build grid; the player founds the town by clicking plots.
@@ -961,6 +1015,10 @@ export const GameView: React.FC = () => {
             };
             pollQuest();
           }
+          // Tide hitstop: freeze frames yield a zero timestep scale, then release.
+          if (isTide && context) {
+            context.timeScale = hitstop.active ? hitstop.advance() : 1;
+          }
           context.step(dt);
         }
         // The victory stage completes on the won phase, after the playing
@@ -1077,6 +1135,7 @@ export const GameView: React.FC = () => {
       runtime = null;
       shell = null;
       context = null;
+      liveCamera = null;
     };
 
     const bootPromise = boot();
