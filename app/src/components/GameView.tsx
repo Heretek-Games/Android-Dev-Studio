@@ -484,17 +484,25 @@ export const GameView: React.FC = () => {
             // backlog itself is not persisted (DialogueManager exposes no
             // history setter), so its quest flags carry the progression.
             const tide = data.tide;
-            if (tide && typeof tide === 'object') {
+            // Explicit null check: typeof null === 'object', so truthiness
+            // alone cannot distinguish a missing bag from a null one.
+            if (typeof tide === 'object' && tide !== null) {
               if (Array.isArray(tide.flags)) {
                 questFlags.clear();
                 for (const flag of tide.flags) {
                   if (typeof flag === 'string') questFlags.add(flag);
                 }
               }
+              // Restored verbatim (no clamping): save→load must reproduce the
+              // saved counters exactly, and our own saves only ever write
+              // +=1 tallies — clamping would change counter semantics.
               if (Number.isFinite(tide.meleeKills)) meleeKills = tide.meleeKills as number;
               if (Number.isFinite(tide.meleeReactions)) meleeReactions = tide.meleeReactions as number;
               if (Number.isFinite(tide.bloomPickups)) bloomPickups = tide.bloomPickups as number;
-              if (typeof tide.bladeElement === 'string' && tide.bladeElement) {
+              // Explicit empty-string rejection (clearer than truthiness:
+              // the only falsy string is '', and an empty element name
+              // must never overwrite the reset default).
+              if (typeof tide.bladeElement === 'string' && tide.bladeElement !== '') {
                 const heroBlade = player?.getComponent(MeleeHitbox) ?? null;
                 if (heroBlade) heroBlade.element = tide.bladeElement as never;
               }
@@ -772,15 +780,17 @@ export const GameView: React.FC = () => {
       }
 
       // Tide and Cinder: the SINGLE reset path for a run. resetArena's tide
-      // branch and onRestart's tide branch both delegate here, so a restart
-      // can never drift from a fresh start (past live-fire bugs came from
+      // branch is the single delegation point — onStart/onRestart/onQuit/
+      // onLoad all funnel through resetArena() — so a restart can never
+      // drift from a fresh start (past live-fire bugs came from
       // this scatter: stale dialogue history, orphaned quest flags, stacked
       // DOM buttons — the tide DOM buttons stay owned by boot, which dedups
       // [data-tide-ui] on mount).
       // Order: (1) destroy spawned enemies, (2) hero/squire transforms +
       // health, (3) zero melee/quest/combo/pickup counters, (4) rebuild Quest
       // from spec, (5) reset blade elements, (6) end + restart keeper
-      // dialogue (skipped on silent resets — see below), (7) hide the quest
+      // dialogue (loud replays the audience; silent ends, wipes the backlog,
+      // and hides the panel — see below), (7) hide the quest
       // bar, (8) restore the party lead.
       const resetTideRun = (opts?: { silent?: boolean }): void => {
         if (!isTide) return;

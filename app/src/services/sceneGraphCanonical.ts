@@ -53,7 +53,7 @@
  *   switch resolves any unknown shape to the box cuboid — so both builds
  *   simulate identical box-cuboid physics. The canonicalizer applies the
  *   adapter's remap to BOTH sides before comparing and the parity probe spec
- *   carries a plane-shaped slab to lock the rule in.
+ *   carries plane- and torus-shaped slabs to lock the rule in.
  *
  * DOCUMENTED EXCLUSIONS (known divergences — never silently ignored):
  *   (a) MeshRenderer roughness/metalness: the runner honors
@@ -94,7 +94,12 @@ interface GraphLike {
       position?: { x?: unknown; y?: unknown; z?: unknown } | unknown;
       rotation?: { x?: unknown; y?: unknown; z?: unknown } | unknown;
     } | null;
-    components: Array<{ constructor: { name: string } } & Record<string, unknown>>;
+    // NOTE: no `& Record<string, unknown>` intersection here — the real
+    // engine Component class carries no string index signature, so
+    // intersecting would make engine Scene unassignable to GraphLike
+    // (app-build TS2345). Property reads go through a single Record cast
+    // at the componentParams call below; runtime behavior is unchanged.
+    components: Array<{ constructor: { name: string } }>;
   }>;
 }
 
@@ -228,7 +233,11 @@ function componentParams(type: string, c: Record<string, unknown>): Record<strin
             actions?: unknown;
           };
           return {
-            id: asString(e.id, `event_${i}`),
+            // Fallback mirrors the runner's qa_ev_${i} scheme
+            // (qa_scenario_runner.buildScene): the adapter stores raw spec
+            // events with no injected id, so a shared fallback prefix keeps
+            // id-less specs agreeing instead of skewing event_ vs qa_ev_.
+            id: asString(e.id, `qa_ev_${i}`),
             conditions: conditionActionTypes(e.conditions),
             actions: conditionActionTypes(e.actions)
           };
@@ -252,7 +261,7 @@ export function canonicalSceneGraph(scene: GraphLike): CanonicalGraphNode[] {
       const params: Record<string, Record<string, unknown>> = {};
       for (const c of go.components) {
         const type = c.constructor.name;
-        if (!(type in params)) params[type] = componentParams(type, c);
+        if (!(type in params)) params[type] = componentParams(type, c as Record<string, unknown>);
       }
       return {
         name: go.name,

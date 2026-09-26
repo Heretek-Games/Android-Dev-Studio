@@ -73,6 +73,10 @@ match intent, and all six files parse as valid frontmatter.
   arguments after the prefix are unrestricted (e.g. any path after `/tmp/`,
   any subcommand flags on `git log`). Narrower than full shell, wider than
   a fixed argv list — accepted as proportionate for a test runner.
+- Prefix matching is string-based, not argv-aware: a payload chained after an
+  allowed prefix with `;`, `&&`, `||`, `$()`, backticks, or a newline (e.g.
+  `npm test; <anything>`) still matches the allow rule. Containment assumes
+  the agent never chains payloads — the matcher is not a shell parser.
 - Critic keeps broad `shell: *` (needs `git diff`/`log` plus linter output
   as mandatory review input); containment comes from edit/write/subagent
   denies.

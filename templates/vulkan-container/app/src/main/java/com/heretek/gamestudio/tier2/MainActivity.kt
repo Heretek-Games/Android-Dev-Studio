@@ -269,11 +269,17 @@ class MainActivity : Activity(), SurfaceHolder.Callback {
             "HeretekTier2",
             "surfaceChanged hook: ${width}x${height} -> nativeSurfaceChanged"
         )
-        surfaceReady = nativeSurfaceChanged(width, height)
-        if (!surfaceReady) {
+        // Keep surfaceReady=true on hook failure and let swapchainStale_ own
+        // the retry: clearing surfaceReady here would stop nativeFrame()
+        // calls, starving the native parked-retry guard (it only runs inside
+        // renderFrame, throttled every 30 calls). No hot spin: the Kt loop
+        // still posts at ~16ms and the native guard returns early until the
+        // throttled recreate succeeds.
+        val hookOk = nativeSurfaceChanged(width, height)
+        if (!hookOk) {
             android.util.Log.w(
                 "HeretekTier2",
-                "nativeSurfaceChanged failed; frame loop halted until surfaceCreated"
+                "nativeSurfaceChanged failed; frame loop continues, native retry owns recovery"
             )
         }
     }
