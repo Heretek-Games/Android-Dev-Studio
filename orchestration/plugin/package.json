@@ -6,8 +6,7 @@
   "description": "Phase 0 swarm orchestration plugin for the Heretek Engine overhaul: DAG dispatch tool, worker prompt hook, and node-state event mirror.",
   "main": "index.ts",
   "types": "index.ts",
-  "_note": "Leave @opencode/plugin unpinned (*) until the first install test passes in a live session, then pin the exact version here.",
   "dependencies": {
-    "@opencode/plugin": "*"
+    "@opencode/plugin": "2.0.18"
   }
 }

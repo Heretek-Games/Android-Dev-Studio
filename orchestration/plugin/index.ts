@@ -20,11 +20,18 @@ import { Plugin } from "@opencode/plugin";
 
 export const PLUGIN_ID = "heretek.swarm";
 
-/** Storage prefix for DAG nodes: `swarm/dag/<slug>`. */
+/** Storage prefix for DAG nodes: `swarm/dag/<slug>-<seq>` (see `allocateNodeId`). */
 export const DAG_PREFIX = "swarm/dag/";
 
 /** Storage prefix indexing worker sessions back to nodes: `swarm/by-session/<sessionID>`. */
 export const SESSION_INDEX_PREFIX = "swarm/by-session/";
+
+/**
+ * Storage key for the persisted DAG sequence counter.
+ * The counter lives in plugin storage (not memory) so orchestrator restarts
+ * cannot reuse an id suffix. See `allocateNodeId`.
+ */
+export const SEQ_KEY = "swarm/seq";
 
 /** Node lifecycle states (plan section 0.2: pending -> working -> in-review -> merged/failed). */
 export type DagStatus = "pending" | "working" | "in-review" | "merged" | "failed";
@@ -41,7 +48,7 @@ export interface DispatchInput {
   acceptance: string[];
 }
 
-/** A DAG node record as stored under `swarm/dag/<slug>`. */
+/** A DAG node record as stored under `swarm/dag/<slug>-<seq>` (see `allocateNodeId`). */
 export interface DagNode extends DispatchInput {
   id: string;
   status: DagStatus;
@@ -82,6 +89,46 @@ export function slugify(task: string): string {
   return slug || "task";
 }
 
+/** Minimal storage surface needed for id allocation (satisfied by `Plugin.Context["storage"]`). */
+export interface IdStorage {
+  get(key: string): Promise<unknown>;
+  set(key: string, value: StorageValue): Promise<void>;
+}
+
+function toSeqNumber(raw: unknown): number {
+  return typeof raw === "number" && Number.isFinite(raw) && raw >= 0 ? Math.floor(raw) : 0;
+}
+
+function formatSeqSuffix(seq: number): string {
+  return seq.toString(36).padStart(4, "0");
+}
+
+/**
+ * Allocate a unique DAG node id: `<slug>-<base36-seq>`.
+ * The sequence counter is read/incremented/persisted at `SEQ_KEY`, so ids
+ * stay unique across orchestrator restarts (unlike a pure in-memory counter
+ * or a bare `slugify(task)`, which collides when two tasks share a slug).
+ * On key collision (stale counter, concurrent dispatch) the counter advances
+ * until a free key is found; after 100 collisions a timestamp suffix is
+ * appended as a fallback. Single-orchestrator use is assumed; concurrent
+ * writers get best-effort uniqueness via the existence check, not a lock.
+ */
+export async function allocateNodeId(storage: IdStorage, task: string): Promise<string> {
+  const slug = slugify(task);
+  let seq = toSeqNumber(await storage.get(SEQ_KEY));
+  for (let attempt = 0; attempt < 100; attempt++) {
+    seq += 1;
+    const candidate = `${slug}-${formatSeqSuffix(seq)}`;
+    const existing = await storage.get(`${DAG_PREFIX}${candidate}`);
+    if (existing === undefined) {
+      await storage.set(SEQ_KEY, seq as unknown as StorageValue);
+      return candidate;
+    }
+  }
+  await storage.set(SEQ_KEY, seq as unknown as StorageValue);
+  return `${slug}-${Date.now().toString(36)}-${formatSeqSuffix(seq)}`;
+}
+
 /** Runtime-validate unknown tool input into a DispatchInput; throws on any violation. */
 function parseDispatchInput(raw: unknown): DispatchInput {
   if (typeof raw !== "object" || raw === null) throw new Error("swarm_dispatch: input must be an object");
@@ -108,14 +155,62 @@ function isWorkerPrompt(metadata: Record<string, unknown> | undefined): boolean 
 
 type StorageValue = Parameters<Plugin.Context["storage"]["set"]>[1];
 
-/** Session lifecycle events we mirror into storage (best-effort). */
-const MIRRORED_EVENTS: Record<string, DagStatus> = {
-  "session.execution.started": "working",
-  "session.execution.succeeded": "working",
-  "session.execution.failed": "failed",
-  "session.execution.interrupted": "failed",
-  "session.deleted": "failed",
-};
+/**
+ * Session-event → DAG-node transition table (v1 mirror semantics).
+ *
+ * | session event                | DAG node transition                              |
+ * |------------------------------|--------------------------------------------------|
+ * | `session.execution.started`   | `pending` → `working`; otherwise no change       |
+ * | `session.execution.succeeded` | `pending`/`working` → `in-review`; otherwise no change (never regresses `in-review`/`merged`/`failed`) |
+ * | `session.execution.failed`    | → `failed`, unless already `merged` (merge is final). ONLY this event sets `failed`. |
+ * | `session.execution.interrupted`| no status change (record `lastEvent` only; never `failed`) |
+ * | `session.deleted`             | terminal-cleanup only: remove `swarm/by-session/<id>`; NEVER touch the DAG node, NEVER `failed` |
+ * | any other event               | ignored                                          |
+ *
+ * Forward-only: success advances a node (`working` → `in-review`) but never
+ * demotes or resurrects a terminal state. The full state machine
+ * (`in-review` → `merged`, critic-≠-builder enforcement) remains a
+ * follow-up (see STUB `swarm-events` below).
+ */
+const KNOWN_MIRROR_EVENTS: ReadonlySet<string> = new Set([
+  "session.execution.started",
+  "session.execution.succeeded",
+  "session.execution.failed",
+  "session.execution.interrupted",
+  "session.deleted",
+]);
+
+function isDagStatus(value: unknown): value is DagStatus {
+  return (
+    value === "pending" ||
+    value === "working" ||
+    value === "in-review" ||
+    value === "merged" ||
+    value === "failed"
+  );
+}
+
+/**
+ * Compute the next DAG status for a session event, or `null` when the event
+ * must not change the node status (`interrupted`, `deleted`, unknown events,
+ * and any transition that would regress a terminal/advanced state).
+ */
+export function nextDagStatus(current: DagStatus, eventType: string): DagStatus | null {
+  switch (eventType) {
+    case "session.execution.started":
+      return current === "pending" ? "working" : null;
+    case "session.execution.succeeded":
+      return current === "pending" || current === "working" ? "in-review" : null;
+    case "session.execution.failed":
+      // Only this event sets `failed`; `merged` is final and never regresses.
+      return current === "merged" ? null : "failed";
+    case "session.deleted":
+    case "session.execution.interrupted":
+      return null;
+    default:
+      return null;
+  }
+}
 
 /**
  * Best-effort mirror of one stream event into storage.
@@ -124,39 +219,54 @@ const MIRRORED_EVENTS: Record<string, DagStatus> = {
 async function mirrorSessionTransition(ctx: Plugin.Context, event: unknown): Promise<void> {
   const envelope = event as { type?: unknown; data?: unknown };
   if (typeof envelope.type !== "string") return;
-  const status = MIRRORED_EVENTS[envelope.type];
-  if (!status) return;
+  if (!KNOWN_MIRROR_EVENTS.has(envelope.type)) return;
   const data = envelope.data as { sessionID?: unknown } | null | undefined;
   const sessionID = data && typeof data.sessionID === "string" ? data.sessionID : undefined;
   if (!sessionID) return;
   const now = new Date().toISOString();
   const key = `${SESSION_INDEX_PREFIX}${sessionID}`;
+  // `session.deleted` is terminal-cleanup only: drop the session index entry
+  // and never touch the linked DAG node (never `failed`).
+  if (envelope.type === "session.deleted") {
+    await ctx.storage.remove(key);
+    return;
+  }
   const existing = (await ctx.storage.get(key)) as Record<string, unknown> | undefined;
+  const linkedNodeID = typeof existing?.["nodeID"] === "string" ? existing["nodeID"] : undefined;
+  const linkedNode = linkedNodeID
+    ? ((await ctx.storage.get(`${DAG_PREFIX}${linkedNodeID}`)) as Record<string, unknown> | undefined)
+    : undefined;
+  const nodeStatus = linkedNode && isDagStatus(linkedNode["status"]) ? linkedNode["status"] : undefined;
+  const sessionStatus =
+    existing && isDagStatus(existing["status"]) ? (existing["status"] as DagStatus) : undefined;
+  const current: DagStatus = nodeStatus ?? sessionStatus ?? "pending";
+  const next = nextDagStatus(current, envelope.type);
   const record: Record<string, unknown> = {
     ...(existing ?? {}),
     sessionID,
-    status,
     lastEvent: envelope.type,
     updatedAt: now,
   };
+  // `interrupted` records the event but preserves the prior status (never `failed`).
+  if (next !== null) record["status"] = next;
+  else if (sessionStatus !== undefined) record["status"] = sessionStatus;
   await ctx.storage.set(key, record as StorageValue);
-  if (typeof existing?.["nodeID"] === "string") {
-    const nodeKey = `${DAG_PREFIX}${existing["nodeID"]}`;
-    const node = (await ctx.storage.get(nodeKey)) as Record<string, unknown> | undefined;
-    if (node) {
-      await ctx.storage.set(
-        nodeKey,
-        { ...node, status, sessionID, updatedAt: now } as StorageValue,
-      );
-    }
+  if (next !== null && linkedNodeID && linkedNode) {
+    const nodeKey = `${DAG_PREFIX}${linkedNodeID}`;
+    await ctx.storage.set(
+      nodeKey,
+      { ...linkedNode, status: next, sessionID, updatedAt: now } as StorageValue,
+    );
   }
 }
 
 export default Plugin.define({
   id: PLUGIN_ID,
   async setup(ctx) {
-    // 1. DAG dispatch tool. Effective tool id is `swarm_dispatch`
-    //    (namespace `swarm` + name `dispatch`).
+    // 1. DAG dispatch tool. Assumed effective tool id is `swarm_dispatch`
+    //    (namespace `swarm` + name `dispatch`) — UNVERIFIED live; confirm via
+    //    `ctx.tool.list()` in a live OpenCode session before relying on it
+    //    (see README).
     await ctx.tool.transform((editor) => {
       editor.namespace({
         name: "swarm",
@@ -166,7 +276,7 @@ export default Plugin.define({
         name: "dispatch",
         description:
           "Record a swarm DAG node (task + worktree + agent + acceptance criteria) and return its node id. " +
-          "Effective tool id: swarm_dispatch.",
+          "Assumed effective tool id: swarm_dispatch (UNVERIFIED live).",
         input: {
           type: "object",
           properties: {
@@ -181,7 +291,7 @@ export default Plugin.define({
         options: { namespace: "swarm", codemode: true },
         execute: async (input, context) => {
           const parsed = parseDispatchInput(input);
-          const id = slugify(parsed.task);
+          const id = await allocateNodeId(ctx.storage, parsed.task);
           const now = new Date().toISOString();
           const node: DagNode = {
             ...parsed,
